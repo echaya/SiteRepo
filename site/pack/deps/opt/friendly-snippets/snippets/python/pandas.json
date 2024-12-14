@@ -1,0 +1,12 @@
+{
+    "comp_diff":{
+		"prefix":"~comp",
+		"body": ["$1.merge($2,indicator = True, how='outer').loc[lambda x : x['_merge']!='both']"],
+		"description": "compare 2 dataframe"
+	},
+    "rename":{
+		"prefix":"~rename",
+		"body": [".rename({'$1':'$2'},axis=1,inplace=True)"],
+		"description": "rename dataframe"
+	}
+}
