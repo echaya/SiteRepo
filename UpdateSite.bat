@@ -3,6 +3,7 @@ for /d /r . %%d in (plugged) do @if exist "%%d" rd /s/q "%%d"
 
 SET MoveToDir=D:\Workspace\SiteRepo\site
 SET MoveFromDir=c:\Users\echay\AppData\Local\nvim-data\site
+RMDIR %MoveToDir% /S /Q
 ROBOCOPY %MoveFromDir% %MoveToDir% /S
 
 for /d /r . %%d in (.git) do if exist "%%d" if "%%~pd" NEQ "\Workspace\SiteRepo\" rd /s/q "%%d"
