@@ -11,9 +11,10 @@ M.enabled = false
 ---@field enabled? boolean
 local defaults = {
   indent = {
+    priority = 1,
     enabled = true, -- enable indent guides
     char = "│",
-    blank = " ",
+    blank = nil, ---@type string? blank space character. If nil, it will use listchars when list is enabled.
     -- blank = "∙",
     only_scope = false, -- only show indent guides of the scope
     only_current = false, -- only show indent guides in the current window
@@ -51,6 +52,7 @@ local defaults = {
   ---@class snacks.indent.Scope.Config: snacks.scope.Config
   scope = {
     enabled = true, -- enable highlighting the current scope
+    priority = 200,
     char = "│",
     underline = false, -- underline the start of the scope
     only_current = false, -- only show scope in the current window
@@ -62,6 +64,7 @@ local defaults = {
     enabled = false,
     -- only show chunk scopes in the current window
     only_current = false,
+    priority = 200,
     hl = "SnacksIndentChunk", ---@type string|string[] hl group for chunk scopes
     char = {
       corner_top = "┌",
@@ -82,7 +85,6 @@ local defaults = {
   filter = function(buf)
     return vim.g.snacks_indent ~= false and vim.b[buf].snacks_indent ~= false and vim.bo[buf].buftype == ""
   end,
-  priority = 200,
   debug = false,
 }
 
@@ -141,7 +143,8 @@ end
 ---@param indent number
 ---@param state snacks.indent.State
 local function get_extmark(indent, state)
-  local key = indent .. ":" .. state.leftcol .. ":" .. state.shiftwidth .. ":" .. state.indent_offset
+  local space = config.indent.blank or state.listchars.space or " "
+  local key = indent .. ":" .. state.leftcol .. ":" .. state.shiftwidth .. ":" .. state.indent_offset .. ":" .. space
   if cache_extmarks[key] ~= nil then
     return cache_extmarks[key]
   end
@@ -161,10 +164,10 @@ local function get_extmark(indent, state)
   end
 
   local hidden = math.ceil(state.leftcol / sw) -- level of the last hidden indent
-  local blank = config.indent.blank:rep(sw - vim.api.nvim_strwidth(config.indent.char))
+  local blank = space:rep(sw - vim.api.nvim_strwidth(config.indent.char))
 
   local text = {} ---@type string[][]
-  text[1] = rem > 0 and { (config.indent.blank):rep(rem), get_hl(hidden, config.blank.hl) } or nil
+  text[1] = rem > 0 and { (blank):rep(rem), get_hl(hidden, config.blank.hl) } or nil
 
   for i = 1, indent do
     if i >= offset then
@@ -180,10 +183,22 @@ local function get_extmark(indent, state)
     virt_text_pos = "overlay",
     virt_text_win_col = 0,
     hl_mode = "combine",
-    priority = config.priority,
+    priority = config.indent.priority,
     ephemeral = true,
   }
   return cache_extmarks[key]
+end
+
+local function get_listchars(win)
+  local chars = vim.wo[win].list and vim.wo[win].listchars
+  local ret = {} ---@type table<string, string>
+  for _, o in ipairs(chars and vim.split(chars, ",") or {}) do
+    local k, v = o:match("(.-):(.+)")
+    if k then
+      ret[k] = v
+    end
+  end
+  return ret
 end
 
 ---@param win number
@@ -208,6 +223,7 @@ local function get_state(win, buf, top, bottom)
     shiftwidth = vim.bo[buf].shiftwidth,
     indents = prev and prev.indents or { [0] = 0 },
     indent_offset = 0, -- the start column of the indent guides
+    listchars = get_listchars(win),
   }
   state.shiftwidth = state.shiftwidth == 0 and vim.bo[buf].tabstop or state.shiftwidth
   states[win] = state
@@ -271,7 +287,7 @@ function M.on_win(win, buf, top, bottom)
   end)
 
   -- Render scope
-  if scope and scope:size() > 1 then
+  if scope and (scope:size() > 1 or vim.g.snacks_indent_overlap) then
     show_chunk = show_chunk and (scope.indent or 0) >= state.shiftwidth
     if show_chunk then
       M.render_chunk(scope, state)
@@ -322,13 +338,13 @@ function M.render_scope(scope, state)
 
   for l = from, to do
     local i = state.indents[l]
-    if i and i > indent then
+    if (i and i > indent) or vim.g.snacks_indent_overlap then
       vim.api.nvim_buf_set_extmark(scope.buf, ns, l - 1, 0, {
         virt_text = { { config.scope.char, hl } },
         virt_text_pos = "overlay",
         virt_text_win_col = col,
         hl_mode = "combine",
-        priority = config.priority + 1,
+        priority = config.scope.priority,
         strict = false,
         ephemeral = true,
       })
@@ -358,7 +374,7 @@ function M.render_chunk(scope, state)
       virt_text_pos = "overlay",
       virt_text_win_col = col,
       hl_mode = "combine",
-      priority = config.priority + 2,
+      priority = config.chunk.priority,
       strict = false,
       ephemeral = true,
     })
@@ -513,7 +529,7 @@ function M.enable()
   -- redraw when shiftwidth changes
   vim.api.nvim_create_autocmd("OptionSet", {
     group = group,
-    pattern = { "shiftwidth" },
+    pattern = { "shiftwidth", "listchars", "list" },
     callback = vim.schedule_wrap(function()
       vim.cmd([[redraw!]])
     end),

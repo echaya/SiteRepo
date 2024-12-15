@@ -26,6 +26,9 @@ M.config = setmetatable({}, {
     config[k] = config[k] or {}
     return config[k]
   end,
+  __newindex = function(_, k, v)
+    config[k] = v
+  end,
 })
 
 --- Get an example config from the docs/examples directory.

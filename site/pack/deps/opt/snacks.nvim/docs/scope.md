@@ -61,6 +61,10 @@ in [mini.indentscope](https://github.com/echasnovski/mini.indentscope).
       "if_statement",
       "for_statement",
     },
+    -- these treesitter fields will be considered as blocks
+    field_blocks = {
+      "local_declaration",
+    },
   },
   -- These keymaps will only be set if the `scope` plugin is enabled.
   -- Alternatively, you can set them manually in your config,
@@ -69,16 +73,15 @@ in [mini.indentscope](https://github.com/echasnovski/mini.indentscope).
     ---@type table<string, snacks.scope.TextObject|{desc?:string}>
     textobject = {
       ii = {
-        min_size = 1, -- allow single line scopes
-        edge = false, -- don't include the edge
-        treesitter = { enabled = false },
+        min_size = 2, -- minimum size of the scope
+        edge = false, -- inner scope
+        treesitter = { blocks = false },
         desc = "inner scope",
       },
       ai = {
-        min_size = 1, -- allow single line scopes
-        edge = true, -- include the edge
-        treesitter = { enabled = false },
-        desc = "scope with edge",
+        min_size = 2, -- minimum size of the scope
+        treesitter = { blocks = false },
+        desc = "full scope",
       },
     },
     ---@type table<string, snacks.scope.Jump|{desc?:string}>
@@ -105,7 +108,7 @@ in [mini.indentscope](https://github.com/echasnovski/mini.indentscope).
 ## 📚 Types
 
 ```lua
----@class snacks.scope.Opts: snacks.scope.Config
+---@class snacks.scope.Opts: snacks.scope.Config,{}
 ---@field buf? number
 ---@field pos? {[1]:number, [2]:number} -- (1,0) indexed
 ---@field end_pos? {[1]:number, [2]:number} -- (1,0) indexed

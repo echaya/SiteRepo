@@ -97,10 +97,6 @@ end
 
 -- Some path utilities
 M.path = (function()
-  local function escape_wildcards(path)
-    return path:gsub('([%[%]%?%*])', '\\%1')
-  end
-
   --- @param path string
   --- @return boolean
   local function is_fs_root(path)
@@ -108,16 +104,6 @@ M.path = (function()
       return path:match '^%a:$'
     else
       return path == '/'
-    end
-  end
-
-  --- @param filename string
-  --- @return boolean
-  local function is_absolute(filename)
-    if iswin then
-      return filename:match '^%a:' or filename:match '^\\\\'
-    else
-      return filename:match '^/'
     end
   end
 
@@ -179,8 +165,6 @@ M.path = (function()
   local path_separator = iswin and ';' or ':'
 
   return {
-    escape_wildcards = escape_wildcards,
-    is_absolute = is_absolute,
     join = path_join,
     traverse_parents = traverse_parents,
     iterate_parents = iterate_parents,
@@ -216,13 +200,17 @@ function M.get_lsp_clients(filter)
   return nvim_eleven and lsp.get_clients(filter) or lsp.get_active_clients(filter)
 end
 
+local function escape_wildcards(path)
+  return path:gsub('([%[%]%?%*])', '\\%1')
+end
+
 function M.root_pattern(...)
   local patterns = M.tbl_flatten { ... }
   return function(startpath)
     startpath = M.strip_archive_subpath(startpath)
     for _, pattern in ipairs(patterns) do
       local match = M.search_ancestors(startpath, function(path)
-        for _, p in ipairs(vim.fn.glob(M.path.join(M.path.escape_wildcards(path), pattern), true, true)) do
+        for _, p in ipairs(vim.fn.glob(M.path.join(escape_wildcards(path), pattern), true, true)) do
           if vim.loop.fs_stat(p) then
             return path
           end
@@ -234,16 +222,6 @@ function M.root_pattern(...)
       end
     end
   end
-end
-
-function M.find_git_ancestor(startpath)
-  return M.search_ancestors(startpath, function(path)
-    -- Support git directories and git files (worktrees)
-    local gitpath = M.path.join(path, '.git')
-    if vim.fn.isdirectory(gitpath) == 1 or (vim.loop.fs_stat(gitpath) or {}).type == 'file' then
-      return path
-    end
-  end)
 end
 
 function M.insert_package_json(config_files, field, fname)
@@ -391,6 +369,11 @@ end
 --- @deprecated use `vim.fs.dirname(vim.fs.find('package.json', { path = startpath, upward = true })[1])` instead
 function M.find_package_json_ancestor(startpath)
   return vim.fs.dirname(vim.fs.find('package.json', { path = startpath, upward = true })[1])
+end
+
+--- @deprecated use `vim.fs.dirname(vim.fs.find('.git', { path = startpath, upward = true })[1])` instead
+function M.find_git_ancestor(startpath)
+  return vim.fs.dirname(vim.fs.find('.git', { path = startpath, upward = true })[1])
 end
 
 return M
