@@ -12,6 +12,7 @@ Better `vim.ui.input`.
 -- lazy.nvim
 {
   "folke/snacks.nvim",
+  ---@type snacks.Config
   opts = {
     input = {
       -- your input configuration comes here
@@ -43,6 +44,9 @@ Better `vim.ui.input`.
 
 ## 🎨 Styles
 
+Check the [styles](https://github.com/folke/snacks.nvim/blob/main/docs/styles.md)
+docs for more information on how to customize these styles
+
 ### `input`
 
 ```lua
@@ -64,6 +68,10 @@ Better `vim.ui.input`.
     cursorline = false,
   },
   bo = { filetype = "snacks_input" },
+  --- buffer local variables
+  b = {
+    completion = false, -- disable blink completions in input
+  },
   keys = {
     i_esc = { "<esc>", { "cmp_close", "cancel" }, mode = "i" },
     -- i_esc = { "<esc>", "stopinsert", mode = "i" },

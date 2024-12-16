@@ -34,8 +34,6 @@ local defaults = {
 }
 
 local SCROLL_UP, SCROLL_DOWN = Snacks.util.keycode("<c-e>"), Snacks.util.keycode("<c-y>")
-local SCROLL_WHEEL_DOWN, SCROLL_WHEEL_UP =
-  Snacks.util.keycode("<ScrollWheelDown>"), Snacks.util.keycode("<ScrollWheelUp>")
 local mouse_scrolling = false
 
 M.enabled = false
@@ -99,10 +97,11 @@ function M.enable()
   local group = vim.api.nvim_create_augroup("snacks_scroll", { clear = true })
 
   -- track mouse scrolling
-  vim.on_key(function(key)
-    if key == SCROLL_WHEEL_DOWN or key == SCROLL_WHEEL_UP then
-      mouse_scrolling = true
-    end
+  Snacks.util.on_key("<ScrollWheelDown>", function()
+    mouse_scrolling = true
+  end)
+  Snacks.util.on_key("<ScrollWheelUp>", function()
+    mouse_scrolling = true
   end)
 
   -- initialize state for buffers entering windows
@@ -205,14 +204,6 @@ function M.check(win)
     stats.skipped = stats.skipped + 1
     state.current = vim.deepcopy(state.view)
     return
-  elseif spamming and not (state.anim and state.anim.done) then
-    -- just ignore the scroll when spamming and we're already animating
-    stats.spamming = stats.spamming + 1
-    stats.scrolls = stats.scrolls + 1
-    vim.api.nvim_win_call(win, function()
-      vim.fn.winrestview(state.current)
-    end)
-    return
   elseif mouse_scrolling then
     if state.anim then
       state.anim:stop()
@@ -222,6 +213,14 @@ function M.check(win)
     mouse_scrolling = false
     stats.mousescroll = stats.mousescroll + 1
     state.current = vim.deepcopy(state.view)
+    return
+  elseif spamming and not (state.anim and state.anim.done) then
+    -- just ignore the scroll when spamming and we're already animating
+    stats.spamming = stats.spamming + 1
+    stats.scrolls = stats.scrolls + 1
+    vim.api.nvim_win_call(win, function()
+      vim.fn.winrestview(state.current)
+    end)
     return
   end
   stats.scrolls = stats.scrolls + 1

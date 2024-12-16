@@ -143,7 +143,8 @@ end
 ---@param indent number
 ---@param state snacks.indent.State
 local function get_extmark(indent, state)
-  local space = config.indent.blank or state.listchars.space or " "
+  local listchars = state.listchars
+  local space = config.indent.blank or listchars.lead or listchars.space or " "
   local key = indent .. ":" .. state.leftcol .. ":" .. state.shiftwidth .. ":" .. state.indent_offset .. ":" .. space
   if cache_extmarks[key] ~= nil then
     return cache_extmarks[key]
@@ -167,7 +168,7 @@ local function get_extmark(indent, state)
   local blank = space:rep(sw - vim.api.nvim_strwidth(config.indent.char))
 
   local text = {} ---@type string[][]
-  text[1] = rem > 0 and { (blank):rep(rem), get_hl(hidden, config.blank.hl) } or nil
+  text[1] = rem > 0 and { (space):rep(rem), get_hl(hidden, config.blank.hl) } or nil
 
   for i = 1, indent do
     if i >= offset then
@@ -259,6 +260,7 @@ function M.on_win(win, buf, top, bottom)
   -- Calculate and render indents
   local indents = state.indents
   vim.api.nvim_buf_call(buf, function()
+    local parent_indent, current_indent ---@type number, number
     for l = state.top, state.bottom do
       local indent = indents[l]
       if not indent then
@@ -279,6 +281,11 @@ function M.on_win(win, buf, top, bottom)
         end
         indents[l] = indent
       end
+      if indent ~= current_indent then
+        parent_indent = current_indent or indent
+        current_indent = indent
+      end
+      indent = math.min(indent, parent_indent + state.shiftwidth)
       local opts = show_indent and indent > 0 and get_extmark(indent, state)
       if opts then
         vim.api.nvim_buf_set_extmark(buf, ns, l - 1, 0, opts)
@@ -326,7 +333,7 @@ function M.render_scope(scope, state)
       end_col = #vim.api.nvim_buf_get_lines(scope.buf, scope.from - 1, scope.from, false)[1],
       hl_group = get_underline_hl(hl),
       hl_mode = "combine",
-      priority = config.priority + 1,
+      priority = config.scope.priority + 1,
       strict = false,
       ephemeral = true,
     })

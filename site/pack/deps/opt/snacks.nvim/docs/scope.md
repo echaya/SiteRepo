@@ -13,6 +13,7 @@ in [mini.indentscope](https://github.com/echasnovski/mini.indentscope).
 -- lazy.nvim
 {
   "folke/snacks.nvim",
+  ---@type snacks.Config
   opts = {
     scope = {
       -- your scope configuration comes here
@@ -35,6 +36,7 @@ in [mini.indentscope](https://github.com/echasnovski/mini.indentscope).
   min_size = 2,
   -- try to expand the scope to this size
   max_size = nil,
+  cursor = true, -- when true, the column of the cursor is used to determine the scope
   edge = true, -- include the edge of the scope (typically the line above and below with smaller indent)
   siblings = false, -- expand single line scopes with single line siblings
   -- what buffers to attach to
@@ -47,8 +49,9 @@ in [mini.indentscope](https://github.com/echasnovski/mini.indentscope).
     -- detect scope based on treesitter.
     -- falls back to indent based detection if not available
     enabled = true,
-    ---@type string[]|false
+    ---@type string[]|{enabled?:boolean}
     blocks = {
+      enabled = false, -- enable to use the following blocks
       "function_declaration",
       "function_definition",
       "method_declaration",
@@ -75,12 +78,14 @@ in [mini.indentscope](https://github.com/echasnovski/mini.indentscope).
       ii = {
         min_size = 2, -- minimum size of the scope
         edge = false, -- inner scope
-        treesitter = { blocks = false },
+        cursor = false,
+        treesitter = { blocks = { enabled = false } },
         desc = "inner scope",
       },
       ai = {
+        cursor = false,
         min_size = 2, -- minimum size of the scope
-        treesitter = { blocks = false },
+        treesitter = { blocks = { enabled = false } },
         desc = "full scope",
       },
     },
@@ -89,15 +94,17 @@ in [mini.indentscope](https://github.com/echasnovski/mini.indentscope).
       ["[i"] = {
         min_size = 1, -- allow single line scopes
         bottom = false,
+        cursor = false,
         edge = true,
-        treesitter = { enabled = false },
+        treesitter = { blocks = { enabled = false } },
         desc = "jump to top edge of scope",
       },
       ["]i"] = {
         min_size = 1, -- allow single line scopes
         bottom = true,
+        cursor = false,
         edge = true,
-        treesitter = { enabled = false },
+        treesitter = { blocks = { enabled = false } },
         desc = "jump to bottom edge of scope",
       },
     },

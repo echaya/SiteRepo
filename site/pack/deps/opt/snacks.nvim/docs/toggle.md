@@ -12,6 +12,7 @@ Toggle keymaps integrated with which-key icons / colors
 -- lazy.nvim
 {
   "folke/snacks.nvim",
+  ---@type snacks.Config
   opts = {
     toggle = {
       -- your toggle configuration comes here

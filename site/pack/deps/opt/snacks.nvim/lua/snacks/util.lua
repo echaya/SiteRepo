@@ -217,4 +217,21 @@ function M.var(buf, name, default)
   return default
 end
 
+local keys = {} ---@type table<string, fun(key:string)[]>
+local on_key_ns ---@type number?
+
+---@param key string
+---@param cb fun(key:string)
+function M.on_key(key, cb)
+  local code = M.keycode(key)
+  keys[code] = keys[code] or {}
+  table.insert(keys[code], cb)
+  on_key_ns = on_key_ns
+    or vim.on_key(function(resolved, typed)
+      for _, c in ipairs(keys[typed or resolved] or {}) do
+        pcall(c, typed)
+      end
+    end)
+end
+
 return M

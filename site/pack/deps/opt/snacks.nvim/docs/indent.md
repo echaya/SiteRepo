@@ -17,6 +17,7 @@ Similar plugins:
 -- lazy.nvim
 {
   "folke/snacks.nvim",
+  ---@type snacks.Config
   opts = {
     indent = {
       -- your indent configuration comes here

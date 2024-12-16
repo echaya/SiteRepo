@@ -10,6 +10,7 @@ Auto-show LSP references and quickly navigate between them
 -- lazy.nvim
 {
   "folke/snacks.nvim",
+  ---@type snacks.Config
   opts = {
     words = {
       -- your words configuration comes here

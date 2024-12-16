@@ -1,4 +1,4 @@
-*snacks.nvim.txt*           For Neovim           Last change: 2024 December 14
+*snacks.nvim.txt*           For Neovim           Last change: 2024 December 15
 
 ==============================================================================
 Table of Contents                              *snacks.nvim-table-of-contents*
@@ -127,6 +127,7 @@ LAZY.NVIM ~
       "folke/snacks.nvim",
       priority = 1000,
       lazy = false,
+      ---@type snacks.Config
       opts = {
         -- your configuration comes here
         -- or leave it empty to use the default settings
