@@ -14,8 +14,6 @@ local defaults = {
     priority = 1,
     enabled = true, -- enable indent guides
     char = "│",
-    blank = nil, ---@type string? blank space character. If nil, it will use listchars when list is enabled.
-    -- blank = "∙",
     only_scope = false, -- only show indent guides of the scope
     only_current = false, -- only show indent guides in the current window
     hl = "SnacksIndent", ---@type string|string[] hl groups for indent guides
@@ -95,9 +93,10 @@ local defaults = {
 
 local config = Snacks.config.get("scope", defaults)
 local ns = vim.api.nvim_create_namespace("snacks_indent")
-local cache_extmarks = {} ---@type table<string, vim.api.keyset.set_extmark|false>
+local cache_extmarks = {} ---@type table<string, vim.api.keyset.set_extmark[]>
 local debug_timer = assert((vim.uv or vim.loop).new_timer())
 local cache_underline = {} ---@type table<string, boolean>
+local has_repeat_lb = vim.fn.has("nvim-0.10.0") == 1
 local states = {} ---@type table<number, snacks.indent.State>
 local scopes ---@type snacks.scope.Listener?
 local stats = {
@@ -142,64 +141,41 @@ end
 --- the given indent level, left column and shiftwidth
 ---@param indent number
 ---@param state snacks.indent.State
-local function get_extmark(indent, state)
-  local listchars = state.listchars
-  local space = config.indent.blank or listchars.lead or listchars.space or " "
-  local key = indent .. ":" .. state.leftcol .. ":" .. state.shiftwidth .. ":" .. state.indent_offset .. ":" .. space
-  if cache_extmarks[key] ~= nil then
+local function get_extmarks(indent, state)
+  local key = indent
+    .. ":"
+    .. state.leftcol
+    .. ":"
+    .. state.shiftwidth
+    .. ":"
+    .. state.indent_offset
+    .. ":"
+    .. (state.breakindent and "bi" or "")
+  if cache_extmarks[key] then
     return cache_extmarks[key]
   end
   stats.extmarks = stats.extmarks + 1
 
   local sw = state.shiftwidth
-  indent = math.floor(indent / sw) * sw -- align to shiftwidth
-  indent = indent - state.leftcol -- adjust for visible indents
-  local rem = indent % sw -- remaining spaces of the first partially visible indent
   indent = math.floor(indent / sw) -- full visible indents
-  local offset = math.max(math.floor((state.indent_offset - state.leftcol + sw) / sw), 0) -- offset for the scope
+  local offset = math.max(math.floor(state.indent_offset / sw), 0) -- offset for the scope
+  cache_extmarks[key] = {}
 
-  -- hide if indent is 0 and no remaining spaces
-  if indent < 1 and rem == 0 then
-    cache_extmarks[key] = false
-    return false
-  end
-
-  local hidden = math.ceil(state.leftcol / sw) -- level of the last hidden indent
-  local blank = space:rep(sw - vim.api.nvim_strwidth(config.indent.char))
-
-  local text = {} ---@type string[][]
-  text[1] = rem > 0 and { (space):rep(rem), get_hl(hidden, config.blank.hl) } or nil
-
-  for i = 1, indent do
-    if i >= offset then
-      text[#text + 1] = { config.indent.char, get_hl(i + hidden, config.indent.hl) }
-    else
-      text[#text + 1] = { blank, get_hl(i + hidden, config.blank.hl) }
+  for i = 1 + offset, indent do
+    local col = (i - 1) * sw - state.leftcol
+    if col >= 0 then
+      table.insert(cache_extmarks[key], {
+        virt_text = { { config.indent.char, get_hl(i, config.indent.hl) } },
+        virt_text_pos = "overlay",
+        virt_text_win_col = col,
+        hl_mode = "combine",
+        priority = config.indent.priority,
+        ephemeral = true,
+        virt_text_repeat_linebreak = has_repeat_lb and state.breakindent or nil,
+      })
     end
-    text[#text + 1] = { blank, get_hl(i + hidden, config.blank.hl) }
   end
-
-  cache_extmarks[key] = {
-    virt_text = text,
-    virt_text_pos = "overlay",
-    virt_text_win_col = 0,
-    hl_mode = "combine",
-    priority = config.indent.priority,
-    ephemeral = true,
-  }
   return cache_extmarks[key]
-end
-
-local function get_listchars(win)
-  local chars = vim.wo[win].list and vim.wo[win].listchars
-  local ret = {} ---@type table<string, string>
-  for _, o in ipairs(chars and vim.split(chars, ",") or {}) do
-    local k, v = o:match("(.-):(.+)")
-    if k then
-      ret[k] = v
-    end
-  end
-  return ret
 end
 
 ---@param win number
@@ -213,6 +189,7 @@ local function get_state(win, buf, top, bottom)
   end
   ---@class snacks.indent.State
   ---@field indents table<number, number>
+  ---@field blanks table<number, boolean>
   local state = {
     win = win,
     buf = buf,
@@ -223,8 +200,9 @@ local function get_state(win, buf, top, bottom)
     leftcol = vim.api.nvim_buf_call(buf, vim.fn.winsaveview).leftcol --[[@as number]],
     shiftwidth = vim.bo[buf].shiftwidth,
     indents = prev and prev.indents or { [0] = 0 },
+    blanks = prev and prev.blanks or {},
     indent_offset = 0, -- the start column of the indent guides
-    listchars = get_listchars(win),
+    breakindent = vim.wo[win].breakindent and vim.wo[win].wrap,
   }
   state.shiftwidth = state.shiftwidth == 0 and vim.bo[buf].tabstop or state.shiftwidth
   states[win] = state
@@ -242,6 +220,11 @@ function M.on_win(win, buf, top, bottom)
   local state = get_state(win, buf, top, bottom)
 
   local scope = scopes and scopes:get(win) --[[@as snacks.indent.Scope?]]
+  vim.api.nvim_buf_call(buf, function()
+    if scope and vim.fn.foldclosed(scope.from) ~= -1 then
+      scope = nil
+    end
+  end)
 
   -- adjust top and bottom if only_scope is enabled
   if config.indent.only_scope then
@@ -269,6 +252,7 @@ function M.on_win(win, buf, top, bottom)
         -- Indent for a blank line is the minimum of the previous and next non-blank line.
         -- If the previous and next non-blank lines have different indents, add shiftwidth.
         if next ~= l then
+          state.blanks[l] = true
           local prev = vim.fn.prevnonblank(l)
           indents[prev] = indents[prev] or vim.fn.indent(prev)
           indents[next] = indents[next] or vim.fn.indent(next)
@@ -286,8 +270,8 @@ function M.on_win(win, buf, top, bottom)
         current_indent = indent
       end
       indent = math.min(indent, parent_indent + state.shiftwidth)
-      local opts = show_indent and indent > 0 and get_extmark(indent, state)
-      if opts then
+      local extmarks = show_indent and indent > 0 and get_extmarks(indent, state)
+      for _, opts in ipairs(extmarks or {}) do
         vim.api.nvim_buf_set_extmark(buf, ns, l - 1, 0, opts)
       end
     end
@@ -345,7 +329,7 @@ function M.render_scope(scope, state)
 
   for l = from, to do
     local i = state.indents[l]
-    if (i and i > indent) or vim.g.snacks_indent_overlap then
+    if (i and i > indent) or vim.g.snacks_indent_overlap or state.blanks[l] then
       vim.api.nvim_buf_set_extmark(scope.buf, ns, l - 1, 0, {
         virt_text = { { config.scope.char, hl } },
         virt_text_pos = "overlay",
@@ -354,6 +338,7 @@ function M.render_scope(scope, state)
         priority = config.scope.priority,
         strict = false,
         ephemeral = true,
+        virt_text_repeat_linebreak = has_repeat_lb and state.breakindent or nil,
       })
     end
   end
@@ -375,7 +360,8 @@ function M.render_chunk(scope, state)
 
   ---@param l number
   ---@param line string
-  local function add(l, line)
+  ---@param repeat_indent? boolean
+  local function add(l, line, repeat_indent)
     vim.api.nvim_buf_set_extmark(scope.buf, ns, l - 1, 0, {
       virt_text = { { line, hl } },
       virt_text_pos = "overlay",
@@ -383,6 +369,7 @@ function M.render_chunk(scope, state)
       hl_mode = "combine",
       priority = config.chunk.priority,
       strict = false,
+      virt_text_repeat_linebreak = has_repeat_lb and repeat_indent or nil,
       ephemeral = true,
     })
   end
@@ -390,11 +377,14 @@ function M.render_chunk(scope, state)
   for l = from, to do
     local i = state.indents[l] - state.leftcol
     if l == scope.from then -- top line
+      if state.breakindent then
+        add(l, char.vertical, true)
+      end
       add(l, char.corner_top .. (char.horizontal):rep(i - col - 1))
     elseif l == scope.to then -- bottom line
       add(l, char.corner_bottom .. (char.horizontal):rep(i - col - 2) .. char.arrow)
     elseif i and i > col then -- middle line
-      add(l, char.vertical)
+      add(l, char.vertical, state.breakindent)
     end
   end
 end
@@ -436,10 +426,12 @@ function M.on_scope(win, buf, scope, prev)
     scope.win = win
     local animate = Snacks.animate.enabled({ buf = buf, name = "indent" })
 
-    -- skip animation if new lines have been added before or inside the scope
-    if prev and (vim.fn.nextnonblank(prev.from) == scope.from) then
-      animate = false
-    end
+    vim.api.nvim_buf_call(buf, function()
+      -- skip animation if new lines have been added before or inside the scope
+      if prev and (vim.fn.nextnonblank(prev.from) == scope.from) then
+        animate = false
+      end
+    end)
 
     if animate then
       step(scope, 0)

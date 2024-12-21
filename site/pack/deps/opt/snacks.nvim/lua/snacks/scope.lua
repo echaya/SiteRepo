@@ -246,6 +246,9 @@ function IndentScope:with_edge()
   local indent = math.min(math.max(before_i or self.indent, after_i or self.indent), self.indent)
   local from = before_i and before_i == indent and before_l or self.from
   local to = after_i and after_i == indent and after_l or self.to
+  if from == 0 or to == 0 or indent < 0 then
+    return self
+  end
   return self:with({ from = from, to = to, indent = indent })
 end
 
@@ -307,6 +310,18 @@ end
 ---@field node TSNode
 local TSScope = setmetatable({}, Scope)
 TSScope.__index = TSScope
+
+function TSScope.has_ts(buf)
+  if vim.b[buf].snacks_ts == nil then
+    if vim.b[buf].ts_highlight then
+      vim.b[buf].snacks_ts = true
+    else
+      local ok, parser = pcall(vim.treesitter.get_parser, buf)
+      vim.b[buf].snacks_ts = ok and parser ~= nil
+    end
+  end
+  return vim.b[buf].snacks_ts
+end
 
 -- Expand the scope to fill the range of the node
 function TSScope:fill()
@@ -380,9 +395,6 @@ end
 
 ---@param opts snacks.scope.Opts
 function TSScope:find(opts)
-  if not vim.b[opts.buf].ts_highlight then
-    return
-  end
   local lang = vim.bo[opts.buf].filetype
   local has_parser, parser = pcall(vim.treesitter.get_parser, opts.buf, lang, { error = false })
   if not has_parser or parser == nil then
@@ -476,7 +488,7 @@ function M.get(opts)
   end
 
   ---@type snacks.scope.Scope
-  local Class = opts.treesitter.enabled and vim.b[opts.buf].ts_highlight and TSScope or IndentScope
+  local Class = opts.treesitter.enabled and TSScope.has_ts(opts.buf) and TSScope or IndentScope
   local ret = Class:find(opts) --[[ @as snacks.scope.Scope? ]]
 
   -- fallback to indent based detection

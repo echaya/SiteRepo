@@ -67,14 +67,17 @@ docs for more information on how to customize these styles
     winhighlight = "NormalFloat:SnacksInputNormal,FloatBorder:SnacksInputBorder,FloatTitle:SnacksInputTitle",
     cursorline = false,
   },
-  bo = { filetype = "snacks_input" },
+  bo = {
+    filetype = "snacks_input",
+    buftype = "prompt",
+  },
   --- buffer local variables
   b = {
     completion = false, -- disable blink completions in input
   },
   keys = {
-    i_esc = { "<esc>", { "cmp_close", "cancel" }, mode = "i" },
-    -- i_esc = { "<esc>", "stopinsert", mode = "i" },
+    n_esc = { "<esc>", { "cmp_close", "cancel" }, mode = "n" },
+    i_esc = { "<esc>", { "cmp_close", "stopinsert" }, mode = "i" },
     i_cr = { "<cr>", { "cmp_accept", "confirm" }, mode = "i" },
     i_tab = { "<tab>", { "cmp_select_next", "cmp" }, mode = "i" },
     q = "cancel",
@@ -89,7 +92,7 @@ docs for more information on how to customize these styles
 ```
 
 ```lua
----@class snacks.input.Opts: snacks.input.Config
+---@class snacks.input.Opts: snacks.input.Config|{}
 ---@field prompt? string
 ---@field default? string
 ---@field completion? string

@@ -87,6 +87,7 @@ docs for more information on how to customize these styles
   height = 0,
   backdrop = { transparent = true, blend = 40 },
   keys = { q = false },
+  zindex = 40,
   wo = {
     winhighlight = "NormalFloat:Normal",
   },

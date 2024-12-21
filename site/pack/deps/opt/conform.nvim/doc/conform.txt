@@ -331,6 +331,7 @@ FORMATTERS                                                    *conform-formatter
 `fnlfmt` - A formatter for Fennel code.
 `forge_fmt` - Forge is a command-line tool that ships with Foundry. Forge tests,
             builds, and deploys your smart contracts.
+`format-dune-file` - Auto-formatter for Dune files.
 `format-queries` - Tree-sitter query formatter.
 `fourmolu` - A fork of ormolu that uses four space indentation and allows
            arbitrary configuration.
@@ -351,6 +352,7 @@ FORMATTERS                                                    *conform-formatter
             unreferenced ones.
 `goimports-reviser` - Right imports sorting & code formatting tool (goimports
                     alternative).
+`gojq` - Pure Go implementation of jq.
 `golines` - A golang formatter that fixes long lines.
 `google-java-format` - Reformats Java source code according to Google Java
                      Style.

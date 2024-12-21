@@ -28,9 +28,9 @@ function M.bufname_valid(bufname)
 end
 
 function M.validate_bufnr(bufnr)
-  validate {
-    bufnr = { bufnr, 'n' },
-  }
+  if nvim_eleven then
+    validate('bufnr', bufnr, 'number')
+  end
   return bufnr == 0 and api.nvim_get_current_buf() or bufnr
 end
 
@@ -107,10 +107,6 @@ M.path = (function()
     end
   end
 
-  local function path_join(...)
-    return table.concat(M.tbl_flatten { ... }, '/')
-  end
-
   -- Traverse the path calling cb along the way.
   local function traverse_parents(path, cb)
     path = vim.loop.fs_realpath(path)
@@ -162,19 +158,17 @@ M.path = (function()
     return dir == root
   end
 
-  local path_separator = iswin and ';' or ':'
-
   return {
-    join = path_join,
     traverse_parents = traverse_parents,
     iterate_parents = iterate_parents,
     is_descendant = is_descendant,
-    path_separator = path_separator,
   }
 end)()
 
 function M.search_ancestors(startpath, func)
-  validate { func = { func, 'f' } }
+  if nvim_eleven then
+    validate('func', func, 'function')
+  end
   if func(startpath) then
     return startpath
   end
@@ -192,14 +186,6 @@ function M.search_ancestors(startpath, func)
   end
 end
 
-function M.tbl_flatten(t)
-  return nvim_eleven and vim.iter(t):flatten(math.huge):totable() or vim.tbl_flatten(t)
-end
-
-function M.get_lsp_clients(filter)
-  return nvim_eleven and lsp.get_clients(filter) or lsp.get_active_clients(filter)
-end
-
 local function escape_wildcards(path)
   return path:gsub('([%[%]%?%*])', '\\%1')
 end
@@ -210,7 +196,7 @@ function M.root_pattern(...)
     startpath = M.strip_archive_subpath(startpath)
     for _, pattern in ipairs(patterns) do
       local match = M.search_ancestors(startpath, function(path)
-        for _, p in ipairs(vim.fn.glob(M.path.join(escape_wildcards(path), pattern), true, true)) do
+        for _, p in ipairs(vim.fn.glob(table.concat({ escape_wildcards(path), pattern }, '/'), true, true)) do
           if vim.loop.fs_stat(p) then
             return path
           end
@@ -245,6 +231,7 @@ function M.get_active_clients_list_by_ft(filetype)
   local clients = M.get_lsp_clients()
   local clients_list = {}
   for _, client in pairs(clients) do
+    --- @diagnostic disable-next-line:undefined-field
     local filetypes = client.config.filetypes or {}
     for _, ft in pairs(filetypes) do
       if ft == filetype then
@@ -326,6 +313,18 @@ function M.strip_archive_subpath(path)
   return path
 end
 
+--- Functions that can be removed once minimum required neovim version is high enough
+
+function M.tbl_flatten(t)
+  --- @diagnostic disable-next-line:deprecated
+  return nvim_eleven and vim.iter(t):flatten(math.huge):totable() or vim.tbl_flatten(t)
+end
+
+function M.get_lsp_clients(filter)
+  --- @diagnostic disable-next-line:deprecated
+  return nvim_eleven and lsp.get_clients(filter) or lsp.get_active_clients(filter)
+end
+
 --- Deprecated functions
 
 --- @deprecated use `vim.fn.isdirectory(path) == 1` instead
@@ -355,6 +354,14 @@ function M.path.exists(filename)
   local stat = vim.loop.fs_stat(filename)
   return stat and stat.type or false
 end
+
+--- @deprecated use `table.concat({"path1", "path2"})` or regular string concatenation instead
+function M.path.join(...)
+  return table.concat({ ... }, '/')
+end
+
+--- @deprecated use `vim.fn.has('win32') == 1 and ';' or ':'` instead
+M.path.path_separator = vim.fn.has('win32') == 1 and ';' or ':'
 
 --- @deprecated use `vim.fs.dirname(vim.fs.find('.hg', { path = startpath, upward = true })[1])` instead
 function M.find_mercurial_ancestor(startpath)

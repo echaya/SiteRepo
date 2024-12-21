@@ -164,14 +164,14 @@ Snacks.win = {}
 ### `Snacks.win()`
 
 ```lua
----@type fun(opts? :snacks.win.Config): snacks.win
+---@type fun(opts? :snacks.win.Config|{}): snacks.win
 Snacks.win()
 ```
 
 ### `Snacks.win.new()`
 
 ```lua
----@param opts? snacks.win.Config
+---@param opts? snacks.win.Config|{}
 ---@return snacks.win
 Snacks.win.new(opts)
 ```

@@ -133,6 +133,16 @@ Ensures the hl groups are always set, even after a colorscheme change.
 Snacks.util.set_hl(groups, opts)
 ```
 
+### `Snacks.util.throttle()`
+
+```lua
+---@generic T
+---@param fn T
+---@param opts? {ms?:number}
+---@return T
+Snacks.util.throttle(fn, opts)
+```
+
 ### `Snacks.util.var()`
 
 Get a buffer or global variable.

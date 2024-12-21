@@ -6,7 +6,7 @@
 ---@field augroup? number
 ---@field backdrop? snacks.win
 ---@field keys snacks.win.Keys[]
----@overload fun(opts? :snacks.win.Config): snacks.win
+---@overload fun(opts? :snacks.win.Config|{}): snacks.win
 local M = setmetatable({}, {
   __call = function(t, ...)
     return t.new(...)
@@ -176,7 +176,7 @@ function M.resolve(...)
   return ret
 end
 
----@param opts? snacks.win.Config
+---@param opts? snacks.win.Config|{}
 ---@return snacks.win
 function M.new(opts)
   local self = setmetatable({}, { __index = M })
@@ -442,10 +442,10 @@ function M:show()
   for k, v in pairs(self.opts.w or {}) do
     vim.w[self.win][k] = v
   end
-  Snacks.util.wo(self.win, self.opts.wo)
   if Snacks.util.is_transparent() then
     self.opts.wo.winblend = 0
   end
+  Snacks.util.wo(self.win, self.opts.wo)
   if self.opts.on_win then
     self.opts.on_win(self)
   end

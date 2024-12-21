@@ -15,6 +15,7 @@ for /r "%MoveToDir%" %%f in (*.jpg, *.png, *.gif, *.bmp, *.tiff, *.svg) do del "
 del d:\Workspace\SiteRepo\site\pack\deps\opt\nvim-treesitter\parser-info\.gitignore
 del d:\Workspace\SiteRepo\site\pack\deps\opt\nvim-treesitter\parser\.gitignore
 del d:\Workspace\SiteRepo\site\pack\deps\opt\telescope-fzf-native.nvim\.gitignore
+del d:\Workspace\SiteRepo\site\pack\deps\opt\blink.cmp\.gitignore
 
 lazygit
 :: cmd /k

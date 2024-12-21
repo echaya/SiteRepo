@@ -59,8 +59,8 @@ Snacks.words.enable()
 ### `Snacks.words.is_enabled()`
 
 ```lua
----@param buf number?
-Snacks.words.is_enabled(buf)
+---@param opts? number|{buf?:number, modes:boolean} if modes is true, also check if the current mode is enabled
+Snacks.words.is_enabled(opts)
 ```
 
 ### `Snacks.words.jump()`

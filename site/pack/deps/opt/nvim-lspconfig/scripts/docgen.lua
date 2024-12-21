@@ -178,7 +178,7 @@ local function make_lsp_sections()
             end
           end,
           function()
-            local package_json_name = util.path.join(tempdir, config_name .. '.package.json')
+            local package_json_name = table.concat({ tempdir, config_name .. '.package.json' }, '/')
             if docs.package_json then
               if not ((vim.loop.fs_stat(package_json_name) or {}).type == 'file') then
                 os.execute(string.format('curl -v -L -o %q %q', package_json_name, docs.package_json))
@@ -278,10 +278,9 @@ local function make_implemented_servers_list()
 end
 
 local function generate_readme(template_file, params)
-  vim.validate {
-    lsp_server_details = { params.lsp_server_details, 's' },
-    implemented_servers_list = { params.implemented_servers_list, 's' },
-  }
+  vim.validate('lsp_server_details', params.lsp_server_details, 'string')
+  vim.validate('implemented_servers_list', params.implemented_servers_list, 'string')
+
   local input_template = readfile(template_file)
   local readme_data = template(input_template, params)
 
