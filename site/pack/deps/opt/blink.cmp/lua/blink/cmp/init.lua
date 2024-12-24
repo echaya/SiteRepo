@@ -10,7 +10,7 @@ function cmp.setup(opts)
 
   local version = vim.version()
   if version.major == 0 and version.minor < 10 then
-    vim.notify('blink.cmp only supports nvim 0.10 and newer', vim.log.levels.ERROR)
+    vim.notify('blink.cmp only supports nvim 0.10 and newer', vim.log.levels.ERROR, { title = 'blink.cmp' })
     return
   end
 
@@ -18,7 +18,7 @@ function cmp.setup(opts)
   config.merge_with(opts)
 
   require('blink.cmp.fuzzy.download').ensure_downloaded(function(err)
-    if err then error('Error while downloading blink.cmp pre-built binary: ' .. err) end
+    if err then vim.notify(err, vim.log.levels.ERROR) end
 
     -- setup highlights, keymap, completion and signature help
     require('blink.cmp.highlights').setup()
@@ -43,7 +43,11 @@ function cmp.show(opts)
 
   vim.schedule(function()
     require('blink.cmp.completion.windows.menu').auto_show = true
-    require('blink.cmp.completion.trigger').show({ force = true, providers = opts and opts.providers })
+    require('blink.cmp.completion.trigger').show({
+      force = true,
+      providers = opts and opts.providers,
+      trigger_kind = 'manual',
+    })
   end)
   return true
 end

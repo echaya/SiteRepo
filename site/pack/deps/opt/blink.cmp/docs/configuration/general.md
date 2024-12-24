@@ -4,6 +4,8 @@ Blink cmp has *a lot* of configuration options, the following code block highlig
 
 For more common configurations, see the [recipes](../recipes.md).
 
+> [!IMPORTANT] Do not copy this entire configuration! It contains only non-default options
+
 ```lua
 {
   -- Disable for some filetypes
@@ -21,10 +23,12 @@ For more common configurations, see the [recipes](../recipes.md).
 
     -- Disable auto brackets
     -- NOTE: some LSPs may add auto brackets themselves anyway
-    accept = { auto_brackets = { enabled = false }, }
+    accept = { auto_brackets = { enabled = false }, },
 
     -- Insert completion item on selection, don't select by default
     list = { selection = 'auto_insert' },
+    -- or set per mode
+    list = { selection = function(ctx) return ctx.mode == 'cmdline' and 'auto_insert' or 'preselect' end },
 
     menu = {
       -- Don't automatically show the completion menu
@@ -51,7 +55,7 @@ For more common configurations, see the [recipes](../recipes.md).
     default = { 'lsp', 'path', 'snippets', 'buffer' },
     -- Disable cmdline completions
     cmdline = {},
-  }
+  },
 
   -- Experimental signature help support
   signature = { enabled = true }

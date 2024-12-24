@@ -1,5 +1,6 @@
 # Recipes
 
+[[toc]]
 
 ## Disable per filetype
 
@@ -15,10 +16,30 @@ end,
 
 ```lua
 completion = {
-  menu = { border = 'single' }
-  documentation = { border = 'single' }
+  menu = { border = 'single' },
+  documentation = { window = { border = 'single' } },
 },
-signature = { window = { border = 'single' } }
+signature = { window = { border = 'single' } },
+```
+
+## Change selection type per mode
+
+```lua
+completion = { 
+  list = { 
+    selection = function(ctx)
+      return ctx.mode == 'cmdline' and 'auto_insert' or 'preselect'
+    end
+  }
+}
+```
+
+## Don't show completion menu automatically in cmdline mode
+
+```lua
+completion = { 
+  menu = { auto_show = function(ctx) return ctx.mode ~= 'cmdline' end }
+}
 ```
 
 ## Select Nth item from the list
@@ -126,7 +147,7 @@ Trigger characters are defined by the sources. For example, for Lua, the trigger
 
 ```lua
 sources.providers.snippets.should_show_items = function(ctx)
-  return ctx.trigger.kind == vim.lsp.protocol.CompletionTriggerKind.TriggerCharacter
+  return ctx.trigger.initial_kind ~= 'trigger_character'
 end
 ```
 

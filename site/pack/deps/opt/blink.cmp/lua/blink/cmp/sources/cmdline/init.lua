@@ -59,7 +59,7 @@ function cmdline:get_completions(context, callback)
         table.insert(items, {
           label = completion,
           insertText = completion,
-          sortText = completion,
+          sortText = completion:lower(),
           textEdit = {
             newText = new_text,
             range = {
@@ -78,7 +78,7 @@ function cmdline:get_completions(context, callback)
       })
     end)
     :catch(function(err)
-      vim.notify('Error while fetching completions: ' .. err, vim.log.levels.ERROR)
+      vim.notify('Error while fetching completions: ' .. err, vim.log.levels.ERROR, { title = 'blink.cmp' })
       callback({ is_incomplete_backward = false, is_incomplete_forward = false, items = {} })
     end)
 

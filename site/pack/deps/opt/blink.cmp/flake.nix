@@ -23,7 +23,7 @@
         # define the packages provided by this flake
         packages = let
           src = ./.;
-          version = "0.8.1";
+          version = "0.8.2";
         in rec {
           blink-fuzzy-lib = let
             inherit (inputs.fenix.packages.${system}.minimal) toolchain;
@@ -36,6 +36,8 @@
             inherit src version;
             useFetchCargoVendor = true;
             cargoHash = "sha256-t84hokb2loZ6FPPt4eN8HzgNQJrQUdiG5//ZbmlasWY=";
+
+            nativeBuildInputs = with pkgs; [ git ];
 
             passthru.updateScript = pkgs.nix-update-script;
           };
@@ -88,6 +90,7 @@
         devShells.default = pkgs.mkShell {
           name = "blink";
           packages = with pkgs; [
+            git
             gcc
             fenix.complete.toolchain
             rust-analyzer-nightly

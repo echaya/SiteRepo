@@ -92,9 +92,12 @@ completion.trigger = {
 completion.list = {
   -- Maximum number of items to display
   max_items = 200,
+
   -- Controls if completion items will be selected automatically,
   -- and whether selection automatically inserts
   selection = 'preselect',
+  -- selection = function(ctx) return ctx.mode == 'cmdline' and 'auto_insert' or 'preselect' end,
+
   -- Controls how the completion items are selected
   -- 'preselect' will automatically select the first item in the completion list
   -- 'manual' will not select any item by default
@@ -135,7 +138,7 @@ completion.accept = {
     -- Asynchronously use semantic token to determine if brackets should be added
     semantic_token_resolution = {
       enabled = true,
-      blocked_filetypes = {},
+      blocked_filetypes = { 'java' },
       -- How long to wait for semantic tokens to return before assuming no brackets should be added
       timeout_ms = 400,
     },
@@ -271,7 +274,7 @@ completion.documentation = {
     max_height = 20,
     border = 'padded',
     winblend = 0,
-    winhighlight = 'Normal:BlinkCmpDoc,FloatBorder:BlinkCmpDocBorder,CursorLine:BlinkCmpDocCursorLine,Search:None',
+    winhighlight = 'Normal:BlinkCmpDoc,FloatBorder:BlinkCmpDocBorder,EndOfBuffer:BlinkCmpDoc',
     -- Note that the gutter will be disabled when border ~= 'none'
     scrollbar = true,
     -- Which directions to show the documentation window,
