@@ -339,6 +339,18 @@
 ---     aa,  bb
 ---     aaa, bbb
 --- <
+--- <|> Split by "|" character, trim whitespace, merge with single space.
+---
+---     Before: >
+---     |a|b|
+---     |aa|bb|
+---     |aaa    |    bbb   |
+--- <
+---     After typing `,`: >
+---     | a   | b   |
+---     | aa  | bb  |
+---     | aaa | bbb |
+--- <
 --- < > (Space bar) Squash consecutive whitespace into single single space (accept
 ---     possible indentation) and split by `%s+` pattern (keeps indentation).
 ---
@@ -608,6 +620,13 @@ MiniAlign.config = {
       opts.merge_delimiter = ' '
     end,
     --minidoc_replace_end
+    --minidoc_replace_start ['|'] = --<function: enhanced setup for '|'>,
+    ['|'] = function(steps, opts)
+      opts.split_pattern = '|'
+      table.insert(steps.pre_justify, MiniAlign.gen_step.trim())
+      opts.merge_delimiter = ' '
+    end,
+    --minidoc_replace_end
     --minidoc_replace_start [' '] = --<function: enhanced setup for ' '>,
     [' '] = function(steps, opts)
       table.insert(
@@ -738,11 +757,11 @@ MiniAlign.align_user = function(mode)
   local steps_are_from_cache = H.cache.steps ~= nil
   H.cache.region = nil
 
-  -- Track if lines were actually set to properly undo during preview
-  local lines_were_set = false
+  -- Track if lines were actually changed to properly undo during preview
+  local lines_were_changed = false
 
   -- Make initial process
-  lines_were_set = H.process_current_region(lines_were_set, mode, opts, steps)
+  lines_were_changed = H.process_current_region(lines_were_changed, mode, opts, steps)
 
   -- Make early return:
   -- - If cache is present (enables dot-repeat).
@@ -759,7 +778,7 @@ MiniAlign.align_user = function(mode)
     -- Stop in case user supplied inappropriate modifier id (abort)
     -- Also stop in case of too many iterations (guard from infinite cycle)
     if id == nil or n_iter > 1000 then
-      if lines_were_set then H.undo() end
+      if lines_were_changed then H.undo() end
       if n_iter > 1000 then H.echo({ { 'Too many modifiers typed.', 'WarningMsg' } }, true) end
       break
     end
@@ -790,8 +809,8 @@ MiniAlign.align_user = function(mode)
     steps = H.normalize_steps(steps, opts)
 
     -- Process region while tracking if lines were set at least once
-    local lines_now_set = H.process_current_region(lines_were_set, mode, opts, steps)
-    lines_were_set = lines_were_set or lines_now_set
+    local lines_now_changed = H.process_current_region(lines_were_changed, mode, opts, steps)
+    lines_were_changed = lines_were_changed or lines_now_changed
 
     -- Stop in "no preview" mode right after `split` is defined
     if not with_preview and opts.split_pattern ~= '' then break end
@@ -1648,12 +1667,12 @@ end
 -- Work with regions ----------------------------------------------------------
 ---@return boolean Whether some lines were actually set.
 ---@private
-H.process_current_region = function(lines_were_set, mode, opts, steps)
+H.process_current_region = function(lines_were_changed, mode, opts, steps)
   -- Cache current options and steps for dot-repeat
   H.cache.opts, H.cache.steps = opts, steps
 
   -- Undo previously set lines
-  if lines_were_set then H.undo() end
+  if lines_were_changed then H.undo() end
 
   -- Get current region. NOTE: use cached value to ensure that the same region
   -- is processed during preview. Otherwise there might be problems with
@@ -1681,7 +1700,7 @@ H.process_current_region = function(lines_were_set, mode, opts, steps)
   vim.cmd('redraw')
 
   -- Confirm that lines were actually set
-  return true
+  return table.concat(strings) ~= table.concat(strings_aligned)
 end
 
 H.get_current_region = function()

@@ -588,6 +588,10 @@ end
 --- Used to jump to next/previous tabstop and stop active session respectively.
 --- Use |MiniSnippets.session.jump()| and |MiniSnippets.session.stop()| for custom
 --- Insert mode mappings.
+--- Note: do not use `"<C-n>"` or `"<C-p>"` for any action as they conflict with
+--- built-in completion: it forces them to mean "change focus to next/previous
+--- completion item". This matters more frequently than when there is a tabstop
+--- with choices due to how this module handles built-in completion during jumps.
 ---
 --- # Expand ~
 ---
@@ -1796,8 +1800,9 @@ H.parse_processors.dollar_tabstop = function(c, s, n)
   local new_node = { text = {} }
   s:add_node(new_node)
   if c == '$' then return s:set_name('dollar') end -- Case of `$1$2` and `$1$a`
-  table.insert(new_node.text, c) -- Case of `$1a`
   s:set_name('text')
+  if c == '\\' then return s:set_in(new_node, 'after_slash', true) end -- Case of `${1:{$2\}}`
+  table.insert(new_node.text, c) -- Case of `$1a`
 end
 
 H.parse_processors.dollar_var = function(c, s, n)
@@ -1806,8 +1811,9 @@ H.parse_processors.dollar_var = function(c, s, n)
   local new_node = { text = {} }
   s:add_node(new_node)
   if c == '$' then return s:set_name('dollar') end -- Case of `$a$b` and `$a$1`
-  table.insert(new_node.text, c) -- Case of `$a-`
   s:set_name('text')
+  if c == '\\' then return s:set_in(new_node, 'after_slash', true) end -- Case of `${AAA:{$1\}}`
+  table.insert(new_node.text, c) -- Case of `$a-`
 end
 
 H.parse_processors.dollar_lbrace = function(c, s, n)
@@ -2124,19 +2130,39 @@ end
 
 H.session_ensure_gravity = function(session)
   -- Ensure proper gravity relative to reference node (first node with current
-  -- tabstop): "left" before, "expand" at, "right" after. This should account
-  -- for typing in snippets like `$1$2$1$2$1` (in both 1 and 2).
+  -- tabstop): "left" before, "expand" at and all its parents, "right" after.
+  -- This accounts for typing in snippets like `$1$2$1$2$1` (in both 1 and 2)
+  -- and correct tracking of $2 in `${2:$1}` (should expand if typing in 1).
   local buf_id, cur_tabstop, base_gravity = session.buf_id, session.cur_tabstop, 'left'
+  local parent_extmarks = {}
   local ensure = function(n)
     local is_ref_node = n.tabstop == cur_tabstop and base_gravity == 'left'
+    if is_ref_node then
+      for _, extmark_id in ipairs(parent_extmarks) do
+        H.extmark_set_gravity(buf_id, extmark_id, 'expand')
+      end
+      -- Disable parent stack tracking, as reference node is accounted for
+      parent_extmarks = nil
+    end
     H.extmark_set_gravity(buf_id, n.extmark_id, is_ref_node and 'expand' or base_gravity)
     base_gravity = (is_ref_node or base_gravity == 'right') and 'right' or 'left'
   end
-  -- NOTE: This relies on `H.nodes_traverse` to first apply to the node and
-  -- only later (recursively) to placeholder nodes, which makes them all have
-  -- "right" gravity and thus being removable during replacing placeholder (as
-  -- they will not cover newly inserted text).
-  H.nodes_traverse(session.nodes, ensure)
+
+  local ensure_in_nodes
+  ensure_in_nodes = function(nodes)
+    for _, n in ipairs(nodes) do
+      -- NOTE: apply first to the node and only later to placeholder nodes,
+      -- which makes them have "right" gravity and thus being removable during
+      -- replacing placeholder (as they will not cover newly inserted text).
+      ensure(n)
+      if n.placeholder ~= nil then
+        if parent_extmarks ~= nil then table.insert(parent_extmarks, n.extmark_id) end
+        ensure_in_nodes(n.placeholder)
+        if parent_extmarks ~= nil then parent_extmarks[#parent_extmarks] = nil end
+      end
+    end
+  end
+  ensure_in_nodes(session.nodes)
 end
 
 H.session_get_ref_node = function(session)
@@ -2550,10 +2576,11 @@ end
 
 H.hide_completion = function()
   -- NOTE: `complete()` instead of emulating <C-y> has immediate effect
-  -- (without the need to `vim.schedule()`). The downside is that `fn.mode(1)`
-  -- returns 'ic' (i.e. not "i" for clean Insert mode). Appending
-  -- ` | call feedkeys("\\<C-y>", "n")` removes that, but still would require
-  -- workarounds to work in edge cases.
+  -- (without the need to `vim.schedule()`). The downsides are that `fn.mode(1)`
+  -- returns 'ic' (i.e. not "i" for clean Insert mode) and <C-n>/<C-p> act as if
+  -- there is completion active (thus not allowing them as custom mappings).
+  -- Appending ` | call feedkeys("\\<C-y>", "n")` removes that, but still would
+  -- require workarounds to work in edge cases.
   if vim.fn.mode() == 'i' then vim.cmd('noautocmd call complete(col("."), [])') end
 end
 
