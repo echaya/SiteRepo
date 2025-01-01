@@ -1,2 +1,0 @@
---- @alias blink.cmp.WindowBorderChar string | table
---- @alias blink.cmp.WindowBorder 'single' | 'double' | 'rounded' | 'solid' | 'shadow' | 'padded' | 'none' | blink.cmp.WindowBorderChar[]
