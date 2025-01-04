@@ -222,7 +222,7 @@
     "revision": "69086d7627c03e1f4baf766bcef14c60d9e92331"
   },
   "gdscript": {
-    "revision": "75ce61d196717b8c183fa6066676540c81e24dca"
+    "revision": "48b49330888a4669b48619b211cc8da573827725"
   },
   "gdshader": {
     "revision": "ffd9f958df13cae04593781d7d2562295a872455"
@@ -270,7 +270,7 @@
     "revision": "49c43532689fe1f53e8b9e009d0521cab02c432b"
   },
   "godot_resource": {
-    "revision": "74105cc46a09850ebe626b894ecc6c61a12fb999"
+    "revision": "941955d027f1d8530501e77ce5e1d6035f5f99c1"
   },
   "gomod": {
     "revision": "3b01edce2b9ea6766ca19328d1850e456fde3103"
@@ -585,7 +585,7 @@
     "revision": "77625d78eebc3ffc44d114a07b2f348dff3061b0"
   },
   "properties": {
-    "revision": "f93f673990deffbfa548826eebade93af81887b4"
+    "revision": "579b62f5ad8d96c2bb331f07d1408c92767531d9"
   },
   "proto": {
     "revision": "e9f6b43f6844bd2189b50a422d4e2094313f6aa3"
@@ -618,7 +618,7 @@
     "revision": "6b2b5e41734bd6f07ea4c36ac20fb6f14061c841"
   },
   "qmljs": {
-    "revision": "6d4db242185721e1f5ef21fde613ca90c743ec47"
+    "revision": "8fef30e231d74b65c713bcbac21956156d8963da"
   },
   "query": {
     "revision": "a6674e279b14958625d7a530cabe06119c7a1532"

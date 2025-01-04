@@ -222,8 +222,7 @@
 ---            typing `x` at first placeholder results in `T1=x T1=x`.
 ---
 --- - Tabstop can also have choices: suggestions about tabstop text. It is denoted
----   as `${1|a,b,c|}`. Choices are shown (with |ins-completion| like interface)
----   after jumping to tabstop. First choice is used as placeholder.
+---   as `${1|a,b,c|}`. First choice is used as placeholder.
 ---
 ---   Example: `T1=${1|left,right|}` is expanded as `T1=left`.
 ---
@@ -242,6 +241,7 @@
 --- - Variable `TM_SELECTED_TEXT` is resolved as contents of |quote_quote| register.
 ---   It assumes that text is put there prior to expanding. For example, visually
 ---   select, press |c|, type prefix, and expand.
+---   See |MiniSnippets-examples| for how to adjust this.
 --- - Environment variables are recognized and supported: `V1=$VIMRUNTIME` will
 ---   use an actual value of |$VIMRUNTIME|.
 --- - Variable transformations are not supported during snippet session. It would
@@ -284,6 +284,8 @@
 ---   When finished with current tabstop, jump to next with <C-l>. Repeat.
 ---   If changed mind about some previous tabstop, jump back with <C-h>.
 ---   Jumping also wraps around the edge (first tabstop is next after final).
+---
+--- - If tabstop has choices, use <C-n> / <C-p> to select next / previous item.
 ---
 --- - Starting another snippet session while there is an active one is allowed.
 ---   This creates nested sessions: suspend current, start the new one.
@@ -439,6 +441,24 @@
 ---   end
 ---   local au_opts = { pattern = 'MiniSnippetsSessionJump', callback = fin_stop }
 ---   vim.api.nvim_create_autocmd('User', au_opts)
+--- <
+--- # Customize variable evaluation ~
+---
+--- Create environment variables and `config.expand.insert` wrapper: >lua
+---
+---   -- Use evnironment variables with value is same for all snippet sessions
+---   vim.loop.os_setenv('USERNAME', 'user')
+---
+---   -- Compute custom lookup for variables with dynamic values
+---   local insert_with_lookup = function(snippet)
+---     local lookup = { TM_SELECTED_TEXT = vim.fn.getreg('*') }
+---     return MiniSnippets.default_insert(snippet, { lookup = lookup })
+---   end
+---
+---   require('mini.snippets').setup({
+---     -- ... Set up snippets ...
+---     expand = { insert = insert_with_lookup },
+---   })
 --- <
 --- # Using Neovim's built-ins to insert snippet ~
 ---
@@ -638,8 +658,8 @@ end
 ---     return MiniSnippets.default_prepare(raw_snippets, { context = cont })
 ---   end
 ---   -- Perform fuzzy match based only on alphanumeric characters
----   local my_m = function(snippets, pos)
----     return MiniSnippets.default_match(snippets, pos, {pattern_fuzzy = '%w*'})
+---   local my_m = function(snippets)
+---     return MiniSnippets.default_match(snippets, { pattern_fuzzy = '%w*' })
 ---   end
 ---   -- Always insert the best matched snippet
 ---   local my_s = function(snippets, insert) return insert(snippets[1]) end
@@ -1167,6 +1187,14 @@ end
 ---   adjusted in |MiniSnippets.config| `mappings`.
 ---   See |MiniSnippets.session.jump()| for jumping details.
 ---
+--- - If tabstop has choices, all of them are shown after each jump and deleting
+---   tabstop text. It is done with |complete()|, so use <C-n> / <C-p> to select
+---   next / previous choice. Type text to narrow down the list.
+---   Works best when 'completeopt' option contains `menuone` and `noselect` flags.
+---   Note: deleting character hides the list due to how |complete()| works;
+---   delete whole tabstop text (for example with one or more |i_CTRL-W|) for
+---   full list to reappear.
+---
 --- - Nest another session by expanding snippet in the same way as without
 ---   active session (can be even done in another buffer). If snippet has no
 ---   actionable tabstop, text is just inserted. Otherwise start nested session:
@@ -1236,8 +1264,8 @@ end
 ---     Default: "•".
 ---   - <empty_tabstop_final> `(string)` - used to visualize empty final tabstop(s).
 ---     Default: "∎".
----   - <lookup> `(table)` - passed to |MiniSnippets.parse()|.
----     Default: `{}`.
+---   - <lookup> `(table)` - passed to |MiniSnippets.parse()|. Use it to adjust
+---     how variables are evaluated. Default: `{}`.
 MiniSnippets.default_insert = function(snippet, opts)
   if not H.is_snippet(snippet) then H.error('`snippet` should be a snippet table') end
 
@@ -2126,8 +2154,7 @@ H.session_tabstop_focus = function(session, tabstop_id)
   H.set_cursor(pos)
 
   -- Show choices: if present and match node text (or all if still placeholder)
-  local matched_choices = H.session_match_choices(ref_node.choices, ref_node.text or '')
-  H.show_completion(matched_choices, col + 1)
+  H.show_completion(ref_node.choices, col + 1)
 end
 
 H.session_ensure_gravity = function(session)
@@ -2172,13 +2199,6 @@ H.session_get_ref_node = function(session)
   local find = function(n) res = res or (n.tabstop == cur_tabstop and n or nil) end
   H.nodes_traverse(session.nodes, find)
   return res
-end
-
-H.session_match_choices = function(choices, prefix)
-  if choices == nil then return {} end
-  if prefix == '' then return choices end
-  if vim.o.completeopt:find('fuzzy') ~= nil then return vim.fn.matchfuzzy(choices, prefix) end
-  return vim.tbl_filter(function(c) return vim.startswith(c, prefix) end, choices)
 end
 
 H.session_is_valid = function(session)
@@ -2251,8 +2271,9 @@ H.session_sync_current_tabstop = function(session)
   session._no_sync = nil
   H.session_ensure_gravity(session)
 
-  -- Maybe show choices
-  if cur_text == '' then H.show_completion(ref_node.choices) end
+  -- Maybe show choices for empty tabstop at cursor
+  local cur_pos = vim.api.nvim_win_get_cursor(0)
+  if cur_text == '' and cur_pos[1] == (row + 1) and cur_pos[2] == col then H.show_completion(ref_node.choices) end
 
   -- Make highlighting up to date
   H.session_update_hl(session)

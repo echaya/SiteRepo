@@ -1725,6 +1725,9 @@ Snippet to enable the language server:
 require'lspconfig'.ccls.setup{}
 ```
 
+Commands:
+- CclsSwitchSourceHeader: Switch between source/header
+
 Default config:
 - `cmd` :
   ```lua
@@ -1738,7 +1741,7 @@ Default config:
   ```lua
   "utf-32"
   ```
-- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/ccls.lua:4](../lua/lspconfig/configs/ccls.lua#L4)
+- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/ccls.lua:24](../lua/lspconfig/configs/ccls.lua#L24)
 - `single_file_support` : `false`
 
 
@@ -8726,9 +8729,7 @@ Install the gem. There's no need to require it, since the server is used as a
 standalone executable.
 
 ```sh
-group :development do
-  gem "ruby-lsp", require: false
-end
+gem install ruby-lsp
 ```
 
 Snippet to enable the language server:
