@@ -38,7 +38,7 @@
           # nvim source files
           # all that are not nix, nor rust
           nvimFs = fs.difference ./. (fs.union nixFs rustFs);
-          version = "0.9.2";
+          version = "0.9.3";
         in {
           blink-fuzzy-lib = let
             inherit (inputs'.fenix.packages.minimal) toolchain;
@@ -85,6 +85,7 @@
               name = "build-plugin";
               runtimeInputs = with pkgs; [ fenix.minimal.toolchain gcc ];
               text = ''
+                export LIBRARY_PATH="${lib.makeLibraryPath [ pkgs.libiconv ]}";
                 cargo build --release
               '';
             };
@@ -105,4 +106,11 @@
         formatter = pkgs.nixfmt-classic;
       };
     };
+
+  nixConfig = {
+    extra-substituters = [ "https://nix-community.cachix.org" ];
+    extra-trusted-public-keys = [
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs"
+    ];
+  };
 }

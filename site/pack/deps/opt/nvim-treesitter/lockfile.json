@@ -54,7 +54,7 @@
     "revision": "3aa2995549d5d8b26928e8d3fa2770fd4327414e"
   },
   "c_sharp": {
-    "revision": "4bf615f8d688f50d69fc5677187dc35f22e03ad6"
+    "revision": "acff8cbb53a1d7b9cd07b209c9933a0e2da9ef35"
   },
   "cairo": {
     "revision": "6238f609bea233040fe927858156dee5515a0745"
@@ -123,7 +123,7 @@
     "revision": "4a6c08abfb54827db4e722d6cdca81b093898988"
   },
   "diff": {
-    "revision": "63439b5e6e35750aff1e53d9eecc663d369c54bc"
+    "revision": "e42b8def4f75633568f1aecfe01817bf15164928"
   },
   "disassembly": {
     "revision": "0229c0211dba909c5d45129ac784a3f4d49c243a"
@@ -396,7 +396,7 @@
     "revision": "ffdd9fe4dccdc26d62ce1654fceac52c394f0cf3"
   },
   "just": {
-    "revision": "4f4e566fe47c30b14cfe388a28f70b79009609e5"
+    "revision": "bb0c898a80644de438e6efe5d88d30bf092935cd"
   },
   "kconfig": {
     "revision": "9ac99fe4c0c27a35dc6f757cef534c646e944881"
@@ -486,7 +486,7 @@
     "revision": "281d184b8240b2b22670b8907b57b6d6842db6f3"
   },
   "nickel": {
-    "revision": "ddaa2bc22355effd97c0d6b09ff5962705c6368d"
+    "revision": "25464b33522c3f609fa512aa9651707c0b66d48b"
   },
   "nim": {
     "revision": "897e5d346f0b59ed62b517cfb0f1a845ad8f0ab7"
@@ -516,10 +516,10 @@
     "revision": "28d3b2e25a0b1881d1b47ed1924ca276c7003d45"
   },
   "ocaml": {
-    "revision": "98c2130c59ca7553b47086f91c5d22180151ad55"
+    "revision": "781514ec0b786e516e4da3edc64fdfcf76400e4e"
   },
   "ocaml_interface": {
-    "revision": "98c2130c59ca7553b47086f91c5d22180151ad55"
+    "revision": "781514ec0b786e516e4da3edc64fdfcf76400e4e"
   },
   "ocamllex": {
     "revision": "4b9898ccbf198602bb0dec9cd67cc1d2c0a4fad2"
@@ -762,7 +762,7 @@
     "revision": "395006713db3bbb90d267ebdfcbf1881b399b05c"
   },
   "swift": {
-    "revision": "742723056556ec80ca4da09a6411fff86b330911"
+    "revision": "f4be8072f18fb9704fd35d4b8154ae2b19e314c0"
   },
   "sxhkdrc": {
     "revision": "440d5f913d9465c9c776a1bd92334d32febcf065"
@@ -900,7 +900,7 @@
     "revision": "ce150c5be7f617e18ffa2064213e5d9c4cb5d69e"
   },
   "xresources": {
-    "revision": "7c7b03e69710a31031e02bc18a7c3c6542a010e2"
+    "revision": "8117b0ab58df8afb902c0862b7f6eb3bbb06c7ab"
   },
   "yaml": {
     "revision": "b733d3f5f5005890f324333dd57e1f0badec5c87"
