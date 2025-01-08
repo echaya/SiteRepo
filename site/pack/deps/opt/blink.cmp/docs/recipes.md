@@ -29,9 +29,10 @@ signature = { window = { border = 'single' } },
 ```lua
 completion = { 
   list = { 
-    selection = function(ctx)
-      return ctx.mode == 'cmdline' and 'auto_insert' or 'preselect'
-    end
+    selection = {
+      preselect = function(ctx) return ctx.mode ~= 'cmdline' end,
+      auto_insert = function(ctx) return ctx.mode ~= 'cmdline' end
+    }
   }
 }
 ```
@@ -133,6 +134,22 @@ vim.api.nvim_create_autocmd('User', {
     vim.b.copilot_suggestion_hidden = false
   end,
 })
+```
+
+### Show on newline, tab and space
+
+Note that you may want to add the override to other sources as well, since if the LSP doesnt return any items, we won't show the menu if it was triggered by any of these three characters.
+
+```lua
+-- by default, blink.cmp will block newline, tab and space trigger characters, disable that behavior
+completion.trigger.blocked_trigger_characters = {}
+
+-- add newline, tab and space to LSP source trigger characters
+sources.providers.lsp.override.get_trigger_characters = function(self)
+  local trigger_characters = self:get_trigger_characters()
+  vim.list_extend(trigger_characters, { '\n', '\t', ' ' })
+  return trigger_characters
+end
 ```
 
 ## Sources

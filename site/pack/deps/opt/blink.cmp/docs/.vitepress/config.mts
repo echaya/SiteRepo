@@ -1,14 +1,25 @@
 import { defineConfig } from 'vitepress'
 import { tabsMarkdownPlugin } from 'vitepress-plugin-tabs'
 import taskLists from 'markdown-it-task-lists'
+import { execSync } from 'node:child_process'
+
+const isMain = process.env.IS_RELEASE !== 'true'
+const version = execSync('git describe --tags --abbrev=0', { encoding: 'utf-8' }).trim()
+
+const siteUrl = isMain ? 'https://main.cmp.saghen.dev' : 'https://cmp.saghen.dev'
+const otherSiteUrl = isMain ? 'https://cmp.saghen.dev' : 'https://main.cmp.saghen.dev'
+
+const title = isMain ? 'Main' : version
+const otherTitle = isMain ? version : 'Main'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: 'Blink Completion (blink.cmp)',
   description: 'Performant, batteries-included completion plugin for Neovim',
-  sitemap: { hostname: 'https://cmp.saghen.dev/' },
+  sitemap: { hostname: siteUrl },
   head: [['link', { rel: 'icon', href: '/favicon.png' }]],
   themeConfig: {
+    nav: [{ text: `Version: ${title}`, items: [{ text: otherTitle, link: otherSiteUrl }] }],
     sidebar: [
       { text: 'Introduction', link: '/' },
       { text: 'Installation', link: '/installation' },

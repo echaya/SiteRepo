@@ -1,4 +1,4 @@
-# Snippets <a href="./reference#snippets"><Badge type="info" text="Go to default configuration" /></a>
+# Snippets <Badge type="info"><a href="./reference#snippets">Go to default configuration</a></Badge>
 
 Blink uses the `vim.snippet` API by default for expanding and navigating snippets. The built-in `snippets` source will load [friendly-snippets](https://github.com/rafamadriz/friendly-snippets), if available, and load any snippets found at `~/.config/nvim/snippets/`. For use with Luasnip, see the [Luasnip section](#luasnip).
 
@@ -43,18 +43,26 @@ By default, the `snippets` source will check `~/.config/nvim/snippets` for your 
   -- `main` does not work at the moment
   dependencies = { 'L3MON4D3/LuaSnip', version = 'v2.*' },
   opts = {
-    snippets = {
-      expand = function(snippet) require('luasnip').lsp_expand(snippet) end,
-      active = function(filter)
-        if filter and filter.direction then
-          return require('luasnip').jumpable(filter.direction)
-        end
-        return require('luasnip').in_snippet()
-      end,
-      jump = function(direction) require('luasnip').jump(direction) end,
-    },
+    snippets = { preset = 'luasnip' },
+    -- ensure you have the `snippets` source (enabled by default)
     sources = {
-      default = { 'lsp', 'path', 'luasnip', 'buffer' },
+      default = { 'lsp', 'path', 'snippets', 'buffer' },
+    },
+  }
+}
+```
+
+## `mini.snippets`
+
+```lua
+{
+  'saghen/blink.cmp',
+  dependencies = 'echasnovski/mini.snippets',
+  opts = {
+    snippets = { preset = 'mini_snippets' },
+    -- ensure you have the `snippets` source (enabled by default)
+    sources = {
+      default = { 'lsp', 'path', 'snippets', 'buffer' },
     },
   }
 }
