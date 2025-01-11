@@ -6,9 +6,6 @@ local util = require('gitsigns.util')
 local system = require('gitsigns.system').system
 local check_version = require('gitsigns.git.version').check
 
---- @type fun(cmd: string[], opts?: vim.SystemOpts): vim.SystemCompleted
-local asystem = async.wrap(3, system)
-
 local uv = vim.uv or vim.loop
 
 --- @class Gitsigns.RepoInfo
@@ -28,7 +25,9 @@ local M = {}
 --- @async
 --- @param args string[]
 --- @param spec? Gitsigns.Git.JobSpec
---- @return string[] stdout, string? stderr
+--- @return string[] stdout
+--- @return string? stderr
+--- @return integer code
 function M:command(args, spec)
   spec = spec or {}
   spec.cwd = self.toplevel
@@ -73,9 +72,7 @@ end
 --- @return boolean
 local function iconv_supported(encoding)
   -- TODO(lewis6991): needs https://github.com/neovim/neovim/pull/21924
-  if vim.startswith(encoding, 'utf-16') then
-    return false
-  elseif vim.startswith(encoding, 'utf-32') then
+  if vim.startswith(encoding, 'utf-16') or vim.startswith(encoding, 'utf-32') then
     return false
   end
   return true
@@ -142,7 +139,7 @@ function M.get(dir, gitdir, toplevel)
 
   gitdir = info.gitdir
   if not repo_cache[gitdir] then
-    repo_cache[gitdir] = {1, new(info)}
+    repo_cache[gitdir] = { 1, new(info) }
   else
     local refcount = repo_cache[gitdir][1]
     repo_cache[gitdir][1] = refcount + 1
@@ -168,6 +165,7 @@ end
 
 local has_cygpath = jit and jit.os == 'Windows' and vim.fn.executable('cygpath') == 1
 
+--- @async
 --- @generic S
 --- @param path S
 --- @return S
@@ -175,7 +173,8 @@ local function normalize_path(path)
   if path and has_cygpath and not uv.fs_stat(path) then
     -- If on windows and path isn't recognizable as a file, try passing it
     -- through cygpath
-    path = asystem({ 'cygpath', '-aw', path }).stdout
+    --- @type string
+    path = async.await(3, system, { 'cygpath', '-aw', path }).stdout
   end
   return path
 end
@@ -186,26 +185,24 @@ end
 --- @param cwd string
 --- @return string
 local function process_abbrev_head(gitdir, head_str, cwd)
-  if not gitdir then
+  if not gitdir or head_str ~= 'HEAD' then
     return head_str
   end
-  if head_str == 'HEAD' then
-    local short_sha = git_command({ 'rev-parse', '--short', 'HEAD' }, {
-      ignore_error = true,
-      cwd = cwd,
-    })[1] or ''
-    if log.debug_mode and short_sha ~= '' then
-      short_sha = 'HEAD'
-    end
-    if
-      util.path_exists(gitdir .. '/rebase-merge')
-      or util.path_exists(gitdir .. '/rebase-apply')
-    then
-      return short_sha .. '(rebasing)'
-    end
-    return short_sha
+
+  local short_sha = git_command({ 'rev-parse', '--short', 'HEAD' }, {
+    ignore_error = true,
+    cwd = cwd,
+  })[1] or ''
+
+  if log.debug_mode and short_sha ~= '' then
+    short_sha = 'HEAD'
   end
-  return head_str
+
+  if util.path_exists(gitdir .. '/rebase-merge') or util.path_exists(gitdir .. '/rebase-apply') then
+    return short_sha .. '(rebasing)'
+  end
+
+  return short_sha
 end
 
 --- @async

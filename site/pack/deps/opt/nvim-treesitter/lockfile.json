@@ -408,7 +408,7 @@
     "revision": "0662afbd2ce19b17c603acf67ae707b4d69ab8f4"
   },
   "koto": {
-    "revision": "7258681498ac92f24b2d7ebb844b5e79dc3cf9ac"
+    "revision": "329b0e84ef6cc6950665de4accd0bdda1601a2f1"
   },
   "kusto": {
     "revision": "8353a1296607d6ba33db7c7e312226e5fc83e8ce"
@@ -516,10 +516,10 @@
     "revision": "28d3b2e25a0b1881d1b47ed1924ca276c7003d45"
   },
   "ocaml": {
-    "revision": "781514ec0b786e516e4da3edc64fdfcf76400e4e"
+    "revision": "57644edfbba0edb38ac17dba2add4c243fa3539b"
   },
   "ocaml_interface": {
-    "revision": "781514ec0b786e516e4da3edc64fdfcf76400e4e"
+    "revision": "57644edfbba0edb38ac17dba2add4c243fa3539b"
   },
   "ocamllex": {
     "revision": "4b9898ccbf198602bb0dec9cd67cc1d2c0a4fad2"
