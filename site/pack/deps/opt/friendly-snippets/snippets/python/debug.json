@@ -6,7 +6,7 @@
     },
     "iPDB set trace": {
         "prefix": "ipdb",
-        "body": "__import__('ipdb').set_trace()$0",
+        "body": "__import__('IPython').core.debugger.set_trace()",
         "description": "Code snippet for ipdb debug"
     },
     "rPDB set trace": {

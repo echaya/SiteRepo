@@ -445,6 +445,22 @@
 ---   local au_opts = { pattern = 'MiniSnippetsSessionJump', callback = fin_stop }
 ---   vim.api.nvim_create_autocmd('User', au_opts)
 --- <
+--- # Stop all sessions on Normal mode exit ~
+---
+--- Use |ModeChanged| and |MiniSnippets-events| events: >lua
+---
+---   local make_stop = function()
+---     local au_opts = { pattern = '*:n', once = true }
+---     au_opts.callback = function()
+---       while MiniSnippets.session.get() do
+---         MiniSnippets.session.stop()
+---       end
+---     end
+---     vim.api.nvim_create_autocmd('ModeChanged', au_opts)
+---   end
+---   local opts = { pattern = 'MiniSnippetsSessionStart', callback = make_stop }
+---   vim.api.nvim_create_autocmd('User', opts)
+--- <
 --- # Customize variable evaluation ~
 ---
 --- Create environment variables and `config.expand.insert` wrapper: >lua
@@ -1296,7 +1312,7 @@ MiniSnippets.session = {}
 
 --- Get data about active session
 ---
----@param all boolean Whether to return array with the whole session stack.
+---@param all boolean|nil Whether to return array with the whole session stack.
 ---   Default: `false`.
 ---
 ---@return table Single table with session data (if `all` is `false`) or array of them.
@@ -1622,7 +1638,9 @@ H.get_default_context = function()
   local ref_range, res_level = { lnum - 1, col - 1, lnum - 1, col }, 0
   local traverse
   traverse = function(lang_tree, level)
-    if lang_tree:contains(ref_range) and level > res_level then lang = lang_tree:lang() or lang end
+    if lang_tree:contains(ref_range) and level > res_level then
+      lang, res_level = lang_tree:lang() or lang, level
+    end
     for _, child_lang_tree in pairs(lang_tree:children()) do
       traverse(child_lang_tree, level + 1)
     end
