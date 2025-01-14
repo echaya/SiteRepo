@@ -8,6 +8,7 @@ Nvim by running `:help lspconfig-all`.
 - [ada_ls](#ada_ls)
 - [agda_ls](#agda_ls)
 - [aiken](#aiken)
+- [alloy_ls](#alloy_ls)
 - [anakin_language_server](#anakin_language_server)
 - [angularls](#angularls)
 - [ansiblels](#ansiblels)
@@ -112,6 +113,7 @@ Nvim by running `:help lspconfig-all`.
 - [futhark_lsp](#futhark_lsp)
 - [gdscript](#gdscript)
 - [gdshader_lsp](#gdshader_lsp)
+- [gh_actions_ls](#gh_actions_ls)
 - [ghcide](#ghcide)
 - [ghdl_ls](#ghdl_ls)
 - [ginko_ls](#ginko_ls)
@@ -261,6 +263,7 @@ Nvim by running `:help lspconfig-all`.
 - [salt_ls](#salt_ls)
 - [scheme_langserver](#scheme_langserver)
 - [scry](#scry)
+- [selene3p_ls](#selene3p_ls)
 - [serve_d](#serve_d)
 - [shopify_theme_ls](#shopify_theme_ls)
 - [sixtyfps](#sixtyfps)
@@ -291,6 +294,7 @@ Nvim by running `:help lspconfig-all`.
 - [steep](#steep)
 - [stimulus_ls](#stimulus_ls)
 - [stylelint_lsp](#stylelint_lsp)
+- [stylua3p_ls](#stylua3p_ls)
 - [superhtml](#superhtml)
 - [svelte](#svelte)
 - [svlangserver](#svlangserver)
@@ -436,6 +440,48 @@ Default config:
   { "aiken" }
   ```
 - `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/aiken.lua:4](../lua/lspconfig/configs/aiken.lua#L4)
+
+
+## alloy_ls
+
+https://github.com/AlloyTools/org.alloytools.alloy
+
+Alloy is a formal specification language for describing structures and a tool for exploring them.
+
+You may also need to configure the filetype for Alloy (*.als) files:
+
+```
+autocmd BufNewFile,BufRead *.als set filetype=alloy
+```
+
+or
+
+```lua
+vim.filetype.add({
+  pattern = {
+    ['.*/*.als'] = 'alloy',
+  },
+})
+```
+
+Alternatively, you may use a syntax plugin like https://github.com/runoshun/vim-alloy.
+
+Snippet to enable the language server:
+```lua
+require'lspconfig'.alloy_ls.setup{}
+```
+
+Default config:
+- `cmd` :
+  ```lua
+  { "alloy", "lsp" }
+  ```
+- `filetypes` :
+  ```lua
+  { "alloy" }
+  ```
+- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/alloy_ls.lua:2](../lua/lspconfig/configs/alloy_ls.lua#L2)
+- `single_file_support` : `true`
 
 
 ## anakin_language_server
@@ -4030,6 +4076,46 @@ Default config:
 - `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/gdshader_lsp.lua:4](../lua/lspconfig/configs/gdshader_lsp.lua#L4)
 
 
+## gh_actions_ls
+
+https://github.com/lttb/gh-actions-language-server
+
+Language server for GitHub Actions.
+
+`gh-actions-language-server` can be installed via `npm`:
+
+```sh
+npm install -g gh-actions-language-server
+```
+
+Snippet to enable the language server:
+```lua
+require'lspconfig'.gh_actions_ls.setup{}
+```
+
+Default config:
+- `capabilities` :
+  ```lua
+  {
+    workspace = {
+      didChangeWorkspaceFolders = {
+        dynamicRegistration = true
+      }
+    }
+  }
+  ```
+- `cmd` :
+  ```lua
+  { "gh-actions-language-server", "--stdio" }
+  ```
+- `filetypes` :
+  ```lua
+  { "yaml" }
+  ```
+- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/gh_actions_ls.lua:4](../lua/lspconfig/configs/gh_actions_ls.lua#L4)
+- `single_file_support` : `false`
+
+
 ## ghcide
 
 https://github.com/digital-asset/ghcide
@@ -4589,7 +4675,7 @@ Default config:
   ```
 - `filetypes` :
   ```lua
-  { "c", "cpp", "cs", "gitcommit", "go", "html", "java", "javascript", "lua", "markdown", "nix", "python", "ruby", "rust", "swift", "toml", "typescript", "typescriptreact", "haskell", "cmake" }
+  { "c", "cpp", "cs", "gitcommit", "go", "html", "java", "javascript", "lua", "markdown", "nix", "python", "ruby", "rust", "swift", "toml", "typescript", "typescriptreact", "haskell", "cmake", "typst" }
   ```
 - `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/harper_ls.lua:2](../lua/lspconfig/configs/harper_ls.lua#L2)
 - `single_file_support` : `true`
@@ -9063,6 +9149,29 @@ Default config:
 - `single_file_support` : `true`
 
 
+## selene3p_ls
+
+https://github.com/antonk52/lua-3p-language-servers
+
+3rd party Language Server for Selene lua linter
+
+Snippet to enable the language server:
+```lua
+require'lspconfig'.selene3p_ls.setup{}
+```
+
+Default config:
+- `cmd` :
+  ```lua
+  { "selene-3p-language-server" }
+  ```
+- `filetypes` :
+  ```lua
+  { "lua" }
+  ```
+- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/selene3p_ls.lua:4](../lua/lspconfig/configs/selene3p_ls.lua#L4)
+
+
 ## serve_d
 
 https://github.com/Pure-D/serve-d
@@ -10065,6 +10174,29 @@ Default config:
   ```lua
   {}
   ```
+
+
+## stylua3p_ls
+
+https://github.com/antonk52/lua-3p-language-servers
+
+3rd party Language Server for Stylua lua formatter
+
+Snippet to enable the language server:
+```lua
+require'lspconfig'.stylua3p_ls.setup{}
+```
+
+Default config:
+- `cmd` :
+  ```lua
+  { "stylua-3p-language-server" }
+  ```
+- `filetypes` :
+  ```lua
+  { "lua" }
+  ```
+- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/stylua3p_ls.lua:4](../lua/lspconfig/configs/stylua3p_ls.lua#L4)
 
 
 ## superhtml
