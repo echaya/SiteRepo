@@ -121,6 +121,16 @@ function M.enable()
     end),
   })
 
+  -- update state when leaving insert mode or changing text in normal mode
+  vim.api.nvim_create_autocmd({ "InsertLeave", "TextChanged" }, {
+    group = group,
+    callback = vim.schedule_wrap(function(ev)
+      for _, win in ipairs(vim.fn.win_findbuf(ev.buf)) do
+        get_state(win)
+      end
+    end),
+  })
+
   -- update current state on cursor move
   vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
     group = group,

@@ -93,6 +93,19 @@ The other options are used with `:lua Snacks.dashboard()`
 }
 ```
 
+### `help`
+
+```lua
+{
+  position = "float",
+  backdrop = false,
+  border = "top",
+  row = -1,
+  width = 0,
+  height = 0.3,
+}
+```
+
 ### `input`
 
 ```lua
@@ -146,6 +159,7 @@ The other options are used with `:lua Snacks.dashboard()`
     cursorcolumn = false,
     cursorline = false,
     cursorlineopt = "both",
+    colorcolumn = "",
     fillchars = "eob: ,lastline:…",
     list = false,
     listchars = "extends:…,tab:  ",

@@ -5,29 +5,30 @@
 
 (local api vim.api)
 (local map vim.tbl_map)
+(local empty? vim.tbl_isempty)
+
+
+(fn has-hl-group? [name]
+  (not (empty? (api.nvim_get_hl 0 {: name}))))
 
 
 (local M {:ns (api.nvim_create_namespace "")
           :extmarks []
-          :group {:match "LeapMatch"
-                  :backdrop "LeapBackdrop"}
+          :group (setmetatable
+                   {:match "LeapMatch"
+                    :backdrop "LeapBackdrop"}
+                   {:__index (fn [_ key]
+                               (if (= key :label)
+                                   (if (has-hl-group? "LeapLabelPrimary")
+                                       "LeapLabelPrimary"
+                                       "LeapLabel")
+                                   (= key :label-dimmed)
+                                   (if (has-hl-group? "LeapLabelSecondary")
+                                       "LeapLabelSecondary"
+                                       "LeapLabelDimmed")))})
           :priority {:label 65535
                      :cursor 65534
                      :backdrop 65533}})
-
-
-(setmetatable M.group
-  {:__index (fn [_ key]
-              (when (= key :label)
-                ; NOTE: `nvim_get_hl_by_name` is deprecated.
-                (if (pcall api.nvim_get_hl_by_name "LeapLabel" false)
-                    "LeapLabel"
-                    "LeapLabelPrimary"
-
-                ; (if (vim.tbl_isempty (api.nvim_get_hl 0 {:name "LeapLabel"}))  ; 0.9+
-                ;     "LeapLabelPrimary"
-                ;     "LeapLabel"
-                  )))})
 
 
 (fn M.cleanup [self affected-windows]
@@ -37,8 +38,7 @@
       (api.nvim_buf_del_extmark bufnr self.ns id)))
   (set self.extmarks [])
   ; Clear backdrop.
-  ; NOTE: `nvim_get_hl_by_name` is deprecated.
-  (when (pcall api.nvim_get_hl_by_name self.group.backdrop false)  ; group exists?
+  (when (has-hl-group? self.group.backdrop)
     (each [_ winid (ipairs affected-windows)]
       ; TODO: Edge case: what if the window has become invalid, but the
       ;       buffer is still there?
@@ -53,7 +53,7 @@
 
 
 (fn M.apply-backdrop [self backward? ?target-windows]
-  (when (pcall api.nvim_get_hl_by_name self.group.backdrop false)  ; group exists?
+  (when (has-hl-group? self.group.backdrop)
     (if ?target-windows
         (each [_ winid (ipairs ?target-windows)]
           (local wininfo (. (vim.fn.getwininfo winid) 1))
@@ -86,6 +86,22 @@ so we set a temporary highlight on it to see where we are."
                                       :hl_mode "combine"
                                       :priority self.priority.cursor})]
     (table.insert self.extmarks [(api.nvim_get_current_buf) id])))
+
+
+(fn blend [color1 color2 weight]
+  ; n = (r + g + b), as returned by `nvim_get_hl`
+  (fn ->rgb [n]
+    (let [r (math.floor (/ n 0x10000))
+          g (math.floor (% (/ n 0x100) 0x100))
+          b (% n 0x100)]
+      (values r g b)))
+
+  (let [(r1 g1 b1) (->rgb color1)
+        (r2 g2 b2) (->rgb color2)
+        r (+ (* r1 (- 1 weight)) (* r2 weight))
+        g (+ (* g1 (- 1 weight)) (* g2 weight))
+        b (+ (* b1 (- 1 weight)) (* b2 weight))]
+    (string.format "#%02x%02x%02x" r g b)))
 
 
 (fn M.init-highlight [self force?]
@@ -124,11 +140,21 @@ so we set a temporary highlight on it to see where we are."
 
                       {:link "Search"})}]
     (when (or force?
-              (= (vim.fn.has "nvim-0.9.1") 0)
-              (vim.tbl_isempty (api.nvim_get_hl 0 {:name "LeapLabelPrimary"})))
+              ; Otherwise LeapLabel would take priority, and override
+              ; the legacy group, `default` does not help in this case.
+              (not (has-hl-group? "LeapLabelPrimary")))
       (each [group-name def-map (pairs defaults)]
-          (when (not force?) (tset def-map :default true))
-          (api.nvim_set_hl 0 group-name def-map)))))
+        (when (not force?) (set def-map.default true))
+        (api.nvim_set_hl 0 group-name def-map)))
+    ; Define LeapLabelDimmed.
+    (let [normal (vim.api.nvim_get_hl 0 {:name "Normal" :link false})
+          label* (vim.api.nvim_get_hl 0 {:name self.group.label :link false})]
+      ; E.g., the old default color scheme (`vim`) does not define Normal at all.
+      (when (and label*.bg normal.bg)
+        (set label*.bg (blend label*.bg normal.bg 0.7)))
+      (when (and label*.fg normal.fg)
+        (set label*.fg (blend label*.fg normal.bg 0.5)))
+      (vim.api.nvim_set_hl 0 self.group.label-dimmed label*))))
 
 
 M
