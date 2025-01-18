@@ -1,7 +1,7 @@
 local M = {}
 
----@alias snacks.picker.Extmark vim.api.keyset.set_extmark|{col:number, row?:number}
----@alias snacks.picker.Text {[1]:string, [2]:string?, virtual?:boolean}
+---@alias snacks.picker.Extmark vim.api.keyset.set_extmark|{col:number, row?:number, field?:string}
+---@alias snacks.picker.Text {[1]:string, [2]:string?, virtual?:boolean, field?:string}
 ---@alias snacks.picker.Highlight snacks.picker.Text|snacks.picker.Extmark
 ---@alias snacks.picker.format fun(item:snacks.picker.Item, picker:snacks.Picker):snacks.picker.Highlight[]
 ---@alias snacks.picker.preview fun(ctx: snacks.picker.preview.ctx):boolean?
@@ -75,7 +75,7 @@ local M = {}
 --- Preset options
 ---@field previewers? snacks.picker.previewers.Config|{}
 ---@field formatters? snacks.picker.formatters.Config|{}
----@field sources? snacks.picker.sources.Config|{}
+---@field sources? snacks.picker.sources.Config|{}|table<string, snacks.picker.Config|{}>
 ---@field layouts? table<string, snacks.picker.layout.Config>
 --- Actions
 ---@field actions? table<string, snacks.picker.Action.spec> actions used by keymaps
@@ -84,6 +84,7 @@ local M = {}
 ---@field main? snacks.picker.main.Config main editor window config
 ---@field on_change? fun(picker:snacks.Picker, item:snacks.picker.Item) called when the cursor changes
 ---@field on_show? fun(picker:snacks.Picker) called when the picker is shown
+---@field jump? snacks.picker.jump.Config|{}
 --- Other
 ---@field debug? snacks.picker.debug|{}
 local defaults = {
@@ -114,6 +115,10 @@ local defaults = {
     file = {
       filename_first = false, -- display filename before the file path
     },
+    selected = {
+      show_always = false, -- only show the selected column when there are multiple selections
+      unselected = true, -- use the unselected icon for unselected items
+    },
   },
   ---@class snacks.picker.previewers.Config
   previewers = {
@@ -127,6 +132,12 @@ local defaults = {
     },
     man_pager = nil, ---@type string? MANPAGER env to use for `man` preview
   },
+  ---@class snacks.picker.jump.Config
+  jump = {
+    jumplist = true, -- save the current position in the jumplist
+    tagstack = false, -- save the current position in the tagstack
+    reuse_win = false, -- reuse an existing window if the buffer is already open
+  },
   win = {
     -- input window
     input = {
@@ -136,7 +147,7 @@ local defaults = {
         -- to close the picker on ESC instead of going to normal mode,
         -- add the following keymap to your config
         -- ["<Esc>"] = { "close", mode = { "n", "i" } },
-        ["<CR>"] = "confirm",
+        ["<CR>"] = { "confirm", mode = { "n", "i" } },
         ["G"] = "list_bottom",
         ["gg"] = "list_top",
         ["j"] = "list_down",
@@ -238,7 +249,10 @@ local defaults = {
     },
     ui = {
       live        = "󰐰 ",
+      hidden      = "h",
+      ignored     = "i",
       selected    = "● ",
+      unselected  = "○ ",
       -- selected = " ",
     },
     git = {
@@ -286,7 +300,7 @@ local defaults = {
       Text          = " ",
       TypeParameter = " ",
       Unit          = " ",
-      Uknown        = " ",
+      Unknown        = " ",
       Value         = " ",
       Variable      = "󰀫 ",
     },

@@ -161,6 +161,7 @@ function M:init_layout(layout)
     hidden = { preview_hidden and "preview" or nil },
     on_update = function()
       self:update_titles()
+      self:show_preview()
     end,
     layout = {
       backdrop = backdrop,
@@ -213,7 +214,18 @@ function M:update_titles()
   local data = {
     source = self.source_name,
     live = self.opts.live and self.opts.icons.ui.live or "",
+    preview = vim.trim(self.preview.title or ""),
   }
+  local opts = self.opts --[[@as snacks.picker.files.Config]]
+  local flags = {} ---@type snacks.picker.Text[]
+  if opts.hidden then
+    flags[#flags + 1] = { " " .. self.opts.icons.ui.hidden .. " ", "SnacksPickerFlagHidden" }
+    flags[#flags + 1] = { " ", "FloatTitle" }
+  end
+  if opts.ignored then
+    flags[#flags + 1] = { " " .. self.opts.icons.ui.ignored .. " ", "SnacksPickerFlagIgnored" }
+    flags[#flags + 1] = { " ", "FloatTitle" }
+  end
   local wins = { self.layout.root }
   vim.list_extend(wins, vim.tbl_values(self.layout.wins))
   vim.list_extend(wins, vim.tbl_values(self.layout.box_wins))
@@ -221,7 +233,19 @@ function M:update_titles()
     if win.opts.title then
       local tpl = win.meta.title_tpl or win.opts.title
       win.meta.title_tpl = tpl
-      win:set_title(Snacks.picker.util.tpl(tpl, data))
+      local ret = {} ---@type snacks.picker.Text[]
+      local title = Snacks.picker.util.tpl(tpl, data)
+      if title:find("{flags}", 1, true) then
+        title = title:gsub("{flags}", "")
+        vim.list_extend(ret, flags)
+      end
+      title = vim.trim(title):gsub("%s+", " ")
+      if title ~= "" then
+        -- HACK: add extra space when last char is non word like an icon
+        title = title:sub(-1):match("%w") and title or title .. " "
+        table.insert(ret, 1, { " " .. title .. " ", "FloatTitle" })
+      end
+      win:set_title(ret)
     end
   end
 end
@@ -258,6 +282,7 @@ function M:show_preview()
     return
   end
   self.preview:show(self)
+  self:update_titles()
 end
 
 ---@hide
@@ -331,10 +356,11 @@ function M:close()
   if self.closed then
     return
   end
+  vim.cmd.stopinsert()
+  self.closed = true
   M.last.selected = self:selected({ fallback = false })
   M.last.cursor = self.list.cursor
   M.last.topline = self.list.top
-  self.closed = true
   Snacks.picker.current = nil
   local current = vim.api.nvim_get_current_win()
   local is_picker_win = vim.tbl_contains({ self.input.win.win, self.list.win.win, self.preview.win.win }, current)
@@ -439,6 +465,7 @@ end
 --- Clear the list and run the finder and matcher
 ---@param opts? {on_done?: fun()} Callback when done
 function M:find(opts)
+  self:update_titles()
   self.finder:run(self)
   self.matcher:run(self)
   if opts and opts.on_done then

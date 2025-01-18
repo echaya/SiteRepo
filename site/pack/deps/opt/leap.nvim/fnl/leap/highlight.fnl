@@ -149,11 +149,15 @@ so we set a temporary highlight on it to see where we are."
     ; Define LeapLabelDimmed.
     (let [normal (vim.api.nvim_get_hl 0 {:name "Normal" :link false})
           label* (vim.api.nvim_get_hl 0 {:name self.group.label :link false})]
-      ; E.g., the old default color scheme (`vim`) does not define Normal at all.
-      (when (and label*.bg normal.bg)
-        (set label*.bg (blend label*.bg normal.bg 0.7)))
-      (when (and label*.fg normal.fg)
-        (set label*.fg (blend label*.fg normal.bg 0.5)))
+      ; `bg` can be nil (transparent background), and e.g. the old default
+      ; color scheme (`vim`) does not define Normal at all.
+      ; Also, `nvim_get_hl()` apparently does not guarantee to return numeric
+      ; values in the table (#260).
+      (when (= (type normal.bg) "number")
+        (when (= (type label*.bg) "number")
+          (set label*.bg (blend label*.bg normal.bg 0.7)))
+        (when (= (type label*.fg) "number")
+          (set label*.fg (blend label*.fg normal.bg 0.5))))
       (vim.api.nvim_set_hl 0 self.group.label-dimmed label*))))
 
 

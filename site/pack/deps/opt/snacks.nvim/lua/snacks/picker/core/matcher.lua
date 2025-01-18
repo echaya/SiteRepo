@@ -262,23 +262,38 @@ function M:match(item)
   return score
 end
 
+--- Returns the fields that are used in the pattern.
+---@return string[]
+function M:fields()
+  local ret = {} ---@type table<string,boolean>
+  for _, any in ipairs(self.mods) do
+    for _, mods in ipairs(any) do
+      ret[mods.field or "text"] = true
+    end
+  end
+  return vim.tbl_keys(ret)
+end
+
 --- Returns the positions of the matched pattern in the item.
 --- All search patterns are combined with OR.
 ---@param item snacks.picker.Item
 function M:positions(item)
   local all = {} ---@type snacks.picker.matcher.Mods[]
-  local ret = {} ---@type number[]
+  local ret = {} ---@type table<string,number[]>
   for _, any in ipairs(self.mods) do
     vim.list_extend(all, any)
   end
   for _, mods in ipairs(all) do
     local _, from, to, str = self:_match(item, mods)
     if from and to and str then
+      local field = mods.field or "text"
+      ret[field] = ret[field] or {}
+      local pos = ret[field]
       if mods.fuzzy then
-        vim.list_extend(ret, self:fuzzy_positions(str, mods.chars, from))
+        vim.list_extend(pos, self:fuzzy_positions(str, mods.chars, from))
       else
         for c = from, to do
-          ret[#ret + 1] = c
+          pos[#pos + 1] = c
         end
       end
     end
@@ -301,6 +316,7 @@ end
 ---@param mods snacks.picker.matcher.Mods
 ---@return number? score, number? from, number? to, string? str
 function M:_match(item, mods)
+  self.score.is_file = item.file ~= nil
   local str = item.text
   if mods.field then
     if item[mods.field] == nil then

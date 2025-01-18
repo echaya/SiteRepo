@@ -116,6 +116,7 @@ M.diagnostics_buffer = {
 ---@field ignored? boolean show ignored files
 ---@field dirs? string[] directories to search
 ---@field follow? boolean follow symlinks
+---@field exclude? string[] exclude patterns
 M.files = {
   finder = "files",
   format = "file",
@@ -198,6 +199,7 @@ M.git_diff = {
 ---@field regex? boolean use regex search pattern (defaults to `true`)
 ---@field buffers? boolean search in open buffers
 ---@field need_search? boolean require a search pattern
+---@field exclude? string[] exclude patterns
 M.grep = {
   finder = "grep",
   format = "file",
@@ -315,6 +317,7 @@ M.lsp_declarations = {
   format = "file",
   include_current = false,
   auto_confirm = true,
+  jump = { tagstack = true, reuse_win = true },
 }
 
 -- LSP definitions
@@ -324,6 +327,7 @@ M.lsp_definitions = {
   format = "file",
   include_current = false,
   auto_confirm = true,
+  jump = { tagstack = true, reuse_win = true },
 }
 
 -- LSP implementations
@@ -333,6 +337,7 @@ M.lsp_implementations = {
   format = "file",
   include_current = false,
   auto_confirm = true,
+  jump = { tagstack = true, reuse_win = true },
 }
 
 -- LSP references
@@ -344,6 +349,7 @@ M.lsp_references = {
   include_declaration = true,
   include_current = false,
   auto_confirm = true,
+  jump = { tagstack = true, reuse_win = true },
 }
 
 -- LSP document symbols
@@ -399,6 +405,7 @@ M.lsp_type_definitions = {
   format = "file",
   include_current = false,
   auto_confirm = true,
+  jump = { tagstack = true, reuse_win = true },
 }
 
 M.man = {

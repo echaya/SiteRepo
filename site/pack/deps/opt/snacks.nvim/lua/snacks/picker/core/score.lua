@@ -6,6 +6,7 @@
 ---@field prev? number
 ---@field prev_class number
 ---@field in_gap boolean
+---@field is_file boolean
 ---@field str string
 ---@field opts snacks.picker.matcher.Config
 local M = {}
@@ -100,6 +101,7 @@ function M.new(opts)
   local self = setmetatable({}, M)
   self.opts = opts or {}
   self.score = 0
+  self.is_file = true
   self.consecutive = 0
   self.prev_class = CHAR_WHITE
   self.in_gap = false
@@ -130,7 +132,12 @@ function M:init(str, first)
   if first > 1 then
     self.prev_class = CHAR_CLASS[str:byte(first - 1)] or CHAR_NONWORD
   end
-  if self.opts.filename_bonus and not str:find(PATH_SEP, first + 1, true) then
+  if
+    self.is_file
+    and self.opts.filename_bonus
+    and not str:find(PATH_SEP, first + 1, true)
+    and not (PATH_SEP ~= "/" and str:find("/", first + 1, true))
+  then
     self.score = self.score + BONUS_NO_PATH_SEP
   end
   self.in_gap = false
