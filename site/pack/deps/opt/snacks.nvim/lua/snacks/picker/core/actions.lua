@@ -42,7 +42,7 @@ function M.wrap(action, picker, name)
   return {
     name = name,
     action = function()
-      action.action(picker, picker:current(), action)
+      return action.action(picker, picker:current(), action)
     end,
     desc = action.desc,
   }
