@@ -19,7 +19,7 @@ Async.BUDGET = 10
 ---@field sort snacks.picker.sort
 ---@field updater uv.uv_timer_t
 ---@field start_time number
----@field source_name string
+---@field title string
 ---@field closed? boolean
 ---@field hist_idx number
 ---@field hist_cursor number
@@ -100,7 +100,7 @@ function M.new(opts)
     topline = self.list.top,
   }
 
-  self.source_name = Snacks.picker.util.title(self.opts.source or "search")
+  self.title = self.opts.title or Snacks.picker.util.title(self.opts.source or "search")
 
   -- properly close the picker when the window is closed
   self.input.win:on("WinClosed", function()
@@ -211,7 +211,8 @@ end
 ---@hide
 function M:update_titles()
   local data = {
-    source = self.source_name,
+    source = self.title,
+    title = self.title,
     live = self.opts.live and self.opts.icons.ui.live or "",
     preview = vim.trim(self.preview.title or ""),
   }

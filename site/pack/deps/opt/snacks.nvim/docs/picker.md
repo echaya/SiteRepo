@@ -84,6 +84,7 @@ Snacks.picker.pick({source = "files", ...})
 ---@field layout? snacks.picker.layout.Config|string|{}|fun(source:string):(snacks.picker.layout.Config|string)
 ---@field icons? snacks.picker.icons
 ---@field prompt? string prompt text / icon
+---@field title? string defaults to a capitalized source name
 --- Preset options
 ---@field previewers? snacks.picker.previewers.Config|{}
 ---@field formatters? snacks.picker.formatters.Config|{}
@@ -429,6 +430,15 @@ Snacks.picker.pick({source = "files", ...})
 ```
 
 ```lua
+---@class snacks.picker.Last
+---@field cursor number
+---@field topline number
+---@field opts snacks.picker.Config
+---@field selected snacks.picker.Item[]
+---@field filter snacks.picker.Filter
+```
+
+```lua
 ---@alias snacks.picker.Extmark vim.api.keyset.set_extmark|{col:number, row?:number, field?:string}
 ---@alias snacks.picker.Text {[1]:string, [2]:string?, virtual?:boolean, field?:string}
 ---@alias snacks.picker.Highlight snacks.picker.Text|snacks.picker.Extmark
@@ -494,15 +504,6 @@ It's a previewer that shows a preview based on the item data.
 ---@field input? snacks.win.Config|{} input window config
 ---@field list? snacks.win.Config|{} result list window config
 ---@field preview? snacks.win.Config|{} preview window config
-```
-
-```lua
----@class snacks.picker.Last
----@field cursor number
----@field topline number
----@field opts snacks.picker.Config
----@field selected snacks.picker.Item[]
----@field filter snacks.picker.Filter
 ```
 
 ## 📦 Module
@@ -1313,7 +1314,7 @@ Open a project from zoxide
     {
       box = "vertical",
       border = "rounded",
-      title = "{source} {live} {flags}",
+      title = "{title} {live} {flags}",
       { win = "input", height = 1, border = "bottom" },
       { win = "list", border = "none" },
     },
@@ -1338,7 +1339,7 @@ Open a project from zoxide
     {
       box = "vertical",
       border = "rounded",
-      title = "{source} {live} {flags}",
+      title = "{title} {live} {flags}",
       title_pos = "center",
       { win = "input", height = 1, border = "bottom" },
       { win = "list", border = "none" },
@@ -1358,7 +1359,7 @@ Open a project from zoxide
     width = 0,
     height = 0.4,
     border = "top",
-    title = " {source} {live} {flags}",
+    title = " {title} {live} {flags}",
     title_pos = "left",
     { win = "input", height = 1, border = "bottom" },
     {
@@ -1406,7 +1407,7 @@ Open a project from zoxide
     {
       box = "vertical",
       { win = "list", title = " Results ", title_pos = "center", border = "rounded" },
-      { win = "input", height = 1, border = "rounded", title = "{source} {live} {flags}", title_pos = "center" },
+      { win = "input", height = 1, border = "rounded", title = "{title} {live} {flags}", title_pos = "center" },
     },
     {
       win = "preview",
@@ -1431,7 +1432,7 @@ Open a project from zoxide
     min_height = 30,
     box = "vertical",
     border = "rounded",
-    title = "{source} {live} {flags}",
+    title = "{title} {live} {flags}",
     title_pos = "center",
     { win = "input", height = 1, border = "bottom" },
     { win = "list", border = "none" },
@@ -1453,7 +1454,7 @@ Open a project from zoxide
     height = 0.4,
     border = "none",
     box = "vertical",
-    { win = "input", height = 1, border = "rounded", title = "{source} {live} {flags}", title_pos = "center" },
+    { win = "input", height = 1, border = "rounded", title = "{title} {live} {flags}", title_pos = "center" },
     { win = "list", border = "hpad" },
     { win = "preview", title = "{preview}", border = "rounded" },
   },
@@ -1726,8 +1727,6 @@ Snacks.picker.actions.toggle_maximize(picker)
 Snacks.picker.actions.toggle_preview(picker)
 ```
 
-
-
 ## 📦 `snacks.picker.core.picker`
 
 ```lua
@@ -1746,7 +1745,7 @@ Snacks.picker.actions.toggle_preview(picker)
 ---@field sort snacks.picker.sort
 ---@field updater uv.uv_timer_t
 ---@field start_time number
----@field source_name string
+---@field title string
 ---@field closed? boolean
 ---@field hist_idx number
 ---@field hist_cursor number
@@ -1893,3 +1892,5 @@ Get the word under the cursor or the current visual selection
 ```lua
 picker:word()
 ```
+
+

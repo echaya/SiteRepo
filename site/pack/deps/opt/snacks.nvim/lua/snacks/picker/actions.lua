@@ -291,7 +291,7 @@ end
 
 function M.toggle_live(picker)
   if not picker.opts.supports_live then
-    Snacks.notify.warn("Live search is not supported for `" .. picker.source_name .. "`", { title = "Snacks Picker" })
+    Snacks.notify.warn("Live search is not supported for `" .. picker.title .. "`", { title = "Snacks Picker" })
     return
   end
   picker.opts.live = not picker.opts.live

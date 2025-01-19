@@ -526,13 +526,13 @@ function M.enable()
   })
 
   -- redraw when shiftwidth changes
-  vim.api.nvim_create_autocmd("OptionSet", {
-    group = group,
-    pattern = { "shiftwidth", "listchars", "list" },
-    callback = vim.schedule_wrap(function()
-      vim.cmd([[redraw!]])
-    end),
-  })
+  -- vim.api.nvim_create_autocmd("OptionSet", {
+  --   group = group,
+  --   pattern = { "shiftwidth", "listchars", "list" },
+  --   callback = vim.schedule_wrap(function()
+  --     vim.cmd([[redraw!]])
+  --   end),
+  -- })
 end
 
 -- Disable indent guides

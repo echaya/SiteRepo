@@ -72,6 +72,7 @@ local M = {}
 ---@field layout? snacks.picker.layout.Config|string|{}|fun(source:string):(snacks.picker.layout.Config|string)
 ---@field icons? snacks.picker.icons
 ---@field prompt? string prompt text / icon
+---@field title? string defaults to a capitalized source name
 --- Preset options
 ---@field previewers? snacks.picker.previewers.Config|{}
 ---@field formatters? snacks.picker.formatters.Config|{}
