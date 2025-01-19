@@ -124,9 +124,8 @@ function M.new(opts)
     end)
   end)
 
-  local show_preview = self.show_preview
-  self.show_preview = Snacks.util.throttle(function()
-    show_preview(self)
+  self._throttled_preview = Snacks.util.throttle(function()
+    self._show_preview(self)
   end, { ms = 60, name = "preview" })
 
   self:find()
@@ -273,8 +272,9 @@ function M.resume()
   return ret
 end
 
+--- Actual preview code
 ---@hide
-function M:show_preview()
+function M:_show_preview()
   if self.opts.on_change then
     self.opts.on_change(self, self:current())
   end
@@ -283,6 +283,18 @@ function M:show_preview()
   end
   self.preview:show(self)
   self:update_titles()
+end
+
+-- Throttled preview
+M._throttled_preview = M._show_preview
+
+-- Show the preview. Show instantly when no item is yet in the preview,
+-- otherwise throttle the preview.
+function M:show_preview()
+  if not self.preview.item then
+    self:_show_preview()
+  end
+  return self:_throttled_preview()
 end
 
 ---@hide
