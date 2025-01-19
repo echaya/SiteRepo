@@ -346,6 +346,15 @@ function M.toggle_ignored(picker)
   picker:find()
 end
 
+function M.item_action(picker, item, action)
+  if item.action then
+    picker:norm(function()
+      picker:close()
+      item.action(picker, item, action)
+    end)
+  end
+end
+
 function M.toggle_hidden(picker)
   local opts = picker.opts --[[@as snacks.picker.files.Config]]
   opts.hidden = not opts.hidden

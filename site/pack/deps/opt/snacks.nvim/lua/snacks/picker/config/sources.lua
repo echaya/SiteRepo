@@ -537,6 +537,13 @@ M.smart = {
   matcher = { sort_empty = true },
 }
 
+M.spelling = {
+  finder = "vim_spelling",
+  format = "text",
+  layout = { preset = "vscode" },
+  confirm = "item_action",
+}
+
 -- Open a project from zoxide
 M.zoxide = {
   finder = "files_zoxide",

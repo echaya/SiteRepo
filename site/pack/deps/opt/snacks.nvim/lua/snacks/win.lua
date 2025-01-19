@@ -614,10 +614,13 @@ function M:scratch()
     ---@cast text string[]
     vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, text)
   end
-  if self.opts.scratch_ft then
-    vim.bo[self.buf].filetype = self.opts.scratch_ft
-  else
-    vim.bo[self.buf].filetype = self.opts.bo.filetype or "snacks_win"
+  if not self.opts.bo.filetype then
+    if self.opts.scratch_ft then
+      vim.bo[self.buf].filetype = self.opts.scratch_ft
+    else
+      vim.bo[self.buf].filetype = self.opts.bo.filetype or "snacks_win"
+    end
+    vim.bo[self.buf].syntax = ""
   end
   if self:win_valid() then
     vim.api.nvim_win_set_buf(self.win, self.buf)

@@ -1289,6 +1289,17 @@ Neovim search history
 }
 ```
 
+### `spelling`
+
+```lua
+{
+  finder = "vim_spelling",
+  format = "text",
+  layout = { preset = "vscode" },
+  confirm = "item_action",
+}
+```
+
 ### `zoxide`
 
 Open a project from zoxide
@@ -1546,6 +1557,12 @@ Snacks.picker.actions.history_forward(picker)
 
 ```lua
 Snacks.picker.actions.inspect(picker, item)
+```
+
+### `Snacks.picker.actions.item_action()`
+
+```lua
+Snacks.picker.actions.item_action(picker, item, action)
 ```
 
 ### `Snacks.picker.actions.jump()`
@@ -1868,6 +1885,17 @@ like during live searches.
 
 ```lua
 picker:match()
+```
+
+### `picker:norm()`
+
+Execute the callback in normal mode.
+When still in insert mode, stop insert mode first,
+and then`vim.schedule` the callback.
+
+```lua
+---@param cb fun()
+picker:norm(cb)
 ```
 
 ### `picker:selected()`

@@ -293,4 +293,34 @@ function M.registers()
   return items
 end
 
+function M.spelling()
+  local buf = vim.api.nvim_get_current_buf()
+  local win = vim.api.nvim_get_current_win()
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local line = vim.api.nvim_buf_get_lines(buf, cursor[1] - 1, cursor[1], false)[1]
+
+  -- get a misspelled word from under the cursor, if not found, then use the cursor_word instead
+  local bad = vim.fn.spellbadword() ---@type string[]
+  local word = bad[1] == "" and vim.fn.expand("<cword>") or bad[1]
+  local suggestions = vim.fn.spellsuggest(word, 25, bad[2] == "caps")
+
+  local items = {} ---@type snacks.picker.finder.Item[]
+
+  for _, label in ipairs(suggestions) do
+    table.insert(items, {
+      text = label,
+      action = function()
+        -- skip whitespace
+        local col = cursor[2] + 1
+        while line:sub(col, col):match("%s") and col < #line do
+          col = col + 1
+          vim.api.nvim_win_set_cursor(win, { cursor[1], col - 1 })
+        end
+        vim.cmd('normal! "_ciw' .. label)
+      end,
+    })
+  end
+  return items
+end
+
 return M

@@ -133,6 +133,20 @@ function M.new(opts)
   return self
 end
 
+--- Execute the callback in normal mode.
+--- When still in insert mode, stop insert mode first,
+--- and then`vim.schedule` the callback.
+---@param cb fun()
+function M:norm(cb)
+  if vim.fn.mode():sub(1, 1) == "i" then
+    vim.cmd.stopinsert()
+    vim.schedule(cb)
+    return
+  end
+  cb()
+  return true
+end
+
 ---@param layout? snacks.picker.layout.Config
 ---@private
 function M:init_layout(layout)
