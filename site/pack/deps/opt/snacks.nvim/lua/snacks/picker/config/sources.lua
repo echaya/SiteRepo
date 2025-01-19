@@ -76,7 +76,7 @@ M.command_history = {
 -- Neovim commands
 M.commands = {
   finder = "vim_commands",
-  format = "text",
+  format = "command",
   preview = "preview",
   confirm = "cmd",
 }

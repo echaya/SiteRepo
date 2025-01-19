@@ -352,6 +352,12 @@ function M.toggle_hidden(picker)
   picker:find()
 end
 
+function M.toggle_follow(picker)
+  local opts = picker.opts --[[@as snacks.picker.files.Config]]
+  opts.follow = not opts.follow
+  picker:find()
+end
+
 function M.list_top(picker)
   picker.list:move(1, true)
 end

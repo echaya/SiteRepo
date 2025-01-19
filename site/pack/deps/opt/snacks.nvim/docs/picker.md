@@ -196,6 +196,7 @@ Snacks.picker.pick({source = "files", ...})
         ["<c-q>"] = { "qflist", mode = { "i", "n" } },
         ["<a-i>"] = { "toggle_ignored", mode = { "i", "n" } },
         ["<a-h>"] = { "toggle_hidden", mode = { "i", "n" } },
+        ["<a-f>"] = { "toggle_follow", mode = { "i", "n" } },
       },
       b = {
         minipairs_disable = true,
@@ -236,6 +237,10 @@ Snacks.picker.pick({source = "files", ...})
         ["<a-w>"] = "cycle_win",
         ["<Esc>"] = "close",
       },
+      wo = {
+        conceallevel = 2,
+        concealcursor = "nvc",
+      },
     },
     -- preview window
     preview = {
@@ -263,6 +268,7 @@ Snacks.picker.pick({source = "files", ...})
       live        = "󰐰 ",
       hidden      = "h",
       ignored     = "i",
+      follow      = "f",
       selected    = "● ",
       unselected  = "○ ",
       -- selected = " ",
@@ -430,15 +436,6 @@ Snacks.picker.pick({source = "files", ...})
 ```
 
 ```lua
----@class snacks.picker.Last
----@field cursor number
----@field topline number
----@field opts snacks.picker.Config
----@field selected snacks.picker.Item[]
----@field filter snacks.picker.Filter
-```
-
-```lua
 ---@alias snacks.picker.Extmark vim.api.keyset.set_extmark|{col:number, row?:number, field?:string}
 ---@alias snacks.picker.Text {[1]:string, [2]:string?, virtual?:boolean, field?:string}
 ---@alias snacks.picker.Highlight snacks.picker.Text|snacks.picker.Extmark
@@ -504,6 +501,15 @@ It's a previewer that shows a preview based on the item data.
 ---@field input? snacks.win.Config|{} input window config
 ---@field list? snacks.win.Config|{} result list window config
 ---@field preview? snacks.win.Config|{} preview window config
+```
+
+```lua
+---@class snacks.picker.Last
+---@field cursor number
+---@field topline number
+---@field opts snacks.picker.Config
+---@field selected snacks.picker.Item[]
+---@field filter snacks.picker.Filter
 ```
 
 ## 📦 Module
@@ -653,7 +659,7 @@ Neovim commands
 ```lua
 {
   finder = "vim_commands",
-  format = "text",
+  format = "command",
   preview = "preview",
   confirm = "cmd",
 }
@@ -1697,6 +1703,12 @@ Snacks.picker.actions.select_and_prev(picker)
 Snacks.picker.actions.toggle_focus(picker)
 ```
 
+### `Snacks.picker.actions.toggle_follow()`
+
+```lua
+Snacks.picker.actions.toggle_follow(picker)
+```
+
 ### `Snacks.picker.actions.toggle_hidden()`
 
 ```lua
@@ -1726,6 +1738,8 @@ Snacks.picker.actions.toggle_maximize(picker)
 ```lua
 Snacks.picker.actions.toggle_preview(picker)
 ```
+
+
 
 ## 📦 `snacks.picker.core.picker`
 
@@ -1892,5 +1906,3 @@ Get the word under the cursor or the current visual selection
 ```lua
 picker:word()
 ```
-
-

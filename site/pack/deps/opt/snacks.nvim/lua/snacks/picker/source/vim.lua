@@ -22,6 +22,11 @@ function M.commands()
       commands[k] = v
     end
   end
+  for _, c in ipairs(vim.fn.getcompletion("", "command")) do
+    if not commands[c] and c:find("^[a-z]") then
+      commands[c] = { definition = "completion" }
+    end
+  end
   ---@async
   ---@param cb async fun(item: snacks.picker.finder.Item)
   return function(cb)
@@ -32,6 +37,7 @@ function M.commands()
       local def = commands[name]
       cb({
         text = name,
+        desc = def.script_id and def.script_id < 0 and def.definition or nil,
         command = def,
         cmd = name,
         preview = {
