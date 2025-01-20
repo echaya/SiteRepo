@@ -13,6 +13,7 @@ Snacks now comes with a modern fuzzy-finder to navigate the Neovim universe.
 - 🔎 over 40 [built-in sources](https://github.com/folke/snacks.nvim/blob/main/docs/picker.md#-sources)
 - 🚀 Fast and powerful fuzzy matching engine that supports the [fzf](https://junegunn.github.io/fzf/search-syntax/) search syntax
   - additionally supports field searches like `file:lua$ 'function`
+  - `files` and `grep` additionally support adding optiont like `foo -- -e=lua`
 - 🌲 uses **treesitter** highlighting where it makes sense
 - 🧹 Sane default settings so you can start using it right away
 - 💪 Finders and matchers run asynchronously for maximum performance
@@ -117,6 +118,7 @@ Snacks.picker.pick({source = "files", ...})
     ignorecase = true, -- use ignorecase
     sort_empty = false, -- sort results when the search string is empty
     filename_bonus = true, -- give bonus for matching file names (last part of the path)
+    file_pos = true, -- support patterns like `file:line:col` and `file:line`
   },
   sort = {
     -- default sort is by score, text length and index
@@ -264,6 +266,9 @@ Snacks.picker.pick({source = "files", ...})
       middle = "├╴",
       last   = "└╴",
     },
+    undo = {
+      saved   = " ",
+    },
     ui = {
       live        = "󰐰 ",
       hidden      = "h",
@@ -326,6 +331,7 @@ Snacks.picker.pick({source = "files", ...})
   ---@class snacks.picker.debug
   debug = {
     scores = false, -- show scores in the list
+    leaks = false, -- show when pickers don't get garbage collected
   },
 }
 ```
@@ -442,6 +448,7 @@ Snacks.picker.pick({source = "files", ...})
 ---@alias snacks.picker.format fun(item:snacks.picker.Item, picker:snacks.Picker):snacks.picker.Highlight[]
 ---@alias snacks.picker.preview fun(ctx: snacks.picker.preview.ctx):boolean?
 ---@alias snacks.picker.sort fun(a:snacks.picker.Item, b:snacks.picker.Item):boolean
+---@alias snacks.picker.Pos {[1]:number, [2]:number}
 ```
 
 Generic filter used by finders to pre-filter items
@@ -473,11 +480,14 @@ It's a previewer that shows a preview based on the item data.
 ---@field score_add? number
 ---@field score_mul? number
 ---@field match_tick? number
+---@field file? string
 ---@field text string
----@field pos? {[1]:number, [2]:number}
----@field end_pos? {[1]:number, [2]:number}
+---@field pos? snacks.picker.Pos
+---@field loc? snacks.picker.lsp.Loc
+---@field end_pos? snacks.picker.Pos
 ---@field highlights? snacks.picker.Highlight[][]
 ---@field preview? snacks.picker.Item.preview
+---@field resolve? fun(item:snacks.picker.Item)
 ```
 
 ```lua
@@ -501,6 +511,10 @@ It's a previewer that shows a preview based on the item data.
 ---@field input? snacks.win.Config|{} input window config
 ---@field list? snacks.win.Config|{} result list window config
 ---@field preview? snacks.win.Config|{} preview window config
+```
+
+```lua
+---@alias snacks.Picker.ref (fun():snacks.Picker?)|{value?: snacks.Picker}
 ```
 
 ```lua
@@ -683,6 +697,7 @@ Neovim commands
       "lnum",
     },
   },
+  matcher = { sort_empty = true },
   -- only show diagnostics from the cwd by default
   filter = { cwd = true },
 }
@@ -698,6 +713,7 @@ Neovim commands
   sort = {
     fields = { "severity", "file", "lnum" },
   },
+  matcher = { sort_empty = true },
   filter = { buf = true },
 }
 ```
@@ -712,6 +728,7 @@ Neovim commands
 ---@field dirs? string[] directories to search
 ---@field follow? boolean follow symlinks
 ---@field exclude? string[] exclude patterns
+---@field args? string[] additional arguments
 {
   finder = "files",
   format = "file",
@@ -719,6 +736,26 @@ Neovim commands
   ignored = false,
   follow = false,
   supports_live = true,
+}
+```
+
+### `git_branches`
+
+```lua
+{
+  finder = "git_branches",
+  format = "git_branch",
+  preview = "git_log",
+  confirm = "git_checkout",
+  on_show = function(picker)
+    for i, item in ipairs(picker:items()) do
+      if item.current then
+        picker.list:view(i)
+        Snacks.picker.actions.list_scroll_center(picker)
+        break
+      end
+    end
+  end,
 }
 ```
 
@@ -825,6 +862,7 @@ Git log
 ---@field buffers? boolean search in open buffers
 ---@field need_search? boolean require a search pattern
 ---@field exclude? string[] exclude patterns
+---@field args? string[] additional arguments
 {
   finder = "grep",
   format = "file",
@@ -1036,6 +1074,7 @@ LSP document symbols
 ---@class snacks.picker.lsp.symbols.Config: snacks.picker.Config
 ---@field hierarchy? boolean show symbol hierarchy
 ---@field filter table<string, string[]|boolean>? symbol kind filter
+---@field workspace? boolean show workspace symbols
 {
   finder = "lsp_symbols",
   format = "lsp_symbol",
@@ -1092,6 +1131,18 @@ LSP type definitions
   auto_confirm = true,
   jump = { tagstack = true, reuse_win = true },
 }
+```
+
+### `lsp_workspace_symbols`
+
+```lua
+---@type snacks.picker.lsp.symbols.Config
+vim.tbl_extend("force", {}, M.lsp_symbols, {
+  workspace = true,
+  hierarchy = false,
+  supports_live = true,
+  live = true, -- live by default
+})
 ```
 
 ### `man`
@@ -1297,6 +1348,18 @@ Neovim search history
   format = "text",
   layout = { preset = "vscode" },
   confirm = "item_action",
+}
+```
+
+### `undo`
+
+```lua
+{
+  finder = "vim_undo",
+  format = "undo",
+  preview = "preview",
+  confirm = "item_action",
+  win = { preview = { wo = { number = false, relativenumber = false, signcolumn = "no" } } },
 }
 ```
 
@@ -1527,6 +1590,12 @@ Snacks.picker.actions.focus_list(picker)
 
 ```lua
 Snacks.picker.actions.focus_preview(picker)
+```
+
+### `Snacks.picker.actions.git_checkout()`
+
+```lua
+Snacks.picker.actions.git_checkout(picker, item)
 ```
 
 ### `Snacks.picker.actions.git_stage()`
@@ -1814,7 +1883,8 @@ picker:count()
 Get the current item at the cursor
 
 ```lua
-picker:current()
+---@param opts? {resolve?: boolean} default is `true`
+picker:current(opts)
 ```
 
 ### `picker:empty()`
@@ -1898,6 +1968,20 @@ and then`vim.schedule` the callback.
 picker:norm(cb)
 ```
 
+### `picker:ref()`
+
+```lua
+---@return snacks.Picker.ref
+picker:ref()
+```
+
+### `picker:resolve()`
+
+```lua
+---@param item snacks.picker.Item?
+picker:resolve(item)
+```
+
 ### `picker:selected()`
 
 Get the selected items.
@@ -1905,6 +1989,7 @@ If `fallback=true` and there is no selection, return the current item.
 
 ```lua
 ---@param opts? {fallback?: boolean} default is `false`
+---@return snacks.picker.Item[]
 picker:selected(opts)
 ```
 

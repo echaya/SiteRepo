@@ -23,7 +23,9 @@ function M.buffers(opts, filter)
       and (opts.nofile or vim.bo[buf].buftype ~= "nofile")
     if keep then
       local name = vim.api.nvim_buf_get_name(buf)
-      name = name == "" and "[No Name]" or name
+      if name == "" then
+        name = "[No Name]" .. (vim.bo[buf].filetype ~= "" and " " .. vim.bo[buf].filetype or "")
+      end
       local info = vim.fn.getbufinfo(buf)[1]
       local flags = {
         buf == current_buf and "%" or (buf == alternate_buf and "#" or ""),
@@ -34,7 +36,7 @@ function M.buffers(opts, filter)
       table.insert(items, {
         flags = table.concat(flags),
         buf = buf,
-        text = name,
+        text = buf .. " " .. name,
         file = name,
         info = info,
         pos = { info.lnum, 0 },

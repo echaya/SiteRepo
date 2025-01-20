@@ -323,4 +323,128 @@ function M.spelling()
   return items
 end
 
+---@type snacks.picker.finder
+function M.undo()
+  local tree = vim.fn.undotree()
+  local buf = vim.api.nvim_get_current_buf()
+  local win = vim.api.nvim_get_current_win()
+  local view = vim.api.nvim_win_call(win, vim.fn.winsaveview)
+  local items = {} ---@type snacks.picker.finder.Item[]
+
+  ---@param entries vim.fn.undotree.entry[]
+  ---@param parent? snacks.picker.finder.Item
+  local function add(entries, parent)
+    entries = entries or {}
+    table.sort(entries, function(a, b)
+      return a.seq > b.seq
+    end)
+    for e, entry in ipairs(entries) do
+      local file = vim.api.nvim_buf_get_name(buf)
+      ---@param item snacks.picker.finder.Item
+      local function resolve(item)
+        ---@type string[], string[]
+        local before, after = {}, {}
+
+        local ei = vim.o.eventignore
+        vim.o.eventignore = "all"
+        vim.api.nvim_buf_call(buf, function()
+          -- state after the undo
+          vim.cmd("noautocmd silent undo " .. entry.seq)
+          after = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+          -- state before the undo
+          vim.cmd("noautocmd silent undo")
+          before = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        end)
+        vim.o.eventignore = ei
+
+        local diff = vim.diff(table.concat(before, "\n"), table.concat(after, "\n"), { ctxlen = 4 }) --[[@as string]]
+        local changes = {} ---@type string[]
+        local added, removed = 0, 0
+
+        for _, line in ipairs(vim.split(diff, "\n")) do
+          if line:sub(1, 1) == "+" then
+            added = added + 1
+            changes[#changes + 1] = line:sub(2)
+          elseif line:sub(1, 1) == "-" then
+            removed = removed + 1
+            changes[#changes + 1] = line:sub(2)
+          end
+        end
+        diff = Snacks.picker.util.tpl(
+          "diff --git a/{file} b/{file}\n--- {file}\n+++ {file}\n{diff}",
+          { file = vim.fn.fnamemodify(file, ":."), diff = diff }
+        )
+        item.text = table.concat(changes, " ")
+        item.added = added
+        item.removed = removed
+        item.preview = {
+          text = diff,
+          ft = "diff",
+        }
+      end
+
+      local item = {
+        buf = buf,
+        resolve = resolve,
+        file = file,
+        item = entry,
+        current = entry.seq == tree.seq_cur,
+        last = e == #entries,
+        parent = parent,
+        depth = parent and parent.depth + 1 or 1,
+        action = function()
+          vim.api.nvim_buf_call(buf, function()
+            vim.cmd("undo " .. entry.seq)
+          end)
+        end,
+      }
+      items[#items + 1] = item
+      add(entry.alt, item)
+    end
+  end
+  add(tree.entries)
+
+  -- disable folding to prevent fold re-calculations
+  local foldmethod = vim.wo[win].foldmethod
+  vim.wo[win].foldmethod = "manual"
+  vim.b[buf].snacks_scroll = false
+
+  local function restore()
+    vim.api.nvim_buf_call(buf, function()
+      -- reset to the original state
+      vim.cmd("noautocmd silent undo " .. tree.seq_cur)
+      vim.wo[win].foldmethod = foldmethod
+    end)
+    vim.api.nvim_win_call(win, function()
+      vim.fn.winrestview(view)
+    end)
+    vim.b[buf].snacks_scroll = nil
+  end
+
+  -- Resolve the items in batches to prevent blocking the UI
+  ---@param cb async fun(item: snacks.picker.finder.Item)
+  ---@param task snacks.picker.Async
+  ---@async
+  return function(cb, task)
+    task:on("abort", vim.schedule_wrap(restore))
+
+    while #items > 0 do
+      vim.schedule(function()
+        local count = 0
+        while #items > 0 and count < 5 do
+          count = count + 1
+          local item = table.remove(items, 1)
+          Snacks.picker.util.resolve(item)
+          cb(item)
+        end
+        if #items == 0 then
+          restore()
+        end
+        task:resume()
+      end)
+      task:suspend()
+    end
+  end
+end
+
 return M

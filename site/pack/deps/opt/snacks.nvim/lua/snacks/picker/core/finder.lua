@@ -9,7 +9,7 @@ local Async = require("snacks.picker.util.async")
 local M = {}
 M.__index = M
 
----@alias snacks.picker.finder fun(opts:snacks.picker.Config, filter:snacks.picker.Filter): (snacks.picker.finder.Item[] | fun(cb:async fun(item:snacks.picker.finder.Item)))
+---@alias snacks.picker.finder fun(opts:snacks.picker.Config, filter:snacks.picker.Filter): (snacks.picker.finder.Item[] | fun(cb:async fun(item:snacks.picker.finder.Item), task:snacks.picker.Async))
 ---@alias snacks.picker.finder.multi (snacks.picker.finder|string)[]
 
 local YIELD_FIND = 1 -- ms
@@ -69,9 +69,10 @@ function M:run(picker)
   end
 
   collectgarbage("stop") -- moar speed
-  ---@cast finder fun(cb:async fun(item:snacks.picker.finder.Item))
+  ---@cast finder fun(cb:async fun(item:snacks.picker.finder.Item), task:snacks.picker.Async)
   ---@diagnostic disable-next-line: await-in-sync
   self.task = Async.new(function()
+    local async = Async.running()
     ---@async
     finder(function(item)
       if #self.items >= limit then
@@ -85,7 +86,7 @@ function M:run(picker)
       picker.matcher.task:resume()
       yield = yield or Async.yielder(YIELD_FIND)
       yield()
-    end)
+    end, async)
   end):on("done", function()
     collectgarbage("restart")
     picker.matcher.task:resume()

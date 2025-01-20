@@ -98,8 +98,11 @@ function M.git_log(item, picker)
   local ret = {} ---@type snacks.picker.Highlight[]
   ret[#ret + 1] = { picker.opts.icons.git.commit, "SnacksPickerGitCommit" }
   ret[#ret + 1] = { item.commit, "SnacksPickerGitCommit" }
+
   ret[#ret + 1] = { " " }
-  ret[#ret + 1] = { a(item.date, 16), "SnacksPickerGitDate" }
+  if item.date then
+    ret[#ret + 1] = { a(item.date, 16), "SnacksPickerGitDate" }
+  end
 
   local msg = item.msg ---@type string
   local type, scope, breaking, body = msg:match("^(%S+)(%(.-%))(!?):%s*(.*)$")
@@ -130,34 +133,91 @@ function M.git_log(item, picker)
   return ret
 end
 
-function M.lsp_symbol(item, picker)
+function M.git_branch(item, picker)
+  local a = Snacks.picker.util.align
   local ret = {} ---@type snacks.picker.Highlight[]
-  if item.hierarchy then
-    local indents = picker.opts.icons.indent
-    local indent = {} ---@type string[]
-    local node = item
-    while node and node.depth > 0 do
-      local is_last, icon = node.last, ""
-      if node ~= item then
-        icon = is_last and "  " or indents.vertical
-      else
-        icon = is_last and indents.last or indents.middle
-      end
-      table.insert(indent, 1, icon)
-      node = node.parent
+  if item.current then
+    ret[#ret + 1] = { a("", 2), "SnacksPickerGitBranchCurrent" }
+    ret[#ret + 1] = { a(item.branch, 30, { truncate = true }), "SnacksPickerGitBranch" }
+  else
+    ret[#ret + 1] = { a("", 2) }
+    ret[#ret + 1] = { a(item.branch, 30, { truncate = true }), "SnacksPickerGitBranch" }
+  end
+  ret[#ret + 1] = { " " }
+  local offset = Snacks.picker.highlight.offset(ret)
+  local log = M.git_log(item, picker)
+  Snacks.picker.highlight.fix_offset(log, offset)
+  vim.list_extend(ret, log)
+  return ret
+end
+
+function M.indent(item, picker)
+  local ret = {} ---@type snacks.picker.Highlight[]
+  local indents = picker.opts.icons.indent
+  local indent = {} ---@type string[]
+  local node = item
+  while node and node.depth > 0 do
+    local is_last, icon = node.last, ""
+    if node ~= item then
+      icon = is_last and "  " or indents.vertical
+    else
+      icon = is_last and indents.last or indents.middle
     end
-    ret[#ret + 1] = { table.concat(indent), "SnacksPickerIndent" }
+    table.insert(indent, 1, icon)
+    node = node.parent
+  end
+  ret[#ret + 1] = { table.concat(indent), "SnacksPickerIndent" }
+  return ret
+end
+
+function M.undo(item, picker)
+  local ret = {} ---@type snacks.picker.Highlight[]
+  local entry = item.item ---@type vim.fn.undotree.entry
+  local a = Snacks.picker.util.align
+  if item.current then
+    ret[#ret + 1] = { a("", 2), "SnacksPickerUndoCurrent" }
+  else
+    ret[#ret + 1] = { a("", 2) }
+  end
+  vim.list_extend(ret, M.indent(item, picker))
+
+  ret[#ret + 1] = { a(tostring(entry.seq), 4), "SnacksPickerIdx" }
+  ret[#ret + 1] = { " " }
+  ret[#ret + 1] = { a(Snacks.picker.util.reltime(entry.time), 13), "SnacksPickerTime" }
+  ret[#ret + 1] = { " " }
+  local function num(v, prefix)
+    v = v or 0
+    return a((v and v > 0 and prefix .. v or ""), 4)
+  end
+  ret[#ret + 1] = { num(item.added, "+"), "SnacksPickerUndoAdded" }
+  ret[#ret + 1] = { " " }
+  ret[#ret + 1] = { num(item.removed, "-"), "SnacksPickerUndoRemoved" }
+  if entry.save then
+    ret[#ret + 1] = { " " }
+    ret[#ret + 1] = { a(picker.opts.icons.undo.saved, 2), "SnacksPickerUndoSaved" }
+  end
+  return ret
+end
+
+function M.lsp_symbol(item, picker)
+  local opts = picker.opts --[[@as snacks.picker.lsp.symbols.Config]]
+  local ret = {} ---@type snacks.picker.Highlight[]
+  if item.hierarchy and not opts.workspace then
+    vim.list_extend(ret, M.indent(item, picker))
   end
   local kind = item.kind or "Unknown" ---@type string
   local kind_hl = "SnacksPickerIcon" .. kind
   ret[#ret + 1] = { picker.opts.icons.kinds[kind], kind_hl }
   ret[#ret + 1] = { " " }
-  -- ret[#ret + 1] = { kind:lower() .. string.rep(" ", 10 - #kind), kind_hl }
-  -- ret[#ret + 1] = { " " }
   local name = vim.trim(item.name:gsub("\r?\n", " "))
   name = name == "" and item.detail or name
   Snacks.picker.highlight.format(item, name, ret)
-  -- ret[#ret + 1] = { name }
+
+  if opts.workspace then
+    local offset = Snacks.picker.highlight.offset(ret, { char_idx = true })
+    ret[#ret + 1] = { Snacks.picker.util.align(" ", 40 - offset) }
+    vim.list_extend(ret, M.filename(item, picker))
+  end
   return ret
 end
 

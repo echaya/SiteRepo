@@ -10,6 +10,7 @@ local Async = require("snacks.picker.util.async")
 ---@field live? boolean
 ---@field score snacks.picker.Score
 ---@field sorting? boolean
+---@field file? {path: string, pos: snacks.picker.Pos}
 local M = {}
 M.__index = M
 M.DEFAULT_SCORE = 1000
@@ -114,6 +115,7 @@ end
 function M:init(opts)
   opts = opts or {}
   self.tick = self.tick + 1
+  self.file = nil
   local pattern = vim.trim(opts.pattern or self.pattern)
   self.mods = {}
   self.pattern = pattern
@@ -158,7 +160,29 @@ end
 function M:_prepare(pattern)
   ---@type snacks.picker.matcher.Mods
   local mods = { pattern = pattern, entropy = 0, chars = {} }
-  local field, p = pattern:match("^([%w_]+):(.*)$")
+
+  local file_patterns = {
+    "^(.*[/\\].*):(%d*):(%d*)$",
+    "^(.*[/\\].*):(%d*)$",
+    "^(.+%.[a-z_]+):(%d*):(%d*)$",
+    "^(.+%.[a-z_]+):(%d*)$",
+  }
+
+  for _, p in ipairs(file_patterns) do
+    local file, line, col = pattern:match(p)
+    if file then
+      mods.field = "file"
+      mods.pattern = file .. "$"
+      self.file = {
+        path = file,
+        pos = { tonumber(line) or 1, tonumber(col) or 0 },
+      }
+      break
+    end
+  end
+
+  -- minimum two chars for field pattern
+  local field, p = pattern:match("^([%w_][%w_]+):(.*)$")
   if field then
     mods.field = field
     mods.pattern = p
@@ -217,6 +241,9 @@ function M:update(item)
   if item.match_tick == self.tick then
     return false
   end
+  if item.match_pos then
+    item.pos = nil
+  end
   local score = self:match(item)
   if score ~= 0 then
     if item.score_add then
@@ -224,6 +251,10 @@ function M:update(item)
     end
     if item.score_mul then
       score = score * item.score_mul
+    end
+    if self.file and not item.pos then
+      item.pos = self.file.pos
+      item.match_pos = true
     end
   end
   item.match_tick, item.score = self.tick, score

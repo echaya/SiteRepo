@@ -7,6 +7,7 @@
 ---@field all boolean
 ---@field paths {path:string, want:boolean}[]
 ---@field opts snacks.picker.filter.Config
+---@field current_buf number
 local M = {}
 M.__index = M
 
@@ -16,6 +17,7 @@ local uv = vim.uv or vim.loop
 function M.new(picker)
   local opts = picker.opts ---@type snacks.picker.Config|{filter?:snacks.picker.filter.Config}
   local self = setmetatable({}, M)
+  self.current_buf = vim.api.nvim_get_current_buf()
   self.opts = opts.filter or {}
   local function gets(v)
     return type(v) == "function" and v(picker) or v or "" --[[@as string]]

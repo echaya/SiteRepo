@@ -4,6 +4,8 @@ local Finder = require("snacks.picker.core.finder")
 local uv = vim.uv or vim.loop
 Async.BUDGET = 10
 
+---@alias snacks.Picker.ref (fun():snacks.Picker?)|{value?: snacks.Picker}
+
 ---@class snacks.Picker
 ---@field opts snacks.picker.Config
 ---@field finder snacks.picker.Finder
@@ -55,6 +57,15 @@ function M.new(opts)
   if self.opts.source == "resume" then
     return M.resume()
   end
+
+  if self.opts.debug.leaks then
+    collectgarbage("collect")
+    local picker_count = vim.tbl_count(M._pickers)
+    if picker_count > 0 then
+      Snacks.notify.error("` " .. picker_count .. " ` active pickers.", { title = "Snacks Picker" })
+    end
+  end
+
   self.visual = Snacks.picker.util.visual()
   self.start_time = uv.hrtime()
   Snacks.picker.current = self
@@ -125,8 +136,12 @@ function M.new(opts)
     end)
   end)
 
+  local ref = self:ref()
   self._throttled_preview = Snacks.util.throttle(function()
-    self._show_preview(self)
+    local this = ref()
+    if this then
+      this:_show_preview()
+    end
   end, { ms = 60, name = "preview" })
 
   self:find()
@@ -176,6 +191,7 @@ function M:init_layout(layout)
     on_update = function()
       self:update_titles()
       self:show_preview()
+      self.input:update()
     end,
     layout = {
       backdrop = backdrop,
@@ -333,6 +349,16 @@ function M:show()
   end
 end
 
+---@param item snacks.picker.Item?
+function M:resolve(item)
+  if not item then
+    return
+  end
+  Snacks.picker.util.resolve(item)
+  Snacks.picker.util.resolve_loc(item)
+  return item
+end
+
 --- Returns an iterator over the filtered items in the picker.
 --- Items will be in sorted order.
 ---@return fun():snacks.picker.Item?
@@ -342,7 +368,7 @@ function M:iter()
   return function()
     i = i + 1
     if i <= n then
-      return self.list:get(i)
+      return self:resolve(self.list:get(i))
     end
   end
 end
@@ -357,20 +383,29 @@ function M:items()
 end
 
 --- Get the current item at the cursor
-function M:current()
-  return self.list:current()
+---@param opts? {resolve?: boolean} default is `true`
+function M:current(opts)
+  opts = opts or {}
+  local ret = self.list:current()
+  if ret and opts.resolve ~= false then
+    ret = self:resolve(ret)
+  end
+  return ret
 end
 
 --- Get the selected items.
 --- If `fallback=true` and there is no selection, return the current item.
 ---@param opts? {fallback?: boolean} default is `false`
+---@return snacks.picker.Item[]
 function M:selected(opts)
   opts = opts or {}
   local ret = vim.deepcopy(self.list.selected)
   if #ret == 0 and opts.fallback then
-    return { self:current() }
+    ret = { self:current() }
   end
-  return ret
+  return vim.tbl_map(function(item)
+    return self:resolve(item)
+  end, ret)
 end
 
 --- Total number of items in the picker
@@ -383,12 +418,17 @@ function M:empty()
   return self:count() == 0
 end
 
+---@return snacks.Picker.ref
+function M:ref()
+  return Snacks.util.ref(self)
+end
+
 --- Close the picker
 function M:close()
+  vim.cmd.stopinsert()
   if self.closed then
     return
   end
-  vim.cmd.stopinsert()
   self.closed = true
   M.last.selected = self:selected({ fallback = false })
   M.last.cursor = self.list.cursor
@@ -399,15 +439,14 @@ function M:close()
   if is_picker_win and vim.api.nvim_win_is_valid(self.main) then
     vim.api.nvim_set_current_win(self.main)
   end
-  self.preview.win:close()
   self.layout:close()
   self.updater:stop()
   M._active[self] = nil
   vim.schedule(function()
-    self.list:clear()
-    self.finder.items = {}
     self.matcher:abort()
     self.finder:abort()
+    self.input:close()
+    self.preview:close()
   end)
 end
 

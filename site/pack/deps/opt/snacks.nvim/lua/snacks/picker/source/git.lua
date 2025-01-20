@@ -62,8 +62,9 @@ function M.log(opts)
     args[#args + 1] = file
   end
 
-  local cwd = vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
+  local cwd = vim.fs.normalize(file and vim.fn.fnamemodify(file, ":h") or opts and opts.cwd or uv.cwd() or ".") or nil
   return require("snacks.picker.source.proc").proc(vim.tbl_deep_extend("force", {
+    cwd = cwd,
     cmd = "git",
     args = args,
     ---@param item snacks.picker.finder.Item
@@ -85,6 +86,7 @@ end
 ---@type snacks.picker.finder
 function M.status(opts)
   local args = {
+    "--no-pager",
     "status",
     "-uall",
     "--porcelain=v1",
@@ -93,6 +95,7 @@ function M.status(opts)
   local cwd = vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
   cwd = Snacks.git.get_root(cwd)
   return require("snacks.picker.source.proc").proc(vim.tbl_deep_extend("force", {
+    cwd = cwd,
     cmd = "git",
     args = args,
     ---@param item snacks.picker.finder.Item
@@ -150,6 +153,28 @@ function M.diff(opts)
     end)
     add()
   end
+end
+
+---@param opts snacks.picker.Config
+---@type snacks.picker.finder
+function M.branches(opts)
+  local args = { "--no-pager", "branch", "--no-color", "-vvl" }
+  local cwd = vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
+  cwd = Snacks.git.get_root(cwd)
+  return require("snacks.picker.source.proc").proc(vim.tbl_deep_extend("force", {
+    cwd = cwd,
+    cmd = "git",
+    args = args,
+    ---@param item snacks.picker.finder.Item
+    transform = function(item)
+      local status, branch, commit, msg = item.text:match("^(.)%s(%S+)%s+([a-zA-Z0-9]+)%s*(.*)$")
+      item.cwd = cwd
+      item.current = status == "*"
+      item.branch = branch
+      item.commit = commit
+      item.msg = msg
+    end,
+  }, opts or {}))
 end
 
 return M

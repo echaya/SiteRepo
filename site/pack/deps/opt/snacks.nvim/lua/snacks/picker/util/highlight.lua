@@ -90,11 +90,15 @@ function M.get_highlights(opts)
 end
 
 ---@param line snacks.picker.Highlight[]
-function M.offset(line)
+---@param opts? {char_idx?:boolean}
+function M.offset(line, opts)
+  opts = opts or {}
   local offset = 0
   for _, t in ipairs(line) do
     if type(t[1]) == "string" then
       if t.virtual then
+        offset = offset + vim.api.nvim_strwidth(t[1])
+      elseif opts.char_idx then
         offset = offset + vim.api.nvim_strwidth(t[1])
       else
         offset = offset + #t[1]
@@ -222,6 +226,46 @@ function M.to_text(line, opts)
     end
   end
   return table.concat(parts), ret
+end
+
+---@param hl snacks.picker.Highlight[]
+function M.fix_offset(hl, offset)
+  for _, t in ipairs(hl) do
+    if t.col then
+      t.col = t.col + offset
+    end
+    if t.end_col then
+      t.end_col = t.end_col + offset
+    end
+  end
+end
+
+---@param buf number
+---@param ns number
+---@param row number
+---@param hl snacks.picker.Highlight[]
+function M.set(buf, ns, row, hl)
+  while #hl > 0 and type(hl[#hl][1]) == "string" and hl[#hl][1]:find("^%s*$") do
+    table.remove(hl)
+  end
+  local line_text, extmarks = Snacks.picker.highlight.to_text(hl)
+  vim.api.nvim_buf_set_lines(buf, row - 1, row, false, { line_text })
+  for _, extmark in ipairs(extmarks) do
+    local col = extmark.col
+    extmark.col = nil
+    extmark.row = nil
+    extmark.field = nil
+    local ok, err = pcall(vim.api.nvim_buf_set_extmark, buf, ns, row - 1, col, extmark)
+    if not ok then
+      Snacks.notify.error(
+        "Failed to set extmark. This should not happen. Please report.\n"
+          .. err
+          .. "\n```lua\n"
+          .. vim.inspect(extmark)
+          .. "\n```"
+      )
+    end
+  end
 end
 
 return M

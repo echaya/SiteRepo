@@ -120,6 +120,7 @@ end
 function M.bufdelete(picker)
   for _, item in ipairs(picker:selected({ fallback = true })) do
     Snacks.bufdelete.delete(item.buf)
+    picker.list:unselect(item)
   end
   local cursor = picker.list.cursor
   picker:find({
@@ -140,6 +141,21 @@ function M.git_stage(picker)
           picker.list:view(cursor + 1)
         end,
       })
+    end, { cwd = item.cwd })
+  end
+end
+
+function M.git_checkout(picker, item)
+  picker:close()
+  if item then
+    local what = item.branch or item.commit
+    if not what then
+      Snacks.notify.warn("No branch or commit found", { title = "Snacks Picker" })
+      return
+    end
+    local cmd = { "git", "checkout", what }
+    Snacks.picker.util.cmd(cmd, function()
+      Snacks.notify("Checkout " .. what, { title = "Snacks Picker" })
     end, { cwd = item.cwd })
   end
 end

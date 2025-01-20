@@ -94,6 +94,12 @@ layout:close(opts)
 layout:each(cb, opts)
 ```
 
+### `layout:hide()`
+
+```lua
+layout:hide()
+```
+
 ### `layout:is_enabled()`
 
 Check if the window has been used in the layout
@@ -135,6 +141,12 @@ Toggle a window
 ```lua
 ---@param win string
 layout:toggle(win)
+```
+
+### `layout:unhide()`
+
+```lua
+layout:unhide()
 ```
 
 ### `layout:valid()`

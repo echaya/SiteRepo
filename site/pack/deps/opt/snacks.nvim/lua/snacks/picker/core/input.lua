@@ -2,7 +2,6 @@
 ---@field win snacks.win
 ---@field totals string
 ---@field picker snacks.Picker
----@field _statuscolumn string
 ---@field filter snacks.picker.Filter
 local M = {}
 M.__index = M
@@ -17,7 +16,6 @@ function M.new(picker)
   self.picker = picker
   self.filter = require("snacks.picker.core.filter").new(picker)
   picker.matcher:init({ pattern = self.filter.pattern })
-  self._statuscolumn = self:statuscolumn()
 
   self.win = Snacks.win(Snacks.win.resolve(picker.opts.win.input, {
     show = false,
@@ -36,16 +34,18 @@ function M.new(picker)
       buftype = "prompt",
     },
     wo = {
-      statuscolumn = self._statuscolumn,
+      statuscolumn = self:statuscolumn(),
       cursorline = false,
       winhighlight = Snacks.picker.highlight.winhl("SnacksPickerInput"),
     },
   }))
 
+  local ref = picker:ref()
   self.win:on(
     { "TextChangedI", "TextChanged" },
     Snacks.util.throttle(function()
-      if not self.win:valid() then
+      local p = ref()
+      if not p or not self.win:valid() then
         return
       end
       -- only one line
@@ -57,16 +57,21 @@ function M.new(picker)
       end
       vim.bo[self.win.buf].modified = false
       local pattern = self:get()
-      if self.picker.opts.live then
+      if p.opts.live then
         self.filter.search = pattern
       else
         self.filter.pattern = pattern
       end
-      picker:match()
+      p:match()
     end, { ms = picker.opts.live and 100 or 30 }),
     { buf = true }
   )
   return self
+end
+
+function M:close()
+  self.win:destroy()
+  self.picker = nil -- needed for garbage collection of the picker
 end
 
 function M:statuscolumn()
@@ -92,9 +97,9 @@ function M:update()
     return
   end
   local sc = self:statuscolumn()
-  if self._statuscolumn ~= sc then
-    self._statuscolumn = sc
-    vim.wo[self.win.win].statuscolumn = sc
+  if self.win.opts.wo.statuscolumn ~= sc then
+    self.win.opts.wo.statuscolumn = sc
+    Snacks.util.wo(self.win.win, { statuscolumn = sc })
   end
   local line = {} ---@type snacks.picker.Highlight[]
   if self.picker:is_active() then
@@ -136,7 +141,7 @@ function M:set(pattern, search)
   })
   vim.api.nvim_win_set_cursor(self.win.win, { 1, #self:get() + 1 })
   self.totals = ""
-  self._statuscolumn = ""
+  self.win.opts.wo.statuscolumn = ""
   self:update()
   self.picker:update_titles()
 end

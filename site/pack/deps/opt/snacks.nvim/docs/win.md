@@ -269,6 +269,12 @@ win:buf_valid()
 win:close(opts)
 ```
 
+### `win:destroy()`
+
+```lua
+win:destroy()
+```
+
 ### `win:dim()`
 
 ```lua
@@ -319,6 +325,12 @@ win:line(line)
 ---@param from? number 1-indexed, inclusive
 ---@param to? number 1-indexed, inclusive
 win:lines(from, to)
+```
+
+### `win:map()`
+
+```lua
+win:map()
 ```
 
 ### `win:on()`

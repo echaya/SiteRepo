@@ -96,6 +96,7 @@ M.diagnostics = {
       "lnum",
     },
   },
+  matcher = { sort_empty = true },
   -- only show diagnostics from the cwd by default
   filter = { cwd = true },
 }
@@ -107,6 +108,7 @@ M.diagnostics_buffer = {
   sort = {
     fields = { "severity", "file", "lnum" },
   },
+  matcher = { sort_empty = true },
   filter = { buf = true },
 }
 
@@ -117,6 +119,7 @@ M.diagnostics_buffer = {
 ---@field dirs? string[] directories to search
 ---@field follow? boolean follow symlinks
 ---@field exclude? string[] exclude patterns
+---@field args? string[] additional arguments
 M.files = {
   finder = "files",
   format = "file",
@@ -124,6 +127,22 @@ M.files = {
   ignored = false,
   follow = false,
   supports_live = true,
+}
+
+M.git_branches = {
+  finder = "git_branches",
+  format = "git_branch",
+  preview = "git_log",
+  confirm = "git_checkout",
+  on_show = function(picker)
+    for i, item in ipairs(picker:items()) do
+      if item.current then
+        picker.list:view(i)
+        Snacks.picker.actions.list_scroll_center(picker)
+        break
+      end
+    end
+  end,
 }
 
 -- Find git files
@@ -200,6 +219,7 @@ M.git_diff = {
 ---@field buffers? boolean search in open buffers
 ---@field need_search? boolean require a search pattern
 ---@field exclude? string[] exclude patterns
+---@field args? string[] additional arguments
 M.grep = {
   finder = "grep",
   format = "file",
@@ -356,6 +376,7 @@ M.lsp_references = {
 ---@class snacks.picker.lsp.symbols.Config: snacks.picker.Config
 ---@field hierarchy? boolean show symbol hierarchy
 ---@field filter table<string, string[]|boolean>? symbol kind filter
+---@field workspace? boolean show workspace symbols
 M.lsp_symbols = {
   finder = "lsp_symbols",
   format = "lsp_symbol",
@@ -397,6 +418,14 @@ M.lsp_symbols = {
     },
   },
 }
+
+---@type snacks.picker.lsp.symbols.Config
+M.lsp_workspace_symbols = vim.tbl_extend("force", {}, M.lsp_symbols, {
+  workspace = true,
+  hierarchy = false,
+  supports_live = true,
+  live = true, -- live by default
+})
 
 -- LSP type definitions
 ---@type snacks.picker.lsp.Config
@@ -542,6 +571,14 @@ M.spelling = {
   format = "text",
   layout = { preset = "vscode" },
   confirm = "item_action",
+}
+
+M.undo = {
+  finder = "vim_undo",
+  format = "undo",
+  preview = "preview",
+  confirm = "item_action",
+  win = { preview = { wo = { number = false, relativenumber = false, signcolumn = "no" } } },
 }
 
 -- Open a project from zoxide

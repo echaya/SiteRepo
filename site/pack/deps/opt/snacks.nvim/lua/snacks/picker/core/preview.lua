@@ -1,5 +1,6 @@
 ---@class snacks.picker.Preview
 ---@field item? snacks.picker.Item
+---@field pos? snacks.picker.Pos
 ---@field win snacks.win
 ---@field preview snacks.picker.preview
 ---@field state table<string, any>
@@ -35,6 +36,7 @@ function M.new(opts, main)
         colorcolumn = "",
         number = true,
         relativenumber = true,
+        list = false,
       },
     },
     opts.win.preview,
@@ -79,6 +81,13 @@ function M.new(opts, main)
   return self
 end
 
+function M:close()
+  self.win:destroy()
+  self.item = nil
+  self.win_opts = { main = {}, layout = {}, win = {} }
+  self.state = {}
+end
+
 ---@param main? number
 function M:update(main)
   self.main = main
@@ -92,8 +101,13 @@ end
 
 ---@param picker snacks.Picker
 function M:show(picker)
-  local item, prev = picker:current(), self.item
+  local item, prev = picker:current({ resolve = false }), self.item
+  if self.item == item and self.pos == (item and item.pos or nil) then
+    return
+  end
+  Snacks.picker.util.resolve(item)
   self.item = item
+  self.pos = item and item.pos or nil
   if item then
     local buf = self.win.buf
     local ok, err = pcall(
@@ -154,15 +168,16 @@ function M:reset()
   self:set_title()
   vim.treesitter.stop(self.win.buf)
   vim.bo[self.win.buf].modifiable = true
-  vim.api.nvim_buf_set_lines(self.win.buf, 0, -1, false, {})
+  self:set_lines({})
   self:clear(self.win.buf)
   local ei = vim.o.eventignore
   vim.o.eventignore = "all"
   vim.bo[self.win.buf].filetype = "snacks_picker_preview"
   vim.bo[self.win.buf].syntax = ""
-  vim.o.eventignore = ei
+  vim.bo[self.win.buf].buftype = "nofile"
   self:wo({ cursorline = false })
   self:wo(self.win.opts.wo)
+  vim.o.eventignore = ei
 end
 
 -- create a new scratch buffer
@@ -174,7 +189,8 @@ function M:scratch()
   vim.bo[buf].filetype = "snacks_picker_preview"
   vim.o.eventignore = ei
   vim.api.nvim_win_set_buf(self.win.win, buf)
-  self:wo({ number = false, relativenumber = false })
+  self.win:map()
+  self:wo({ number = false, relativenumber = false, signcolumn = "no" })
   return buf
 end
 
@@ -203,7 +219,10 @@ function M:loc()
   if not self.item then
     return
   end
+
   local line_count = vim.api.nvim_buf_line_count(self.win.buf)
+  Snacks.picker.util.resolve_loc(self.item, self.win.buf)
+
   if self.item.pos and self.item.pos[1] > 0 and self.item.pos[1] <= line_count then
     vim.api.nvim_win_set_cursor(self.win.win, { self.item.pos[1], 0 })
     vim.api.nvim_win_call(self.win.win, function()
@@ -228,10 +247,22 @@ function M:loc()
   end
 end
 
+---@param lines string[]
+function M:set_lines(lines)
+  vim.bo[self.win.buf].modifiable = true
+  vim.api.nvim_buf_set_lines(self.win.buf, 0, -1, false, lines)
+  vim.bo[self.win.buf].modifiable = false
+end
+
 ---@param msg string
 ---@param level? "info" | "warn" | "error"
 ---@param opts? {item?:boolean}
 function M:notify(msg, level, opts)
+  if not self.win:buf_valid() then
+    Snacks.notify(msg, { level = level })
+    return
+  end
+  self:reset()
   level = level or "info"
   local lines = vim.split(level .. ": " .. msg, "\n", { plain = true })
   local msg_len = #lines
@@ -239,7 +270,7 @@ function M:notify(msg, level, opts)
     lines[#lines + 1] = ""
     vim.list_extend(lines, vim.split(vim.inspect(self.item), "\n", { plain = true }))
   end
-  vim.api.nvim_buf_set_lines(self.win.buf, 0, -1, false, lines)
+  self:set_lines(lines)
   vim.api.nvim_buf_set_extmark(self.win.buf, ns, 0, 0, {
     hl_group = "Diagnostic" .. level:sub(1, 1):upper() .. level:sub(2),
     end_row = msg_len,

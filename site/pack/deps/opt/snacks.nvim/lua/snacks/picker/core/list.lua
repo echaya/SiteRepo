@@ -47,6 +47,7 @@ function M.new(picker)
     bo = { modifiable = false, filetype = "snacks_picker_list" },
     wo = {
       foldenable = false,
+      foldmethod = "manual",
       cursorline = false,
       winhighlight = Snacks.picker.highlight.winhl("SnacksPickerList", { CursorLine = "Visual" }),
     },
@@ -122,7 +123,7 @@ function M:on_show()
   self.state.scroll = vim.wo[self.win.win].scroll
   self.state.height = vim.api.nvim_win_get_height(self.win.win)
   self.state.mousescroll = tonumber(vim.o.mousescroll:match("ver:(%d+)")) or 1
-  vim.wo[self.win.win].scrolloff = 0
+  Snacks.util.wo(self.win.win, { scrolloff = 0 })
   self.dirty = true
 end
 
@@ -131,9 +132,8 @@ function M:count()
 end
 
 function M:close()
-  self.win:close()
-  self.items = {}
-  self.topk:clear()
+  -- nothing todo. Keep all items so actions can be performed on them,
+  -- even when the picker closed
 end
 
 function M:scrolloff()
@@ -205,6 +205,7 @@ function M:clear()
   self.topk:clear()
   self.top, self.cursor = 1, 1
   self.items = {}
+  self._current = nil
   self.dirty = true
   if next(self.items) == nil then
     return
@@ -270,24 +271,41 @@ function M:update()
 end
 
 -- Toggle selection of current item
-function M:select()
-  local item = self:current()
+---@param item? snacks.picker.Item
+function M:select(item)
+  item = item or self:current()
+  if not item then
+    return
+  end
+  if self:unselect(item) then
+    return
+  end
+  local key = self:select_key(item)
+  self.selected_map[key] = item
+  table.insert(self.selected, item)
+  self.picker.input:update()
+  self.dirty = true
+  self:render()
+end
+
+---@param item? snacks.picker.Item
+function M:unselect(item)
+  item = item or self:current()
   if not item then
     return
   end
   local key = self:select_key(item)
-  if self.selected_map[key] then
-    self.selected_map[key] = nil
-    self.selected = vim.tbl_filter(function(v)
-      return self:select_key(v) ~= key
-    end, self.selected)
-  else
-    self.selected_map[key] = item
-    table.insert(self.selected, item)
+  if not self.selected_map[key] then
+    return
   end
+  self.selected_map[key] = nil
+  self.selected = vim.tbl_filter(function(v)
+    return self:select_key(v) ~= key
+  end, self.selected)
   self.picker.input:update()
   self.dirty = true
   self:render()
+  return true
 end
 
 function M:select_all()
@@ -329,6 +347,7 @@ end
 
 ---@param item snacks.picker.Item
 function M:format(item)
+  Snacks.picker.util.resolve(item)
   -- Add selected and debug info
   local prefix = {} ---@type snacks.picker.Highlight[]
   if #self.selected > 0 or self.picker.opts.formatters.selected.show_always then

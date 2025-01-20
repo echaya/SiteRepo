@@ -149,4 +149,105 @@ function M.title(str)
   )
 end
 
+---@param str string
+---@return string text, string[] args
+function M.parse(str)
+  -- Format: this is a test -- -g=hello
+  local t, a = str:match("^(.-)%s*%-%-%s*(.*)$")
+  if not t then
+    return str, {}
+  end
+  t, a = vim.trim(t), vim.trim(a:gsub("%s+", " "))
+  local args = {} ---@type string[]
+  -- tokenize the args, keeping quoted strings together
+  local in_quote = nil ---@type string?
+  local c = 1
+  for i = 1, #a do
+    local char = a:sub(i, i)
+    if char == "'" or char == '"' then
+      if in_quote == char then
+        in_quote = nil
+      else
+        in_quote = char
+      end
+    elseif char == " " and not in_quote then
+      args[#args + 1] = a:sub(c, i - 1)
+      c = i + 1
+    end
+  end
+  if c <= #a then
+    args[#args + 1] = a:sub(c)
+  end
+  return t, args
+end
+
+--- Resolves the item if it has a resolve function
+---@param item snacks.picker.Item?
+function M.resolve(item)
+  if item and item.resolve then
+    item.resolve(item)
+    item.resolve = nil
+  end
+  return item
+end
+
+---@param s string
+---@param index number
+---@param encoding string
+function M.str_byteindex(s, index, encoding)
+  if vim.lsp.util._str_byteindex_enc then
+    return vim.lsp.util._str_byteindex_enc(s, index, encoding)
+  elseif vim._str_byteindex then
+    return vim._str_byteindex(s, index, encoding == "utf-16")
+  end
+  return vim.str_byteindex(s, index, encoding == "utf-16")
+end
+
+--- Resolves the location of an item to byte positions
+---@param item snacks.picker.Item
+---@param buf? number
+function M.resolve_loc(item, buf)
+  if not item or not item.loc or item.loc.resolved then
+    return item
+  end
+  -- return vim._str_byteindex(s, index, encoding == 'utf-16')
+
+  local lines = {} ---@type string[]
+  if buf and vim.api.nvim_buf_is_valid(buf) then
+    lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  else
+    lines = vim.fn.readfile(item.file)
+  end
+
+  ---@param pos lsp.Position?
+  local function resolve(pos)
+    return pos and { pos.line + 1, M.str_byteindex(lines[pos.line + 1], pos.character, item.loc.encoding) } or nil
+  end
+  item.pos = resolve(item.loc.range["start"])
+  item.end_pos = resolve(item.loc.range["end"]) or item.end_pos
+  item.loc.resolved = true
+  return item
+end
+
+--- Returns the relative time from a given time
+--- as ... ago
+---@param time number in seconds
+function M.reltime(time)
+  local delta = os.time() - time
+  local tpl = {
+    { 1, 60, "just now", "just now" },
+    { 60, 3600, "a minute ago", "%d minutes ago" },
+    { 3600, 3600 * 24, "an hour ago", "%d hours ago" },
+    { 3600 * 24, 3600 * 24 * 7, "yesterday", "%d days ago" },
+    { 3600 * 24 * 7, 3600 * 24 * 7 * 4, "a week ago", "%d weeks ago" },
+  }
+  for _, v in ipairs(tpl) do
+    if delta < v[2] then
+      local value = math.floor(delta / v[1] + 0.5)
+      return value == 1 and v[3] or v[4]:format(value)
+    end
+  end
+  return os.date("%b %d, %Y", time) ---@type string
+end
+
 return M

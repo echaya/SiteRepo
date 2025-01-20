@@ -382,24 +382,51 @@ function M:close(opts)
   for w, win in pairs(self.wins) do
     if opts.wins == false then
       win.opts = self.win_opts[w]
-    elseif win:valid() then
-      win:close()
+    else
+      win:destroy()
     end
   end
   for _, win in pairs(self.box_wins) do
-    win:close()
+    win:destroy()
   end
+  self.opts = nil
+  self.root = nil
+  self.wins = nil
+  self.box_wins = nil
+  self.win_opts = nil
 end
 
 --- Check if layout is valid (visible)
 function M:valid()
-  return self.root:valid()
+  return not self.closed and self.root:valid()
 end
 
 --- Check if the window has been used in the layout
 ---@param w string
 function M:is_enabled(w)
   return not self:is_hidden(w) and self.wins[w].enabled
+end
+
+function M:hide()
+  for _, win in ipairs(self:get_wins()) do
+    if win:valid() then
+      vim.api.nvim_win_set_config(win.win, { hide = true })
+      if win.backdrop and win.backdrop:valid() then
+        vim.api.nvim_win_set_config(win.backdrop.win, { hide = true })
+      end
+    end
+  end
+end
+
+function M:unhide()
+  for _, win in ipairs(self:get_wins()) do
+    if win:valid() then
+      vim.api.nvim_win_set_config(win.win, { hide = false })
+      if win.backdrop and win.backdrop:valid() then
+        vim.api.nvim_win_set_config(win.backdrop.win, { hide = false })
+      end
+    end
+  end
 end
 
 --- Show the layout

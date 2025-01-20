@@ -175,7 +175,7 @@ N.styles = {
   minimal = function(buf, notif, ctx)
     ctx.opts.border = "none"
     local whl = ctx.opts.wo.winhighlight
-    ctx.opts.wo.winhighlight = whl:gsub(ctx.hl.msg, "NormalFloat")
+    ctx.opts.wo.winhighlight = whl:gsub(ctx.hl.msg, "SnacksNotifierMinimal")
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(notif.msg, "\n"))
     vim.api.nvim_buf_set_extmark(buf, ctx.ns, 0, 0, {
       virt_text = { { notif.icon, ctx.hl.icon } },
@@ -290,6 +290,7 @@ function N:init()
     [hl("History")] = "Normal",
     [hl("HistoryTitle")] = "Title",
     [hl("HistoryDateTime")] = "Special",
+    SnacksNotifierMinimal = "NormalFloat",
   }
   for _, level in ipairs(N.level_names) do
     local Level = cap(level)
@@ -493,7 +494,7 @@ function N:hide(id)
   self.queue[id], self.sorted = nil, nil
   notif.hidden = ts()
   if notif.win then
-    notif.win:hide()
+    notif.win:close()
     notif.win = nil
   end
 end

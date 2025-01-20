@@ -6,6 +6,7 @@ local M = {}
 ---@alias snacks.picker.format fun(item:snacks.picker.Item, picker:snacks.Picker):snacks.picker.Highlight[]
 ---@alias snacks.picker.preview fun(ctx: snacks.picker.preview.ctx):boolean?
 ---@alias snacks.picker.sort fun(a:snacks.picker.Item, b:snacks.picker.Item):boolean
+---@alias snacks.picker.Pos {[1]:number, [2]:number}
 
 --- Generic filter used by finders to pre-filter items
 ---@class snacks.picker.filter.Config
@@ -29,11 +30,14 @@ local M = {}
 ---@field score_add? number
 ---@field score_mul? number
 ---@field match_tick? number
+---@field file? string
 ---@field text string
----@field pos? {[1]:number, [2]:number}
----@field end_pos? {[1]:number, [2]:number}
+---@field pos? snacks.picker.Pos
+---@field loc? snacks.picker.lsp.Loc
+---@field end_pos? snacks.picker.Pos
 ---@field highlights? snacks.picker.Highlight[][]
 ---@field preview? snacks.picker.Item.preview
+---@field resolve? fun(item:snacks.picker.Item)
 
 ---@class snacks.picker.finder.Item: snacks.picker.Item
 ---@field idx? number
@@ -105,6 +109,7 @@ local defaults = {
     ignorecase = true, -- use ignorecase
     sort_empty = false, -- sort results when the search string is empty
     filename_bonus = true, -- give bonus for matching file names (last part of the path)
+    file_pos = true, -- support patterns like `file:line:col` and `file:line`
   },
   sort = {
     -- default sort is by score, text length and index
@@ -253,6 +258,9 @@ local defaults = {
       middle = "├╴",
       last   = "└╴",
     },
+    undo = {
+      saved   = " ",
+    },
     ui = {
       live        = "󰐰 ",
       hidden      = "h",
@@ -315,6 +323,7 @@ local defaults = {
   ---@class snacks.picker.debug
   debug = {
     scores = false, -- show scores in the list
+    leaks = false, -- show when pickers don't get garbage collected
   },
 }
 

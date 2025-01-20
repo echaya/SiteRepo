@@ -2,6 +2,8 @@ local Async = require("snacks.picker.util.async")
 
 local M = {}
 
+local islist = vim.islist or vim.tbl_islist
+
 ---@class snacks.picker
 ---@field lsp_definitions? fun(opts?: snacks.picker.lsp.Config):snacks.Picker
 ---@field lsp_implementations? fun(opts?: snacks.picker.lsp.Config):snacks.Picker
@@ -12,6 +14,10 @@ local M = {}
 
 ---@alias lsp.Symbol lsp.SymbolInformation|lsp.DocumentSymbol
 ---@alias lsp.Loc lsp.Location|lsp.LocationLink
+
+---@class snacks.picker.lsp.Loc: lsp.Location
+---@field encoding string
+---@field resolved? boolean
 
 local kinds = nil ---@type table<lsp.SymbolKind, string>
 
@@ -62,6 +68,23 @@ local function wrap(client)
       return client[k]
     end,
   })
+end
+
+---@param item snacks.picker.finder.Item
+---@param result lsp.Loc
+---@param client vim.lsp.Client
+function M.add_loc(item, result, client)
+  ---@type snacks.picker.lsp.Loc
+  local loc = {
+    uri = result.uri or result.targetUri,
+    range = result.range or result.targetSelectionRange,
+    encoding = client.offset_encoding,
+  }
+  item.loc = loc
+  item.pos = { loc.range.start.line + 1, loc.range.start.character }
+  item.end_pos = { loc.range["end"].line + 1, loc.range["end"].character }
+  item.file = vim.uri_to_fname(loc.uri)
+  return item
 end
 
 ---@param buf number
@@ -154,6 +177,10 @@ function M.get_locations(method, opts, filter)
       params.context = opts.context
       return params
     end, function(client, result)
+      result = result or {}
+      -- Result can be a single item or a list of items
+      result = vim.tbl_isempty(result) and {} or islist(result) and result or { result }
+
       local items = vim.lsp.util.locations_to_items(result or {}, client.offset_encoding)
       M.fix_locs(items)
 
@@ -201,12 +228,11 @@ end
 ---@alias lsp.ResultItem lsp.Symbol|lsp.CallHierarchyItem|{text?:string}
 ---@param client vim.lsp.Client
 ---@param results lsp.ResultItem[]
----@param opts? {default_uri?:string, filter?:fun(result:lsp.ResultItem):boolean}
+---@param opts? {default_uri?:string, filter?:(fun(result:lsp.ResultItem):boolean), text_with_file?:boolean}
 function M.results_to_items(client, results, opts)
   opts = opts or {}
   local items = {} ---@type snacks.picker.finder.Item[]
   local locs = {} ---@type lsp.Loc[]
-  local processed = {} ---@type table<lsp.ResultItem, {uri:string, loc:lsp.Loc, range?:lsp.Loc}>
 
   ---@param result lsp.ResultItem
   local function process(result)
@@ -216,7 +242,6 @@ function M.results_to_items(client, results, opts)
     if not loc.uri then
       assert(loc.uri, "missing uri in result:\n" .. vim.inspect(result))
     end
-    processed[result] = { uri = uri, loc = loc }
     if not opts.filter or opts.filter(result) then
       locs[#locs + 1] = loc
     end
@@ -229,39 +254,35 @@ function M.results_to_items(client, results, opts)
     process(result)
   end
 
-  local loc_items = vim.lsp.util.locations_to_items(locs, client.offset_encoding)
-  M.fix_locs(loc_items)
-  local ranges = {} ---@type table<lsp.Loc, vim.quickfix.entry>
-  for _, i in ipairs(loc_items) do
-    local loc = i.user_data ---@type lsp.Loc
-    ranges[loc] = i
-  end
-
   local last = {} ---@type table<snacks.picker.finder.Item, snacks.picker.finder.Item>
   ---@param result lsp.ResultItem
   ---@param parent snacks.picker.finder.Item
   local function add(result, parent)
-    local loc = processed[result].loc
-    local sym = ranges[loc]
-    ---@type snacks.picker.finder.Item?
-    local item
-    if sym then
-      item = {
-        kind = M.symbol_kind(result.kind),
-        parent = parent,
-        depth = (parent.depth or 0) + 1,
-        detail = result.detail,
-        name = result.name,
-        text = table.concat({ M.symbol_kind(result.kind), result.name, result.detail }, " "),
-        file = sym.filename,
-        buf = sym.bufnr,
-        pos = { sym.lnum, sym.col - 1 },
-        end_pos = sym.end_lnum and sym.end_col and { sym.end_lnum, sym.end_col - 1 } or nil,
-      }
+    ---@type snacks.picker.finder.Item
+    local item = {
+      kind = M.symbol_kind(result.kind),
+      parent = parent,
+      depth = (parent.depth or 0) + 1,
+      detail = result.detail,
+      name = result.name,
+      text = "",
+    }
+    local uri = result.location and result.location.uri or result.uri or opts.default_uri
+    local loc = result.location or { range = result.selectionRange or result.range, uri = uri }
+    loc.uri = loc.uri or uri
+    M.add_loc(item, loc, client)
+    local text = table.concat({ M.symbol_kind(result.kind), result.name, result.detail or "" }, " ")
+    if opts.text_with_file and item.file then
+      text = text .. " " .. item.file
+    end
+    item.text = text
+
+    if not opts.filter or opts.filter(result) then
       items[#items + 1] = item
       last[parent] = item
       parent = item
     end
+
     for _, child in ipairs(result.children or {}) do
       add(child, parent)
     end
@@ -281,8 +302,9 @@ function M.results_to_items(client, results, opts)
 end
 
 ---@param opts snacks.picker.lsp.symbols.Config
-function M.symbols(opts)
-  local buf = vim.api.nvim_get_current_buf()
+---@param filt snacks.picker.Filter
+function M.symbols(opts, filt)
+  local buf = filt.current_buf
   local ft = vim.bo[buf].filetype
   local filter = opts.filter[ft]
   if filter == nil then
@@ -294,14 +316,18 @@ function M.symbols(opts)
     return type(filter) == "boolean" or vim.tbl_contains(filter, kind)
   end
 
+  local method = opts.workspace and "workspace/symbol" or "textDocument/documentSymbol"
+  local p = opts.workspace and { query = filt.search } or { textDocument = vim.lsp.util.make_text_document_params(buf) }
+
   ---@async
   ---@param cb async fun(item: snacks.picker.finder.Item)
   return function(cb)
-    M.request(buf, "textDocument/documentSymbol", function()
-      return { textDocument = vim.lsp.util.make_text_document_params(buf) }
+    M.request(buf, method, function()
+      return p
     end, function(client, result, params)
       local items = M.results_to_items(client, result, {
-        default_uri = params.textDocument.uri,
+        default_uri = params.textDocument and params.textDocument.uri or nil,
+        text_with_file = opts.workspace,
         filter = function(item)
           return want(M.symbol_kind(item.kind))
         end,

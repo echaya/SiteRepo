@@ -348,8 +348,14 @@ get_hunks({bufnr})                                      *gitsigns.get_hunks()*
                           • `"start"`: Line number (1-based)
                           • `"count"`: Line count
 
-select_hunk()                                         *gitsigns.select_hunk()*
+select_hunk({opts})                                   *gitsigns.select_hunk()*
                 Select the hunk under the cursor.
+
+                Parameters: ~
+                    {opts} (table|nil): Additional options:
+                           • {greedy}: (boolean)
+                             Select all contiguous hunks. Only useful if 'diff_opts'
+                             contains `linematch`. Defaults to `true`.
 
 preview_hunk_inline()                         *gitsigns.preview_hunk_inline()*
                 Preview the hunk at the cursor position inline in the buffer.
@@ -432,6 +438,8 @@ stage_buffer()                                       *gitsigns.stage_buffer()*
                     {async}
 
 undo_stage_hunk()                                 *gitsigns.undo_stage_hunk()*
+                DEPRECATED: use |gitsigns.stage_hunk()| on staged signs
+
                 Undo the last call of stage_hunk().
 
                 Note: only the calls to stage_hunk() performed in the current
@@ -481,6 +489,8 @@ stage_hunk({range}, {opts}, {callback?})               *gitsigns.stage_hunk()*
                               contains `linematch`. Defaults to `true`.
 
 toggle_deleted({value})                            *gitsigns.toggle_deleted()*
+                DEPRECATED: Use |gitsigns.preview_hunk_inline()|
+
                 Toggle |gitsigns-config-show_deleted|
 
                 Parameters: ~
@@ -699,6 +709,8 @@ culhl                                                  *gitsigns-config-culhl*
       and linked to the corresponding highlight group in `signs.*.hl`.
 
 show_deleted                                    *gitsigns-config-show_deleted*
+      DEPRECATED
+
       Type: `boolean`, Default: `false`
 
       Show the old version of hunks inline in the buffer (via virtual lines).
