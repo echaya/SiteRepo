@@ -10,11 +10,13 @@ Table of Contents                            *snacks-layout-table-of-contents*
   - Snacks.layout.new()             |snacks-layout-module-snacks.layout.new()|
   - layout:close()                       |snacks-layout-module-layout:close()|
   - layout:each()                         |snacks-layout-module-layout:each()|
+  - layout:hide()                         |snacks-layout-module-layout:hide()|
   - layout:is_enabled()             |snacks-layout-module-layout:is_enabled()|
   - layout:is_hidden()               |snacks-layout-module-layout:is_hidden()|
   - layout:maximize()                 |snacks-layout-module-layout:maximize()|
   - layout:show()                         |snacks-layout-module-layout:show()|
   - layout:toggle()                     |snacks-layout-module-layout:toggle()|
+  - layout:unhide()                     |snacks-layout-module-layout:unhide()|
   - layout:valid()                       |snacks-layout-module-layout:valid()|
 
 ==============================================================================
@@ -120,6 +122,13 @@ LAYOUT:EACH()                             *snacks-layout-module-layout:each()*
 <
 
 
+LAYOUT:HIDE()                             *snacks-layout-module-layout:hide()*
+
+>lua
+    layout:hide()
+<
+
+
 LAYOUT:IS_ENABLED()                 *snacks-layout-module-layout:is_enabled()*
 
 Check if the window has been used in the layout
@@ -165,6 +174,13 @@ Toggle a window
 >lua
     ---@param win string
     layout:toggle(win)
+<
+
+
+LAYOUT:UNHIDE()                         *snacks-layout-module-layout:unhide()*
+
+>lua
+    layout:unhide()
 <
 
 

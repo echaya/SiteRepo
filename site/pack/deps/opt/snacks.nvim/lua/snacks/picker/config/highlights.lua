@@ -49,6 +49,7 @@ Snacks.util.set_hl({
   UndoSaved = "Special",
   GitCommit = "@variable.builtin",
   GitBreaking = "Error",
+  GitDetached = "DiagnosticWarn",
   GitBranch = "Title",
   GitBranchCurrent = "Number",
   GitDate = "Special",

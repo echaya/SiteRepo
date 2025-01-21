@@ -108,6 +108,7 @@ Snacks.config.style("notification_history", {
 ---@class snacks.notifier.Config
 ---@field enabled? boolean
 ---@field keep? fun(notif: snacks.notifier.Notif): boolean # global keep function
+---@field filter? fun(notif: snacks.notifier.Notif): boolean # filter our unwanted notifications (return false to hide)
 local defaults = {
   timeout = 3000, -- default timeout in ms
   width = { min = 40, max = 0.4 },
@@ -399,9 +400,12 @@ function N:add(opts)
     notif.dirty = true
   end
   self.sorted = nil
-  if numlevel(notif.level) >= numlevel(self.opts.level) then
-    self.queue[notif.id] = notif
+  local want = numlevel(notif.level) >= numlevel(self.opts.level)
+  want = want and (not self.opts.filter or self.opts.filter(notif))
+  if not want then
+    return notif.id
   end
+  self.queue[notif.id] = notif
   if opts.history ~= false then
     self.history[notif.id] = notif
   end

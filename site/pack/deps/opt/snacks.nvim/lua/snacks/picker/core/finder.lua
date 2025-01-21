@@ -5,7 +5,6 @@ local Async = require("snacks.picker.util.async")
 ---@field task snacks.picker.Async
 ---@field items snacks.picker.finder.Item[]
 ---@field filter? snacks.picker.Filter
----@field has_scores? boolean
 local M = {}
 M.__index = M
 
@@ -46,7 +45,6 @@ function M:run(picker)
   local default_score = require("snacks.picker.core.matcher").DEFAULT_SCORE
   self.task:abort()
   self.items = {}
-  self.has_scores = false
   local yield ---@type fun()
   self.filter = picker.input.filter:clone({ trim = true })
   local finder = self._find(picker.opts, self.filter)
@@ -56,7 +54,6 @@ function M:run(picker)
   local function add(item)
     item.idx, item.score = #self.items + 1, default_score
     self.items[item.idx] = item
-    self.has_scores = self.has_scores or item.score_add ~= nil
   end
 
   -- PERF: if finder is a table, we can skip the async part
@@ -72,7 +69,6 @@ function M:run(picker)
   ---@cast finder fun(cb:async fun(item:snacks.picker.finder.Item), task:snacks.picker.Async)
   ---@diagnostic disable-next-line: await-in-sync
   self.task = Async.new(function()
-    local async = Async.running()
     ---@async
     finder(function(item)
       if #self.items >= limit then
@@ -86,11 +82,13 @@ function M:run(picker)
       picker.matcher.task:resume()
       yield = yield or Async.yielder(YIELD_FIND)
       yield()
-    end, async)
+    end, self.task)
   end):on("done", function()
     collectgarbage("restart")
-    picker.matcher.task:resume()
-    picker:update()
+    if not self.task:aborted() then
+      picker.matcher.task:resume()
+      picker:update()
+    end
   end)
 end
 

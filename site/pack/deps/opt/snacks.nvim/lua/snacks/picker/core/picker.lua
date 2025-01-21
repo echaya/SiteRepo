@@ -23,8 +23,7 @@ Async.BUDGET = 10
 ---@field start_time number
 ---@field title string
 ---@field closed? boolean
----@field hist_idx number
----@field hist_cursor number
+---@field history snacks.picker.History
 ---@field visual? snacks.picker.Visual
 local M = {}
 M.__index = M
@@ -46,8 +45,7 @@ M._active = {}
 ---@type snacks.picker.Last?
 M.last = nil
 
----@type {pattern: string, search: string, live?: boolean}[]
-M.history = {}
+---@alias snacks.picker.history.Record {pattern: string, search: string, live?: boolean}
 
 ---@hide
 ---@param opts? snacks.picker.Config
@@ -58,11 +56,43 @@ function M.new(opts)
     return M.resume()
   end
 
+  self.history = require("snacks.picker.util.history").new("picker", {
+    ---@param hist snacks.picker.history.Record
+    filter = function(hist)
+      if hist.pattern == "" and hist.search == "" then
+        return false
+      end
+      return true
+    end,
+  })
+
+  local picker_count = vim.tbl_count(M._pickers)
+  if picker_count > 0 then
+    -- clear items from previous pickers for garbage collection
+    for picker, _ in pairs(M._pickers) do
+      picker.list.items = {}
+      picker.list.topk:clear()
+      picker.finder.items = {}
+      picker.list.picker = nil
+    end
+  end
+
   if self.opts.debug.leaks then
     collectgarbage("collect")
-    local picker_count = vim.tbl_count(M._pickers)
+    picker_count = vim.tbl_count(M._pickers)
     if picker_count > 0 then
-      Snacks.notify.error("` " .. picker_count .. " ` active pickers.", { title = "Snacks Picker" })
+      local lines = { ("# ` %d ` active pickers:"):format(picker_count) }
+      for picker, _ in pairs(M._pickers) do
+        lines[#lines + 1] = ("- [%s]: **pattern**=%q, **search**=%q"):format(
+          picker.opts.source or "custom",
+          picker.input.filter.pattern,
+          picker.input.filter.search
+        )
+      end
+      Snacks.notify.error(lines, { title = "Snacks Picker", id = "snacks_picker_leaks" })
+      Snacks.debug.metrics()
+    else
+      Snacks.notifier.hide("snacks_picker_leaks")
     end
   end
 
@@ -74,8 +104,6 @@ function M.new(opts)
   self.opts.win.input.actions = actions
   self.opts.win.list.actions = actions
   self.opts.win.preview.actions = actions
-  self.hist_idx = #M.history + 1
-  self.hist_cursor = self.hist_idx
 
   local sort = self.opts.sort or require("snacks.picker.sort").default()
   sort = type(sort) == "table" and require("snacks.picker.sort").default(sort) or sort
@@ -429,6 +457,7 @@ function M:close()
   if self.closed then
     return
   end
+  self:hist_record(true)
   self.closed = true
   M.last.selected = self:selected({ fallback = false })
   M.last.cursor = self.list.cursor
@@ -441,10 +470,11 @@ function M:close()
   end
   self.layout:close()
   self.updater:stop()
+  self.finder:abort()
+  self.matcher:abort()
   M._active[self] = nil
   vim.schedule(function()
-    self.matcher:abort()
-    self.finder:abort()
+    -- order matters!
     self.input:close()
     self.preview:close()
   end)
@@ -550,23 +580,40 @@ function M:find(opts)
 end
 
 --- Add current filter to history
+---@param force? boolean
 ---@private
-function M:hist_record()
-  M.history[self.hist_idx] = {
+function M:hist_record(force)
+  if not force and not self.history:is_current() then
+    return
+  end
+  self.history:record({
     pattern = self.input.filter.pattern,
     search = self.input.filter.search,
     live = self.opts.live,
-  }
+  })
+end
+
+function M:cwd()
+  return self.input.filter.cwd
+end
+
+function M:set_cwd(cwd)
+  self.input.filter:set_cwd(cwd)
+  self.opts.cwd = cwd
 end
 
 --- Move the history cursor
 ---@param forward? boolean
 function M:hist(forward)
   self:hist_record()
-  self.hist_cursor = self.hist_cursor + (forward and 1 or -1)
-  self.hist_cursor = math.min(math.max(self.hist_cursor, 1), #M.history)
-  self.opts.live = M.history[self.hist_cursor].live
-  self.input:set(M.history[self.hist_cursor].pattern, M.history[self.hist_cursor].search)
+  if forward then
+    self.history:next()
+  else
+    self.history:prev()
+  end
+  local hist = self.history:get() --[[@as snacks.picker.history.Record]]
+  self.opts.live = hist.live
+  self.input:set(hist.pattern, hist.search)
 end
 
 --- Run the matcher with the current pattern.

@@ -138,9 +138,12 @@ function M.git_branch(item, picker)
   local ret = {} ---@type snacks.picker.Highlight[]
   if item.current then
     ret[#ret + 1] = { a("", 2), "SnacksPickerGitBranchCurrent" }
-    ret[#ret + 1] = { a(item.branch, 30, { truncate = true }), "SnacksPickerGitBranch" }
   else
     ret[#ret + 1] = { a("", 2) }
+  end
+  if item.detached then
+    ret[#ret + 1] = { a("(detached HEAD)", 30, { truncate = true }), "SnacksPickerGitDetached" }
+  else
     ret[#ret + 1] = { a(item.branch, 30, { truncate = true }), "SnacksPickerGitBranch" }
   end
   ret[#ret + 1] = { " " }

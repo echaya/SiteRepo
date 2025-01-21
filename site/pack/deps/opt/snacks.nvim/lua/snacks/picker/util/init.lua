@@ -1,6 +1,8 @@
 ---@class snacks.picker.util
 local M = {}
 
+local uv = vim.uv or vim.loop
+
 ---@param item snacks.picker.Item
 function M.path(item)
   if not (item and item.file) then
@@ -191,6 +193,36 @@ function M.resolve(item)
   return item
 end
 
+--- Reads the lines of a file.
+--- This is about 8x faster than `vim.fn.readfile`
+--- and 3x faster than `io.lines` using a
+--- test files of 225KB and 8300 lines.
+---@param file string
+function M.lines(file)
+  local fd = uv.fs_open(file, "r", 438)
+  if not fd then
+    return {}
+  end
+  local stat = assert(uv.fs_fstat(fd))
+  local data = assert(uv.fs_read(fd, stat.size, 0))
+  uv.fs_close(fd)
+
+  local lines, from = {}, 1 --- @type string[], number
+  while from <= #data do
+    local nl = data:find("\n", from, true)
+    if nl then
+      local cr = data:byte(nl - 1, nl - 1) == 13 -- \r
+      local line = data:sub(from, nl - (cr and 2 or 1))
+      lines[#lines + 1] = line
+      from = nl + 1
+    else
+      lines[#lines + 1] = data:sub(from)
+      break
+    end
+  end
+  return lines
+end
+
 ---@param s string
 ---@param index number
 ---@param encoding string
@@ -210,18 +242,31 @@ function M.resolve_loc(item, buf)
   if not item or not item.loc or item.loc.resolved then
     return item
   end
-  -- return vim._str_byteindex(s, index, encoding == 'utf-16')
 
   local lines = {} ---@type string[]
-  if buf and vim.api.nvim_buf_is_valid(buf) then
+  if item.buf and vim.api.nvim_buf_is_loaded(item.buf) then
+    -- valid and loaded buffer
+    lines = vim.api.nvim_buf_get_lines(item.buf, 0, -1, false)
+  elseif item.buf and vim.uri_from_bufnr(item.buf):sub(1, 4) ~= "file" then
+    -- item buffer with a custom uri
+    vim.fn.bufload(item.buf)
+    lines = vim.api.nvim_buf_get_lines(item.buf, 0, -1, false)
+  elseif buf and vim.api.nvim_buf_is_valid(buf) then
+    -- custom buffer (typically for preview)
     lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-  else
-    lines = vim.fn.readfile(item.file)
+  elseif item.file then
+    -- last resort, read the file
+    lines = M.lines(item.file)
   end
 
   ---@param pos lsp.Position?
   local function resolve(pos)
-    return pos and { pos.line + 1, M.str_byteindex(lines[pos.line + 1], pos.character, item.loc.encoding) } or nil
+    if not pos then
+      return
+    end
+    local line = lines[pos.line + 1]
+    local col = line and M.str_byteindex(line, pos.character, item.loc.encoding) or pos.character
+    return { pos.line + 1, col }
   end
   item.pos = resolve(item.loc.range["start"])
   item.end_pos = resolve(item.loc.range["end"]) or item.end_pos

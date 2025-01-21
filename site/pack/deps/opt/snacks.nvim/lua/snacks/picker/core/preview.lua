@@ -35,7 +35,7 @@ function M.new(opts, main)
         cursorline = false,
         colorcolumn = "",
         number = true,
-        relativenumber = true,
+        relativenumber = false,
         list = false,
       },
     },

@@ -31,6 +31,7 @@ function M.proc(opts)
         end
       end
     end
+
     local aborted = false
     local stdout = assert(uv.new_pipe())
     opts = vim.tbl_deep_extend("force", {}, opts or {}, {
@@ -44,7 +45,7 @@ function M.proc(opts)
       if not aborted and code ~= 0 and opts.notify ~= false then
         local full = { opts.cmd or "" }
         vim.list_extend(full, opts.args or {})
-        return Snacks.notify.error(("Command failed:\n- cmd: `%s`"):format(table.concat(full, " ")))
+        Snacks.notify.error(("Command failed:\n- cmd: `%s`"):format(table.concat(full, " ")))
       end
       stdout:close()
       handle:close()
@@ -55,9 +56,12 @@ function M.proc(opts)
     end
 
     local prev ---@type string?
+    local queue = require("snacks.picker.util.queue").new()
 
     self:on("abort", function()
       aborted = true
+      queue:clear()
+      cb = function() end
       if not handle:is_closing() then
         handle:kill("sigterm")
         vim.defer_fn(function()
@@ -97,9 +101,10 @@ function M.proc(opts)
       end
     end
 
-    local queue = require("snacks.picker.util.queue").new()
-
     stdout:read_start(function(err, data)
+      if aborted then
+        return
+      end
       assert(not err, err)
       if M.USE_QUEUE then
         queue:push(data)

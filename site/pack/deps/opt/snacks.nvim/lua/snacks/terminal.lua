@@ -124,6 +124,9 @@ function M.open(cmd, opts)
         vim.cmd.startinsert()
       end,
     })
+    terminal:on("ExitPre", function()
+      terminal:close()
+    end)
   end
   vim.cmd("noh")
   return terminal

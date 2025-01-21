@@ -187,7 +187,7 @@ function M.get_locations(method, opts, filter)
       if not opts.include_current then
         ---@param item vim.quickfix.entry
         items = vim.tbl_filter(function(item)
-          if item.filename ~= fname then
+          if vim.fs.normalize(item.filename) ~= fname then
             return true
           end
           if not item.lnum then

@@ -21,6 +21,7 @@ Table of Contents                               *snacks-win-table-of-contents*
   - win:border_text_width()        |snacks-win-module-win:border_text_width()|
   - win:buf_valid()                        |snacks-win-module-win:buf_valid()|
   - win:close()                                |snacks-win-module-win:close()|
+  - win:destroy()                            |snacks-win-module-win:destroy()|
   - win:dim()                                    |snacks-win-module-win:dim()|
   - win:execute()                            |snacks-win-module-win:execute()|
   - win:focus()                                |snacks-win-module-win:focus()|
@@ -29,6 +30,7 @@ Table of Contents                               *snacks-win-table-of-contents*
   - win:is_floating()                    |snacks-win-module-win:is_floating()|
   - win:line()                                  |snacks-win-module-win:line()|
   - win:lines()                                |snacks-win-module-win:lines()|
+  - win:map()                                    |snacks-win-module-win:map()|
   - win:on()                                      |snacks-win-module-win:on()|
   - win:on_resize()                        |snacks-win-module-win:on_resize()|
   - win:parent_size()                    |snacks-win-module-win:parent_size()|
@@ -113,6 +115,7 @@ Easily create and manage floating windows or splits
     ---@field b? table<string, any> buffer local variables
     ---@field w? table<string, any> window local variables
     ---@field ft? string filetype to use for treesitter/syntax highlighting. Won't override existing filetype
+    ---@field scratch_ft? string filetype to use for scratch buffers
     ---@field keys? table<string, false|string|fun(self: snacks.win)|snacks.win.Keys> Key mappings
     ---@field on_buf? fun(self: snacks.win) Callback after opening the buffer
     ---@field on_win? fun(self: snacks.win) Callback after opening the window
@@ -336,6 +339,13 @@ WIN:CLOSE()                                    *snacks-win-module-win:close()*
 <
 
 
+WIN:DESTROY()                                *snacks-win-module-win:destroy()*
+
+>lua
+    win:destroy()
+<
+
+
 WIN:DIM()                                        *snacks-win-module-win:dim()*
 
 >lua
@@ -396,6 +406,13 @@ WIN:LINES()                                    *snacks-win-module-win:lines()*
 <
 
 
+WIN:MAP()                                        *snacks-win-module-win:map()*
+
+>lua
+    win:map()
+<
+
+
 WIN:ON()                                          *snacks-win-module-win:on()*
 
 >lua
@@ -446,7 +463,7 @@ WIN:SCROLL()                                  *snacks-win-module-win:scroll()*
 WIN:SET_TITLE()                            *snacks-win-module-win:set_title()*
 
 >lua
-    ---@param title string
+    ---@param title string|{[1]:string, [2]:string}[]
     ---@param pos? "center"|"left"|"right"
     win:set_title(title, pos)
 <

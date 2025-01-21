@@ -8,6 +8,7 @@
 ---@field paths {path:string, want:boolean}[]
 ---@field opts snacks.picker.filter.Config
 ---@field current_buf number
+---@field current_win number
 local M = {}
 M.__index = M
 
@@ -18,6 +19,7 @@ function M.new(picker)
   local opts = picker.opts ---@type snacks.picker.Config|{filter?:snacks.picker.filter.Config}
   local self = setmetatable({}, M)
   self.current_buf = vim.api.nvim_get_current_buf()
+  self.current_win = vim.api.nvim_get_current_win()
   self.opts = opts.filter or {}
   local function gets(v)
     return type(v) == "function" and v(picker) or v or "" --[[@as string]]
@@ -39,6 +41,12 @@ function M.new(picker)
     end
   end
   return self
+end
+
+---@param cwd string
+function M:set_cwd(cwd)
+  self.cwd = cwd
+  self.cwd = vim.fs.normalize(self.cwd --[[@as string]], { _fast = true })
 end
 
 ---@param opts? {trim?:boolean}

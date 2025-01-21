@@ -26,6 +26,7 @@ Table of Contents                            *snacks-picker-table-of-contents*
   - diagnostics                            |snacks-picker-sources-diagnostics|
   - diagnostics_buffer              |snacks-picker-sources-diagnostics_buffer|
   - files                                        |snacks-picker-sources-files|
+  - git_branches                          |snacks-picker-sources-git_branches|
   - git_diff                                  |snacks-picker-sources-git_diff|
   - git_files                                |snacks-picker-sources-git_files|
   - git_log                                    |snacks-picker-sources-git_log|
@@ -47,6 +48,7 @@ Table of Contents                            *snacks-picker-table-of-contents*
   - lsp_references                      |snacks-picker-sources-lsp_references|
   - lsp_symbols                            |snacks-picker-sources-lsp_symbols|
   - lsp_type_definitions          |snacks-picker-sources-lsp_type_definitions|
+  - lsp_workspace_symbols        |snacks-picker-sources-lsp_workspace_symbols|
   - man                                            |snacks-picker-sources-man|
   - marks                                        |snacks-picker-sources-marks|
   - picker_actions                      |snacks-picker-sources-picker_actions|
@@ -61,6 +63,8 @@ Table of Contents                            *snacks-picker-table-of-contents*
   - resume                                      |snacks-picker-sources-resume|
   - search_history                      |snacks-picker-sources-search_history|
   - smart                                        |snacks-picker-sources-smart|
+  - spelling                                  |snacks-picker-sources-spelling|
+  - undo                                          |snacks-picker-sources-undo|
   - zoxide                                      |snacks-picker-sources-zoxide|
 9. Layouts                                             |snacks-picker-layouts|
   - default                                    |snacks-picker-layouts-default|
@@ -75,18 +79,17 @@ Table of Contents                            *snacks-picker-table-of-contents*
   - Snacks.picker.actions.cmd()|snacks-picker-snacks.picker.actions-snacks.picker.actions.cmd()|
   - Snacks.picker.actions.copy()|snacks-picker-snacks.picker.actions-snacks.picker.actions.copy()|
   - Snacks.picker.actions.cycle_win()|snacks-picker-snacks.picker.actions-snacks.picker.actions.cycle_win()|
-  - Snacks.picker.actions.edit()|snacks-picker-snacks.picker.actions-snacks.picker.actions.edit()|
-  - Snacks.picker.actions.edit_split()|snacks-picker-snacks.picker.actions-snacks.picker.actions.edit_split()|
-  - Snacks.picker.actions.edit_tab()|snacks-picker-snacks.picker.actions-snacks.picker.actions.edit_tab()|
-  - Snacks.picker.actions.edit_vsplit()|snacks-picker-snacks.picker.actions-snacks.picker.actions.edit_vsplit()|
   - Snacks.picker.actions.focus_input()|snacks-picker-snacks.picker.actions-snacks.picker.actions.focus_input()|
   - Snacks.picker.actions.focus_list()|snacks-picker-snacks.picker.actions-snacks.picker.actions.focus_list()|
   - Snacks.picker.actions.focus_preview()|snacks-picker-snacks.picker.actions-snacks.picker.actions.focus_preview()|
+  - Snacks.picker.actions.git_checkout()|snacks-picker-snacks.picker.actions-snacks.picker.actions.git_checkout()|
   - Snacks.picker.actions.git_stage()|snacks-picker-snacks.picker.actions-snacks.picker.actions.git_stage()|
   - Snacks.picker.actions.help()|snacks-picker-snacks.picker.actions-snacks.picker.actions.help()|
   - Snacks.picker.actions.history_back()|snacks-picker-snacks.picker.actions-snacks.picker.actions.history_back()|
   - Snacks.picker.actions.history_forward()|snacks-picker-snacks.picker.actions-snacks.picker.actions.history_forward()|
   - Snacks.picker.actions.inspect()|snacks-picker-snacks.picker.actions-snacks.picker.actions.inspect()|
+  - Snacks.picker.actions.item_action()|snacks-picker-snacks.picker.actions-snacks.picker.actions.item_action()|
+  - Snacks.picker.actions.jump()|snacks-picker-snacks.picker.actions-snacks.picker.actions.jump()|
   - Snacks.picker.actions.list_bottom()|snacks-picker-snacks.picker.actions-snacks.picker.actions.list_bottom()|
   - Snacks.picker.actions.list_down()|snacks-picker-snacks.picker.actions-snacks.picker.actions.list_down()|
   - Snacks.picker.actions.list_scroll_bottom()|snacks-picker-snacks.picker.actions-snacks.picker.actions.list_scroll_bottom()|
@@ -103,11 +106,13 @@ Table of Contents                            *snacks-picker-table-of-contents*
   - Snacks.picker.actions.preview_scroll_down()|snacks-picker-snacks.picker.actions-snacks.picker.actions.preview_scroll_down()|
   - Snacks.picker.actions.preview_scroll_up()|snacks-picker-snacks.picker.actions-snacks.picker.actions.preview_scroll_up()|
   - Snacks.picker.actions.qflist()|snacks-picker-snacks.picker.actions-snacks.picker.actions.qflist()|
+  - Snacks.picker.actions.qflist_all()|snacks-picker-snacks.picker.actions-snacks.picker.actions.qflist_all()|
   - Snacks.picker.actions.search()|snacks-picker-snacks.picker.actions-snacks.picker.actions.search()|
   - Snacks.picker.actions.select_all()|snacks-picker-snacks.picker.actions-snacks.picker.actions.select_all()|
   - Snacks.picker.actions.select_and_next()|snacks-picker-snacks.picker.actions-snacks.picker.actions.select_and_next()|
   - Snacks.picker.actions.select_and_prev()|snacks-picker-snacks.picker.actions-snacks.picker.actions.select_and_prev()|
   - Snacks.picker.actions.toggle_focus()|snacks-picker-snacks.picker.actions-snacks.picker.actions.toggle_focus()|
+  - Snacks.picker.actions.toggle_follow()|snacks-picker-snacks.picker.actions-snacks.picker.actions.toggle_follow()|
   - Snacks.picker.actions.toggle_hidden()|snacks-picker-snacks.picker.actions-snacks.picker.actions.toggle_hidden()|
   - Snacks.picker.actions.toggle_ignored()|snacks-picker-snacks.picker.actions-snacks.picker.actions.toggle_ignored()|
   - Snacks.picker.actions.toggle_live()|snacks-picker-snacks.picker.actions-snacks.picker.actions.toggle_live()|
@@ -126,8 +131,12 @@ Table of Contents                            *snacks-picker-table-of-contents*
   - picker:items()    |snacks-picker-snacks.picker.core.picker-picker:items()|
   - picker:iter()      |snacks-picker-snacks.picker.core.picker-picker:iter()|
   - picker:match()    |snacks-picker-snacks.picker.core.picker-picker:match()|
+  - picker:norm()      |snacks-picker-snacks.picker.core.picker-picker:norm()|
+  - picker:ref()        |snacks-picker-snacks.picker.core.picker-picker:ref()|
+  - picker:resolve()|snacks-picker-snacks.picker.core.picker-picker:resolve()|
   - picker:selected()|snacks-picker-snacks.picker.core.picker-picker:selected()|
   - picker:set_layout()|snacks-picker-snacks.picker.core.picker-picker:set_layout()|
+  - picker:show_preview()|snacks-picker-snacks.picker.core.picker-picker:show_preview()|
   - picker:word()      |snacks-picker-snacks.picker.core.picker-picker:word()|
 12. Links                                                |snacks-picker-links|
 Snacks now comes with a modern fuzzy-finder to navigate the Neovim universe.
@@ -141,6 +150,7 @@ Snacks now comes with a modern fuzzy-finder to navigate the Neovim universe.
 - over 40 built-in sources <https://github.com/folke/snacks.nvim/blob/main/docs/picker.md#-sources>
 - Fast and powerful fuzzy matching engine that supports the fzf <https://junegunn.github.io/fzf/search-syntax/> search syntax
     - additionally supports field searches like `file:lua$ 'function`
+    - `files` and `grep` additionally support adding optiont like `foo -- -e=lua`
 - uses **treesitter** highlighting where it makes sense
 - Sane default settings so you can start using it right away
 - Finders and matchers run asynchronously for maximum performance
@@ -218,10 +228,11 @@ below.
     ---@field layout? snacks.picker.layout.Config|string|{}|fun(source:string):(snacks.picker.layout.Config|string)
     ---@field icons? snacks.picker.icons
     ---@field prompt? string prompt text / icon
+    ---@field title? string defaults to a capitalized source name
     --- Preset options
     ---@field previewers? snacks.picker.previewers.Config|{}
     ---@field formatters? snacks.picker.formatters.Config|{}
-    ---@field sources? snacks.picker.sources.Config|{}
+    ---@field sources? snacks.picker.sources.Config|{}|table<string, snacks.picker.Config|{}>
     ---@field layouts? table<string, snacks.picker.layout.Config>
     --- Actions
     ---@field actions? table<string, snacks.picker.Action.spec> actions used by keymaps
@@ -230,6 +241,7 @@ below.
     ---@field main? snacks.picker.main.Config main editor window config
     ---@field on_change? fun(picker:snacks.Picker, item:snacks.picker.Item) called when the cursor changes
     ---@field on_show? fun(picker:snacks.Picker) called when the picker is shown
+    ---@field jump? snacks.picker.jump.Config|{}
     --- Other
     ---@field debug? snacks.picker.debug|{}
     {
@@ -249,6 +261,7 @@ below.
         ignorecase = true, -- use ignorecase
         sort_empty = false, -- sort results when the search string is empty
         filename_bonus = true, -- give bonus for matching file names (last part of the path)
+        file_pos = true, -- support patterns like `file:line:col` and `file:line`
       },
       sort = {
         -- default sort is by score, text length and index
@@ -259,6 +272,10 @@ below.
       formatters = {
         file = {
           filename_first = false, -- display filename before the file path
+        },
+        selected = {
+          show_always = false, -- only show the selected column when there are multiple selections
+          unselected = true, -- use the unselected icon for unselected items
         },
       },
       ---@class snacks.picker.previewers.Config
@@ -273,6 +290,12 @@ below.
         },
         man_pager = nil, ---@type string? MANPAGER env to use for `man` preview
       },
+      ---@class snacks.picker.jump.Config
+      jump = {
+        jumplist = true, -- save the current position in the jumplist
+        tagstack = false, -- save the current position in the tagstack
+        reuse_win = false, -- reuse an existing window if the buffer is already open
+      },
       win = {
         -- input window
         input = {
@@ -282,7 +305,7 @@ below.
             -- to close the picker on ESC instead of going to normal mode,
             -- add the following keymap to your config
             -- ["<Esc>"] = { "close", mode = { "n", "i" } },
-            ["<CR>"] = "confirm",
+            ["<CR>"] = { "confirm", mode = { "n", "i" } },
             ["G"] = "list_bottom",
             ["gg"] = "list_top",
             ["j"] = "list_down",
@@ -318,6 +341,7 @@ below.
             ["<c-q>"] = { "qflist", mode = { "i", "n" } },
             ["<a-i>"] = { "toggle_ignored", mode = { "i", "n" } },
             ["<a-h>"] = { "toggle_hidden", mode = { "i", "n" } },
+            ["<a-f>"] = { "toggle_follow", mode = { "i", "n" } },
           },
           b = {
             minipairs_disable = true,
@@ -358,6 +382,10 @@ below.
             ["<a-w>"] = "cycle_win",
             ["<Esc>"] = "close",
           },
+          wo = {
+            conceallevel = 2,
+            concealcursor = "nvc",
+          },
         },
         -- preview window
         preview = {
@@ -381,9 +409,16 @@ below.
           middle = "├╴",
           last   = "└╴",
         },
+        undo = {
+          saved   = " ",
+        },
         ui = {
           live        = "󰐰 ",
+          hidden      = "h",
+          ignored     = "i",
+          follow      = "f",
           selected    = "● ",
+          unselected  = "○ ",
           -- selected = " ",
         },
         git = {
@@ -439,6 +474,7 @@ below.
       ---@class snacks.picker.debug
       debug = {
         scores = false, -- show scores in the list
+        leaks = false, -- show when pickers don't get garbage collected
       },
     }
 <
@@ -551,12 +587,8 @@ TROUBLE                                       *snacks-picker-examples-trouble*
 6. Types                                                 *snacks-picker-types*
 
 >lua
-    ---@class snacks.picker.Last
-    ---@field cursor number
-    ---@field topline number
-    ---@field opts snacks.picker.Config
-    ---@field selected snacks.picker.Item[]
-    ---@field filter snacks.picker.Filter
+    ---@class snacks.picker.jump.Action: snacks.picker.Action
+    ---@field cmd? string
 <
 
 >lua
@@ -566,6 +598,7 @@ TROUBLE                                       *snacks-picker-examples-trouble*
     ---@alias snacks.picker.format fun(item:snacks.picker.Item, picker:snacks.Picker):snacks.picker.Highlight[]
     ---@alias snacks.picker.preview fun(ctx: snacks.picker.preview.ctx):boolean?
     ---@alias snacks.picker.sort fun(a:snacks.picker.Item, b:snacks.picker.Item):boolean
+    ---@alias snacks.picker.Pos {[1]:number, [2]:number}
 <
 
 Generic filter used by finders to pre-filter items
@@ -597,11 +630,14 @@ that shows a preview based on the item data.
     ---@field score_add? number
     ---@field score_mul? number
     ---@field match_tick? number
+    ---@field file? string
     ---@field text string
-    ---@field pos? {[1]:number, [2]:number}
-    ---@field end_pos? {[1]:number, [2]:number}
+    ---@field pos? snacks.picker.Pos
+    ---@field loc? snacks.picker.lsp.Loc
+    ---@field end_pos? snacks.picker.Pos
     ---@field highlights? snacks.picker.Highlight[][]
     ---@field preview? snacks.picker.Item.preview
+    ---@field resolve? fun(item:snacks.picker.Item)
 <
 
 >lua
@@ -625,6 +661,19 @@ that shows a preview based on the item data.
     ---@field input? snacks.win.Config|{} input window config
     ---@field list? snacks.win.Config|{} result list window config
     ---@field preview? snacks.win.Config|{} preview window config
+<
+
+>lua
+    ---@alias snacks.Picker.ref (fun():snacks.Picker?)|{value?: snacks.Picker}
+<
+
+>lua
+    ---@class snacks.picker.Last
+    ---@field cursor number
+    ---@field topline number
+    ---@field opts snacks.picker.Config
+    ---@field selected snacks.picker.Item[]
+    ---@field filter snacks.picker.Filter
 <
 
 
@@ -788,7 +837,7 @@ Neovim commands
 >lua
     {
       finder = "vim_commands",
-      format = "text",
+      format = "command",
       preview = "preview",
       confirm = "cmd",
     }
@@ -813,6 +862,7 @@ DIAGNOSTICS                                *snacks-picker-sources-diagnostics*
           "lnum",
         },
       },
+      matcher = { sort_empty = true },
       -- only show diagnostics from the cwd by default
       filter = { cwd = true },
     }
@@ -829,6 +879,7 @@ DIAGNOSTICS_BUFFER                  *snacks-picker-sources-diagnostics_buffer*
       sort = {
         fields = { "severity", "file", "lnum" },
       },
+      matcher = { sort_empty = true },
       filter = { buf = true },
     }
 <
@@ -844,6 +895,7 @@ FILES                                            *snacks-picker-sources-files*
     ---@field dirs? string[] directories to search
     ---@field follow? boolean follow symlinks
     ---@field exclude? string[] exclude patterns
+    ---@field args? string[] additional arguments
     {
       finder = "files",
       format = "file",
@@ -851,6 +903,27 @@ FILES                                            *snacks-picker-sources-files*
       ignored = false,
       follow = false,
       supports_live = true,
+    }
+<
+
+
+GIT_BRANCHES                              *snacks-picker-sources-git_branches*
+
+>lua
+    {
+      finder = "git_branches",
+      format = "git_branch",
+      preview = "git_log",
+      confirm = "git_checkout",
+      on_show = function(picker)
+        for i, item in ipairs(picker:items()) do
+          if item.current then
+            picker.list:view(i)
+            Snacks.picker.actions.list_scroll_center(picker)
+            break
+          end
+        end
+      end,
     }
 <
 
@@ -964,6 +1037,7 @@ GREP                                              *snacks-picker-sources-grep*
     ---@field buffers? boolean search in open buffers
     ---@field need_search? boolean require a search pattern
     ---@field exclude? string[] exclude patterns
+    ---@field args? string[] additional arguments
     {
       finder = "grep",
       format = "file",
@@ -1125,6 +1199,7 @@ LSP declarations
       format = "file",
       include_current = false,
       auto_confirm = true,
+      jump = { tagstack = true, reuse_win = true },
     }
 <
 
@@ -1140,6 +1215,7 @@ LSP definitions
       format = "file",
       include_current = false,
       auto_confirm = true,
+      jump = { tagstack = true, reuse_win = true },
     }
 <
 
@@ -1155,6 +1231,7 @@ LSP implementations
       format = "file",
       include_current = false,
       auto_confirm = true,
+      jump = { tagstack = true, reuse_win = true },
     }
 <
 
@@ -1172,6 +1249,7 @@ LSP references
       include_declaration = true,
       include_current = false,
       auto_confirm = true,
+      jump = { tagstack = true, reuse_win = true },
     }
 <
 
@@ -1184,6 +1262,7 @@ LSP document symbols
     ---@class snacks.picker.lsp.symbols.Config: snacks.picker.Config
     ---@field hierarchy? boolean show symbol hierarchy
     ---@field filter table<string, string[]|boolean>? symbol kind filter
+    ---@field workspace? boolean show workspace symbols
     {
       finder = "lsp_symbols",
       format = "lsp_symbol",
@@ -1239,7 +1318,21 @@ LSP type definitions
       format = "file",
       include_current = false,
       auto_confirm = true,
+      jump = { tagstack = true, reuse_win = true },
     }
+<
+
+
+LSP_WORKSPACE_SYMBOLS            *snacks-picker-sources-lsp_workspace_symbols*
+
+>lua
+    ---@type snacks.picker.lsp.symbols.Config
+    vim.tbl_extend("force", {}, M.lsp_symbols, {
+      workspace = true,
+      hierarchy = false,
+      supports_live = true,
+      live = true, -- live by default
+    })
 <
 
 
@@ -1452,6 +1545,31 @@ SMART                                            *snacks-picker-sources-smart*
 <
 
 
+SPELLING                                      *snacks-picker-sources-spelling*
+
+>lua
+    {
+      finder = "vim_spelling",
+      format = "text",
+      layout = { preset = "vscode" },
+      confirm = "item_action",
+    }
+<
+
+
+UNDO                                              *snacks-picker-sources-undo*
+
+>lua
+    {
+      finder = "vim_undo",
+      format = "undo",
+      preview = "preview",
+      confirm = "item_action",
+      win = { preview = { wo = { number = false, relativenumber = false, signcolumn = "no" } } },
+    }
+<
+
+
 ZOXIDE                                          *snacks-picker-sources-zoxide*
 
 Open a project from zoxide
@@ -1486,12 +1604,11 @@ DEFAULT                                        *snacks-picker-layouts-default*
         {
           box = "vertical",
           border = "rounded",
-          title = "{source} {live}",
-          title_pos = "center",
+          title = "{title} {live} {flags}",
           { win = "input", height = 1, border = "bottom" },
           { win = "list", border = "none" },
         },
-        { win = "preview", border = "rounded", width = 0.5 },
+        { win = "preview", title = "{preview}", border = "rounded", width = 0.5 },
       },
     }
 <
@@ -1509,11 +1626,11 @@ DROPDOWN                                      *snacks-picker-layouts-dropdown*
         height = 0.8,
         border = "none",
         box = "vertical",
-        { win = "preview", height = 0.4, border = "rounded" },
+        { win = "preview", title = "{preview}", height = 0.4, border = "rounded" },
         {
           box = "vertical",
           border = "rounded",
-          title = "{source} {live}",
+          title = "{title} {live} {flags}",
           title_pos = "center",
           { win = "input", height = 1, border = "bottom" },
           { win = "list", border = "none" },
@@ -1534,13 +1651,13 @@ IVY                                                *snacks-picker-layouts-ivy*
         width = 0,
         height = 0.4,
         border = "top",
-        title = " {source} {live}",
+        title = " {title} {live} {flags}",
         title_pos = "left",
         { win = "input", height = 1, border = "bottom" },
         {
           box = "horizontal",
           { win = "list", border = "none" },
-          { win = "preview", width = 0.6, border = "left" },
+          { win = "preview", title = "{preview}", width = 0.6, border = "left" },
         },
       },
     }
@@ -1564,7 +1681,7 @@ SELECT                                          *snacks-picker-layouts-select*
         title_pos = "center",
         { win = "input", height = 1, border = "bottom" },
         { win = "list", border = "none" },
-        { win = "preview", height = 0.4, border = "top" },
+        { win = "preview", title = "{preview}", height = 0.4, border = "top" },
       },
     }
 <
@@ -1584,13 +1701,13 @@ TELESCOPE                                    *snacks-picker-layouts-telescope*
         {
           box = "vertical",
           { win = "list", title = " Results ", title_pos = "center", border = "rounded" },
-          { win = "input", height = 1, border = "rounded", title = "{source} {live}", title_pos = "center" },
+          { win = "input", height = 1, border = "rounded", title = "{title} {live} {flags}", title_pos = "center" },
         },
         {
           win = "preview",
+          title = "{preview:Preview}",
           width = 0.45,
           border = "rounded",
-          title = " Preview ",
           title_pos = "center",
         },
       },
@@ -1610,11 +1727,11 @@ VERTICAL                                      *snacks-picker-layouts-vertical*
         min_height = 30,
         box = "vertical",
         border = "rounded",
-        title = "{source} {live}",
+        title = "{title} {live} {flags}",
         title_pos = "center",
         { win = "input", height = 1, border = "bottom" },
         { win = "list", border = "none" },
-        { win = "preview", height = 0.4, border = "top" },
+        { win = "preview", title = "{preview}", height = 0.4, border = "top" },
       },
     }
 <
@@ -1633,9 +1750,9 @@ VSCODE                                          *snacks-picker-layouts-vscode*
         height = 0.4,
         border = "none",
         box = "vertical",
-        { win = "input", height = 1, border = "rounded", title = "{source} {live}", title_pos = "center" },
+        { win = "input", height = 1, border = "rounded", title = "{title} {live} {flags}", title_pos = "center" },
         { win = "list", border = "hpad" },
-        { win = "preview", border = "rounded" },
+        { win = "preview", title = "{preview}", border = "rounded" },
       },
     }
 <
@@ -1679,34 +1796,6 @@ SNACKS.PICKER.ACTIONS.CYCLE_WIN()*snacks-picker-snacks.picker.actions-snacks.pic
 <
 
 
-SNACKS.PICKER.ACTIONS.EDIT()*snacks-picker-snacks.picker.actions-snacks.picker.actions.edit()*
-
->lua
-    Snacks.picker.actions.edit(picker)
-<
-
-
-SNACKS.PICKER.ACTIONS.EDIT_SPLIT()*snacks-picker-snacks.picker.actions-snacks.picker.actions.edit_split()*
-
->lua
-    Snacks.picker.actions.edit_split(picker)
-<
-
-
-SNACKS.PICKER.ACTIONS.EDIT_TAB()*snacks-picker-snacks.picker.actions-snacks.picker.actions.edit_tab()*
-
->lua
-    Snacks.picker.actions.edit_tab(picker)
-<
-
-
-SNACKS.PICKER.ACTIONS.EDIT_VSPLIT()*snacks-picker-snacks.picker.actions-snacks.picker.actions.edit_vsplit()*
-
->lua
-    Snacks.picker.actions.edit_vsplit(picker)
-<
-
-
 SNACKS.PICKER.ACTIONS.FOCUS_INPUT()*snacks-picker-snacks.picker.actions-snacks.picker.actions.focus_input()*
 
 >lua
@@ -1725,6 +1814,13 @@ SNACKS.PICKER.ACTIONS.FOCUS_PREVIEW()*snacks-picker-snacks.picker.actions-snacks
 
 >lua
     Snacks.picker.actions.focus_preview(picker)
+<
+
+
+SNACKS.PICKER.ACTIONS.GIT_CHECKOUT()*snacks-picker-snacks.picker.actions-snacks.picker.actions.git_checkout()*
+
+>lua
+    Snacks.picker.actions.git_checkout(picker, item)
 <
 
 
@@ -1760,6 +1856,20 @@ SNACKS.PICKER.ACTIONS.INSPECT()*snacks-picker-snacks.picker.actions-snacks.picke
 
 >lua
     Snacks.picker.actions.inspect(picker, item)
+<
+
+
+SNACKS.PICKER.ACTIONS.ITEM_ACTION()*snacks-picker-snacks.picker.actions-snacks.picker.actions.item_action()*
+
+>lua
+    Snacks.picker.actions.item_action(picker, item, action)
+<
+
+
+SNACKS.PICKER.ACTIONS.JUMP()*snacks-picker-snacks.picker.actions-snacks.picker.actions.jump()*
+
+>lua
+    Snacks.picker.actions.jump(picker, _, action)
 <
 
 
@@ -1881,6 +1991,15 @@ Send selected or all items to the quickfix list.
 <
 
 
+SNACKS.PICKER.ACTIONS.QFLIST_ALL()*snacks-picker-snacks.picker.actions-snacks.picker.actions.qflist_all()*
+
+Send all items to the quickfix list.
+
+>lua
+    Snacks.picker.actions.qflist_all(picker)
+<
+
+
 SNACKS.PICKER.ACTIONS.SEARCH()*snacks-picker-snacks.picker.actions-snacks.picker.actions.search()*
 
 >lua
@@ -1922,6 +2041,13 @@ SNACKS.PICKER.ACTIONS.TOGGLE_FOCUS()*snacks-picker-snacks.picker.actions-snacks.
 
 >lua
     Snacks.picker.actions.toggle_focus(picker)
+<
+
+
+SNACKS.PICKER.ACTIONS.TOGGLE_FOLLOW()*snacks-picker-snacks.picker.actions-snacks.picker.actions.toggle_follow()*
+
+>lua
+    Snacks.picker.actions.toggle_follow(picker)
 <
 
 
@@ -1979,7 +2105,7 @@ SNACKS.PICKER.ACTIONS.TOGGLE_PREVIEW()*snacks-picker-snacks.picker.actions-snack
     ---@field sort snacks.picker.sort
     ---@field updater uv.uv_timer_t
     ---@field start_time number
-    ---@field source_name string
+    ---@field title string
     ---@field closed? boolean
     ---@field hist_idx number
     ---@field hist_cursor number
@@ -2021,7 +2147,8 @@ PICKER:CURRENT()    *snacks-picker-snacks.picker.core.picker-picker:current()*
 Get the current item at the cursor
 
 >lua
-    picker:current()
+    ---@param opts? {resolve?: boolean} default is `true`
+    picker:current(opts)
 <
 
 
@@ -2102,6 +2229,33 @@ search string has changed, like during live searches.
 <
 
 
+PICKER:NORM()          *snacks-picker-snacks.picker.core.picker-picker:norm()*
+
+Execute the callback in normal mode. When still in insert mode, stop insert
+mode first, and then`vim.schedule` the callback.
+
+>lua
+    ---@param cb fun()
+    picker:norm(cb)
+<
+
+
+PICKER:REF()            *snacks-picker-snacks.picker.core.picker-picker:ref()*
+
+>lua
+    ---@return snacks.Picker.ref
+    picker:ref()
+<
+
+
+PICKER:RESOLVE()    *snacks-picker-snacks.picker.core.picker-picker:resolve()*
+
+>lua
+    ---@param item snacks.picker.Item?
+    picker:resolve(item)
+<
+
+
 PICKER:SELECTED()  *snacks-picker-snacks.picker.core.picker-picker:selected()*
 
 Get the selected items. If `fallback=true` and there is no selection, return
@@ -2109,6 +2263,7 @@ the current item.
 
 >lua
     ---@param opts? {fallback?: boolean} default is `false`
+    ---@return snacks.picker.Item[]
     picker:selected(opts)
 <
 
@@ -2121,6 +2276,16 @@ layout configuration.
 >lua
     ---@param layout? string|snacks.picker.layout.Config
     picker:set_layout(layout)
+<
+
+
+PICKER:SHOW_PREVIEW()*snacks-picker-snacks.picker.core.picker-picker:show_preview()*
+
+Show the preview. Show instantly when no item is yet in the preview, otherwise
+throttle the preview.
+
+>lua
+    picker:show_preview()
 <
 
 

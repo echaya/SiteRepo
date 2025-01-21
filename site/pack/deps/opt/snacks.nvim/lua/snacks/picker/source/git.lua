@@ -33,7 +33,7 @@ end
 
 ---@param opts snacks.picker.git.log.Config
 ---@type snacks.picker.finder
-function M.log(opts)
+function M.log(opts, filter)
   local args = {
     "log",
     "--pretty=format:%h %s (%ch)",
@@ -44,20 +44,22 @@ function M.log(opts)
     "--no-show-signature",
     "--no-patch",
   }
-
-  if opts.follow and not opts.current_line then
-    args[#args + 1] = "--follow"
+  if opts.follow and not opts.current_file then
+    opts.follow = nil
   end
 
   local file ---@type string?
   if opts.current_line then
-    local cursor = vim.api.nvim_win_get_cursor(0)
-    file = vim.api.nvim_buf_get_name(0)
+    local cursor = vim.api.nvim_win_get_cursor(filter.current_win)
+    file = vim.api.nvim_buf_get_name(filter.current_buf)
     local line = cursor[1]
     args[#args + 1] = "-L"
     args[#args + 1] = line .. ",+1:" .. file
   elseif opts.current_file then
-    file = vim.api.nvim_buf_get_name(0)
+    file = vim.api.nvim_buf_get_name(filter.current_buf)
+    if opts.follow then
+      args[#args + 1] = "--follow"
+    end
     args[#args + 1] = "--"
     args[#args + 1] = file
   end
@@ -161,18 +163,38 @@ function M.branches(opts)
   local args = { "--no-pager", "branch", "--no-color", "-vvl" }
   local cwd = vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
   cwd = Snacks.git.get_root(cwd)
+
+  local pattern_hash = "[a-zA-Z0-9]+"
+  local patterns = {
+    -- stylua: ignore start
+    --- e.g. "* (HEAD detached at f65a2c8) f65a2c8 chore(build): auto-generate docs"
+    "^(.)%s(%b())%s+(" .. pattern_hash .. ")%s*(.*)$",
+    --- e.g. "  main                       d2b2b7b [origin/main: behind 276] chore(build): auto-generate docs"
+    "^(.)%s(%S+)%s+(".. pattern_hash .. ")%s*(.*)$",
+    -- stylua: ignore end
+  } ---@type string[]
+
   return require("snacks.picker.source.proc").proc(vim.tbl_deep_extend("force", {
     cwd = cwd,
     cmd = "git",
     args = args,
     ---@param item snacks.picker.finder.Item
     transform = function(item)
-      local status, branch, commit, msg = item.text:match("^(.)%s(%S+)%s+([a-zA-Z0-9]+)%s*(.*)$")
       item.cwd = cwd
-      item.current = status == "*"
-      item.branch = branch
-      item.commit = commit
-      item.msg = msg
+      for p, pattern in ipairs(patterns) do
+        local status, branch, commit, msg = item.text:match(pattern)
+        if status then
+          local detached = p == 1
+          item.current = status == "*"
+          item.branch = not detached and branch or nil
+          item.commit = commit
+          item.msg = msg
+          item.detached = detached
+          return
+        end
+      end
+      Snacks.notify.warn("failed to parse branch: " .. item.text)
+      return false -- skip items we could not parse
     end,
   }, opts or {}))
 end

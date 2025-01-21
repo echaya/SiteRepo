@@ -58,9 +58,17 @@ function Async:init(fn)
   return M.add(self)
 end
 
+function Async:aborted()
+  return self._aborted
+end
+
 function Async:_done()
+  if self._co == nil then
+    return
+  end
   self:_emit("done")
   self._fn = nil
+  M._threads[self._co] = nil
   self._co = nil
   self._on = {}
 end
@@ -178,6 +186,9 @@ function Async:abort()
     return
   end
   self._aborted = true
+  if coroutine.running() == self._co then
+    error("aborted", 2)
+  end
   coroutine.resume(self._co, "abort")
 end
 

@@ -4083,7 +4083,12 @@ https://github.com/lttb/gh-actions-language-server
 
 Language server for GitHub Actions.
 
-`gh-actions-language-server` can be installed via `npm`:
+The projects [forgejo](https://forgejo.org/) and [gitea](https://about.gitea.com/)
+design their actions to be as compatible to github as possible
+with only [a few differences](https://docs.gitea.com/usage/actions/comparison#unsupported-workflows-syntax) between the systems.
+The `gh_actions_ls` is therefore enabled for those `yaml` files as well.
+
+The `gh-actions-language-server` can be installed via `npm`:
 
 ```sh
 npm install -g gh-actions-language-server
@@ -12143,7 +12148,7 @@ require('lspconfig').yamlls.setup {
     yaml = {
       ... -- other settings. note this overrides the lspconfig defaults.
       schemas = {
-        ["https://raw.githubusercontent.com/instrumenta/kubernetes-json-schema/master/v1.18.0-standalone-strict/all.json"] = "/*.k8s.yaml",
+        ["https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.32.1-standalone-strict/all.json"] = "/*.k8s.yaml",
         ... -- other schemas
       },
     },

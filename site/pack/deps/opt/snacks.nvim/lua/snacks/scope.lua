@@ -400,7 +400,7 @@ function TSScope:find(opts)
   if not has_parser or parser == nil then
     return
   end
-  parser:parse()
+  parser:parse(true)
 
   local line = vim.fn.nextnonblank(opts.pos[1])
   line = line == 0 and vim.fn.prevnonblank(opts.pos[1]) or line
