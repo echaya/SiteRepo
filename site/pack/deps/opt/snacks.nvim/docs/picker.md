@@ -96,7 +96,7 @@ Snacks.picker.pick({source = "files", ...})
 ---@field confirm? snacks.picker.Action.spec shortcut for confirm action
 ---@field auto_confirm? boolean automatically confirm if there is only one item
 ---@field main? snacks.picker.main.Config main editor window config
----@field on_change? fun(picker:snacks.Picker, item:snacks.picker.Item) called when the cursor changes
+---@field on_change? fun(picker:snacks.Picker, item?:snacks.picker.Item) called when the cursor changes
 ---@field on_show? fun(picker:snacks.Picker) called when the picker is shown
 ---@field jump? snacks.picker.jump.Config|{}
 --- Other
@@ -521,7 +521,7 @@ It's a previewer that shows a preview based on the item data.
 ---@class snacks.picker.Last
 ---@field cursor number
 ---@field topline number
----@field opts snacks.picker.Config
+---@field opts? snacks.picker.Config
 ---@field selected snacks.picker.Item[]
 ---@field filter snacks.picker.Filter
 ```
@@ -1844,6 +1844,7 @@ Snacks.picker.actions.toggle_preview(picker)
 
 ```lua
 ---@class snacks.Picker
+---@field id number
 ---@field opts snacks.picker.Config
 ---@field finder snacks.picker.Finder
 ---@field format snacks.picker.format

@@ -34,6 +34,14 @@ function M:count()
   return #self.items
 end
 
+function M:close()
+  self.task:abort()
+  self.task = Async.nop()
+  self._find = function()
+    return {}
+  end
+end
+
 ---@param search string
 function M:changed(search)
   search = vim.trim(search)

@@ -132,7 +132,9 @@ function M:count()
 end
 
 function M:close()
-  -- nothing todo. Keep all items so actions can be performed on them,
+  self.win:destroy()
+  self.picker = nil
+  -- Keep all items so actions can be performed on them,
   -- even when the picker closed
 end
 

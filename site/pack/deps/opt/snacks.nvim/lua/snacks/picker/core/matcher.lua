@@ -59,6 +59,11 @@ function M:abort()
   self.task:abort()
 end
 
+function M:close()
+  self:abort()
+  self.task = Async.nop()
+end
+
 ---@param picker snacks.Picker
 ---@param opts? {prios?: snacks.picker.Item[]}
 function M:run(picker, opts)

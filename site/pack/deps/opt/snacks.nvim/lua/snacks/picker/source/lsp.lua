@@ -140,6 +140,8 @@ function M.request(buf, method, params, cb)
   end)
 
   async:suspend()
+  cancel = {}
+  async = Async.nop()
 end
 
 -- Support for older versions of neovim

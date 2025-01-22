@@ -349,13 +349,13 @@ function M.cycle_win(picker)
   win = wins[idx % #wins + 1] or 1 -- cycle
   vim.api.nvim_set_current_win(win)
   if win == picker.input.win.win then
-    vim.cmd("startinsert")
+    vim.cmd("startinsert!")
   end
 end
 
 function M.focus_input(picker)
   picker.input.win:focus()
-  vim.cmd("startinsert")
+  vim.cmd("startinsert!")
 end
 
 function M.focus_list(picker)

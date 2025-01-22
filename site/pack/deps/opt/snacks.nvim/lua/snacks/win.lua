@@ -489,6 +489,9 @@ end
 function M:destroy()
   self:close()
   self.events = {}
+  self.keys = {}
+  self.meta = {}
+  self.opts = {}
 end
 
 ---@param opts? { buf: boolean }

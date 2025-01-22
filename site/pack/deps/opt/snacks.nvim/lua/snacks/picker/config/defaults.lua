@@ -87,7 +87,7 @@ local M = {}
 ---@field confirm? snacks.picker.Action.spec shortcut for confirm action
 ---@field auto_confirm? boolean automatically confirm if there is only one item
 ---@field main? snacks.picker.main.Config main editor window config
----@field on_change? fun(picker:snacks.Picker, item:snacks.picker.Item) called when the cursor changes
+---@field on_change? fun(picker:snacks.Picker, item?:snacks.picker.Item) called when the cursor changes
 ---@field on_show? fun(picker:snacks.Picker) called when the picker is shown
 ---@field jump? snacks.picker.jump.Config|{}
 --- Other

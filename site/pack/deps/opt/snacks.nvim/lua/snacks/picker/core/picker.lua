@@ -3,10 +3,12 @@ local Finder = require("snacks.picker.core.finder")
 
 local uv = vim.uv or vim.loop
 Async.BUDGET = 10
+local _id = 0
 
 ---@alias snacks.Picker.ref (fun():snacks.Picker?)|{value?: snacks.Picker}
 
 ---@class snacks.Picker
+---@field id number
 ---@field opts snacks.picker.Config
 ---@field finder snacks.picker.Finder
 ---@field format snacks.picker.format
@@ -38,7 +40,7 @@ M._active = {}
 ---@class snacks.picker.Last
 ---@field cursor number
 ---@field topline number
----@field opts snacks.picker.Config
+---@field opts? snacks.picker.Config
 ---@field selected snacks.picker.Item[]
 ---@field filter snacks.picker.Filter
 
@@ -51,6 +53,8 @@ M.last = nil
 ---@param opts? snacks.picker.Config
 function M.new(opts)
   local self = setmetatable({}, M)
+  _id = _id + 1
+  self.id = _id
   self.opts = Snacks.picker.config.get(opts)
   if self.opts.source == "resume" then
     return M.resume()
@@ -70,19 +74,23 @@ function M.new(opts)
   if picker_count > 0 then
     -- clear items from previous pickers for garbage collection
     for picker, _ in pairs(M._pickers) do
-      picker.list.items = {}
-      picker.list.topk:clear()
       picker.finder.items = {}
+      picker.list.items = {}
+      picker.list:clear()
       picker.list.picker = nil
     end
   end
 
-  if self.opts.debug.leaks then
+  if self.opts.debug.leaks and picker_count > 0 then
     collectgarbage("collect")
     picker_count = vim.tbl_count(M._pickers)
     if picker_count > 0 then
+      local pickers = vim.tbl_keys(M._pickers) ---@type snacks.Picker[]
+      table.sort(pickers, function(a, b)
+        return a.id < b.id
+      end)
       local lines = { ("# ` %d ` active pickers:"):format(picker_count) }
-      for picker, _ in pairs(M._pickers) do
+      for _, picker in ipairs(pickers) do
         lines[#lines + 1] = ("- [%s]: **pattern**=%q, **search**=%q"):format(
           picker.opts.source or "custom",
           picker.input.filter.pattern,
@@ -92,7 +100,10 @@ function M.new(opts)
       Snacks.notify.error(lines, { title = "Snacks Picker", id = "snacks_picker_leaks" })
       Snacks.debug.metrics()
     else
-      Snacks.notifier.hide("snacks_picker_leaks")
+      Snacks.notify(
+        "Picker leaks cleared after `collectgarbage`",
+        { title = "Snacks Picker", id = "snacks_picker_leaks" }
+      )
     end
   end
 
@@ -133,7 +144,7 @@ function M.new(opts)
   self.preview = require("snacks.picker.core.preview").new(self.opts, layout.preview == "main" and self.main or nil)
 
   M.last = {
-    opts = self.opts,
+    opts = opts,
     selected = {},
     cursor = self.list.cursor,
     filter = self.input.filter,
@@ -457,6 +468,15 @@ function M:close()
   if self.closed then
     return
   end
+
+  -- FIXME: lsp definitions picker can't be gc-ed without the below,
+  -- which makes no sense. Need to further investigate.
+
+  -- if not self.shown then
+  --   self.input.win.opts.relative = "editor"
+  --   self.input.win:show()
+  -- end
+
   self:hist_record(true)
   self.closed = true
   M.last.selected = self:selected({ fallback = false })
@@ -468,15 +488,22 @@ function M:close()
   if is_picker_win and vim.api.nvim_win_is_valid(self.main) then
     vim.api.nvim_set_current_win(self.main)
   end
-  self.layout:close()
   self.updater:stop()
   self.finder:abort()
   self.matcher:abort()
   M._active[self] = nil
   vim.schedule(function()
-    -- order matters!
+    self.finder:close()
+    self.matcher:close()
+    self.layout:close()
+    self.list:close()
     self.input:close()
     self.preview:close()
+    self.resolved_layout = nil
+    self.preview = nil
+    self.matcher = nil
+    self.updater = nil
+    self.history = nil
   end)
 end
 
@@ -487,12 +514,12 @@ end
 
 ---@private
 function M:progress(ms)
-  if self.updater:is_active() then
+  if self.updater:is_active() or self.closed then
     return
   end
   self.updater = vim.defer_fn(function()
     self:update()
-    if self:is_active() then
+    if not self.closed and self:is_active() then
       -- slower progress when we filled topk
       local topk, height = self.list.topk:count(), self.list.state.height or 50
       self:progress(topk > height and 30 or 10)

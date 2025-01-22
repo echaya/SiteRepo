@@ -23,11 +23,10 @@ function M.new(picker)
     height = 1,
     text = picker.opts.live and self.filter.search or self.filter.pattern,
     ft = "regex",
-    on_win = function()
-      vim.fn.prompt_setprompt(self.win.buf, "")
-      self.win:focus()
-      vim.cmd.startinsert()
-      vim.api.nvim_win_set_cursor(self.win.win, { 1, #self:get() + 1 })
+    on_win = function(win)
+      vim.fn.prompt_setprompt(win.buf, "")
+      win:focus()
+      vim.cmd("startinsert!")
     end,
     bo = {
       filetype = "snacks_picker_input",
@@ -40,29 +39,29 @@ function M.new(picker)
     },
   }))
 
-  local ref = picker:ref()
+  local ref = Snacks.util.ref(self)
   self.win:on(
     { "TextChangedI", "TextChanged" },
     Snacks.util.throttle(function()
-      local p = ref()
-      if not p or not self.win:valid() then
+      local input = ref()
+      if not input or not input.win:valid() then
         return
       end
       -- only one line
       -- Can happen when someone pastes a multiline string
-      if vim.api.nvim_buf_line_count(self.win.buf) > 1 then
-        local line = vim.trim(self.win:text():gsub("\n", " "))
-        vim.api.nvim_buf_set_lines(self.win.buf, 0, -1, false, { line })
-        vim.api.nvim_win_set_cursor(self.win.win, { 1, #line + 1 })
+      if vim.api.nvim_buf_line_count(input.win.buf) > 1 then
+        local line = vim.trim(input.win:text():gsub("\n", " "))
+        vim.api.nvim_buf_set_lines(input.win.buf, 0, -1, false, { line })
+        vim.api.nvim_win_set_cursor(input.win.win, { 1, #line + 1 })
       end
-      vim.bo[self.win.buf].modified = false
-      local pattern = self:get()
-      if p.opts.live then
-        self.filter.search = pattern
+      vim.bo[input.win.buf].modified = false
+      local pattern = input:get()
+      if input.picker.opts.live then
+        input.filter.search = pattern
       else
-        self.filter.pattern = pattern
+        input.filter.pattern = pattern
       end
-      p:match()
+      input.picker:match()
     end, { ms = picker.opts.live and 100 or 30 }),
     { buf = true }
   )
