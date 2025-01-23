@@ -74,10 +74,7 @@ function M.new(opts, main)
     self:clear(self.win.buf)
   end, { win = true })
 
-  local preview = opts.preview or Snacks.picker.preview.file
-  preview = type(preview) == "string" and Snacks.picker.preview[preview] or preview
-  ---@cast preview snacks.picker.preview
-  self.preview = preview
+  self.preview = Snacks.picker.config.preview(opts)
   return self
 end
 

@@ -26,7 +26,7 @@ function M.filename(item, picker)
     return ret
   end
   local path = Snacks.picker.util.path(item) or item.file
-  path = vim.fn.fnamemodify(path, ":~:."):gsub("\\", "/")
+  path = Snacks.picker.util.truncpath(path, picker.opts.formatters.file.truncate or 40, { cwd = picker:cwd() })
   local name, cat = path, "file"
   if item.buf and vim.api.nvim_buf_is_loaded(item.buf) then
     name = vim.bo[item.buf].filetype
@@ -54,7 +54,7 @@ function M.filename(item, picker)
   else
     ret[#ret + 1] = { path, "SnacksPickerFile", field = "file" }
   end
-  if item.pos then
+  if item.pos and item.pos[1] > 0 then
     ret[#ret + 1] = { ":", "SnacksPickerDelim" }
     ret[#ret + 1] = { tostring(item.pos[1]), "SnacksPickerRow" }
     if item.pos[2] > 0 then
@@ -275,10 +275,15 @@ function M.lines(item)
   return ret
 end
 
-function M.text(item)
-  return {
-    { item.text },
-  }
+function M.text(item, picker)
+  local ret = {} ---@type snacks.picker.Highlight[]
+  local ft = item.ft or picker.opts.formatters.text.ft
+  if ft then
+    Snacks.picker.highlight.format(item, item.text, ret, { lang = ft })
+  else
+    ret[#ret + 1] = { item.text, item.text_hl }
+  end
+  return ret
 end
 
 function M.command(item)
@@ -368,11 +373,27 @@ function M.keymap(item, picker)
       ret[#ret + 1] = { "   " }
     end
   end
-  local lhs = vim.fn.keytrans(Snacks.util.keycode(k.lhs))
+  local lhs = Snacks.util.normkey(k.lhs)
   ret[#ret + 1] = { k.mode, "SnacksPickerKeymapMode" }
   ret[#ret + 1] = { " " }
   ret[#ret + 1] = { a(lhs, 15), "SnacksPickerKeymapLhs" }
   ret[#ret + 1] = { " " }
+  local icon_nowait = picker.opts.icons.keymaps.nowait
+
+  if k.nowait == 1 then
+    ret[#ret + 1] = { icon_nowait, "SnacksPickerKeymapNowait" }
+  else
+    ret[#ret + 1] = { (" "):rep(vim.api.nvim_strwidth(icon_nowait)) }
+  end
+  ret[#ret + 1] = { " " }
+
+  if k.buffer and k.buffer > 0 then
+    ret[#ret + 1] = { a("buf:" .. k.buffer, 6), "SnacksPickerBufNr" }
+  else
+    ret[#ret + 1] = { a("", 6) }
+  end
+  ret[#ret + 1] = { " " }
+
   local rhs_len = 0
   if k.rhs and k.rhs ~= "" then
     local rhs = k.rhs or ""
@@ -490,6 +511,21 @@ function M.debug(item, picker)
   end
   local ret = {} ---@type snacks.picker.Highlight[]
   ret[#ret + 1] = { ("%.2f "):format(score), "Number" }
+  return ret
+end
+
+function M.icon(item, picker)
+  local a = Snacks.picker.util.align
+  ---@cast item snacks.picker.Icon
+  local ret = {} ---@type snacks.picker.Highlight[]
+
+  ret[#ret + 1] = { a(item.icon, 2), "SnacksPickerIcon" }
+  ret[#ret + 1] = { " " }
+  ret[#ret + 1] = { a(item.source, 10), "SnacksPickerIconSource" }
+  ret[#ret + 1] = { " " }
+  ret[#ret + 1] = { a(item.name, 30), "SnacksPickerIconName" }
+  ret[#ret + 1] = { " " }
+  ret[#ret + 1] = { a(item.category, 8), "SnacksPickerIconCategory" }
   return ret
 end
 

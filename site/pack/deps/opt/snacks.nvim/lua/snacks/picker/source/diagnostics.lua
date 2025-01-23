@@ -6,11 +6,11 @@ local uv = vim.uv or vim.loop
 
 ---@param opts snacks.picker.diagnostics.Config
 ---@type snacks.picker.finder
-function M.diagnostics(opts, filter)
+function M.diagnostics(opts, ctx)
   local items = {} ---@type snacks.picker.finder.Item[]
   local current_buf = vim.api.nvim_get_current_buf()
   local cwd = vim.fs.normalize(uv.cwd() or ".")
-  for _, diag in ipairs(vim.diagnostic.get(filter.buf, { severity = opts.severity })) do
+  for _, diag in ipairs(vim.diagnostic.get(ctx.filter.buf, { severity = opts.severity })) do
     local buf = diag.bufnr
     if buf and vim.api.nvim_buf_is_valid(buf) then
       local file = vim.fs.normalize(vim.api.nvim_buf_get_name(buf), { _fast = true })
@@ -32,7 +32,7 @@ function M.diagnostics(opts, filter)
       }
     end
   end
-  return filter:filter(items)
+  return ctx.filter:filter(items)
 end
 
 return M

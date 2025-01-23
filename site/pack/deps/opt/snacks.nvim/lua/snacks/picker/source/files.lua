@@ -82,8 +82,12 @@ local function get_cmd(opts, filter)
   end
 
   -- dirs
-  if opts.dirs and #opts.dirs > 0 then
-    local dirs = vim.tbl_map(vim.fs.normalize, opts.dirs) ---@type string[]
+  local dirs = opts.dirs or {}
+  if opts.rtp then
+    vim.list_extend(dirs, Snacks.picker.util.rtp())
+  end
+  if #dirs > 0 then
+    dirs = vim.tbl_map(vim.fs.normalize, dirs) ---@type string[]
     if is_fd and not pattern then
       args[#args + 1] = "."
     end
@@ -102,32 +106,40 @@ end
 
 ---@param opts snacks.picker.files.Config
 ---@type snacks.picker.finder
-function M.files(opts, filter)
-  local cwd = not (opts.dirs and #opts.dirs > 0) and vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
-  local cmd, args = get_cmd(opts, filter)
-  return require("snacks.picker.source.proc").proc(vim.tbl_deep_extend("force", {
-    cmd = cmd,
-    args = args,
-    notify = not opts.live,
-    ---@param item snacks.picker.finder.Item
-    transform = function(item)
-      item.cwd = cwd
-      item.file = item.text
-    end,
-  }, opts or {}))
+function M.files(opts, ctx)
+  local cwd = not (opts.rtp or (opts.dirs and #opts.dirs > 0))
+      and vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".")
+    or nil
+  local cmd, args = get_cmd(opts, ctx.filter)
+  return require("snacks.picker.source.proc").proc({
+    opts,
+    {
+      cmd = cmd,
+      args = args,
+      notify = not opts.live,
+      ---@param item snacks.picker.finder.Item
+      transform = function(item)
+        item.cwd = cwd
+        item.file = item.text
+      end,
+    },
+  }, ctx)
 end
 
----@param opts snacks.picker.Config
+---@param opts snacks.picker.proc.Config
 ---@type snacks.picker.finder
-function M.zoxide(opts)
-  return require("snacks.picker.source.proc").proc(vim.tbl_deep_extend("force", {
-    cmd = "zoxide",
-    args = { "query", "--list" },
-    ---@param item snacks.picker.finder.Item
-    transform = function(item)
-      item.file = item.text
-    end,
-  }, opts or {}))
+function M.zoxide(opts, ctx)
+  return require("snacks.picker.source.proc").proc({
+    opts,
+    {
+      cmd = "zoxide",
+      args = { "query", "--list" },
+      ---@param item snacks.picker.finder.Item
+      transform = function(item)
+        item.file = item.text
+      end,
+    },
+  }, ctx)
 end
 
 return M

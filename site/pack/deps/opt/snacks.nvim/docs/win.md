@@ -307,6 +307,13 @@ win:has_border()
 win:hide()
 ```
 
+### `win:hscroll()`
+
+```lua
+---@param left? boolean
+win:hscroll(left)
+```
+
 ### `win:is_floating()`
 
 ```lua

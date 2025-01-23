@@ -12,6 +12,8 @@ M.meta = {
 
 local uv = vim.uv or vim.loop
 
+local MAX_INSPECT_LINES = 2000
+
 vim.schedule(function()
   Snacks.util.set_hl({
     Indent = "LineNr",
@@ -40,7 +42,14 @@ function M.inspect(...)
   end
   vim.schedule(function()
     local title = "Debug: " .. vim.fn.fnamemodify(caller.source:sub(2), ":~:.") .. ":" .. caller.linedefined
-    Snacks.notify.warn(vim.inspect(len == 1 and obj[1] or len > 0 and obj or nil), { title = title, ft = "lua" })
+    local lines = vim.split(vim.inspect(len == 1 and obj[1] or len > 0 and obj or nil), "\n")
+    if #lines > MAX_INSPECT_LINES then
+      local c = #lines
+      lines = vim.list_slice(lines, 1, MAX_INSPECT_LINES)
+      lines[#lines + 1] = ""
+      lines[#lines + 1] = (c - MAX_INSPECT_LINES) .. " more lines have been truncated …"
+    end
+    Snacks.notify.warn(lines, { title = title, ft = "lua" })
   end)
 end
 

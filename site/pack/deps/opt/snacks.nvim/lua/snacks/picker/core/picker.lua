@@ -128,11 +128,7 @@ function M.new(opts)
     return self.opts.items or {}
   end)
 
-  local format = type(self.opts.format) == "string" and Snacks.picker.format[self.opts.format]
-    or self.opts.format
-    or Snacks.picker.format.file
-  ---@cast format snacks.picker.format
-  self.format = format
+  self.format = Snacks.picker.config.format(self.opts)
 
   M._pickers[self] = true
   M._active[self] = true
@@ -335,6 +331,7 @@ function M.resume()
   last.opts.pattern = last.filter.pattern
   last.opts.search = last.filter.search
   local ret = M.new(last.opts)
+  ret:show()
   ret.list:set_selected(last.selected)
   ret.list:update()
   ret.input:update()
@@ -350,10 +347,13 @@ end
 --- Actual preview code
 ---@hide
 function M:_show_preview()
+  if self.closed then
+    return
+  end
   if self.opts.on_change then
     self.opts.on_change(self, self:current())
   end
-  if not self.preview.win:valid() then
+  if not (self.preview and self.preview.win:valid()) then
     return
   end
   self.preview:show(self)
@@ -482,6 +482,8 @@ function M:close()
   M.last.selected = self:selected({ fallback = false })
   M.last.cursor = self.list.cursor
   M.last.topline = self.list.top
+  M.last.opts = M.last.opts or {}
+  M.last.opts.live = self.opts.live
   Snacks.picker.current = nil
   local current = vim.api.nvim_get_current_win()
   local is_picker_win = vim.tbl_contains({ self.input.win.win, self.list.win.win, self.preview.win.win }, current)
@@ -590,22 +592,6 @@ function M:action(actions)
   return self.input.win:execute(actions)
 end
 
---- Clear the list and run the finder and matcher
----@param opts? {on_done?: fun()} Callback when done
-function M:find(opts)
-  self:update_titles()
-  self.finder:run(self)
-  self.matcher:run(self)
-  if opts and opts.on_done then
-    if self.matcher.task:running() then
-      self.matcher.task:on("done", vim.schedule_wrap(opts.on_done))
-    else
-      opts.on_done()
-    end
-  end
-  self:progress()
-end
-
 --- Add current filter to history
 ---@param force? boolean
 ---@private
@@ -643,40 +629,49 @@ function M:hist(forward)
   self.input:set(hist.pattern, hist.search)
 end
 
---- Run the matcher with the current pattern.
---- May also trigger a new find if the search string has changed,
---- like during live searches.
-function M:match()
-  local pattern = vim.trim(self.input.filter.pattern)
-  local search = vim.trim(self.input.filter.search)
-  local needs_match = false
+--- Check if the finder and/or matcher need to run,
+--- based on the current pattern and search string.
+---@param opts? { on_done?: fun(), refresh?: boolean }
+function M:find(opts)
+  opts = opts or {}
+  local filter = self.input.filter:clone({ trim = true })
+  local refresh = opts.refresh ~= false
+  if filter.opts.transform then
+    refresh = filter.opts.transform(self, filter) or refresh
+  end
   self:hist_record()
-  if self.matcher.pattern ~= pattern then
-    self.matcher:init({ pattern = pattern })
-    needs_match = true
+
+  local finding = false
+  if self.finder:init(filter) or refresh then
+    finding = true
+    if self:count() > 0 then
+      -- pause rapid list updates to prevent flickering
+      self.list:pause(60)
+    end
+    self.finder:run(self)
   end
 
-  if self.finder:changed(search) then
-    -- pause rapid list updates to prevent flickering
-    -- of the search results
-    self.list:pause(60)
-    return self:find()
+  -- re-run matcher if finder or pattern changed
+  if self.matcher:init(filter.pattern) or finding then
+    local prios = {} ---@type snacks.picker.Item[]
+    if not finding then
+      -- add current topk items to be checked first
+      vim.list_extend(prios, self.list.topk:get())
+      if not self.matcher:empty() then
+        -- next add the rest of the matched items
+        vim.list_extend(prios, self.list.items, 1, 1000)
+      end
+    end
+    self.matcher:run(self, { prios = prios })
+    if opts.on_done then
+      if self.matcher.task:running() then
+        self.matcher.task:on("done", vim.schedule_wrap(opts.on_done))
+      else
+        opts.on_done()
+      end
+    end
+    self:progress()
   end
-
-  if not needs_match then
-    return
-  end
-
-  local prios = {} ---@type snacks.picker.Item[]
-  -- add current topk items to be checked first
-  vim.list_extend(prios, self.list.topk:get())
-  if not self.matcher:empty() then
-    -- next add the rest of the matched items
-    vim.list_extend(prios, self.list.items, 1, 1000)
-  end
-
-  self.matcher:run(self, { prios = prios })
-  self:progress()
 end
 
 --- Get the active filter

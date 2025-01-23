@@ -76,7 +76,91 @@ function M.get(opts)
   end
 
   -- Merge the configs
-  return Snacks.config.merge(unpack(todo))
+  opts = Snacks.config.merge(unpack(todo))
+  M.multi(opts)
+  return opts
+end
+
+---@param opts snacks.picker.Config
+function M.multi(opts)
+  if not opts.multi then
+    return opts
+  end
+  local Finder = require("snacks.picker.core.finder")
+
+  local finders = {} ---@type snacks.picker.finder[]
+  local formats = {} ---@type snacks.picker.format[]
+  local previews = {} ---@type snacks.picker.preview[]
+  local confirms = {} ---@type snacks.picker.Action.spec[]
+
+  local sources = {} ---@type snacks.picker.Config[]
+  for _, source in ipairs(opts.multi) do
+    if type(source) == "string" then
+      source = { source = source }
+    end
+    ---@cast source snacks.picker.Config
+    source = Snacks.config.merge({}, opts.sources[source.source], source) --[[@as snacks.picker.Config]]
+    source.actions = source.actions or {}
+    if source.confirm then
+      source.actions.confirm = source.confirm
+    end
+    local finder = M.finder(source.finder)
+    finders[#finders + 1] = function(fopts, filter, picker)
+      fopts = Snacks.config.merge({}, vim.deepcopy(source), fopts)
+      return finder(fopts, filter, picker)
+    end
+    confirms[#confirms + 1] = source.actions.confirm or "jump"
+    previews[#previews + 1] = M.preview(source)
+    formats[#formats + 1] = M.format(source)
+    sources[#sources + 1] = source
+
+    -- merge keys
+    for w, win in pairs(source.win or {}) do
+      if win.keys then
+        opts.win = opts.win or {}
+        opts.win[w] = opts.win[w] or {}
+        opts.win[w].keys = Snacks.config.merge(opts.win[w].keys or {}, win.keys)
+      end
+    end
+  end
+
+  opts.finder = opts.finder or Finder.multi(finders)
+  opts.format = opts.format or function(item, picker)
+    return formats[item.source_id](item, picker)
+  end
+  opts.preview = opts.preview or function(ctx)
+    return previews[ctx.item.source_id](ctx)
+  end
+  opts.confirm = opts.confirm
+    or function(picker, item, action)
+      return confirms[item.source_id](picker, item, action)
+    end
+end
+
+---@param opts snacks.picker.Config
+function M.format(opts)
+  local ret = type(opts.format) == "string" and Snacks.picker.format[opts.format]
+    or opts.format
+    or Snacks.picker.format.file
+  ---@cast ret snacks.picker.format
+  return ret
+end
+
+---@param opts snacks.picker.Config
+function M.transform(opts)
+  local ret = type(opts.transform) == "string" and require("snacks.picker.transform")[opts.transform]
+    or opts.transform
+    or nil
+  ---@cast ret snacks.picker.transform?
+  return ret
+end
+
+---@param opts snacks.picker.Config
+function M.preview(opts)
+  local preview = opts.preview or Snacks.picker.preview.file
+  preview = type(preview) == "string" and Snacks.picker.preview[preview] or preview
+  ---@cast preview snacks.picker.preview
+  return preview
 end
 
 --- Resolve the layout configuration

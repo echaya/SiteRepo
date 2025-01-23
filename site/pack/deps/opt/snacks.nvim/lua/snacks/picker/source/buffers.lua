@@ -5,7 +5,7 @@ local M = {}
 
 ---@param opts snacks.picker.buffers.Config
 ---@type snacks.picker.finder
-function M.buffers(opts, filter)
+function M.buffers(opts, ctx)
   opts = vim.tbl_extend("force", {
     hidden = false,
     unloaded = true,
@@ -48,7 +48,7 @@ function M.buffers(opts, filter)
       return a.info.lastused > b.info.lastused
     end)
   end
-  return filter:filter(items)
+  return ctx.filter:filter(items)
 end
 
 return M

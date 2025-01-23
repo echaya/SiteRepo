@@ -1,4 +1,7 @@
+---@diagnostic disable: await-in-sync
 local Async = require("snacks.picker.util.async")
+
+---@module 'uv'
 
 local M = {}
 
@@ -112,13 +115,18 @@ function M.request(buf, method, params, cb)
   local async = Async.running()
   local cancel = {} ---@type fun()[]
 
-  async:on("abort", function()
-    for _, c in ipairs(cancel) do
-      c()
-    end
-  end)
+  async:on(
+    "abort",
+    vim.schedule_wrap(function()
+      vim.tbl_map(pcall, cancel)
+      cancel = {}
+    end)
+  )
   vim.schedule(function()
     local clients = M.get_clients(buf, method)
+    if vim.tbl_isempty(clients) then
+      return async:resume()
+    end
     local remaining = #clients
     for _, client in ipairs(clients) do
       local p = params(client)
@@ -164,8 +172,8 @@ end
 ---@param opts snacks.picker.lsp.Config|{context?:lsp.ReferenceContext}
 ---@param filter snacks.picker.Filter
 function M.get_locations(method, opts, filter)
-  local win = vim.api.nvim_get_current_win()
-  local buf = vim.api.nvim_get_current_buf()
+  local win = filter.current_win
+  local buf = filter.current_buf
   local fname = vim.api.nvim_buf_get_name(buf)
   fname = vim.fs.normalize(fname)
   local cursor = vim.api.nvim_win_get_cursor(win)
@@ -304,11 +312,37 @@ function M.results_to_items(client, results, opts)
 end
 
 ---@param opts snacks.picker.lsp.symbols.Config
----@param filt snacks.picker.Filter
-function M.symbols(opts, filt)
-  local buf = filt.current_buf
-  local ft = vim.bo[buf].filetype
-  local filter = opts.filter[ft]
+---@type snacks.picker.finder
+function M.symbols(opts, ctx)
+  local buf = ctx.filter.current_buf
+  -- For unloaded buffers, load the buffer and
+  -- refresh the picker on every LspAttach event
+  -- for 10 seconds. Also defer to ensure the file is loaded by the LSP.
+  if not vim.api.nvim_buf_is_loaded(buf) then
+    local id = vim.api.nvim_create_autocmd("LspAttach", {
+      buffer = buf,
+      callback = vim.schedule_wrap(function()
+        if ctx.picker:count() > 0 then
+          return true
+        end
+        ctx.picker:find()
+        vim.defer_fn(function()
+          if ctx.picker:count() == 0 then
+            ctx.picker:find()
+          end
+        end, 1000)
+      end),
+    })
+    pcall(vim.fn.bufload, buf)
+    vim.defer_fn(function()
+      vim.api.nvim_del_autocmd(id)
+    end, 10000)
+    return function()
+      ctx.async:sleep(2000)
+    end
+  end
+
+  local filter = opts.filter[vim.bo[buf].filetype]
   if filter == nil then
     filter = opts.filter.default
   end
@@ -319,7 +353,8 @@ function M.symbols(opts, filt)
   end
 
   local method = opts.workspace and "workspace/symbol" or "textDocument/documentSymbol"
-  local p = opts.workspace and { query = filt.search } or { textDocument = vim.lsp.util.make_text_document_params(buf) }
+  local p = opts.workspace and { query = ctx.filter.search }
+    or { textDocument = vim.lsp.util.make_text_document_params(buf) }
 
   ---@async
   ---@param cb async fun(item: snacks.picker.finder.Item)
@@ -345,39 +380,39 @@ end
 
 ---@param opts snacks.picker.lsp.references.Config
 ---@type snacks.picker.finder
-function M.references(opts, filter)
+function M.references(opts, ctx)
   opts = opts or {}
   return M.get_locations(
     "textDocument/references",
     vim.tbl_deep_extend("force", opts, {
       context = { includeDeclaration = opts.include_declaration },
     }),
-    filter
+    ctx.filter
   )
 end
 
 ---@param opts snacks.picker.lsp.Config
 ---@type snacks.picker.finder
-function M.definitions(opts, filter)
-  return M.get_locations("textDocument/definition", opts, filter)
+function M.definitions(opts, ctx)
+  return M.get_locations("textDocument/definition", opts, ctx.filter)
 end
 
 ---@param opts snacks.picker.lsp.Config
 ---@type snacks.picker.finder
-function M.type_definitions(opts, filter)
-  return M.get_locations("textDocument/typeDefinition", opts, filter)
+function M.type_definitions(opts, ctx)
+  return M.get_locations("textDocument/typeDefinition", opts, ctx.filter)
 end
 
 ---@param opts snacks.picker.lsp.Config
 ---@type snacks.picker.finder
-function M.implementations(opts, filter)
-  return M.get_locations("textDocument/implementation", opts, filter)
+function M.implementations(opts, ctx)
+  return M.get_locations("textDocument/implementation", opts, ctx.filter)
 end
 
 ---@param opts snacks.picker.lsp.Config
 ---@type snacks.picker.finder
-function M.declarations(opts, filter)
-  return M.get_locations("textDocument/declaration", opts, filter)
+function M.declarations(opts, ctx)
+  return M.get_locations("textDocument/declaration", opts, ctx.filter)
 end
 
 return M

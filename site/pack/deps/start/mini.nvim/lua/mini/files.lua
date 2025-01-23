@@ -807,7 +807,7 @@ MiniFiles.refresh = function(opts)
   local force_update = #vim.tbl_keys(content_opts) > 0
 
   -- Confirm refresh if there is modified buffer
-  if force_update then force_update = H.explorer_confirm_modified(explorer, 'buffer updates') end
+  if force_update then force_update = H.explorer_ignore_pending_fs_actions(explorer, 'Update buffers') end
 
   -- Respect explorer local options supplied inside its `open()` call but give
   -- current `opts` higher precedence
@@ -820,17 +820,26 @@ end
 ---
 --- - Parse user edits in directory buffers.
 --- - Convert edits to file system actions and apply them after confirmation.
+---   Choosing "No" skips application while "Cancel" stops synchronization.
 --- - Update all directory buffers with the most relevant file system information.
 ---   Can be used without user edits to account for external file system changes.
+---
+---@return boolean Whether synchronization was done.
 MiniFiles.synchronize = function()
   local explorer = H.explorer_get()
   if explorer == nil then return end
 
   -- Parse and apply file system operations
   local fs_actions = H.explorer_compute_fs_actions(explorer)
-  if fs_actions ~= nil and H.fs_actions_confirm(fs_actions) then H.fs_actions_apply(fs_actions) end
+  if fs_actions ~= nil then
+    local msg = table.concat(H.fs_actions_to_lines(fs_actions), '\n')
+    local confirm_res = vim.fn.confirm(msg, '&Yes\n&No\n&Cancel', 1, 'Question')
+    if confirm_res == 3 then return false end
+    if confirm_res == 1 then H.fs_actions_apply(fs_actions) end
+  end
 
   H.explorer_refresh(explorer, { force_update = true })
+  return true
 end
 
 --- Reset explorer
@@ -866,7 +875,7 @@ MiniFiles.close = function()
   pcall(vim.loop.timer_stop, H.timers.focus)
 
   -- Confirm close if there is modified buffer
-  if not H.explorer_confirm_modified(explorer, 'close') then return false end
+  if not H.explorer_ignore_pending_fs_actions(explorer, 'Close') then return false end
 
   -- Trigger appropriate event
   H.trigger_event('MiniFilesExplorerClose')
@@ -1786,42 +1795,18 @@ H.explorer_get_path_depth = function(explorer, path)
   end
 end
 
-H.explorer_confirm_modified = function(explorer, action_name)
-  local has_modified = false
-  for _, view in pairs(explorer.views) do
-    if H.is_modified_buffer(view.buf_id) then has_modified = true end
-  end
+H.explorer_ignore_pending_fs_actions = function(explorer, action_name)
+  -- Exit if nothing to ignore
+  if H.explorer_compute_fs_actions(explorer) == nil then return true end
 
-  -- Exit if nothing to confirm
-  if not has_modified then return true end
-
-  local msg = string.format('There is at least one modified buffer\n\nConfirm %s without synchronization?', action_name)
+  local msg = string.format('There are pending file system actions\n\n%s without synchronization?', action_name)
   local confirm_res = vim.fn.confirm(msg, '&Yes\n&No', 1, 'Question')
   return confirm_res == 1
 end
 
 H.explorer_open_file = function(explorer, path)
   explorer = H.explorer_ensure_target_window(explorer)
-
-  -- Try to use already created buffer, if present. This avoids not needed
-  -- `:edit` call and avoids some problems with auto-root from 'mini.misc'.
-  path = H.fs_normalize_path(path)
-  local path_buf_id
-  for _, buf_id in ipairs(vim.api.nvim_list_bufs()) do
-    local is_same_name = H.fs_normalize_path(vim.api.nvim_buf_get_name(buf_id)) == path
-    local is_target = H.is_valid_buf(buf_id) and vim.bo[buf_id].buflisted and is_same_name
-    if is_target then path_buf_id = buf_id end
-  end
-
-  if path_buf_id ~= nil then
-    vim.api.nvim_win_set_buf(explorer.target_window, path_buf_id)
-  else
-    -- Use relative path for a better initial view in `:buffers`
-    local path_norm = vim.fn.fnameescape(vim.fn.fnamemodify(path, ':.'))
-    -- Use `pcall()` to avoid possible `:edit` errors, like present swap file
-    pcall(vim.fn.win_execute, explorer.target_window, 'edit ' .. path_norm)
-  end
-
+  H.edit(path, explorer.target_window)
   return explorer
 end
 
@@ -2656,12 +2641,6 @@ H.fs_get_type = function(path)
 end
 
 -- File system actions --------------------------------------------------------
-H.fs_actions_confirm = function(fs_actions)
-  local msg = table.concat(H.fs_actions_to_lines(fs_actions), '\n')
-  local confirm_res = vim.fn.confirm(msg, '&Yes\n&No', 1, 'Question')
-  return confirm_res == 1
-end
-
 H.fs_actions_to_lines = function(fs_actions)
   -- Gather actions per source directory
   local short = H.fs_shorten_path
@@ -2874,6 +2853,15 @@ H.map = function(mode, lhs, rhs, opts)
   if lhs == '' then return end
   opts = vim.tbl_deep_extend('force', { silent = true }, opts or {})
   vim.keymap.set(mode, lhs, rhs, opts)
+end
+
+H.edit = function(path, win_id)
+  if type(path) ~= 'string' then return end
+  local buf_id = vim.fn.bufadd(vim.fn.fnamemodify(path, ':.'))
+  -- Showing in window also loads. Use `pcall` to not error with swap messages.
+  pcall(vim.api.nvim_win_set_buf, win_id or 0, buf_id)
+  vim.bo[buf_id].buflisted = true
+  return buf_id
 end
 
 H.trigger_event = function(event_name, data) vim.api.nvim_exec_autocmds('User', { pattern = event_name, data = data }) end

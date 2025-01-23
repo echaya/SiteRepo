@@ -455,6 +455,7 @@ function M.picker(ret)
     local opts = info.props[source]
     table.insert(ret, ("### `%s`"):format(source))
     table.insert(ret, "")
+    table.insert(ret, ("```vim\n:lua Snacks.picker.%s(opts?)\n```\n"):format(source))
     table.insert(ret, M.md(opts))
   end
   lines = vim.fn.readfile("lua/snacks/picker/config/layouts.lua")

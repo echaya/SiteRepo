@@ -25,6 +25,7 @@ end
 --- Gets the git root for a buffer or path.
 --- Defaults to the current buffer.
 ---@param path? number|string buffer or path
+---@return string?
 function M.get_root(path)
   path = path or 0
   path = type(path) == "number" and vim.api.nvim_buf_get_name(path) or path --[[@as string]]

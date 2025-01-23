@@ -9,6 +9,8 @@
 ---@field opts snacks.picker.filter.Config
 ---@field current_buf number
 ---@field current_win number
+---@field source_id? number
+---@field meta table<string, any>
 local M = {}
 M.__index = M
 
@@ -21,6 +23,7 @@ function M.new(picker)
   self.current_buf = vim.api.nvim_get_current_buf()
   self.current_win = vim.api.nvim_get_current_win()
   self.opts = opts.filter or {}
+  self.meta = {}
   local function gets(v)
     return type(v) == "function" and v(picker) or v or "" --[[@as string]]
   end
@@ -52,7 +55,7 @@ end
 ---@param opts? {trim?:boolean}
 ---@return snacks.picker.Filter
 function M:clone(opts)
-  local ret = setmetatable({}, { __index = self })
+  local ret = setmetatable({}, { __index = self, __call = M.filter })
   if opts and opts.trim then
     ret.pattern = vim.trim(self.pattern)
     ret.search = vim.trim(self.search)
@@ -68,7 +71,7 @@ function M:match(item)
   if self.all then
     return true
   end
-  if self.opts.filter and not self.opts.filter(item) then
+  if self.opts.filter and not self.opts.filter(item, self) then
     return false
   end
   if self.buf and (item.buf ~= self.buf) and (item.file ~= self.file) then
@@ -107,5 +110,7 @@ function M:filter(items)
   end
   return ret
 end
+
+M.__call = M.filter
 
 return M

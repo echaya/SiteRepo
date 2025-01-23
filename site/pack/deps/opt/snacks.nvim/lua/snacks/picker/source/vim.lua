@@ -237,11 +237,16 @@ function M.keymaps(opts)
   local done = {} ---@type table<string, boolean>
   for _, km in ipairs(maps) do
     local key = Snacks.picker.util.text(km, { "mode", "lhs", "buffer" })
-    if not done[key] then
+    local keep = true
+    if opts.plugs == false and km.lhs:match("^<Plug>") then
+      keep = false
+    end
+    if keep and not done[key] then
       done[key] = true
       local item = {
         mode = km.mode,
         item = km,
+        key = km.lhs,
         preview = {
           text = vim.inspect(km),
           ft = "lua",
@@ -324,7 +329,7 @@ function M.spelling()
 end
 
 ---@type snacks.picker.finder
-function M.undo()
+function M.undo(opts, ctx)
   local tree = vim.fn.undotree()
   local buf = vim.api.nvim_get_current_buf()
   local win = vim.api.nvim_get_current_win()
@@ -423,10 +428,9 @@ function M.undo()
 
   -- Resolve the items in batches to prevent blocking the UI
   ---@param cb async fun(item: snacks.picker.finder.Item)
-  ---@param task snacks.picker.Async
   ---@async
-  return function(cb, task)
-    task:on("abort", vim.schedule_wrap(restore))
+  return function(cb)
+    ctx.async:on("abort", vim.schedule_wrap(restore))
 
     while #items > 0 do
       vim.schedule(function()
@@ -440,9 +444,9 @@ function M.undo()
         if #items == 0 then
           restore()
         end
-        task:resume()
+        ctx.async:resume()
       end)
-      task:suspend()
+      ctx.async:suspend()
     end
   end
 end

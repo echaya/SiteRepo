@@ -77,7 +77,7 @@ function M.jump(picker, _, action)
     vim.api.nvim_win_set_buf(win, buf)
 
     -- set the cursor
-    if item.pos then
+    if item.pos and item.pos[1] > 0 then
       vim.api.nvim_win_set_cursor(win, { item.pos[1], item.pos[2] })
     elseif item.search then
       vim.cmd(item.search)
@@ -218,9 +218,17 @@ function M.loclist(picker)
   setqflist(items, { win = picker.main })
 end
 
-function M.copy(_, item)
+function M.yank(_, item)
   if item then
     vim.fn.setreg("+", item.data or item.text)
+  end
+end
+M.copy = M.yank
+
+function M.put(picker, item)
+  picker:close()
+  if item then
+    vim.api.nvim_put({ item.data or item.text }, "c", true, true)
   end
 end
 
@@ -309,6 +317,14 @@ end
 
 function M.preview_scroll_up(picker)
   picker.preview.win:scroll(true)
+end
+
+function M.preview_scroll_left(picker)
+  picker.preview.win:hscroll(true)
+end
+
+function M.preview_scroll_right(picker)
+  picker.preview.win:hscroll()
 end
 
 function M.inspect(picker, item)

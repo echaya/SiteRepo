@@ -457,7 +457,7 @@ function M:render()
     -- matcher for highlighting should include the search filter
     local pattern = vim.trim(self.picker.input.filter.pattern .. " " .. self.picker.input.filter.search)
     if self.matcher.pattern ~= pattern then
-      self.matcher:init({ pattern = pattern })
+      self.matcher:init(pattern)
     end
 
     -- render items

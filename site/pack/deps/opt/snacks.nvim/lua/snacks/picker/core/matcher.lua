@@ -11,10 +11,14 @@ local Async = require("snacks.picker.util.async")
 ---@field score snacks.picker.Score
 ---@field sorting? boolean
 ---@field file? {path: string, pos: snacks.picker.Pos}
+---@field cwd string
+---@field frecency? snacks.picker.Frecency
 local M = {}
 M.__index = M
 M.DEFAULT_SCORE = 1000
 M.INVERSE_SCORE = 1000
+local BONUS_FRECENCY = 8
+local BONUS_CWD = 10
 
 local YIELD_MATCH = 1 -- ms
 
@@ -44,6 +48,7 @@ function M.new(opts)
   self.sorting = true
   self.tick = 0
   self.score = require("snacks.picker.core.score").new(self.opts)
+  self.frecency = self.opts.frecency and require("snacks.picker.core.frecency").new() or nil
   return self
 end
 
@@ -71,6 +76,7 @@ function M:run(picker, opts)
   self.task:abort()
   picker.list:clear()
 
+  self.cwd = vim.fs.normalize(picker.opts.cwd or (vim.uv or vim.loop).cwd() or ".")
   self.sorting = not self:empty() or picker.opts.matcher.sort_empty
 
   -- PERF: fast path for empty pattern
@@ -116,18 +122,21 @@ function M:run(picker, opts)
   end)
 end
 
----@param opts? {pattern?: string}
-function M:init(opts)
-  opts = opts or {}
+---@param pattern string
+---@return boolean changed
+function M:init(pattern)
+  pattern = vim.trim(pattern)
+  if pattern == self.pattern then
+    return false
+  end
   self.tick = self.tick + 1
   self.file = nil
-  local pattern = vim.trim(opts.pattern or self.pattern)
   self.mods = {}
   self.pattern = pattern
   self:abort()
   self.one = nil
   if pattern == "" then
-    return
+    return true
   end
   local is_or = false
   for _, p in ipairs(vim.split(pattern, " +")) do
@@ -158,6 +167,7 @@ function M:init(opts)
   if #self.mods == 1 and #self.mods[1] == 1 then
     self.one = self.mods[1][1]
   end
+  return true
 end
 
 ---@param pattern string
@@ -260,6 +270,15 @@ function M:update(item)
     if self.file and not item.pos then
       item.pos = self.file.pos
       item.match_pos = true
+    end
+    if item.file then
+      if self.frecency then
+        item.frecency = item.frecency or self.frecency:get(item)
+        score = score + (1 - 1 / (1 + item.frecency)) * BONUS_FRECENCY
+      end
+      if self.opts.cwd_bonus and self.cwd == item.cwd or Snacks.picker.util.path(item):find(self.cwd, 1, true) == 1 then
+        score = score + BONUS_CWD
+      end
     end
   end
   item.match_tick, item.score = self.tick, score

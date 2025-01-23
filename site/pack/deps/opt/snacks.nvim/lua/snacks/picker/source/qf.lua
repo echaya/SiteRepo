@@ -35,7 +35,7 @@ local severities = {
 
 ---@param opts snacks.picker.qf.Config
 ---@type snacks.picker.finder
-function M.qf(opts, filter)
+function M.qf(opts, ctx)
   local win = opts.qf_win
   win = win == 0 and vim.api.nvim_get_current_win() or win
 
@@ -68,7 +68,7 @@ function M.qf(opts, filter)
       ret[#ret].item.line = ret[#ret].item.line .. "\n" .. item.text
     end
   end
-  return filter:filter(ret)
+  return ctx.filter:filter(ret)
 end
 
 return M

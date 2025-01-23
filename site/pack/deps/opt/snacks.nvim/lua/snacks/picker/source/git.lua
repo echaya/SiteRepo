@@ -12,7 +12,7 @@ local uv = vim.uv or vim.loop
 
 ---@param opts snacks.picker.git.files.Config
 ---@type snacks.picker.finder
-function M.files(opts)
+function M.files(opts, ctx)
   local args = { "-c", "core.quotepath=false", "ls-files", "--exclude-standard", "--cached" }
   if opts.untracked then
     table.insert(args, "--others")
@@ -20,20 +20,23 @@ function M.files(opts)
     table.insert(args, "--recurse-submodules")
   end
   local cwd = vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
-  return require("snacks.picker.source.proc").proc(vim.tbl_deep_extend("force", {
-    cmd = "git",
-    args = args,
-    ---@param item snacks.picker.finder.Item
-    transform = function(item)
-      item.cwd = cwd
-      item.file = item.text
-    end,
-  }, opts or {}))
+  return require("snacks.picker.source.proc").proc({
+    opts,
+    {
+      cmd = "git",
+      args = args,
+      ---@param item snacks.picker.finder.Item
+      transform = function(item)
+        item.cwd = cwd
+        item.file = item.text
+      end,
+    },
+  }, ctx)
 end
 
 ---@param opts snacks.picker.git.log.Config
 ---@type snacks.picker.finder
-function M.log(opts, filter)
+function M.log(opts, ctx)
   local args = {
     "log",
     "--pretty=format:%h %s (%ch)",
@@ -50,13 +53,13 @@ function M.log(opts, filter)
 
   local file ---@type string?
   if opts.current_line then
-    local cursor = vim.api.nvim_win_get_cursor(filter.current_win)
-    file = vim.api.nvim_buf_get_name(filter.current_buf)
+    local cursor = vim.api.nvim_win_get_cursor(ctx.filter.current_win)
+    file = vim.api.nvim_buf_get_name(ctx.filter.current_buf)
     local line = cursor[1]
     args[#args + 1] = "-L"
     args[#args + 1] = line .. ",+1:" .. file
   elseif opts.current_file then
-    file = vim.api.nvim_buf_get_name(filter.current_buf)
+    file = vim.api.nvim_buf_get_name(ctx.filter.current_buf)
     if opts.follow then
       args[#args + 1] = "--follow"
     end
@@ -65,28 +68,31 @@ function M.log(opts, filter)
   end
 
   local cwd = vim.fs.normalize(file and vim.fn.fnamemodify(file, ":h") or opts and opts.cwd or uv.cwd() or ".") or nil
-  return require("snacks.picker.source.proc").proc(vim.tbl_deep_extend("force", {
-    cwd = cwd,
-    cmd = "git",
-    args = args,
-    ---@param item snacks.picker.finder.Item
-    transform = function(item)
-      local commit, msg, date = item.text:match("^(%S+) (.*) %((.*)%)$")
-      if not commit then
-        error(item.text)
-      end
-      item.cwd = cwd
-      item.commit = commit
-      item.msg = msg
-      item.date = date
-      item.file = file
-    end,
-  }, opts or {}))
+  return require("snacks.picker.source.proc").proc({
+    opts,
+    {
+      cwd = cwd,
+      cmd = "git",
+      args = args,
+      ---@param item snacks.picker.finder.Item
+      transform = function(item)
+        local commit, msg, date = item.text:match("^(%S+) (.*) %((.*)%)$")
+        if not commit then
+          error(item.text)
+        end
+        item.cwd = cwd
+        item.commit = commit
+        item.msg = msg
+        item.date = date
+        item.file = file
+      end,
+    },
+  }, ctx)
 end
 
 ---@param opts snacks.picker.Config
 ---@type snacks.picker.finder
-function M.status(opts)
+function M.status(opts, ctx)
   local args = {
     "--no-pager",
     "status",
@@ -96,30 +102,33 @@ function M.status(opts)
 
   local cwd = vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
   cwd = Snacks.git.get_root(cwd)
-  return require("snacks.picker.source.proc").proc(vim.tbl_deep_extend("force", {
-    cwd = cwd,
-    cmd = "git",
-    args = args,
-    ---@param item snacks.picker.finder.Item
-    transform = function(item)
-      local status, file = item.text:sub(1, 2), item.text:sub(4)
-      item.cwd = cwd
-      item.status = status
-      item.file = file
-    end,
-  }, opts or {}))
+  return require("snacks.picker.source.proc").proc({
+    opts,
+    {
+      cwd = cwd,
+      cmd = "git",
+      args = args,
+      ---@param item snacks.picker.finder.Item
+      transform = function(item)
+        local status, file = item.text:sub(1, 2), item.text:sub(4)
+        item.cwd = cwd
+        item.status = status
+        item.file = file
+      end,
+    },
+  }, ctx)
 end
 
 ---@param opts snacks.picker.Config
 ---@type snacks.picker.finder
-function M.diff(opts)
+function M.diff(opts, ctx)
   local args = { "--no-pager", "diff", "--no-color", "--no-ext-diff" }
   local file, line ---@type string?, number?
   local header, hunk = {}, {} ---@type string[], string[]
-  local finder = require("snacks.picker.source.proc").proc(vim.tbl_deep_extend("force", {
-    cmd = "git",
-    args = args,
-  }, opts or {}))
+  local finder = require("snacks.picker.source.proc").proc({
+    opts,
+    { cmd = "git", args = args },
+  }, ctx)
   return function(cb)
     local function add()
       if file and line and #hunk > 0 then
@@ -159,7 +168,7 @@ end
 
 ---@param opts snacks.picker.Config
 ---@type snacks.picker.finder
-function M.branches(opts)
+function M.branches(opts, ctx)
   local args = { "--no-pager", "branch", "--no-color", "-vvl" }
   local cwd = vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
   cwd = Snacks.git.get_root(cwd)
@@ -174,29 +183,32 @@ function M.branches(opts)
     -- stylua: ignore end
   } ---@type string[]
 
-  return require("snacks.picker.source.proc").proc(vim.tbl_deep_extend("force", {
-    cwd = cwd,
-    cmd = "git",
-    args = args,
-    ---@param item snacks.picker.finder.Item
-    transform = function(item)
-      item.cwd = cwd
-      for p, pattern in ipairs(patterns) do
-        local status, branch, commit, msg = item.text:match(pattern)
-        if status then
-          local detached = p == 1
-          item.current = status == "*"
-          item.branch = not detached and branch or nil
-          item.commit = commit
-          item.msg = msg
-          item.detached = detached
-          return
+  return require("snacks.picker.source.proc").proc({
+    opts,
+    {
+      cwd = cwd,
+      cmd = "git",
+      args = args,
+      ---@param item snacks.picker.finder.Item
+      transform = function(item)
+        item.cwd = cwd
+        for p, pattern in ipairs(patterns) do
+          local status, branch, commit, msg = item.text:match(pattern)
+          if status then
+            local detached = p == 1
+            item.current = status == "*"
+            item.branch = not detached and branch or nil
+            item.commit = commit
+            item.msg = msg
+            item.detached = detached
+            return
+          end
         end
-      end
-      Snacks.notify.warn("failed to parse branch: " .. item.text)
-      return false -- skip items we could not parse
-    end,
-  }, opts or {}))
+        Snacks.notify.warn("failed to parse branch: " .. item.text)
+        return false -- skip items we could not parse
+      end,
+    },
+  }, ctx)
 end
 
 return M

@@ -66,6 +66,7 @@ Snacks.picker.pick({source = "files", ...})
 
 ```lua
 ---@class snacks.picker.Config
+---@field multi? (string|snacks.picker.Config)[]
 ---@field source? string source name and config to use
 ---@field pattern? string|fun(picker:snacks.Picker):string pattern used to filter items by the matcher
 ---@field search? string|fun(picker:snacks.Picker):string search string used by finders
@@ -80,6 +81,7 @@ Snacks.picker.pick({source = "files", ...})
 ---@field preview? snacks.picker.preview|string preview function or preset
 ---@field matcher? snacks.picker.matcher.Config matcher config
 ---@field sort? snacks.picker.sort|snacks.picker.sort.Config sort function or config
+---@field transform? string|snacks.picker.transform transform/filter function
 --- UI
 ---@field win? snacks.picker.win.Config
 ---@field layout? snacks.picker.layout.Config|string|{}|fun(source:string):(snacks.picker.layout.Config|string)
@@ -119,6 +121,10 @@ Snacks.picker.pick({source = "files", ...})
     sort_empty = false, -- sort results when the search string is empty
     filename_bonus = true, -- give bonus for matching file names (last part of the path)
     file_pos = true, -- support patterns like `file:line:col` and `file:line`
+    -- the bonusses below, possibly require string concatenation and path normalization,
+    -- so this can have a performance impact for large lists and increase memory usage
+    cwd_bonus = false, -- give bonus for matching files in the cwd
+    frecency = false, -- frecency bonus
   },
   sort = {
     -- default sort is by score, text length and index
@@ -127,8 +133,12 @@ Snacks.picker.pick({source = "files", ...})
   ui_select = true, -- replace `vim.ui.select` with the snacks picker
   ---@class snacks.picker.formatters.Config
   formatters = {
+    text = {
+      ft = nil, ---@type string? filetype for highlighting
+    },
     file = {
       filename_first = false, -- display filename before the file path
+      truncate = 40, -- truncate the file path to (roughly) this length
     },
     selected = {
       show_always = false, -- only show the selected column when there are multiple selections
@@ -186,6 +196,8 @@ Snacks.picker.pick({source = "files", ...})
         ["<c-k>"] = { "list_up", mode = { "i", "n" } },
         ["<c-n>"] = { "list_down", mode = { "i", "n" } },
         ["<c-p>"] = { "list_up", mode = { "i", "n" } },
+        ["<c-l>"] = { "preview_scroll_left", mode = { "i", "n" } },
+        ["<c-h>"] = { "preview_scroll_right", mode = { "i", "n" } },
         ["<c-b>"] = { "preview_scroll_up", mode = { "i", "n" } },
         ["<c-d>"] = { "list_scroll_down", mode = { "i", "n" } },
         ["<c-f>"] = { "preview_scroll_down", mode = { "i", "n" } },
@@ -230,6 +242,8 @@ Snacks.picker.pick({source = "files", ...})
         ["<c-a>"] = "select_all",
         ["<c-f>"] = "preview_scroll_down",
         ["<c-b>"] = "preview_scroll_up",
+        ["<c-l>"] = "preview_scroll_right",
+        ["<c-h>"] = "preview_scroll_left",
         ["<c-v>"] = "edit_vsplit",
         ["<c-s>"] = "edit_split",
         ["<c-j>"] = "list_down",
@@ -260,6 +274,9 @@ Snacks.picker.pick({source = "files", ...})
   icons = {
     files = {
       enabled = true, -- show file icons
+    },
+    keymaps = {
+      nowait = "󰓅 "
     },
     indent = {
       vertical    = "│ ",
@@ -448,6 +465,7 @@ Snacks.picker.pick({source = "files", ...})
 ---@alias snacks.picker.format fun(item:snacks.picker.Item, picker:snacks.Picker):snacks.picker.Highlight[]
 ---@alias snacks.picker.preview fun(ctx: snacks.picker.preview.ctx):boolean?
 ---@alias snacks.picker.sort fun(a:snacks.picker.Item, b:snacks.picker.Item):boolean
+---@alias snacks.picker.transform fun(item:snacks.picker.finder.Item, ctx:snacks.picker.finder.ctx):(boolean|snacks.picker.finder.Item|nil)
 ---@alias snacks.picker.Pos {[1]:number, [2]:number}
 ```
 
@@ -458,7 +476,8 @@ Generic filter used by finders to pre-filter items
 ---@field cwd? boolean|string only show files for the given cwd
 ---@field buf? boolean|number only show items for the current or given buffer
 ---@field paths? table<string, boolean> only show items that include or exclude the given paths
----@field filter? fun(item:snacks.picker.finder.Item):boolean custom filter function
+---@field filter? fun(item:snacks.picker.finder.Item, filter:snacks.picker.Filter):boolean? custom filter function
+---@field transform? fun(picker:snacks.Picker, filter:snacks.picker.Filter):boolean? filter transform. Return `true` to force refresh
 ```
 
 This is only used when using `opts.preview = "preview"`.
@@ -477,9 +496,11 @@ It's a previewer that shows a preview based on the item data.
 ---@field [string] any
 ---@field idx number
 ---@field score number
+---@field frecency? number
 ---@field score_add? number
 ---@field score_mul? number
 ---@field match_tick? number
+---@field source_id? number
 ---@field file? string
 ---@field text string
 ---@field pos? snacks.picker.Pos
@@ -582,6 +603,10 @@ Snacks.picker.select(...)
 
 ### `autocmds`
 
+```vim
+:lua Snacks.picker.autocmds(opts?)
+```
+
 ```lua
 {
   finder = "vim_autocmds",
@@ -591,6 +616,10 @@ Snacks.picker.select(...)
 ```
 
 ### `buffers`
+
+```vim
+:lua Snacks.picker.buffers(opts?)
+```
 
 ```lua
 ---@class snacks.picker.buffers.Config: snacks.picker.Config
@@ -621,6 +650,10 @@ Snacks.picker.select(...)
 
 ### `cliphist`
 
+```vim
+:lua Snacks.picker.cliphist(opts?)
+```
+
 ```lua
 {
   finder = "system_cliphist",
@@ -631,6 +664,10 @@ Snacks.picker.select(...)
 ```
 
 ### `colorschemes`
+
+```vim
+:lua Snacks.picker.colorschemes(opts?)
+```
 
 Neovim colorschemes with live preview
 
@@ -654,6 +691,10 @@ Neovim colorschemes with live preview
 
 ### `command_history`
 
+```vim
+:lua Snacks.picker.command_history(opts?)
+```
+
 Neovim command history
 
 ```lua
@@ -667,10 +708,15 @@ Neovim command history
     preset = "vscode",
   },
   confirm = "cmd",
+  formatters = { text = { ft = "vim" } },
 }
 ```
 
 ### `commands`
+
+```vim
+:lua Snacks.picker.commands(opts?)
+```
 
 Neovim commands
 
@@ -684,6 +730,10 @@ Neovim commands
 ```
 
 ### `diagnostics`
+
+```vim
+:lua Snacks.picker.diagnostics(opts?)
+```
 
 ```lua
 ---@class snacks.picker.diagnostics.Config: snacks.picker.Config
@@ -709,6 +759,10 @@ Neovim commands
 
 ### `diagnostics_buffer`
 
+```vim
+:lua Snacks.picker.diagnostics_buffer(opts?)
+```
+
 ```lua
 ---@type snacks.picker.diagnostics.Config
 {
@@ -724,6 +778,10 @@ Neovim commands
 
 ### `files`
 
+```vim
+:lua Snacks.picker.files(opts?)
+```
+
 ```lua
 ---@class snacks.picker.files.Config: snacks.picker.proc.Config
 ---@field cmd? string
@@ -733,6 +791,7 @@ Neovim commands
 ---@field follow? boolean follow symlinks
 ---@field exclude? string[] exclude patterns
 ---@field args? string[] additional arguments
+---@field rtp? boolean search in runtimepath
 {
   finder = "files",
   format = "file",
@@ -744,6 +803,10 @@ Neovim commands
 ```
 
 ### `git_branches`
+
+```vim
+:lua Snacks.picker.git_branches(opts?)
+```
 
 ```lua
 {
@@ -765,6 +828,10 @@ Neovim commands
 
 ### `git_diff`
 
+```vim
+:lua Snacks.picker.git_diff(opts?)
+```
+
 ```lua
 {
   finder = "git_diff",
@@ -774,6 +841,10 @@ Neovim commands
 ```
 
 ### `git_files`
+
+```vim
+:lua Snacks.picker.git_files(opts?)
+```
 
 Find git files
 
@@ -790,6 +861,10 @@ Find git files
 ```
 
 ### `git_log`
+
+```vim
+:lua Snacks.picker.git_log(opts?)
+```
 
 Git log
 
@@ -808,6 +883,10 @@ Git log
 
 ### `git_log_file`
 
+```vim
+:lua Snacks.picker.git_log_file(opts?)
+```
+
 ```lua
 ---@type snacks.picker.git.log.Config
 {
@@ -822,6 +901,10 @@ Git log
 
 ### `git_log_line`
 
+```vim
+:lua Snacks.picker.git_log_line(opts?)
+```
+
 ```lua
 ---@type snacks.picker.git.log.Config
 {
@@ -835,6 +918,10 @@ Git log
 ```
 
 ### `git_status`
+
+```vim
+:lua Snacks.picker.git_status(opts?)
+```
 
 ```lua
 {
@@ -853,6 +940,10 @@ Git log
 
 ### `grep`
 
+```vim
+:lua Snacks.picker.grep(opts?)
+```
+
 ```lua
 ---@class snacks.picker.grep.Config: snacks.picker.proc.Config
 ---@field cmd? string
@@ -867,6 +958,7 @@ Git log
 ---@field need_search? boolean require a search pattern
 ---@field exclude? string[] exclude patterns
 ---@field args? string[] additional arguments
+---@field rtp? boolean search in runtimepath
 {
   finder = "grep",
   format = "file",
@@ -876,6 +968,10 @@ Git log
 ```
 
 ### `grep_buffers`
+
+```vim
+:lua Snacks.picker.grep_buffers(opts?)
+```
 
 ```lua
 ---@type snacks.picker.grep.Config
@@ -891,6 +987,10 @@ Git log
 
 ### `grep_word`
 
+```vim
+:lua Snacks.picker.grep_word(opts?)
+```
+
 ```lua
 ---@type snacks.picker.grep.Config
 {
@@ -905,6 +1005,10 @@ Git log
 ```
 
 ### `help`
+
+```vim
+:lua Snacks.picker.help(opts?)
+```
 
 Neovim help tags
 
@@ -928,6 +1032,10 @@ Neovim help tags
 
 ### `highlights`
 
+```vim
+:lua Snacks.picker.highlights(opts?)
+```
+
 ```lua
 {
   finder = "vim_highlights",
@@ -936,7 +1044,29 @@ Neovim help tags
 }
 ```
 
+### `icons`
+
+```vim
+:lua Snacks.picker.icons(opts?)
+```
+
+```lua
+---@class snacks.picker.icons.Config: snacks.picker.Config
+---@field icon_sources? string[]
+{
+  icon_sources = { "nerd_fonts", "emoji" },
+  finder = "icons",
+  format = "icon",
+  layout = { preset = "vscode" },
+  confirm = "put",
+}
+```
+
 ### `jumps`
+
+```vim
+:lua Snacks.picker.jumps(opts?)
+```
 
 ```lua
 {
@@ -947,16 +1077,22 @@ Neovim help tags
 
 ### `keymaps`
 
+```vim
+:lua Snacks.picker.keymaps(opts?)
+```
+
 ```lua
 ---@class snacks.picker.keymaps.Config: snacks.picker.Config
 ---@field global? boolean show global keymaps
 ---@field local? boolean show buffer keymaps
+---@field plugs? boolean show plugin keymaps
 ---@field modes? string[]
 {
   finder = "vim_keymaps",
   format = "keymap",
   preview = "preview",
   global = true,
+  plugs = false,
   ["local"] = true,
   modes = { "n", "v", "x", "s", "o", "i", "c", "t" },
   confirm = function(picker, item)
@@ -965,10 +1101,48 @@ Neovim help tags
       vim.api.nvim_input(item.item.lhs)
     end
   end,
+  actions = {
+    toggle_global = function(picker)
+      picker.opts.global = not picker.opts.global
+      picker:find()
+    end,
+    toggle_buffer = function(picker)
+      picker.opts["local"] = not picker.opts["local"]
+      picker:find()
+    end,
+  },
+  win = {
+    input = {
+      keys = {
+        ["<a-g>"] = { "toggle_global", mode = { "n", "i" }, desc = "Toggle Global Keymaps" },
+        ["<a-b>"] = { "toggle_buffer", mode = { "n", "i" }, desc = "Toggle Buffer Keymaps" },
+      },
+    },
+  },
+}
+```
+
+### `lazy`
+
+```vim
+:lua Snacks.picker.lazy(opts?)
+```
+
+Search for a lazy.nvim plugin spec
+
+```lua
+{
+  finder = "lazy_spec",
+  live = true,
+  search = "'",
 }
 ```
 
 ### `lines`
+
+```vim
+:lua Snacks.picker.lines(opts?)
+```
 
 Search lines in the current buffer
 
@@ -997,6 +1171,10 @@ Search lines in the current buffer
 
 ### `loclist`
 
+```vim
+:lua Snacks.picker.loclist(opts?)
+```
+
 Loclist
 
 ```lua
@@ -1009,6 +1187,10 @@ Loclist
 ```
 
 ### `lsp_declarations`
+
+```vim
+:lua Snacks.picker.lsp_declarations(opts?)
+```
 
 LSP declarations
 
@@ -1025,6 +1207,10 @@ LSP declarations
 
 ### `lsp_definitions`
 
+```vim
+:lua Snacks.picker.lsp_definitions(opts?)
+```
+
 LSP definitions
 
 ```lua
@@ -1040,6 +1226,10 @@ LSP definitions
 
 ### `lsp_implementations`
 
+```vim
+:lua Snacks.picker.lsp_implementations(opts?)
+```
+
 LSP implementations
 
 ```lua
@@ -1054,6 +1244,10 @@ LSP implementations
 ```
 
 ### `lsp_references`
+
+```vim
+:lua Snacks.picker.lsp_references(opts?)
+```
 
 LSP references
 
@@ -1071,6 +1265,10 @@ LSP references
 ```
 
 ### `lsp_symbols`
+
+```vim
+:lua Snacks.picker.lsp_symbols(opts?)
+```
 
 LSP document symbols
 
@@ -1124,6 +1322,10 @@ LSP document symbols
 
 ### `lsp_type_definitions`
 
+```vim
+:lua Snacks.picker.lsp_type_definitions(opts?)
+```
+
 LSP type definitions
 
 ```lua
@@ -1139,6 +1341,10 @@ LSP type definitions
 
 ### `lsp_workspace_symbols`
 
+```vim
+:lua Snacks.picker.lsp_workspace_symbols(opts?)
+```
+
 ```lua
 ---@type snacks.picker.lsp.symbols.Config
 vim.tbl_extend("force", {}, M.lsp_symbols, {
@@ -1150,6 +1356,10 @@ vim.tbl_extend("force", {}, M.lsp_symbols, {
 ```
 
 ### `man`
+
+```vim
+:lua Snacks.picker.man(opts?)
+```
 
 ```lua
 {
@@ -1169,6 +1379,10 @@ vim.tbl_extend("force", {}, M.lsp_symbols, {
 
 ### `marks`
 
+```vim
+:lua Snacks.picker.marks(opts?)
+```
+
 ```lua
 ---@class snacks.picker.marks.Config: snacks.picker.Config
 ---@field global? boolean show global marks
@@ -1183,6 +1397,10 @@ vim.tbl_extend("force", {}, M.lsp_symbols, {
 
 ### `picker_actions`
 
+```vim
+:lua Snacks.picker.picker_actions(opts?)
+```
+
 ```lua
 {
   finder = "meta_actions",
@@ -1192,6 +1410,10 @@ vim.tbl_extend("force", {}, M.lsp_symbols, {
 
 ### `picker_format`
 
+```vim
+:lua Snacks.picker.picker_format(opts?)
+```
+
 ```lua
 {
   finder = "meta_format",
@@ -1200,6 +1422,10 @@ vim.tbl_extend("force", {}, M.lsp_symbols, {
 ```
 
 ### `picker_layouts`
+
+```vim
+:lua Snacks.picker.picker_layouts(opts?)
+```
 
 ```lua
 {
@@ -1215,6 +1441,10 @@ vim.tbl_extend("force", {}, M.lsp_symbols, {
 
 ### `picker_preview`
 
+```vim
+:lua Snacks.picker.picker_preview(opts?)
+```
+
 ```lua
 {
   finder = "meta_preview",
@@ -1223,6 +1453,10 @@ vim.tbl_extend("force", {}, M.lsp_symbols, {
 ```
 
 ### `pickers`
+
+```vim
+:lua Snacks.picker.pickers(opts?)
+```
 
 List all available sources
 
@@ -1240,6 +1474,10 @@ List all available sources
 ```
 
 ### `projects`
+
+```vim
+:lua Snacks.picker.projects(opts?)
+```
 
 Open recent projects
 
@@ -1260,6 +1498,10 @@ Open recent projects
 
 ### `qflist`
 
+```vim
+:lua Snacks.picker.qflist(opts?)
+```
+
 Quickfix list
 
 ```lua
@@ -1271,6 +1513,10 @@ Quickfix list
 ```
 
 ### `recent`
+
+```vim
+:lua Snacks.picker.recent(opts?)
+```
 
 Find recent files
 
@@ -1292,6 +1538,10 @@ Find recent files
 
 ### `registers`
 
+```vim
+:lua Snacks.picker.registers(opts?)
+```
+
 Neovim registers
 
 ```lua
@@ -1305,6 +1555,10 @@ Neovim registers
 
 ### `resume`
 
+```vim
+:lua Snacks.picker.resume(opts?)
+```
+
 Special picker that resumes the last picker
 
 ```lua
@@ -1312,6 +1566,10 @@ Special picker that resumes the last picker
 ```
 
 ### `search_history`
+
+```vim
+:lua Snacks.picker.search_history(opts?)
+```
 
 Neovim search history
 
@@ -1322,38 +1580,39 @@ Neovim search history
   name = "search",
   format = "text",
   preview = "none",
-  layout = {
-    preset = "vscode",
-  },
+  layout = { preset = "vscode" },
   confirm = "search",
+  formatters = { text = { ft = "regex" } },
 }
 ```
 
 ### `smart`
+
+```vim
+:lua Snacks.picker.smart(opts?)
+```
 
 ```lua
 ---@class snacks.picker.smart.Config: snacks.picker.Config
 ---@field finders? string[] list of finders to use
 ---@field filter? snacks.picker.filter.Config
 {
-  finder = "smart",
-  finders = { "buffers", "recent", "files" },
-  format = "file",
-  -- sort the results even when the filter is empty (frecency)
-  matcher = { sort_empty = true },
-  win = {
-    input = {
-      keys = {
-        ["dd"] = "bufdelete",
-        ["<c-x>"] = { "bufdelete", mode = { "n", "i" } },
-      },
-    },
-    list = { keys = { ["dd"] = "bufdelete" } },
+  multi = { "buffers", "recent", "files" },
+  format = "file", -- use `file` format for all sources
+  matcher = {
+    cwd_bonus = true, -- boost cwd matches
+    frecency = true, -- use frecency boosting
+    sort_empty = true, -- sort even when the filter is empty
   },
+  transform = "unique_file",
 }
 ```
 
 ### `spelling`
+
+```vim
+:lua Snacks.picker.spelling(opts?)
+```
 
 ```lua
 {
@@ -1366,6 +1625,10 @@ Neovim search history
 
 ### `undo`
 
+```vim
+:lua Snacks.picker.undo(opts?)
+```
+
 ```lua
 {
   finder = "vim_undo",
@@ -1377,6 +1640,10 @@ Neovim search history
 ```
 
 ### `zoxide`
+
+```vim
+:lua Snacks.picker.zoxide(opts?)
+```
 
 Open a project from zoxide
 
@@ -1575,12 +1842,6 @@ Snacks.picker.actions.bufdelete(picker)
 Snacks.picker.actions.cmd(picker, item)
 ```
 
-### `Snacks.picker.actions.copy()`
-
-```lua
-Snacks.picker.actions.copy(_, item)
-```
-
 ### `Snacks.picker.actions.cycle_win()`
 
 ```lua
@@ -1741,10 +2002,28 @@ Snacks.picker.actions.loclist(picker)
 Snacks.picker.actions.preview_scroll_down(picker)
 ```
 
+### `Snacks.picker.actions.preview_scroll_left()`
+
+```lua
+Snacks.picker.actions.preview_scroll_left(picker)
+```
+
+### `Snacks.picker.actions.preview_scroll_right()`
+
+```lua
+Snacks.picker.actions.preview_scroll_right(picker)
+```
+
 ### `Snacks.picker.actions.preview_scroll_up()`
 
 ```lua
 Snacks.picker.actions.preview_scroll_up(picker)
+```
+
+### `Snacks.picker.actions.put()`
+
+```lua
+Snacks.picker.actions.put(picker, item)
 ```
 
 ### `Snacks.picker.actions.qflist()`
@@ -1838,6 +2117,12 @@ Snacks.picker.actions.toggle_maximize(picker)
 Snacks.picker.actions.toggle_preview(picker)
 ```
 
+### `Snacks.picker.actions.yank()`
+
+```lua
+Snacks.picker.actions.yank(_, item)
+```
+
 
 
 ## 📦 `snacks.picker.core.picker`
@@ -1924,10 +2209,11 @@ picker:filter()
 
 ### `picker:find()`
 
-Clear the list and run the finder and matcher
+Check if the finder and/or matcher need to run,
+based on the current pattern and search string.
 
 ```lua
----@param opts? {on_done?: fun()} Callback when done
+---@param opts? { on_done?: fun(), refresh?: boolean }
 picker:find(opts)
 ```
 
@@ -1964,16 +2250,6 @@ Items will be in sorted order.
 ```lua
 ---@return fun():snacks.picker.Item?
 picker:iter()
-```
-
-### `picker:match()`
-
-Run the matcher with the current pattern.
-May also trigger a new find if the search string has changed,
-like during live searches.
-
-```lua
-picker:match()
 ```
 
 ### `picker:norm()`

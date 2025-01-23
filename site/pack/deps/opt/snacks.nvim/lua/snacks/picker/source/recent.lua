@@ -29,7 +29,7 @@ end
 --- current working directory or a custom directory.
 ---@param opts snacks.picker.recent.Config
 ---@type snacks.picker.finder
-function M.files(opts, filter)
+function M.files(opts, ctx)
   local current_file = vim.fs.normalize(vim.api.nvim_buf_get_name(0), { _fast = true })
   ---@type number[]
   local bufs = vim.tbl_filter(function(b)
@@ -44,7 +44,7 @@ function M.files(opts, filter)
   ---@async
   ---@param cb async fun(item: snacks.picker.finder.Item)
   return function(cb)
-    for file in oldfiles(filter, extra) do
+    for file in oldfiles(ctx.filter, extra) do
       if file ~= current_file then
         cb({ file = file, text = file, recent = true })
       end
@@ -60,12 +60,12 @@ M.recent = M.files
 --- You can customize the behavior by providing a custom action.
 ---@param opts snacks.picker.recent.Config
 ---@type snacks.picker.finder
-function M.projects(opts, filter)
+function M.projects(opts, ctx)
   ---@async
   ---@param cb async fun(item: snacks.picker.finder.Item)
   return function(cb)
     local dirs = {} ---@type table<string, boolean>
-    for file in oldfiles(filter) do
+    for file in oldfiles(ctx.filter) do
       local dir = Snacks.git.get_root(file)
       if dir and not dirs[dir] then
         dirs[dir] = true
