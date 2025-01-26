@@ -41,7 +41,7 @@ completion.keyword = {
 ```lua
 completion.trigger = {
   -- When true, will prefetch the completion items when entering insert mode
-  prefetch_on_insert = false,
+  prefetch_on_insert = true,
 
   -- When false, will not show the completion window automatically when in a snippet
   show_in_snippet = true,
@@ -118,6 +118,8 @@ completion.list = {
 completion.accept = {
   -- Create an undo point when accepting a completion item
   create_undo_point = true,
+  -- How long to wait for the LSP to resolve the item with additional information before continuing as-is
+  resolve_timeout_ms = 100,
   -- Experimental auto-brackets support
   auto_brackets = {
     -- Whether to auto-insert brackets for functions
@@ -291,6 +293,10 @@ completion.documentation = {
 -- Displays a preview of the selected item on the current line
 completion.ghost_text = {
   enabled = false,
+  -- Show the ghost text when an item has been selected
+  show_with_selection = true,
+  -- Show the ghost text when no item has been selected, defaulting to the first item
+  show_without_selection = false,
 },
 ```
 
@@ -301,9 +307,17 @@ completion.ghost_text = {
 signature = {
   enabled = false,
   trigger = {
+    -- Show the signature help automatically
+    enabled = true,
+    -- Show the signature help window after typing any of alphanumerics, `-` or `_`
+    show_on_keyword = false,
     blocked_trigger_characters = {},
     blocked_retrigger_characters = {},
-    -- When true, will show the signature help window when the cursor comes after a trigger character when entering insert mode
+    -- Show the signature help window after typing a trigger character
+    show_on_trigger_character = true,
+    -- Show the signature help window when entering insert mode
+    show_on_insert = false,
+    -- Show the signature help window when the cursor comes after a trigger character when entering insert mode
     show_on_insert_on_trigger_character = true,
   },
   window = {
@@ -320,6 +334,7 @@ signature = {
     direction_priority = { 'n', 's' },
     -- Disable if you run into performance issues
     treesitter_highlighting = true,
+    show_documentation = true,
   },
 }
 ```
@@ -328,9 +343,9 @@ signature = {
 
 ```lua
 fuzzy = {
-  -- When enabled, allows for a number of typos relative to the length of the query
-  -- Disabling this matches the behavior of fzf
-  use_typo_resistance = true,
+  -- Allows for a number of typos relative to the length of the query
+  -- Set this to 0 to match the behavior of fzf
+  max_typos = function(keyword) return math.floor(#keyword / 4) end,
   -- Frecency tracks the most recently/frequently used items and boosts the score of the item
   use_frecency = true,
   -- Proximity bonus boosts the score of items matching nearby words

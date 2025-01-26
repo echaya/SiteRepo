@@ -30,20 +30,35 @@ function cmdline:get_completions(context, callback)
   local keyword = context.get_bounds(keyword_config.range)
   local current_arg_prefix = current_arg:sub(1, keyword.start_col - #text_before_argument - 1)
 
+  -- Parse the command to ignore modifiers like :vert help
+  -- Fails in some cases, like context.line = ':vert' so we fallback to the first argument
+  local valid_cmd, parsed = pcall(vim.api.nvim_parse_cmd, context.line, {})
+  local cmd = (valid_cmd and parsed.cmd) or arguments[1] or ''
+
   local task = async.task
     .empty()
     :map(function()
       -- Special case for help where we read all the tags ourselves
-      if vim.tbl_contains(constants.help_commands, arguments[1] or '') then
+      if vim.tbl_contains(constants.help_commands, cmd) and arg_number > 1 then
         return require('blink.cmp.sources.cmdline.help').get_completions(current_arg_prefix)
       end
 
       local completions = {}
-      local completion_type = vim.fn.getcmdcompltype()
+      local completion_args = vim.split(vim.fn.getcmdcompltype(), ',', { plain = true })
+      local completion_type = completion_args[1]
+      local completion_func = completion_args[2]
+
       -- Handle custom completions explicitly, since otherwise they won't work in input() mode (getcmdtype() == '@')
-      if vim.startswith(completion_type, 'custom,') or vim.startswith(completion_type, 'customlist,') then
-        local fun = completion_type:gsub('custom,', ''):gsub('customlist,', '')
-        completions = vim.fn.call(fun, { current_arg_prefix, vim.fn.getcmdline(), vim.fn.getcmdpos() })
+      -- TODO: however, we cannot handle v:lua, s:, and <sid> completions. is there a better solution here where we can
+      -- get completions in input() mode without calling ourselves?
+      if
+        vim.fn.getcmdtype() == '@'
+        and vim.startswith(completion_type, 'custom')
+        and not vim.startswith(completion_func:lower(), 's:')
+        and not vim.startswith(completion_func:lower(), 'v:lua')
+        and not vim.startswith(completion_func:lower(), '<sid>')
+      then
+        completions = vim.fn.call(completion_func, { current_arg_prefix, vim.fn.getcmdline(), vim.fn.getcmdpos() })
         -- `custom,` type returns a string, delimited by newlines
         if type(completions) == 'string' then completions = vim.split(completions, '\n') end
       else
@@ -52,12 +67,13 @@ function cmdline:get_completions(context, callback)
       end
 
       -- Special case for files, escape special characters
-      if vim.tbl_contains(constants.file_commands, arguments[1] or '') then
+      if vim.tbl_contains(constants.file_commands, cmd) then
         completions = vim.tbl_map(function(completion) return vim.fn.fnameescape(completion) end, completions)
       end
 
       return completions
     end)
+    :schedule()
     :map(function(completions)
       local items = {}
       for _, completion in ipairs(completions) do
@@ -65,14 +81,14 @@ function cmdline:get_completions(context, callback)
 
         -- remove prefix from the filter text
         local filter_text = completion
-        if has_prefix then filter_text = completion:sub(#current_arg_prefix + 1) end
+        if has_prefix and cmd == 'lua' then filter_text = completion:sub(#current_arg_prefix + 1) end
 
         -- for lua, use the filter text as the label since it doesn't include the prefix
-        local label = arguments[1] == 'lua' and filter_text or completion
+        local label = cmd == 'lua' and filter_text or completion
 
         -- add prefix to the newText
         local new_text = completion
-        if not has_prefix then new_text = current_arg_prefix .. completion end
+        if not has_prefix and cmd == 'lua' then new_text = current_arg_prefix .. completion end
 
         table.insert(items, {
           label = label,
@@ -81,7 +97,11 @@ function cmdline:get_completions(context, callback)
           sortText = label:lower():gsub('^([!-@\\[-`])', '~%1'),
           textEdit = {
             newText = new_text,
-            range = {
+            insert = {
+              start = { line = 0, character = #text_before_argument },
+              ['end'] = { line = 0, character = math.min(#text_before_argument + #current_arg, vim.fn.getcmdpos() - 1) },
+            },
+            replace = {
               start = { line = 0, character = #text_before_argument },
               ['end'] = { line = 0, character = #text_before_argument + #current_arg },
             },

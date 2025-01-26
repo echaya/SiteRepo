@@ -37,6 +37,29 @@ completion = {
 }
 ```
 
+### Buffer completion from all open buffers
+
+The default behavior is to only show completions from **visible** "normal" buffers (i.e. it woudldn't include neo-tree). This will instead show completions from all buffers, even if they're not visible on screen. Note that the performance impact of this has not been tested. 
+
+```lua
+sources = {
+  providers = {
+    buffer = {
+      opts = {
+        -- get all buffers, even ones like neo-tree
+        get_bufnrs = vim.api.nvim_list_bufs
+        -- or (recommended) filter to only "normal" buffers
+        get_bufnrs = function()
+          return vim.tbl_filter(function(bufnr)
+            return vim.bo[bufnr].buftype == ''
+          end, vim.api.nvim_list_bufs())
+        end
+      }
+    }
+  }
+}
+```
+
 ### Don't show completion menu automatically in cmdline mode
 
 ```lua
@@ -142,7 +165,7 @@ Note that you may want to add the override to other sources as well, since if th
 
 ```lua
 -- by default, blink.cmp will block newline, tab and space trigger characters, disable that behavior
-completion.trigger.blocked_trigger_characters = {}
+completion.trigger.show_on_blocked_trigger_characters = {}
 
 -- add newline, tab and space to LSP source trigger characters
 sources.providers.lsp.override.get_trigger_characters = function(self)
@@ -192,6 +215,20 @@ See the [relevant section in the snippets documentation](./configuration/snippet
 sources.min_keyword_length = function()
   return vim.bo.filetype == 'markdown' and 2 or 0
 end
+```
+
+### Set minimum keyword length for command only in cmdline
+
+If you'd prefer the menu doesn't popup when typing abbreviations like `wq`, you may set the minimum keyword length to 2 when typing the command.
+
+```lua
+sources = {
+  min_keyword_length = function(ctx)
+    -- only applies when typing a command, doesn't apply to arguments
+    if ctx.mode == 'cmdline' and string.find(ctx.line, ' ') == nil then return 2 end
+    return 0
+  end
+}
 ```
 
 ## For writers

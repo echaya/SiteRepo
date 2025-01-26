@@ -263,6 +263,7 @@ You can view this list in vim with `:help conform-formatters`
 - [hindent](https://github.com/mihaimaruseac/hindent) - Haskell pretty printer.
 - [html_beautify](https://github.com/beautifier/js-beautify) - Beautifier for html.
 - [htmlbeautifier](https://github.com/threedaymonk/htmlbeautifier) - A normaliser/beautifier for HTML that also understands embedded Ruby. Ideal for tidying up Rails templates.
+- [hurlfmt](https://hurl.dev/) - Formats hurl files.
 - [imba_fmt](https://imba.io/) - Code formatter for the Imba programming language.
 - [indent](https://www.gnu.org/software/indent/) - GNU Indent.
 - [injected](doc/advanced_topics.md#injected-language-formatting-code-blocks) - Format treesitter injected languages.
@@ -320,6 +321,7 @@ You can view this list in vim with `:help conform-formatters`
 - [puppet-lint](https://github.com/puppetlabs/puppet-lint) - Check that your Puppet manifests conform to the style guide.
 - [purs-tidy](https://github.com/natefaubion/purescript-tidy) - A syntax tidy-upper for PureScript.
 - [pyink](https://github.com/google/pyink) - A Python formatter, forked from Black with a few different formatting behaviors.
+- [pyproject-fmt](https://github.com/tox-dev/toml-fmt/tree/main/pyproject-fmt) - Apply a consistent format to your pyproject.toml file with comment support.
 - [python-ly](https://github.com/frescobaldi/python-ly) - A Python package and commandline tool to manipulate LilyPond files.
 - [reorder-python-imports](https://github.com/asottile/reorder-python-imports) - Rewrites source to reorder python imports
 - [rescript-format](https://rescript-lang.org/) - The built-in ReScript formatter.

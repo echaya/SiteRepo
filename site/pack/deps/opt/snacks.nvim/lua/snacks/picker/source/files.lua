@@ -8,7 +8,7 @@ local uv = vim.uv or vim.loop
 
 local commands = {
   rg = { "--files", "--no-messages", "--color", "never", "-g", "!.git" },
-  fd = { "--type", "f", "--color", "never", "-E", ".git" },
+  fd = { "--type", "f", "--type", "l", "--color", "never", "-E", ".git" },
   find = { ".", "-type", "f", "-not", "-path", "*/.git/*" },
 }
 

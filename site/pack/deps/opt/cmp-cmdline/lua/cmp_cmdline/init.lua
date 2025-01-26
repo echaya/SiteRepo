@@ -138,30 +138,6 @@ local definitions = {
         or compltype == "file_in_path"
         or compltype == "runtime"
 
-      --- create items.
-      local items = {}
-      local escaped = cmdline:gsub([[\\]], [[\\\\]])
-      local completion_ok, completion = pcall(vim.fn.getcompletion, escaped, "cmdline")
-      if completion_ok then
-        for _, word_or_item in ipairs(completion) do
-          local word = type(word_or_item) == "string" and word_or_item or word_or_item.word
-          if is_path_completion then
-            word = vim.fn.fnameescape(word)
-          end
-          local item = { label = word }
-          table.insert(items, item)
-          if is_option_name_completion and is_boolean_option(word) then
-            table.insert(
-              items,
-              vim.tbl_deep_extend("force", {}, item, {
-                label = "no" .. word,
-                filterText = word,
-              })
-            )
-          end
-        end
-      end
-
       local cmdtype = "cmdline"
       if vim.fn.getcmdtype() == "@" then
         -- Invoke getcmdcompltype() only when getcmdtype() == '@'.
@@ -172,6 +148,8 @@ local definitions = {
         end
       end
 
+      --- create items.
+      local items = {}
       local input_start = string.sub(fixed_input, 1, 1)
       local is_magic_file = (#arglead ~= 1 and (input_start == "%" or input_start == "#"))
       if is_magic_file then
@@ -182,8 +160,12 @@ local definitions = {
           table.insert(items, item)
         end
       else
+        local escaped = cmdline:gsub([[\\]], [[\\\\]])
         for _, word_or_item in ipairs(vim.fn.getcompletion(escaped, "cmdline")) do
           local word = type(word_or_item) == "string" and word_or_item or word_or_item.word
+          if is_path_completion then
+            word = vim.fn.fnameescape(word)
+          end
           word = word:gsub("%$", "\\$") -- escape dollar to prevent env-var expansion
           local item = { label = word }
           table.insert(items, item)

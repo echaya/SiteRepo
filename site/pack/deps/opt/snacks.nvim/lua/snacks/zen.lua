@@ -195,7 +195,7 @@ function M.zen(opts)
   -- when the zen buffer changes
   win:on("BufWinEnter", function()
     vim.api.nvim_win_set_buf(parent_win, win.buf)
-  end, { buf = true })
+  end)
 
   -- close when entering another window
   win:on("WinEnter", function()

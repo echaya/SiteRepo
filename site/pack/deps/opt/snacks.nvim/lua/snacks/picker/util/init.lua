@@ -4,6 +4,7 @@ local M = {}
 local uv = vim.uv or vim.loop
 
 ---@param item snacks.picker.Item
+---@return string?
 function M.path(item)
   if not (item and item.file) then
     return
@@ -21,7 +22,7 @@ function M.truncpath(path, len, opts)
   local home = vim.fs.normalize("~")
   path = vim.fs.normalize(path, { _fast = true, expand_env = false })
 
-  if path:find(cwd, 1, true) == 1 then
+  if path:find(cwd, 1, true) == 1 and #path > #cwd then
     path = path:sub(#cwd + 2)
   else
     local root = Snacks.git.get_root(path)

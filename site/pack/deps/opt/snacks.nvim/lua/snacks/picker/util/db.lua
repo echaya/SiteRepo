@@ -86,6 +86,7 @@ function Query:exec(binds)
   return self:step()
 end
 
+---@return number
 function Query:step()
   return sqlite.sqlite3_step(self.stmt)
 end
@@ -202,6 +203,20 @@ function M:count()
   if query:exec() == 100 then
     return query:col("number")
   end
+end
+
+function M:get_all()
+  local query = self:prepare("SELECT key, value FROM data;")
+  local ret = {} ---@type table<string, any>
+  local code = query:exec()
+  while code == 100 do -- 100 == SQLITE_ROW
+    local k = query:col("string", 0) -- key is always a string
+    local v = query:col(self.type, 1) -- value type is whatever you set
+    ret[k] = v
+    code = query:step()
+  end
+  query:close()
+  return ret
 end
 
 return M

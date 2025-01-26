@@ -1,4 +1,4 @@
-*snacks.nvim.txt*            For Neovim           Last change: 2025 January 23
+*snacks.nvim.txt*            For Neovim           Last change: 2025 January 24
 
 ==============================================================================
 Table of Contents                              *snacks.nvim-table-of-contents*
@@ -140,6 +140,7 @@ LAZY.NVIM ~
         dashboard = { enabled = true },
         indent = { enabled = true },
         input = { enabled = true },
+        picker = { enabled = true },
         notifier = { enabled = true },
         quickfile = { enabled = true },
         scroll = { enabled = true },
@@ -229,6 +230,7 @@ See the example below for how to configure `snacks.nvim`.
           enabled = true,
           timeout = 3000,
         },
+        picker = { enabled = true },
         quickfile = { enabled = true },
         scroll = { enabled = true },
         statuscolumn = { enabled = true },

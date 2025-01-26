@@ -498,7 +498,7 @@ function M:destroy()
   self.events = {}
   self.keys = {}
   self.meta = {}
-  self.opts = {}
+  -- self.opts = {}
 end
 
 ---@param opts? { buf: boolean }
@@ -810,16 +810,23 @@ function M:show()
 
       -- another buffer was opened in this window
       -- find another window to swap with
+      local main ---@type number?
       for _, win in ipairs(vim.api.nvim_list_wins()) do
-        if win ~= self.win and vim.bo[vim.api.nvim_win_get_buf(win)].buftype == "" then
-          vim.schedule(function()
-            vim.api.nvim_win_set_buf(self.win, self.buf)
-            vim.api.nvim_win_set_buf(win, buf)
-            vim.api.nvim_set_current_win(win)
-            vim.cmd.stopinsert()
-          end)
-          return
+        local is_float = vim.api.nvim_win_get_config(win).relative ~= ""
+        if not is_float then
+          main = win
+          if win ~= self.win and vim.bo[vim.api.nvim_win_get_buf(win)].buftype == "" then
+            break
+          end
         end
+      end
+      if main then
+        vim.schedule(function()
+          vim.api.nvim_win_set_buf(self.win, self.buf)
+          vim.api.nvim_win_set_buf(main, buf)
+          vim.api.nvim_set_current_win(main)
+          vim.cmd.stopinsert()
+        end)
       end
     end,
   })

@@ -167,7 +167,7 @@ M.git_log = {
   finder = "git_log",
   format = "git_log",
   preview = "git_show",
-  confirm = "close",
+  confirm = "git_checkout",
 }
 
 ---@type snacks.picker.git.log.Config
@@ -177,7 +177,7 @@ M.git_log_file = {
   preview = "git_show",
   current_file = true,
   follow = true,
-  confirm = "close",
+  confirm = "git_checkout",
 }
 
 ---@type snacks.picker.git.log.Config
@@ -187,7 +187,7 @@ M.git_log_line = {
   preview = "git_show",
   current_line = true,
   follow = true,
-  confirm = "close",
+  confirm = "git_checkout",
 }
 
 M.git_status = {
@@ -508,7 +508,9 @@ M.pickers = {
   confirm = function(picker, item)
     picker:close()
     if item then
-      Snacks.picker(item.text)
+      vim.schedule(function()
+        Snacks.picker(item.text)
+      end)
     end
   end,
 }

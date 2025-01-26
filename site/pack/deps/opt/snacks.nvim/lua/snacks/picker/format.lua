@@ -42,6 +42,10 @@ function M.filename(item, picker)
   end
 
   local dir, file = path:match("^(.*)/(.+)$")
+  if picker.opts.formatters.file.filename_only then
+    dir = nil
+    path = vim.fn.fnamemodify(path, ":t")
+  end
   if file and dir then
     if picker.opts.formatters.file.filename_first then
       ret[#ret + 1] = { file, "SnacksPickerFile", field = "file" }

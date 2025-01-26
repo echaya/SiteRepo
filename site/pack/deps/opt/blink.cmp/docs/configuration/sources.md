@@ -1,3 +1,6 @@
+---
+title: Sources
+---
 # Sources <Badge type="info"><a href="./reference#sources">Go to default configuration</a></Badge>
 
 > [!NOTE]
@@ -52,6 +55,10 @@ sources.providers.lsp = {
 
 Blink can use `nvim-cmp` sources through a compatibility layer developed by [stefanboca](https://github.com/stefanboca): [blink.compat](https://github.com/Saghen/blink.compat). Please open any issues with `blink.compat` in that repo
 
+## Checking status of sources providers
+
+The command `:BlinkCmp status` can be used to view which sources providers are enabled or not enabled.
+
 ## Community sources
 
 - [lazydev](https://github.com/folke/lazydev.nvim)
@@ -59,7 +66,9 @@ Blink can use `nvim-cmp` sources through a compatibility layer developed by [ste
 - [blink-ripgrep](https://github.com/mikavilpas/blink-ripgrep.nvim)
 - [blink-cmp-ripgrep](https://github.com/niuiic/blink-cmp-rg.nvim)
 - [blink-cmp-ctags](https://github.com/netmute/blink-cmp-ctags)
+- [blink-copilot](https://github.com/fang2hou/blink-copilot)
 - [blink-cmp-copilot](https://github.com/giuxtaposition/blink-cmp-copilot)
 - [minuet-ai.nvim](https://github.com/milanglacier/minuet-ai.nvim)
 - [blink-emoji.nvim](https://github.com/moyiz/blink-emoji.nvim)
 - [blink-cmp-dictionary](https://github.com/Kaiser-Yang/blink-cmp-dictionary)
+- [blink-cmp-git](https://github.com/Kaiser-Yang/blink-cmp-git)

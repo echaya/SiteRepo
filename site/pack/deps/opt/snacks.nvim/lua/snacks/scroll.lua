@@ -52,6 +52,18 @@ local stats = { targets = 0, animating = 0, reset = 0, skipped = 0, mousescroll 
 local config = Snacks.config.get("scroll", defaults)
 local debug_timer = assert((vim.uv or vim.loop).new_timer())
 
+---@param state snacks.scroll.State
+---@param value? string
+local function virtualedit(state, value)
+  if value then
+    state.virtualedit = state.virtualedit or vim.wo[state.win].virtualedit
+    vim.wo[state.win].virtualedit = value
+  elseif state.virtualedit then
+    vim.wo[state.win].virtualedit = state.virtualedit
+    state.virtualedit = nil
+  end
+end
+
 -- get the state for a window.
 -- when the state doesn't exist, its target is the current view
 local function get_state(win)
@@ -71,6 +83,15 @@ local function get_state(win)
   local changedtick = vim.api.nvim_buf_get_changedtick(buf)
   local view = vim.api.nvim_win_call(win, vim.fn.winsaveview) ---@type vim.fn.winsaveview.ret
   if not (states[win] and states[win].buf == buf and states[win].changedtick == changedtick) then
+    -- go to target if we're still animating and resetting due to a change
+    if states[win] and states[win].anim and not states[win].anim.done and states[win].buf == buf then
+      states[win].anim:stop()
+      states[win].anim = nil
+      vim.api.nvim_win_call(win, function()
+        vim.fn.winrestview(states[win].target)
+      end)
+      virtualedit(states[win]) -- restore virtualedit
+    end
     ---@diagnostic disable-next-line: missing-fields
     states[win] = {
       win = win,
@@ -137,9 +158,11 @@ function M.enable()
     callback = vim.schedule_wrap(function(ev)
       for _, win in ipairs(vim.fn.win_findbuf(ev.buf)) do
         if states[win] then
-          local cursor = vim.api.nvim_win_get_cursor(win)
-          states[win].current.lnum = cursor[1]
-          states[win].current.col = cursor[2]
+          local view = vim.api.nvim_win_call(win, vim.fn.winsaveview)
+          -- local cursor = vim.api.nvim_win_get_cursor(win)
+          states[win].current.lnum = view.lnum
+          states[win].current.col = view.col
+          states[win].current.topline = view.topline
         end
       end
     end),
@@ -198,18 +221,6 @@ local function visible_lines(from, to)
     from = fold_end == -1 and from + 1 or fold_end + 1
   end
   return ret
-end
-
----@param state snacks.scroll.State
----@param value? string
-local function virtualedit(state, value)
-  if value then
-    state.virtualedit = state.virtualedit or vim.wo[state.win].virtualedit
-    vim.wo[state.win].virtualedit = value
-  elseif state.virtualedit then
-    vim.wo[state.win].virtualedit = state.virtualedit
-    state.virtualedit = nil
-  end
 end
 
 --- Check if we need to animate the scroll

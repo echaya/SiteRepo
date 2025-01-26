@@ -464,18 +464,10 @@ end
 
 --- Close the picker
 function M:close()
-  vim.cmd.stopinsert()
+  self.input:stopinsert()
   if self.closed then
     return
   end
-
-  -- FIXME: lsp definitions picker can't be gc-ed without the below,
-  -- which makes no sense. Need to further investigate.
-
-  -- if not self.shown then
-  --   self.input.win.opts.relative = "editor"
-  --   self.input.win:show()
-  -- end
 
   self:hist_record(true)
   self.closed = true
@@ -491,6 +483,9 @@ function M:close()
     vim.api.nvim_set_current_win(self.main)
   end
   self.updater:stop()
+  if not self.updater:is_closing() then
+    self.updater:close()
+  end
   self.finder:abort()
   self.matcher:abort()
   M._active[self] = nil
@@ -519,7 +514,12 @@ function M:progress(ms)
   if self.updater:is_active() or self.closed then
     return
   end
+  local ref = self:ref()
   self.updater = vim.defer_fn(function()
+    local self = ref()
+    if not self then
+      return
+    end
     self:update()
     if not self.closed and self:is_active() then
       -- slower progress when we filled topk
@@ -633,6 +633,9 @@ end
 --- based on the current pattern and search string.
 ---@param opts? { on_done?: fun(), refresh?: boolean }
 function M:find(opts)
+  if self.closed then
+    return
+  end
   opts = opts or {}
   local filter = self.input.filter:clone({ trim = true })
   local refresh = opts.refresh ~= false
@@ -644,6 +647,7 @@ function M:find(opts)
   local finding = false
   if self.finder:init(filter) or refresh then
     finding = true
+    self:update_titles()
     if self:count() > 0 then
       -- pause rapid list updates to prevent flickering
       self.list:pause(60)

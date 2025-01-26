@@ -12,18 +12,26 @@
 --- @field hide_emitter blink.cmp.EventEmitter<{}>
 ---
 --- @field activate fun()
---- @field is_keyword_character fun(char: string): boolean
 --- @field is_trigger_character fun(char: string, is_show_on_x?: boolean): boolean
 --- @field suppress_events_for_callback fun(cb: fun())
 --- @field show_if_on_trigger_character fun(opts?: { is_accept?: boolean })
---- @field show fun(opts?: { trigger_kind: blink.cmp.CompletionTriggerKind, trigger_character?: string, force?: boolean, send_upstream?: boolean, providers?: string[] }): blink.cmp.Context?
+--- @field show fun(opts?: blink.cmp.CompletionTriggerShowOptions): blink.cmp.Context?
 --- @field hide fun()
 --- @field within_query_bounds fun(cursor: number[]): boolean
 --- @field get_bounds fun(regex: vim.regex, line: string, cursor: number[]): blink.cmp.ContextBounds
 
+--- @class blink.cmp.CompletionTriggerShowOptions
+--- @field trigger_kind blink.cmp.CompletionTriggerKind
+--- @field trigger_character? string
+--- @field force? boolean
+--- @field send_upstream? boolean
+--- @field providers? string[]
+--- @field initial_selected_item_idx? number
+
 local config = require('blink.cmp.config').completion.trigger
 local context = require('blink.cmp.completion.trigger.context')
-local utils = require('blink.cmp.completion.trigger.utils')
+local utils = require('blink.cmp.lib.utils')
+local fuzzy = require('blink.cmp.fuzzy')
 
 --- @type blink.cmp.CompletionTrigger
 --- @diagnostic disable-next-line: missing-fields
@@ -53,7 +61,7 @@ function trigger.activate()
       trigger.show({ trigger_kind = 'trigger_character', trigger_character = char })
 
     -- character is part of a keyword
-    elseif trigger.is_keyword_character(char) and (config.show_on_keyword or trigger.context ~= nil) then
+    elseif fuzzy.is_keyword_character(char) and (config.show_on_keyword or trigger.context ~= nil) then
       trigger.show({ trigger_kind = 'keyword' })
 
     -- nothing matches so hide
@@ -67,7 +75,7 @@ function trigger.activate()
     local cursor_col = cursor[2]
 
     local char_under_cursor = utils.get_char_at_cursor()
-    local is_keyword = trigger.is_keyword_character(char_under_cursor)
+    local is_keyword = fuzzy.is_keyword_character(char_under_cursor)
 
     -- we were told to ignore the cursor moved event, so we update the context
     -- but don't send an on_show event upstream
@@ -87,7 +95,7 @@ function trigger.activate()
     local is_on_trigger_for_show = trigger.is_trigger_character(char_under_cursor)
 
     -- TODO: doesn't handle `a` where the cursor moves immediately after
-    -- Reproducable with `example.|a` and pressing `a`, should not show the menu
+    -- Reproducible with `example.|a` and pressing `a`, should not show the menu
     local insert_enter_on_trigger_character = config.show_on_trigger_character
       and config.show_on_insert_on_trigger_character
       and event == 'InsertEnter'
@@ -131,14 +139,6 @@ function trigger.activate()
     on_cursor_moved = on_cursor_moved,
     on_leave = function() trigger.hide() end,
   })
-end
-
-function trigger.is_keyword_character(char)
-  -- special case for hyphen, since we don't consider a lone hyphen to be a keyword
-  if char == '-' then return true end
-
-  local keyword_start_col, keyword_end_col = require('blink.cmp.fuzzy').get_keyword_range(char, #char, 'prefix')
-  return keyword_start_col ~= keyword_end_col
 end
 
 function trigger.is_trigger_character(char, is_show_on_x)
@@ -226,6 +226,7 @@ function trigger.show(opts)
     initial_trigger_character = trigger.context and trigger.context.trigger.initial_character or opts.trigger_character,
     trigger_kind = opts.trigger_kind,
     trigger_character = opts.trigger_character,
+    initial_selected_item_idx = opts.initial_selected_item_idx,
   })
 
   if opts.send_upstream ~= false then trigger.show_emitter:emit({ context = trigger.context }) end

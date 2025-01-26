@@ -127,7 +127,7 @@ function M.grep(opts, ctx)
         else
           item.line = text
           item.file = file
-          item.pos = { tonumber(line), tonumber(col) }
+          item.pos = { tonumber(line), tonumber(col) - 1 }
         end
       end,
     },

@@ -42,6 +42,10 @@ function M:get(key)
   return self.data[key]
 end
 
+function M:get_all()
+  return self.data
+end
+
 function M:close()
   vim.fn.mkdir(vim.fn.fnamemodify(self.path, ":h"), "p")
   local stat = uv.fs_stat(self.path)

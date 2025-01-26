@@ -2,6 +2,7 @@
 ---@field item? snacks.picker.Item
 ---@field pos? snacks.picker.Pos
 ---@field win snacks.win
+---@field filter? snacks.picker.Filter
 ---@field preview snacks.picker.preview
 ---@field state table<string, any>
 ---@field main? number
@@ -104,6 +105,7 @@ function M:show(picker)
   end
   Snacks.picker.util.resolve(item)
   self.item = item
+  self.filter = picker:filter()
   self.pos = item and item.pos or nil
   if item then
     local buf = self.win.buf
@@ -220,18 +222,35 @@ function M:loc()
   local line_count = vim.api.nvim_buf_line_count(self.win.buf)
   Snacks.picker.util.resolve_loc(self.item, self.win.buf)
 
-  if self.item.pos and self.item.pos[1] > 0 and self.item.pos[1] <= line_count then
-    vim.api.nvim_win_set_cursor(self.win.win, { self.item.pos[1], 0 })
+  local function show(pos)
+    vim.api.nvim_win_set_cursor(self.win.win, pos)
     vim.api.nvim_win_call(self.win.win, function()
-      vim.cmd("norm! zz")
+      vim.cmd("norm! zzze")
       self:wo({ cursorline = true })
     end)
+  end
+
+  if self.item.pos and self.item.pos[1] > 0 and self.item.pos[1] <= line_count then
+    show(self.item.pos)
     if self.item.end_pos then
       vim.api.nvim_buf_set_extmark(self.win.buf, ns_loc, self.item.pos[1] - 1, self.item.pos[2], {
         end_row = self.item.end_pos[1] - 1,
         end_col = self.item.end_pos[2],
         hl_group = "SnacksPickerSearch",
       })
+    elseif self.filter and vim.trim(self.filter.search) ~= "" then
+      local ok, re = pcall(vim.regex, vim.trim(self.filter.search))
+      if ok and re then
+        local start = self.item.pos[2]
+        local from, to = re:match_line(self.win.buf, self.item.pos[1] - 1, start)
+        if from and to then
+          show({ self.item.pos[1], start + to }) -- make sure the to column is visible
+          vim.api.nvim_buf_set_extmark(self.win.buf, ns_loc, self.item.pos[1] - 1, start + from, {
+            end_col = start + to,
+            hl_group = "SnacksPickerSearch",
+          })
+        end
+      end
     end
   elseif self.item.search then
     vim.api.nvim_win_call(self.win.win, function()

@@ -98,7 +98,8 @@ config (overrides `s`, `S` and `gs` in all modes):
 `lua require('leap').create_default_mappings()` (init.vim)
 
 <details>
-<summary>Alternative key mappings (bidirectional jump, etc.)</summary>
+<summary>Alternative key mappings and arrangements (bidirectional jump,
+etc.)</summary>
 
 Calling `require('leap').create_default_mappings()` is equivalent to:
 
@@ -108,31 +109,44 @@ vim.keymap.set({'n', 'x', 'o'}, 'S',  '<Plug>(leap-backward)')
 vim.keymap.set({'n', 'x', 'o'}, 'gs', '<Plug>(leap-from-window)')
 ```
 
-A suggested alternative arrangement (bidirectional `s` for Normal mode):
+Bidirectional `s` for Normal and Visual mode:
 
 ```lua
-vim.keymap.set('n',        's', '<Plug>(leap)')
+vim.keymap.set({'n', 'x'}, 's', '<Plug>(leap)')
 vim.keymap.set('n',        'S', '<Plug>(leap-from-window)')
-vim.keymap.set({'x', 'o'}, 's', '<Plug>(leap-forward)')
-vim.keymap.set({'x', 'o'}, 'S', '<Plug>(leap-backward)')
+vim.keymap.set('o',        's', '<Plug>(leap-forward)')
+vim.keymap.set('o',        'S', '<Plug>(leap-backward)')
 ```
 
-Mapping to `<Plug>(leap)` is not recommended for Visual mode, as autojumping in
-a random direction might be too disorienting with the selection highlight on,
-and neither for Operator-pending mode, as dot-repeat cannot be used if the
-search is non-directional.
+Trade-off: Compared to using separate keys for the two directions, you will
+only get half as many autojumps on average.
 
-Note that compared to using separate keys for the two directions, you will get
-twice as many targets and thus half as many autojumps on average, but not
-needing to press the Shift key for backward motions might compensate for that.
-Another caveat is that you cannot traverse through the matches (`:h
-leap-traversal`), although invoking repeat right away (`:h leap-repeat`) can
-substitute for that.
+Jump to anywhere in Normal mode with one key:
 
-`<Plug>(leap)` sorts matches by euclidean distance from the cursor, with the
-exception that the current line, and on the current line, forward direction is
+```lua
+vim.keymap.set('n', 's', '<Plug>(leap-anywhere)')
+vim.keymap.set('x', 's', '<Plug>(leap)')
+vim.keymap.set('o', 's', '<Plug>(leap-forward)')
+vim.keymap.set('o', 'S', '<Plug>(leap-backward)')
+```
+
+Trade-off: if you have multiple windows open on the tab page, you will almost
+never get an autojump, except if all targets are in the same window. (This is
+an intentional restriction: it would be too disorienting if the cursor could
+jump in/to a different window than your goal, right before selecting the
+target.)
+
+Note that when searching bidirectionally in the current window, Leap sorts
+matches by euclidean (beeline) distance from the cursor, with the exception
+that the current line you're on, and on that line, forward direction is
 prioritized. That is, you can always be sure that the targets right in front of
 you will be the first ones.
+
+Bidirectional search is not recommended for Operator-pending mode, as
+dot-repeat cannot be used if the search is non-directional. Also worth noting
+that in Normal and Visual mode you cannot traverse through the matches anymore
+(`:h leap-traversal`), although invoking repeat right away (`:h leap-repeat`)
+can substitute for that.
 
 See `:h leap-custom-mappings` for more.
 
@@ -143,12 +157,21 @@ See `:h leap-custom-mappings` for more.
 
 ```lua
 -- Define equivalence classes for brackets and quotes, in addition to
--- the default whitespace group.
+-- the default whitespace group:
 require('leap').opts.equivalence_classes = { ' \t\r\n', '([{', ')]}', '\'"`' }
 
--- Use the traversal keys to repeat the previous motion without explicitly
--- invoking Leap.
+-- Use the traversal keys to repeat the previous motion without
+-- explicitly invoking Leap:
 require('leap.user').set_repeat_keys('<enter>', '<backspace>')
+
+-- Define a preview filter (skip the middle of alphanumeric words):
+require('leap').opts.preview_filter =
+  function (ch0, ch1, ch2)
+    return not (
+      ch1:match('%s') or
+      ch0:match('%w') and ch1:match('%w') and ch2:match('%w')
+    )
+  end
 ```
 
 </details>
@@ -165,6 +188,108 @@ Leap lazy loads itself. Using the `keys` feature of lazy.nvim might even cause
 ### Extras
 
 Experimental features, APIs might be subject to change.
+
+<details>
+<summary>Remote operations ("spooky actions at a distance")</summary>
+
+Inspired by [leap-spooky.nvim](https://github.com/ggandor/leap-spooky.nvim),
+and [flash.nvim](https://github.com/folke/flash.nvim)'s similar feature.
+
+This function allows you to perform an action in a remote location: it
+forgets the current mode or pending operator, lets you leap with the
+cursor (to anywhere on the tab page), then continues where it left off.
+Once an operation or insertion is finished, it moves the cursor back to
+the original position, as if you had operated from the distance.
+
+```lua
+-- If using the default mappings (`gs` for multi-window mode), you can
+-- map e.g. `gS` here.
+vim.keymap.set({'n', 'x', 'o'}, 'gs', function ()
+  require('leap.remote').action()
+end)
+```
+
+Example: `gs{leap}yap`, `vgs{leap}apy`, or `ygs{leap}ap` yank the paragraph at
+the position specified by `{leap}`.
+
+**Tips**
+
+* Swapping regions becomes moderately simple, without needing a custom
+  plugin: `d{region1} gs{leap} v{region2} pP`. Example (swapping two
+  words): `diwgs{leap}viwpP`.
+
+* As the remote mode is active until returning to Normal mode again (by
+  any means), `<ctrl-o>` becomes your friend in Insert mode, or when
+  doing change operations.
+
+**Icing on the cake, no. 1 - giving input ahead of time**
+
+The `input` parameter lets you feed keystrokes ahead of time, e.g. to
+automatically trigger visual selection (`v`) (so you can `gs{leap}apy`), or
+create a forced linewise version of the command (`V`):
+
+```lua
+vim.keymap.set({'n', 'o'}, 'gS', function ()
+  require('leap.remote').action { input = 'V' }
+end)
+```
+
+Consequently, you can create **remote text objects**, for an even more
+intuitive workflow (`yarp{leap}`):
+
+```lua
+-- Create remote versions of all default text objects by inserting `r`
+-- into the middle (`iw` becomes `irw`, etc.):
+
+local default_text_objects = {
+  'iw', 'iW', 'is', 'ip', 'i[', 'i]', 'i(', 'i)', 'ib',
+  'i>', 'i<', 'it', 'i{', 'i}', 'iB', 'i"', 'i\'', 'i`',
+  'aw', 'aW', 'as', 'ap', 'a[', 'a]', 'a(', 'a)', 'ab',
+  'a>', 'a<', 'at', 'a{', 'a}', 'aB', 'a"', 'a\'', 'a`',
+}
+
+for _, tobj in ipairs(default_text_objects) do
+  vim.keymap.set({'x', 'o'}, tobj:sub(1,1)..'r'..tobj:sub(2), function ()
+    require('leap.remote').action { input = tobj }
+  end)
+end
+```
+
+A very handy custom mapping - remote line(s), with optional `count`
+(`yaa{leap}`, `y3aa{leap}`):
+
+```lua
+vim.keymap.set({'x', 'o'}, 'aa', function ()
+  -- Force linewise selection.
+  local V = vim.fn.mode(true):match('V') and '' or 'V'
+  -- In any case, do some movement, to trigger operations in O-p mode.
+  local input = vim.v.count > 1 and (vim.v.count - 1 .. 'j') or 'hl'
+  -- With `count=false` you can skip feeding count to the command
+  -- automatically (we need -1 here, see above).
+  require('leap.remote').action { input = V .. input, count = false }
+end)
+```
+
+**Icing on the cake, no. 2 - automatic paste after yanking**
+
+With this, you can clone text objects or regions in the blink of an eye,
+even from another window.
+
+```lua
+vim.api.nvim_create_augroup('LeapRemote', {})
+vim.api.nvim_create_autocmd('User', {
+  pattern = 'RemoteOperationDone',
+  group = 'LeapRemote',
+  callback = function (event)
+    -- Do not paste if some special register was in use.
+    if vim.v.operator == 'y' and event.data.register == '"' then
+      vim.cmd('normal! p')
+    end
+  end,
+})
+```
+
+</details>
 
 <details>
 <summary>Incremental treesitter node selection</summary>
@@ -210,113 +335,6 @@ operate on the current selection right away (`ga;;y`).
     require('leap.treesitter').select { opts = { special_keys = sk } }
   end)
   ```
-
-</details>
-
-<details>
-<summary>Remote operations ("spooky actions at a distance")</summary>
-
-Inspired by [leap-spooky.nvim](https://github.com/ggandor/leap-spooky.nvim),
-and [flash.nvim](https://github.com/folke/flash.nvim)'s similar feature.
-
-This function allows you to perform an action in a remote location: it
-forgets the current mode or pending operator, lets you leap with the
-cursor (to anywhere on the tab page), then continues where it left off.
-Once an operation or insertion is finished, it moves the cursor back to
-the original position, as if you had operated from the distance.
-
-```lua
--- If using the default mappings (`gs` for multi-window mode), you can
--- map e.g. `gS` here.
-vim.keymap.set({'n', 'o'}, 'gs', function ()
-  require('leap.remote').action()
-end)
-```
-
-Example: `gs{leap}yap` yanks the paragraph at the position specified by
-`{leap}`. Getting used to the Normal-mode command is recommended over
-Operator-pending mode (`ygs{leap}ap`), since the former requires the
-same number of keystrokes, but it is much more flexible, as it allows
-you to move around freely, or to visually select a region before
-operating on it (that is, mistakes can be corrected, and more complex
-selections are possible). It might be more intuitive too, since the jump
-does not tear the operator and the selection command apart.
-
-**Tips**
-
-* Swapping regions becomes moderately simple, without needing a custom
-  plugin: `d{region1}gs{leap}v{region2}pP`. Example (swapping two
-  words): `diwgs{leap}viwpP`.
-
-* As the remote mode is active until returning to Normal mode again (by
-  any means), `<ctrl-o>` becomes your friend in Insert mode, or when
-  doing change operations.
-
-**Icing on the cake, no. 1 - automatic paste after yanking**
-
-With this, you can clone text objects or regions in the blink of an eye,
-even from another window.
-
-```lua
-vim.api.nvim_create_augroup('LeapRemote', {})
-vim.api.nvim_create_autocmd('User', {
-  pattern = 'RemoteOperationDone',
-  group = 'LeapRemote',
-  callback = function (event)
-    -- Do not paste if some special register was in use.
-    if vim.v.operator == 'y' and event.data.register == '"' then
-      vim.cmd('normal! p')
-    end
-  end,
-})
-```
-
-**Icing on the cake, no. 2 - giving input ahead of time**
-
-The `input` parameter lets you feed keystrokes ahead of time, e.g. to
-automatically trigger visual selection (`v`) (so you can `gs{leap}apy`),
-or create a forced linewise version of the command (`V`):
-
-```lua
-vim.keymap.set({'n', 'o'}, 'gS', function ()
-  require('leap.remote').action { input = 'V' }
-end)
-```
-
-This also lets you create **remote text objects**, for an even more
-intuitive workflow (`yarp{leap}`):
-
-```lua
-local default_text_objects = {
-  'iw', 'iW', 'is', 'ip', 'i[', 'i]', 'i(', 'i)', 'ib',
-  'i>', 'i<', 'it', 'i{', 'i}', 'iB', 'i"', 'i\'', 'i`',
-  'aw', 'aW', 'as', 'ap', 'a[', 'a]', 'a(', 'a)', 'ab',
-  'a>', 'a<', 'at', 'a{', 'a}', 'aB', 'a"', 'a\'', 'a`',
-}
-
--- Create remote versions of all native text objects by inserting `r`
--- into the middle (`iw` becomes `irw`, etc.):
-for _, tobj in ipairs(default_text_objects) do
-  vim.keymap.set({'x', 'o'}, tobj:sub(1,1)..'r'..tobj:sub(2), function ()
-    require('leap.remote').action { input = tobj }
-  end)
-end
-```
-
-A very handy custom mapping - remote line(s), with optional `count`
-(`y2aa{leap}`):
-
-```lua
-vim.keymap.set({'x', 'o'}, 'aa', function ()
-  -- Force linewise selection.
-  local V = vim.fn.mode(true):match('V') and '' or 'V'
-  -- In any case, do some movement, to trigger operations in O-p mode.
-  local input = vim.v.count > 1 and (vim.v.count - 1 .. 'j') or 'hl'
-  -- With `count=false` you can skip feeding count to the command
-  -- automatically (we need -1 here, see above).
-  require('leap.remote').action { input = V .. input, count = false }
-end)
-```
 
 </details>
 
@@ -446,26 +464,6 @@ If you are not convinced, just head to `:h leap-custom-mappings`.
 </details>
 
 ### Features
-
-<details>
-<summary>Search in all windows</summary>
-
-```lua
-vim.keymap.set('n', 's', function ()
-  require('leap').leap {
-    target_windows = require('leap.user').get_focusable_windows()
-  }
-end)
-```
-
-The additional trade-off here is that if you have multiple windows open on the
-tab page, then you will almost never get an autojump, except if all targets are
-in the same window (it would be too disorienting if the cursor could suddenly
-jump in/to a different window than your goal, right before selecting the
-target, not to mention that we don't want to change the state of a window we're
-not targeting).
-
-</details>
 
 <details>
 <summary>Smart case sensitivity, wildcard characters (one-way

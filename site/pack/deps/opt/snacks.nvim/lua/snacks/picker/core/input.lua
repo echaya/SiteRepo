@@ -24,6 +24,14 @@ function M.new(picker)
     text = picker.opts.live and self.filter.search or self.filter.pattern,
     ft = "regex",
     on_win = function(win)
+      -- HACK: set all other picker input prompt buffers to nofile.
+      -- Otherwise when the prompt buffer is closed,
+      -- Neovim always stops insert mode.
+      for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+        if buf ~= win.buf and vim.bo[buf].filetype == "snacks_picker_input" then
+          vim.bo[buf].buftype = "nofile"
+        end
+      end
       vim.fn.prompt_setprompt(win.buf, "")
       win:focus()
       vim.cmd("startinsert!")
@@ -73,6 +81,19 @@ end
 function M:close()
   self.win:destroy()
   self.picker = nil -- needed for garbage collection of the picker
+end
+
+function M:stopinsert()
+  -- only stop insert mode if needed
+  if not vim.fn.mode():find("^i") then
+    return
+  end
+  local buf = vim.api.nvim_get_current_buf()
+  -- if the other buffer is a prompt, then don't stop insert mode
+  if buf ~= self.win.buf and vim.bo[buf].buftype == "prompt" then
+    return
+  end
+  vim.cmd("stopinsert")
 end
 
 function M:statuscolumn()

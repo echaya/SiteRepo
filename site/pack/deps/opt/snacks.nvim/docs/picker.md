@@ -79,7 +79,7 @@ Snacks.picker.pick({source = "files", ...})
 ---@field format? string|snacks.picker.format|string format function or preset
 ---@field finder? string|snacks.picker.finder|snacks.picker.finder.multi finder function or preset
 ---@field preview? snacks.picker.preview|string preview function or preset
----@field matcher? snacks.picker.matcher.Config matcher config
+---@field matcher? snacks.picker.matcher.Config|{} matcher config
 ---@field sort? snacks.picker.sort|snacks.picker.sort.Config sort function or config
 ---@field transform? string|snacks.picker.transform transform/filter function
 --- UI
@@ -139,6 +139,7 @@ Snacks.picker.pick({source = "files", ...})
     file = {
       filename_first = false, -- display filename before the file path
       truncate = 40, -- truncate the file path to (roughly) this length
+      filename_only = false, -- only show the filename
     },
     selected = {
       show_always = false, -- only show the selected column when there are multiple selections
@@ -459,6 +460,23 @@ Snacks.picker.pick({source = "files", ...})
 ```
 
 ```lua
+---@alias snacks.Picker.ref (fun():snacks.Picker?)|{value?: snacks.Picker}
+```
+
+```lua
+---@class snacks.picker.Last
+---@field cursor number
+---@field topline number
+---@field opts? snacks.picker.Config
+---@field selected snacks.picker.Item[]
+---@field filter snacks.picker.Filter
+```
+
+```lua
+---@alias snacks.picker.history.Record {pattern: string, search: string, live?: boolean}
+```
+
+```lua
 ---@alias snacks.picker.Extmark vim.api.keyset.set_extmark|{col:number, row?:number, field?:string}
 ---@alias snacks.picker.Text {[1]:string, [2]:string?, virtual?:boolean, field?:string}
 ---@alias snacks.picker.Highlight snacks.picker.Text|snacks.picker.Extmark
@@ -532,23 +550,6 @@ It's a previewer that shows a preview based on the item data.
 ---@field input? snacks.win.Config|{} input window config
 ---@field list? snacks.win.Config|{} result list window config
 ---@field preview? snacks.win.Config|{} preview window config
-```
-
-```lua
----@alias snacks.Picker.ref (fun():snacks.Picker?)|{value?: snacks.Picker}
-```
-
-```lua
----@class snacks.picker.Last
----@field cursor number
----@field topline number
----@field opts? snacks.picker.Config
----@field selected snacks.picker.Item[]
----@field filter snacks.picker.Filter
-```
-
-```lua
----@alias snacks.picker.history.Record {pattern: string, search: string, live?: boolean}
 ```
 
 ## 📦 Module
@@ -877,7 +878,7 @@ Git log
   finder = "git_log",
   format = "git_log",
   preview = "git_show",
-  confirm = "close",
+  confirm = "git_checkout",
 }
 ```
 
@@ -895,7 +896,7 @@ Git log
   preview = "git_show",
   current_file = true,
   follow = true,
-  confirm = "close",
+  confirm = "git_checkout",
 }
 ```
 
@@ -913,7 +914,7 @@ Git log
   preview = "git_show",
   current_line = true,
   follow = true,
-  confirm = "close",
+  confirm = "git_checkout",
 }
 ```
 
@@ -1467,7 +1468,9 @@ List all available sources
   confirm = function(picker, item)
     picker:close()
     if item then
-      Snacks.picker(item.text)
+      vim.schedule(function()
+        Snacks.picker(item.text)
+      end)
     end
   end,
 }
@@ -2123,8 +2126,6 @@ Snacks.picker.actions.toggle_preview(picker)
 Snacks.picker.actions.yank(_, item)
 ```
 
-
-
 ## 📦 `snacks.picker.core.picker`
 
 ```lua
@@ -2320,3 +2321,5 @@ Get the word under the cursor or the current visual selection
 ```lua
 picker:word()
 ```
+
+

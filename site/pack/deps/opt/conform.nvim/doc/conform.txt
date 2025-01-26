@@ -365,6 +365,7 @@ FORMATTERS                                                    *conform-formatter
 `html_beautify` - Beautifier for html.
 `htmlbeautifier` - A normaliser/beautifier for HTML that also understands
                  embedded Ruby. Ideal for tidying up Rails templates.
+`hurlfmt` - Formats hurl files.
 `imba_fmt` - Code formatter for the Imba programming language.
 `indent` - GNU Indent.
 `injected` - Format treesitter injected languages.
@@ -441,6 +442,8 @@ FORMATTERS                                                    *conform-formatter
 `purs-tidy` - A syntax tidy-upper for PureScript.
 `pyink` - A Python formatter, forked from Black with a few different formatting
         behaviors.
+`pyproject-fmt` - Apply a consistent format to your pyproject.toml file with
+                comment support.
 `python-ly` - A Python package and commandline tool to manipulate LilyPond
             files.
 `reorder-python-imports` - Rewrites source to reorder python imports
