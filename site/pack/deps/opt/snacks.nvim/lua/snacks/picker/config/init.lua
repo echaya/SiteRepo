@@ -77,6 +77,9 @@ function M.get(opts)
 
   -- Merge the configs
   opts = Snacks.config.merge(unpack(todo))
+  if opts.cwd == true then
+    opts.cwd = nil
+  end
   M.multi(opts)
   return opts
 end

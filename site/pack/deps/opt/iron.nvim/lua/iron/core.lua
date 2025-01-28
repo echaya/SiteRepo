@@ -63,6 +63,11 @@ new_repl.create_on_new_window = function(ft)
     vim.api.nvim_buf_delete(bufnr, {force = true})
   end)
 
+  local filetype = config.repl_filetype(bufnr, ft)
+  if filetype ~= nil then
+    vim.api.nvim_set_option_value("filetype", filetype, { buf = bufnr })
+  end
+
   return meta
 end
 
@@ -118,7 +123,7 @@ core.repl_restart = function()
       else
         vim.api.nvim_set_current_win(replwin)
         local bufnr = ll.new_buffer()
-        meta = new_repl.create(ft, bufnr, current_bufnr, function()
+        new_meta = new_repl.create(ft, bufnr, current_bufnr, function()
           vim.api.nvim_buf_delete(bufnr, {force = true})
         end)
       end
@@ -707,8 +712,10 @@ core.setup = function(opts)
   config.namespace = vim.api.nvim_create_namespace("iron")
   vim.api.nvim_create_augroup("iron", {})
 
-  for k, v in pairs(opts.config) do
-    config[k] = v
+  if opts.config then
+    for k, v in pairs(opts.config) do
+      config[k] = v
+    end
   end
 
   if config.highlight_last ~= false then

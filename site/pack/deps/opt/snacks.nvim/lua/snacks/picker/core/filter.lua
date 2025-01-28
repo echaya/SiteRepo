@@ -40,7 +40,7 @@ function M.new(picker)
     self.buf = self.buf == 0 and vim.api.nvim_get_current_buf() or self.buf
     self.file = self.buf and vim.fs.normalize(vim.api.nvim_buf_get_name(self.buf), { _fast = true }) or nil
     for path, want in pairs(filter.paths or {}) do
-      table.insert(filter, { path = vim.fs.normalize(path), want = want })
+      table.insert(self.paths, { path = vim.fs.normalize(path), want = want })
     end
   end
   return self
@@ -84,7 +84,7 @@ function M:match(item)
   if not path then
     return false
   end
-  if self.opts.cwd and path:sub(1, #self.cwd) ~= self.cwd then
+  if self.opts.cwd and path ~= self.cwd and not path:find(self.cwd .. "/", 1, true) then
     return false
   end
   if self.opts.paths then

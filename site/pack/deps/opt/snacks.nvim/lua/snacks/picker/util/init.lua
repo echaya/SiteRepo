@@ -22,7 +22,7 @@ function M.truncpath(path, len, opts)
   local home = vim.fs.normalize("~")
   path = vim.fs.normalize(path, { _fast = true, expand_env = false })
 
-  if path:find(cwd, 1, true) == 1 and #path > #cwd then
+  if path:find(cwd .. "/", 1, true) == 1 and #path > #cwd then
     path = path:sub(#cwd + 2)
   else
     local root = Snacks.git.get_root(path)
