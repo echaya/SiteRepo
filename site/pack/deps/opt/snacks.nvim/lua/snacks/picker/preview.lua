@@ -109,6 +109,11 @@ function M.file(ctx)
 
       local file = assert(io.open(path, "r"))
 
+      local is_binary = false
+      local ft = ctx.picker.opts.previewers.file.ft or vim.filetype.match({ filename = path })
+      if ft == "bigfile" then
+        ft = nil
+      end
       local lines = {}
       for line in file:lines() do
         ---@cast line string
@@ -117,14 +122,20 @@ function M.file(ctx)
         end
         -- Check for binary data in the current line
         if line:find("[%z\1-\8\11\12\14-\31]") then
-          ctx.preview:notify("binary file", "warn")
-          return
+          is_binary = true
+          if not ft then
+            ctx.preview:notify("binary file", "warn")
+            return
+          end
         end
         table.insert(lines, line)
       end
 
       file:close()
 
+      if is_binary then
+        ctx.preview:wo({ number = false, relativenumber = false, cursorline = false, signcolumn = "no" })
+      end
       ctx.preview:set_lines(lines)
       ctx.preview:highlight({ file = path, ft = ctx.picker.opts.previewers.file.ft, buf = ctx.buf })
     end
@@ -301,6 +312,24 @@ function M.git_diff(ctx)
   if ctx.item.file then
     vim.list_extend(cmd, { "--", ctx.item.file })
   end
+  if not native then
+    table.insert(cmd, 2, "--no-pager")
+  end
+  M.cmd(cmd, ctx, { ft = not native and "diff" or nil })
+end
+
+---@param ctx snacks.picker.preview.ctx
+function M.git_stash(ctx)
+  local native = ctx.picker.opts.previewers.git.native
+  local cmd = {
+    "git",
+    "-c",
+    "delta." .. vim.o.background .. "=true",
+    "stash",
+    "show",
+    "--patch",
+    ctx.item.stash,
+  }
   if not native then
     table.insert(cmd, 2, "--no-pager")
   end

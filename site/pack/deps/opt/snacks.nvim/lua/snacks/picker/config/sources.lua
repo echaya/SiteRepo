@@ -190,6 +190,13 @@ M.git_log_line = {
   confirm = "git_checkout",
 }
 
+M.git_stash = {
+  finder = "git_stash",
+  format = "git_stash",
+  preview = "git_stash",
+  confirm = "git_stash_apply",
+}
+
 M.git_status = {
   finder = "git_status",
   format = "git_status",
@@ -260,11 +267,7 @@ M.help = {
   previewers = {
     file = { ft = "help" },
   },
-  win = {
-    preview = {
-      minimal = true,
-    },
-  },
+  win = { preview = { minimal = true } },
   confirm = "help",
 }
 
@@ -499,6 +502,15 @@ M.marks = {
   format = "file",
   global = true,
   ["local"] = true,
+}
+
+---@class snacks.picker.notifications.Config: snacks.picker.Config
+---@field filter? snacks.notifier.level|fun(notif: snacks.notifier.Notif): boolean
+M.notifications = {
+  finder = "snacks_notifier",
+  format = "notification",
+  preview = "preview",
+  formatters = { severity = { level = true } },
 }
 
 -- List all available sources

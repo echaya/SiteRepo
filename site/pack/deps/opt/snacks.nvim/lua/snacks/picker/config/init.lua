@@ -108,9 +108,14 @@ function M.multi(opts)
       source.actions.confirm = source.confirm
     end
     local finder = M.finder(source.finder)
-    finders[#finders + 1] = function(fopts, filter, picker)
+    finders[#finders + 1] = function(fopts, ctx)
       fopts = Snacks.config.merge({}, vim.deepcopy(source), fopts)
-      return finder(fopts, filter, picker)
+      -- Update source filter when needed
+      if not vim.tbl_isempty(fopts.filter or {}) then
+        ctx = ctx:clone()
+        ctx.filter = ctx.filter:clone():init(fopts)
+      end
+      return finder(fopts, ctx)
     end
     confirms[#confirms + 1] = source.actions.confirm or "jump"
     previews[#previews + 1] = M.preview(source)

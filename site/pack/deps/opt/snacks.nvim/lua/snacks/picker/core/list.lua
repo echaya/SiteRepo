@@ -228,10 +228,15 @@ function M:add(item, sort)
   local idx = #self.items + 1
   self.items[idx] = item
   if sort ~= false then
-    local _added, prev = self.topk:add(item)
+    local added, prev = self.topk:add(item)
+    if added then
+      item.match_topk = item.match_tick
+      self.dirty = true
+    end
     if prev then
       -- replace with previous item, since new item is now in topk
       self.items[idx] = prev
+      prev.match_topk = nil
     end
   end
   if not self.dirty then

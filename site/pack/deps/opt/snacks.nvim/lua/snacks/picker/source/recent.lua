@@ -13,8 +13,11 @@ local function oldfiles(filter, extra)
   local files = {} ---@type string[]
   vim.list_extend(files, extra or {})
   vim.list_extend(files, vim.v.oldfiles)
+  local i = 0
   return function()
-    for _, file in ipairs(files) do
+    for f = i + 1, #files do
+      i = f
+      local file = files[f]
       file = vim.fs.normalize(file, { _fast = true, expand_env = false })
       local want = not done[file] and filter:match({ file = file, text = "" })
       done[file] = true

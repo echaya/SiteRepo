@@ -338,6 +338,9 @@ function M.resume()
   ret.matcher.task:on(
     "done",
     vim.schedule_wrap(function()
+      if ret.closed then
+        return
+      end
       ret.list:view(last.cursor, last.topline)
     end)
   )
@@ -657,16 +660,7 @@ function M:find(opts)
 
   -- re-run matcher if finder or pattern changed
   if self.matcher:init(filter.pattern) or finding then
-    local prios = {} ---@type snacks.picker.Item[]
-    if not finding then
-      -- add current topk items to be checked first
-      vim.list_extend(prios, self.list.topk:get())
-      if not self.matcher:empty() then
-        -- next add the rest of the matched items
-        vim.list_extend(prios, self.list.items, 1, 1000)
-      end
-    end
-    self.matcher:run(self, { prios = prios })
+    self.matcher:run(self)
     if opts.on_done then
       if self.matcher.task:running() then
         self.matcher.task:on("done", vim.schedule_wrap(opts.on_done))

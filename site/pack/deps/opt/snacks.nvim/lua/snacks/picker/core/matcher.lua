@@ -1,5 +1,9 @@
 local Async = require("snacks.picker.util.async")
 
+---@class snacks.picker.Item
+---@field match_tick? number
+---@field match_topk? number
+
 ---@class snacks.picker.Matcher
 ---@field opts snacks.picker.matcher.Config
 ---@field mods snacks.picker.matcher.Mods[][]
@@ -13,6 +17,7 @@ local Async = require("snacks.picker.util.async")
 ---@field file? {path: string, pos: snacks.picker.Pos}
 ---@field cwd string
 ---@field frecency? snacks.picker.Frecency
+---@field subset? boolean
 local M = {}
 M.__index = M
 M.DEFAULT_SCORE = 1000
@@ -70,9 +75,7 @@ function M:close()
 end
 
 ---@param picker snacks.Picker
----@param opts? {prios?: snacks.picker.Item[]}
-function M:run(picker, opts)
-  opts = opts or {}
+function M:run(picker)
   self.task:abort()
   picker.list:clear()
 
@@ -89,27 +92,57 @@ function M:run(picker, opts)
   ---@async
   self.task = Async.new(function()
     local yield = Async.yielder(YIELD_MATCH)
-    local idx = 0
 
     ---@async
     ---@param item snacks.picker.Item
     local function check(item)
-      if self:update(item) and item.score > 0 then
+      if self:update(item) then
         picker.list:add(item, self.sorting)
       end
       yield()
     end
 
-    -- process high priority items first
-    for _, item in ipairs(opts.prios or {}) do
-      check(item)
+    local count = #picker.finder.items
+
+    -- process topk first
+    for i = 1, count do
+      local item = picker.finder.items[i]
+      if item.match_topk then
+        item.match_topk = nil
+        check(item)
+      else
+        item.match_topk = nil
+      end
     end
 
+    -- process matches next
+    for i = 1, count do
+      local item = picker.finder.items[i]
+      if item.score > 0 and item.match_tick ~= self.tick then
+        check(item)
+      end
+    end
+
+    -- if pattern is a subset of the previous pattern, then
+    -- only process items that didn't match previously
+    if self.subset then
+      for i = 1, count do
+        local item = picker.finder.items[i]
+        if item.score == 0 and item.match_tick == self.tick - 1 then
+          item.match_tick = self.tick
+        end
+      end
+    end
+
+    -- then the rest
+    local idx = 0
     repeat
-      -- then the rest
       while idx < #picker.finder.items do
         idx = idx + 1
-        check(picker.finder.items[idx])
+        local item = picker.finder.items[idx]
+        if item.match_tick ~= self.tick then
+          check(item)
+        end
       end
 
       -- suspend till we have more items
@@ -132,6 +165,7 @@ function M:init(pattern)
   self.tick = self.tick + 1
   self.file = nil
   self.mods = {}
+  self.subset = self.pattern ~= "" and pattern:find(self.pattern, 1, true) == 1 and not pattern:find("|", 1, true)
   self.pattern = pattern
   self:abort()
   self.one = nil
@@ -168,6 +202,21 @@ function M:init(pattern)
     self.one = self.mods[1][1]
   end
   return true
+end
+
+---@param a snacks.picker.matcher.Mods[][]
+---@param b snacks.picker.matcher.Mods[][]
+function M:is_subset(a, b)
+  if #a ~= #b then
+    return false
+  end
+  if #a > 1 then
+    return false
+  end
+  if #a[1] ~= #b[1] then
+    return false
+  end
+  return a[1][1].fuzzy and b[1][1].fuzzy and b[1][1].pattern:find(a[1][1].pattern, 1, true) == 1
 end
 
 ---@param pattern string
@@ -251,14 +300,12 @@ function M:_prepare(pattern)
 end
 
 ---@param item snacks.picker.Item
----@return boolean updated
+---@return boolean matched
 function M:update(item)
-  if item.match_tick == self.tick then
-    return false
-  end
   if item.match_pos then
     item.pos = nil
   end
+  item.match_topk = nil
   local score = self:match(item)
   if score ~= 0 then
     if item.score_add then
@@ -281,8 +328,8 @@ function M:update(item)
       end
     end
   end
-  item.match_tick, item.score = self.tick, score
-  return true
+  item.match_tick, item.score, item.match_topk = self.tick, score, nil
+  return score > 0
 end
 
 --- Matches an item and returns the score.

@@ -35,7 +35,7 @@ function M.new(opts, main)
       wo = {
         cursorline = false,
         colorcolumn = "",
-        number = true,
+        number = opts.win.preview.minimal ~= true,
         relativenumber = false,
         list = false,
       },

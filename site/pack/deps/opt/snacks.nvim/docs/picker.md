@@ -145,6 +145,10 @@ Snacks.picker.pick({source = "files", ...})
       show_always = false, -- only show the selected column when there are multiple selections
       unselected = true, -- use the unselected icon for unselected items
     },
+    severity = {
+      icons = true, -- show severity icons
+      level = false, -- show severity level
+    },
   },
   ---@class snacks.picker.previewers.Config
   previewers = {
@@ -187,6 +191,7 @@ Snacks.picker.pick({source = "files", ...})
         ["<a-p>"] = { "toggle_preview", mode = { "i", "n" } },
         ["<a-w>"] = { "cycle_win", mode = { "i", "n" } },
         ["<C-w>"] = { "<c-s-w>", mode = { "i" }, expr = true, desc = "delete word" },
+        ["<S-CR>"] = { { "pick_win", "jump" }, mode = { "n", "i" } },
         ["<C-Up>"] = { "history_back", mode = { "i", "n" } },
         ["<C-Down>"] = { "history_forward", mode = { "i", "n" } },
         ["<Tab>"] = { "select_and_next", mode = { "i", "n" } },
@@ -460,6 +465,23 @@ Snacks.picker.pick({source = "files", ...})
 ```
 
 ```lua
+---@alias snacks.Picker.ref (fun():snacks.Picker?)|{value?: snacks.Picker}
+```
+
+```lua
+---@class snacks.picker.Last
+---@field cursor number
+---@field topline number
+---@field opts? snacks.picker.Config
+---@field selected snacks.picker.Item[]
+---@field filter snacks.picker.Filter
+```
+
+```lua
+---@alias snacks.picker.history.Record {pattern: string, search: string, live?: boolean}
+```
+
+```lua
 ---@alias snacks.picker.Extmark vim.api.keyset.set_extmark|{col:number, row?:number, field?:string}
 ---@alias snacks.picker.Text {[1]:string, [2]:string?, virtual?:boolean, field?:string}
 ---@alias snacks.picker.Highlight snacks.picker.Text|snacks.picker.Extmark
@@ -500,7 +522,6 @@ It's a previewer that shows a preview based on the item data.
 ---@field frecency? number
 ---@field score_add? number
 ---@field score_mul? number
----@field match_tick? number
 ---@field source_id? number
 ---@field file? string
 ---@field text string
@@ -533,23 +554,6 @@ It's a previewer that shows a preview based on the item data.
 ---@field input? snacks.win.Config|{} input window config
 ---@field list? snacks.win.Config|{} result list window config
 ---@field preview? snacks.win.Config|{} preview window config
-```
-
-```lua
----@alias snacks.Picker.ref (fun():snacks.Picker?)|{value?: snacks.Picker}
-```
-
-```lua
----@class snacks.picker.Last
----@field cursor number
----@field topline number
----@field opts? snacks.picker.Config
----@field selected snacks.picker.Item[]
----@field filter snacks.picker.Filter
-```
-
-```lua
----@alias snacks.picker.history.Record {pattern: string, search: string, live?: boolean}
 ```
 
 ## 📦 Module
@@ -918,6 +922,21 @@ Git log
 }
 ```
 
+### `git_stash`
+
+```vim
+:lua Snacks.picker.git_stash(opts?)
+```
+
+```lua
+{
+  finder = "git_stash",
+  format = "git_stash",
+  preview = "git_stash",
+  confirm = "git_stash_apply",
+}
+```
+
 ### `git_status`
 
 ```vim
@@ -1022,11 +1041,7 @@ Neovim help tags
   previewers = {
     file = { ft = "help" },
   },
-  win = {
-    preview = {
-      minimal = true,
-    },
-  },
+  win = { preview = { minimal = true } },
   confirm = "help",
 }
 ```
@@ -1393,6 +1408,23 @@ vim.tbl_extend("force", {}, M.lsp_symbols, {
   format = "file",
   global = true,
   ["local"] = true,
+}
+```
+
+### `notifications`
+
+```vim
+:lua Snacks.picker.notifications(opts?)
+```
+
+```lua
+---@class snacks.picker.notifications.Config: snacks.picker.Config
+---@field filter? snacks.notifier.level|fun(notif: snacks.notifier.Notif): boolean
+{
+  finder = "snacks_notifier",
+  format = "notification",
+  preview = "preview",
+  formatters = { severity = { level = true } },
 }
 ```
 
@@ -1881,6 +1913,12 @@ Snacks.picker.actions.git_checkout(picker, item)
 Snacks.picker.actions.git_stage(picker)
 ```
 
+### `Snacks.picker.actions.git_stash_apply()`
+
+```lua
+Snacks.picker.actions.git_stash_apply(_, item)
+```
+
 ### `Snacks.picker.actions.help()`
 
 ```lua
@@ -1997,6 +2035,12 @@ Send selected or all items to the location list.
 
 ```lua
 Snacks.picker.actions.loclist(picker)
+```
+
+### `Snacks.picker.actions.pick_win()`
+
+```lua
+Snacks.picker.actions.pick_win(picker, item, action)
 ```
 
 ### `Snacks.picker.actions.preview_scroll_down()`
@@ -2125,8 +2169,6 @@ Snacks.picker.actions.toggle_preview(picker)
 ```lua
 Snacks.picker.actions.yank(_, item)
 ```
-
-
 
 ## 📦 `snacks.picker.core.picker`
 
@@ -2323,3 +2365,5 @@ Get the word under the cursor or the current visual selection
 ```lua
 picker:word()
 ```
+
+

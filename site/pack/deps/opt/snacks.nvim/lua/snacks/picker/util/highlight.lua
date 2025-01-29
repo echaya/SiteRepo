@@ -159,7 +159,13 @@ end
 ---@param line snacks.picker.Highlight[]
 function M.markdown(line)
   M.highlight(line, {
+    ["^# .*"] = "@markup.heading.1.markdown",
+    ["^## .*"] = "@markup.heading.2.markdown",
+    ["^### .*"] = "@markup.heading.3.markdown",
+    ["^#### .*"] = "@markup.heading.4.markdown",
+    ["^##### .*"] = "@markup.heading.5.markdown",
     ["`.-`"] = "SnacksPickerCode",
+    ["^%s*[%-%*]"] = "@markup.list.markdown",
     ["%*.-%*"] = "SnacksPickerItalic",
     ["%*%*.-%*%*"] = "SnacksPickerBold",
   })
@@ -194,6 +200,9 @@ function M.to_text(line, opts)
   local col = offset
   local parts = {} ---@type string[]
   for _, text in ipairs(line) do
+    if (type(text[2]) == "string" and text[1] == nil) or vim.tbl_isempty(text) then
+      text[1] = ""
+    end
     if type(text[1]) == "string" then
       ---@cast text snacks.picker.Text
       if text.virtual then

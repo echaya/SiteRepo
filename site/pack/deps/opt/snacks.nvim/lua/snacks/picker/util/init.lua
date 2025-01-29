@@ -353,4 +353,15 @@ function M.reltime(time)
   return os.date("%b %d, %Y", time) ---@type string
 end
 
+---@generic T: table
+---@param t T
+---@return T
+function M.shallow_copy(t)
+  local ret = {}
+  for k, v in pairs(t) do
+    ret[k] = v
+  end
+  return setmetatable(ret, getmetatable(t))
+end
+
 return M

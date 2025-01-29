@@ -117,6 +117,41 @@ function M.toggle_preview(picker)
   picker:show_preview()
 end
 
+function M.pick_win(picker, item, action)
+  local overlays = {} ---@type snacks.win[]
+  picker.layout:hide()
+  local chars = "asdfghjkl"
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_get_config(win).relative == "" then
+      local c = chars:sub(1, 1)
+      chars = chars:sub(2)
+      overlays[c] = Snacks.win({
+        backdrop = false,
+        win = win,
+        focusable = false,
+        enter = false,
+        relative = "win",
+        width = 7,
+        height = 3,
+        text = ("       \n   %s   \n       "):format(c),
+        wo = {
+          winhighlight = "NormalFloat:SnacksPickerPickWin",
+        },
+      })
+    end
+  end
+  vim.cmd([[redraw!]])
+  local char = vim.fn.getcharstr()
+  for _, overlay in pairs(overlays) do
+    overlay:close()
+  end
+  picker.layout:unhide()
+  local win = overlays[char]
+  if win then
+    picker.main = win.opts.win
+  end
+end
+
 function M.bufdelete(picker)
   local non_buf_delete_requested = false
   for _, item in ipairs(picker:selected({ fallback = true })) do
@@ -153,6 +188,16 @@ function M.git_stage(picker)
       })
     end, { cwd = item.cwd })
   end
+end
+
+function M.git_stash_apply(_, item)
+  if not item then
+    return
+  end
+  local cmd = { "git", "stash", "apply", item.stash }
+  Snacks.picker.util.cmd(cmd, function()
+    Snacks.notify("Stash applied: `" .. item.stash .. "`", { title = "Snacks Picker" })
+  end, { cwd = item.cwd })
 end
 
 function M.git_checkout(picker, item)

@@ -32,7 +32,6 @@ local M = {}
 ---@field frecency? number
 ---@field score_add? number
 ---@field score_mul? number
----@field match_tick? number
 ---@field source_id? number
 ---@field file? string
 ---@field text string
@@ -140,6 +139,10 @@ local defaults = {
       show_always = false, -- only show the selected column when there are multiple selections
       unselected = true, -- use the unselected icon for unselected items
     },
+    severity = {
+      icons = true, -- show severity icons
+      level = false, -- show severity level
+    },
   },
   ---@class snacks.picker.previewers.Config
   previewers = {
@@ -182,6 +185,7 @@ local defaults = {
         ["<a-p>"] = { "toggle_preview", mode = { "i", "n" } },
         ["<a-w>"] = { "cycle_win", mode = { "i", "n" } },
         ["<C-w>"] = { "<c-s-w>", mode = { "i" }, expr = true, desc = "delete word" },
+        ["<S-CR>"] = { { "pick_win", "jump" }, mode = { "n", "i" } },
         ["<C-Up>"] = { "history_back", mode = { "i", "n" } },
         ["<C-Down>"] = { "history_forward", mode = { "i", "n" } },
         ["<Tab>"] = { "select_and_next", mode = { "i", "n" } },

@@ -13,6 +13,7 @@ M.__index = M
 ---@field filter snacks.picker.Filter
 ---@field async snacks.picker.Async
 ---@field meta table<string, any>
+---@field clone fun(self:snacks.picker.finder.ctx): snacks.picker.finder.ctx
 
 ---@alias snacks.picker.finder.async fun(cb:async fun(item:snacks.picker.finder.Item))
 ---@alias snacks.picker.finder.result snacks.picker.finder.Item[] | snacks.picker.finder.async
@@ -66,6 +67,9 @@ function M:ctx(picker)
     }),
     filter = self.filter,
     meta = {},
+    clone = function(t)
+      return Snacks.picker.util.shallow_copy(t) --[[@as snacks.picker.finder.ctx]]
+    end,
   }
   setmetatable(ret, { __index = M:deprecated(self.filter) })
   return ret
