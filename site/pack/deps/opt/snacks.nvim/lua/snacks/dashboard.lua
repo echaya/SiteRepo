@@ -768,7 +768,7 @@ function M.pick(cmd, opts)
     function() return Snacks.picker(cmd, opts) end,
   }
   if picker.enabled then
-    table.insert(try, 1, table.remove(try, #try))
+    table.insert(try, 2, table.remove(try, #try))
   end
   for _, fn in ipairs(try) do
     if pcall(fn) then
@@ -909,15 +909,13 @@ function M.sections.projects(opts)
         if opts.action then
           return opts.action(dir)
         end
+        vim.fn.chdir(dir)
+        local session = M.sections.session()
         -- stylua: ignore
-        if opts.session then
+        if opts.session and session then
           local session_loaded = false
           vim.api.nvim_create_autocmd("SessionLoadPost", { once = true, callback = function() session_loaded = true end })
           vim.defer_fn(function() if not session_loaded and opts.pick then M.pick() end end, 100)
-        end
-        vim.fn.chdir(dir)
-        local session = M.sections.session()
-        if opts.session and session then
           self:action(session.action)
         elseif opts.pick then
           M.pick()

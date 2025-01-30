@@ -608,6 +608,14 @@ M.search_history = {
   formatters = { text = { ft = "regex" } },
 }
 
+--- Config used by `vim.ui.select`.
+--- Not meant to be used directly.
+M.select = {
+  items = {}, -- these are set dynamically
+  main = { current = true },
+  layout = { preset = "select" },
+}
+
 ---@class snacks.picker.smart.Config: snacks.picker.Config
 ---@field finders? string[] list of finders to use
 ---@field filter? snacks.picker.filter.Config

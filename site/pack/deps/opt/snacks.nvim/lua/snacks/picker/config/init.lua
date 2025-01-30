@@ -261,6 +261,9 @@ function M.wrap(source, opts)
       return
     end
   end
+  if rawget(Snacks.picker, source) then
+    return Snacks.picker[source]
+  end
   ---@type fun(opts: snacks.picker.Config): snacks.Picker
   local ret = function(_opts)
     return Snacks.picker.pick(source, _opts)

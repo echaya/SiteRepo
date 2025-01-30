@@ -155,13 +155,30 @@ function M.new(opts)
   end, { win = true })
 
   -- close if we enter a window that is not part of the picker
+  local on_focus ---@type fun()?
   self.input.win:on("WinEnter", function()
-    local current = vim.api.nvim_get_current_win()
-    if not vim.tbl_contains({ self.input.win.win, self.list.win.win, self.preview.win.win }, current) then
-      vim.schedule(function()
-        self:close()
-      end)
+    if not self.layout:valid() then
+      return
     end
+    if self:is_focused() then
+      if on_focus then
+        on_focus()
+        on_focus = nil
+      end
+      return
+    end
+    if self.opts.auto_close == false then
+      if self.resolved_layout.preview == "main" and self.preview.win:valid() then
+        self:toggle_preview(false)
+        on_focus = vim.schedule_wrap(function()
+          self:toggle_preview(true)
+        end)
+      end
+      return
+    end
+    vim.schedule(function()
+      self:close()
+    end)
   end)
 
   self:init_layout(layout)
@@ -181,6 +198,14 @@ function M.new(opts)
 
   self:find()
   return self
+end
+
+function M:is_focused()
+  local current = vim.api.nvim_get_current_win()
+  return vim.tbl_contains(
+    { self.input.win.win, self.list.win.win, self.preview.win.win, self.layout.root.win },
+    current
+  )
 end
 
 --- Execute the callback in normal mode.
@@ -232,6 +257,11 @@ function M:init_layout(layout)
       backdrop = backdrop,
     },
   }))
+
+  self.layout.root:on("WinEnter", function()
+    self:action("focus_input")
+  end, { buf = true })
+
   self.preview:update(preview_main and self.main or nil)
   -- apply box highlight groups
   local boxwhl = Snacks.picker.highlight.winhl("SnacksPickerBox")
@@ -239,6 +269,27 @@ function M:init_layout(layout)
     win.opts.wo.winhighlight = boxwhl
   end
   return layout
+end
+
+---@param enable? boolean
+function M:toggle_preview(enable)
+  local showing = self.preview.win:valid()
+  if enable == nil then
+    enable = not showing
+  end
+  if enable == showing then
+    return
+  end
+  if self.resolved_layout.preview == "main" then
+    if enable then
+      self.preview.win:show()
+    else
+      self.preview.win:close()
+    end
+  else
+    self.layout:toggle("preview")
+  end
+  self:show_preview()
 end
 
 --- Set the picker layout. Can be either the name of a preset layout
@@ -312,7 +363,7 @@ function M:update_titles()
       title = vim.trim(title):gsub("%s+", " ")
       if title ~= "" then
         -- HACK: add extra space when last char is non word like an icon
-        title = title:sub(-1):match("%w") and title or title .. " "
+        title = title:sub(-1):match("[%w%p]") and title or title .. " "
         table.insert(ret, 1, { " " .. title .. " ", "FloatTitle" })
       end
       win:set_title(ret)

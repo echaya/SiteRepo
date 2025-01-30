@@ -204,21 +204,6 @@ function M:init(pattern)
   return true
 end
 
----@param a snacks.picker.matcher.Mods[][]
----@param b snacks.picker.matcher.Mods[][]
-function M:is_subset(a, b)
-  if #a ~= #b then
-    return false
-  end
-  if #a > 1 then
-    return false
-  end
-  if #a[1] ~= #b[1] then
-    return false
-  end
-  return a[1][1].fuzzy and b[1][1].fuzzy and b[1][1].pattern:find(a[1][1].pattern, 1, true) == 1
-end
-
 ---@param pattern string
 ---@return snacks.picker.matcher.Mods
 function M:_prepare(pattern)

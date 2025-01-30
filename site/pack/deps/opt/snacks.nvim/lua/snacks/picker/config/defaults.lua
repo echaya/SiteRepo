@@ -82,6 +82,7 @@ local M = {}
 ---@field icons? snacks.picker.icons
 ---@field prompt? string prompt text / icon
 ---@field title? string defaults to a capitalized source name
+---@field auto_close? boolean automatically close the picker when focusing another window (defaults to true)
 --- Preset options
 ---@field previewers? snacks.picker.previewers.Config|{}
 ---@field formatters? snacks.picker.formatters.Config|{}

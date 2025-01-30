@@ -29,15 +29,12 @@ function M.select(items, opts, on_choice)
   return Snacks.picker.pick({
     source = "select",
     items = finder_items,
-    main = { current = true },
     format = Snacks.picker.format.ui_select(opts.kind, #items),
+    title = title,
     layout = {
-      preset = "select",
       preview = false,
       layout = {
         height = math.floor(math.min(vim.o.lines * 0.8 - 10, #items + 2) + 0.5) + 10,
-        title = " " .. title .. " ",
-        title_pos = "center",
       },
     },
     actions = {

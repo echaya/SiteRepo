@@ -88,6 +88,7 @@ Snacks.picker.pick({source = "files", ...})
 ---@field icons? snacks.picker.icons
 ---@field prompt? string prompt text / icon
 ---@field title? string defaults to a capitalized source name
+---@field auto_close? boolean automatically close the picker when focusing another window (defaults to true)
 --- Preset options
 ---@field previewers? snacks.picker.previewers.Config|{}
 ---@field formatters? snacks.picker.formatters.Config|{}
@@ -1621,6 +1622,23 @@ Neovim search history
 }
 ```
 
+### `select`
+
+```vim
+:lua Snacks.picker.select(opts?)
+```
+
+Config used by `vim.ui.select`.
+Not meant to be used directly.
+
+```lua
+{
+  items = {}, -- these are set dynamically
+  main = { current = true },
+  layout = { preset = "select" },
+}
+```
+
 ### `smart`
 
 ```vim
@@ -1766,6 +1784,30 @@ Open a project from zoxide
 }
 ```
 
+### `ivy_split`
+
+```lua
+{
+  preview = "main",
+  layout = {
+    box = "vertical",
+    backdrop = false,
+    width = 0,
+    height = 0.4,
+    position = "bottom",
+    border = "top",
+    title = " {title} {live} {flags}",
+    title_pos = "left",
+    { win = "input", height = 1, border = "bottom" },
+    {
+      box = "horizontal",
+      { win = "list", border = "none" },
+      { win = "preview", title = "{preview}", width = 0.6, border = "left" },
+    },
+  },
+}
+```
+
 ### `select`
 
 ```lua
@@ -1779,9 +1821,35 @@ Open a project from zoxide
     min_height = 10,
     box = "vertical",
     border = "rounded",
-    title = " Select ",
+    title = "{title}",
     title_pos = "center",
     { win = "input", height = 1, border = "bottom" },
+    { win = "list", border = "none" },
+    { win = "preview", title = "{preview}", height = 0.4, border = "top" },
+  },
+}
+```
+
+### `sidebar`
+
+```lua
+{
+  preview = "main",
+  layout = {
+    backdrop = false,
+    width = 40,
+    min_width = 40,
+    height = 0,
+    position = "left",
+    border = "none",
+    box = "vertical",
+    {
+      win = "input",
+      height = 1,
+      border = "rounded",
+      title = "{title} {live} {flags}",
+      title_pos = "center",
+    },
     { win = "list", border = "none" },
     { win = "preview", title = "{preview}", height = 0.4, border = "top" },
   },
@@ -2279,6 +2347,12 @@ Check if the finder or matcher is running
 picker:is_active()
 ```
 
+### `picker:is_focused()`
+
+```lua
+picker:is_focused()
+```
+
 ### `picker:items()`
 
 Get all filtered items in the picker.
@@ -2356,6 +2430,13 @@ otherwise throttle the preview.
 
 ```lua
 picker:show_preview()
+```
+
+### `picker:toggle_preview()`
+
+```lua
+---@param enable? boolean
+picker:toggle_preview(enable)
 ```
 
 ### `picker:word()`

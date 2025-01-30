@@ -9,6 +9,7 @@
 ---@field win_opts {main: snacks.win.Config, layout: snacks.win.Config, win: snacks.win.Config}
 ---@field winhl string
 ---@field title? string
+---@field split_layout? boolean
 local M = {}
 M.__index = M
 
@@ -91,7 +92,14 @@ function M:update(main)
   self.main = main
   self.win_opts.main.win = main
   self.win.opts = vim.tbl_deep_extend("force", self.win.opts, main and self.win_opts.main or self.win_opts.layout)
-  self.win.opts.wo.winhighlight = main and vim.wo[main].winhighlight or self.winhl
+  local winhl = self.winhl
+  if main then
+    winhl = (vim.wo[main].winhighlight .. ",Normal:Normal," .. "CursorLine:SnacksPickerPreviewCursorLine"):gsub(
+      "^,",
+      ""
+    )
+  end
+  self.win.opts.wo.winhighlight = winhl
   if main then
     self.win:update()
   end
@@ -99,6 +107,7 @@ end
 
 ---@param picker snacks.Picker
 function M:show(picker)
+  self.split_layout = not picker.layout.root:is_floating()
   local item, prev = picker:current({ resolve = false }), self.item
   if self.item == item and self.pos == (item and item.pos or nil) then
     return
@@ -159,7 +168,10 @@ function M:clear(buf)
 end
 
 function M:reset()
-  if vim.api.nvim_buf_is_valid(self.win.scratch_buf) then
+  if not self.win:valid() then
+    return
+  end
+  if self.win.scratch_buf and vim.api.nvim_buf_is_valid(self.win.scratch_buf) then
     vim.api.nvim_win_set_buf(self.win.win, self.win.scratch_buf)
   else
     self.win:scratch()
@@ -223,9 +235,22 @@ function M:loc()
   Snacks.picker.util.resolve_loc(self.item, self.win.buf)
 
   local function show(pos)
+    local center = true
+    if self.split_layout and self.main and self.item and self.item.buf then
+      local main_buf = vim.api.nvim_win_get_buf(self.main)
+      if main_buf == self.item.buf then
+        center = false
+        local view = vim.api.nvim_win_call(self.main, vim.fn.winsaveview)
+        vim.api.nvim_win_call(self.win.win, function()
+          vim.fn.winrestview(view)
+        end)
+      end
+    end
     vim.api.nvim_win_set_cursor(self.win.win, pos)
     vim.api.nvim_win_call(self.win.win, function()
-      vim.cmd("norm! zzze")
+      if center then
+        vim.cmd("norm! zzze")
+      end
       self:wo({ cursorline = true })
     end)
   end
@@ -242,7 +267,10 @@ function M:loc()
       local ok, re = pcall(vim.regex, vim.trim(self.filter.search))
       if ok and re then
         local start = self.item.pos[2]
-        local from, to = re:match_line(self.win.buf, self.item.pos[1] - 1, start)
+        local from, to ---@type number?, number?
+        pcall(function()
+          from, to = re:match_line(self.win.buf, self.item.pos[1] - 1, start)
+        end)
         if from and to then
           show({ self.item.pos[1], start + to }) -- make sure the to column is visible
           vim.api.nvim_buf_set_extmark(self.win.buf, ns_loc, self.item.pos[1] - 1, start + from, {

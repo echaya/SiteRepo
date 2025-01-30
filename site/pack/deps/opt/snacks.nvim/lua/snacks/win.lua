@@ -822,6 +822,9 @@ function M:show()
       end
       if main then
         vim.schedule(function()
+          if not self:valid() then
+            return
+          end
           vim.api.nvim_win_set_buf(self.win, self.buf)
           vim.api.nvim_win_set_buf(main, buf)
           vim.api.nvim_set_current_win(main)
@@ -892,7 +895,7 @@ end
 function M:add_padding()
   local listchars = vim.split(self.opts.wo.listchars or "", ",")
   listchars = vim.tbl_filter(function(s)
-    return not s:find("eol:")
+    return not s:find("eol:") and s ~= ""
   end, listchars)
   table.insert(listchars, "eol: ")
   self.opts.wo.listchars = table.concat(listchars, ",")

@@ -7,6 +7,7 @@
 ---@field prev_class number
 ---@field in_gap boolean
 ---@field is_file boolean
+---@field first_bonus number
 ---@field str string
 ---@field opts snacks.picker.matcher.Config
 local M = {}
@@ -106,6 +107,7 @@ function M.new(opts)
   self.prev_class = CHAR_WHITE
   self.in_gap = false
   self.str = ""
+  self.first_bonus = 0
   return self
 end
 
@@ -129,6 +131,7 @@ function M:init(str, first)
   self.consecutive = 0
   self.prev_class = CHAR_WHITE
   self.prev = nil
+  self.first_bonus = 0
   if first > 1 then
     self.prev_class = CHAR_CLASS[str:byte(first - 1)] or CHAR_NONWORD
   end
@@ -148,32 +151,44 @@ end
 function M:update(pos)
   local b = self.str:byte(pos)
   local class = CHAR_CLASS[b] or CHAR_NONWORD
+  local bonus = 0
+  local gap = self.prev and pos - self.prev - 1 or 0
 
-  -- Calculate boundary bonus for transitioning from prevClass->currClass
-  local bonus = BONUS_MATRIX[self.prev_class][class] or 0
-
-  -- Handle gap vs consecutive logic
-  if self.prev then
-    local gap = pos - self.prev - 1
-    if gap > 0 then
-      -- We have a gap. If we were already in a gap, only extension penalty
-      -- otherwise we do a gap start penalty
-      self.score = self.score
-        + (self.in_gap and (gap * SCORE_GAP_EXTENSION) or (SCORE_GAP_START + (gap - 1) * SCORE_GAP_EXTENSION))
-
-      self.consecutive = 0
-      self.in_gap = true
+  if gap > 0 then
+    self.prev_class = CHAR_CLASS[self.str:byte(pos - 1)] or CHAR_NONWORD
+    bonus = BONUS_MATRIX[self.prev_class][class] or 0
+    if self.in_gap then
+      -- Already in a gap => extension penalty
+      self.score = self.score + gap * SCORE_GAP_EXTENSION
     else
-      -- consecutive match => reward
-      self.consecutive = self.consecutive + 1
-      self.score = self.score + (BONUS_CONSECUTIVE * self.consecutive)
-      self.in_gap = false
+      -- New gap => start penalty
+      self.score = self.score + SCORE_GAP_START + (gap - 1) * SCORE_GAP_EXTENSION
+      self.in_gap = true
     end
+    self.consecutive = 0
+    self.first_bonus = 0
   else
-    bonus = bonus * BONUS_FIRST_CHAR_MULTIPLIER
+    bonus = BONUS_MATRIX[self.prev_class][class] or 0
+    -- No gap => consecutive chunk
+    if self.consecutive == 0 then
+      -- New chunk => store the boundary/camel bonus
+      self.first_bonus = bonus
+    else
+      -- If we see a bigger boundary/camel bonus than what started the chunk, update
+      if bonus >= BONUS_BOUNDARY and bonus > self.first_bonus then
+        self.first_bonus = bonus
+      end
+      -- Take the max of the current bonus, the chunk's firstBonus, or BONUS_CONSECUTIVE
+      bonus = math.max(bonus, self.first_bonus, BONUS_CONSECUTIVE)
+    end
+    self.consecutive = self.consecutive + 1
+    self.in_gap = false
   end
 
-  -- Add base match + boundary/camel bonus
+  if not self.prev then
+    bonus = (bonus * BONUS_FIRST_CHAR_MULTIPLIER)
+  end
+
   self.score = self.score + SCORE_MATCH + bonus
 
   -- Update for next iteration

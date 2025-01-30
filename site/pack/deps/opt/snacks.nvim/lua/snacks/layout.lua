@@ -46,6 +46,20 @@ function M.new(opts)
   self.wins = self.opts.wins or {}
   self.box_wins = {}
 
+  -- wrap the split layout in a vertical box
+  -- this is needed since a simple split window can't have borders/titles
+  if self.opts.layout.position and self.opts.layout.position ~= "float" then
+    local inner = self.opts.layout
+    self.opts.layout = {
+      box = "vertical",
+      position = inner.position,
+      width = inner.width,
+      height = inner.height,
+      inner,
+    }
+    inner.width, inner.height, inner.col, inner.row, inner.position = 0, 0, 0, 0, nil
+  end
+
   -- assign ids to boxes and create box wins if needed
   local id = 1
   self:each(function(box, parent)
@@ -63,6 +77,7 @@ function M.new(opts)
         self.box_wins[box.id] = Snacks.win(Snacks.win.resolve(box, {
           relative = is_root and (box.relative or "editor") or "win",
           focusable = false,
+          fixbuf = false,
           enter = false,
           show = false,
           resize = false,
@@ -169,11 +184,20 @@ function M:update()
   if not self.root:valid() then
     self.root:show()
   end
+
+  -- Calculate offsets for vertical splits
+  local voffset = 0
+  local pos = self.opts.layout.position
+  if pos and (pos == "left" or pos == "right") then
+    voffset = (vim.o.cmdheight + (vim.o.laststatus == 3 and 1 or 0)) or 0
+    voffset = voffset
+      + (((vim.o.showtabline == 2 or (vim.o.showtabline == 1 and #vim.api.nvim_list_tabpages() > 1)) and 1 or 0) or 0)
+  end
   self:update_box(layout, {
     col = 0,
     row = 0,
     width = vim.o.columns,
-    height = vim.o.lines,
+    height = vim.o.lines - voffset,
   })
 
   for _, win in pairs(self:get_wins()) do
@@ -226,11 +250,11 @@ function M:update_box(box, parent)
   local dim, border = self:dim_box(box, parent)
   local orig_dim = vim.deepcopy(dim)
   if is_root then
-    dim.col = 0
-    dim.row = 0
+    dim.col = parent.col
+    dim.row = parent.row
   else
-    dim.col = dim.col + border.left
-    dim.row = dim.row + border.top
+    dim.col = dim.col + border.left + parent.col
+    dim.row = dim.row + border.top + parent.row
   end
   local free = vim.deepcopy(dim)
 
@@ -240,26 +264,32 @@ function M:update_box(box, parent)
 
   local dims = {} ---@type table<number, snacks.win.Dim>
   local flex = 0
+
+  -- fixed
   for c, child in ipairs(box) do
-    flex = flex + (size(child) == 0 and 1 or 0)
     if size(child) > 0 then
       dims[c] = self:resolve(child, dim)
       free[size_main] = free[size_main] - dims[c][size_main]
+    else
+      flex = flex + 1
     end
   end
+
+  -- flex
   local free_main = free[size_main]
   for c, child in ipairs(box) do
-    if size(child) == 0 then
+    if not dims[c] then
       free[size_main] = math.floor(free_main / flex)
       flex = flex - 1
       free_main = free_main - free[size_main]
       dims[c] = self:resolve(child, free)
     end
   end
-  -- assert(free[size_main] >= 0, "not enough space for children")
+
   -- fix positions
   local offset = 0
   for c, child in ipairs(box) do
+    dims[c][pos_main] = offset
     local wins = self:get_wins(child)
     for _, win in ipairs(wins) do
       win.opts[pos_main] = win.opts[pos_main] + offset
@@ -267,21 +297,22 @@ function M:update_box(box, parent)
     offset = offset + dims[c][size_main]
   end
 
-  dim.width = dim.width + border.left + border.right
-  dim.height = dim.height + border.top + border.bottom
-
+  -- update box win
   local box_win = self.box_wins[box.id]
   if box_win then
     if not is_root then
       box_win.opts.win = self.root.win
     end
-    box_win.opts.col = orig_dim.col
-    box_win.opts.row = orig_dim.row
+    box_win.opts.col = parent.col + orig_dim.col
+    box_win.opts.row = parent.row + orig_dim.row
     box_win.opts.width = orig_dim.width
     box_win.opts.height = orig_dim.height
   end
 
-  return dim
+  -- return outer dimensions
+  orig_dim.width = orig_dim.width + border.left + border.right
+  orig_dim.height = orig_dim.height + border.top + border.bottom
+  return orig_dim
 end
 
 ---@param widget? snacks.layout.Widget

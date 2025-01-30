@@ -113,8 +113,7 @@ function M.toggle_maximize(picker)
 end
 
 function M.toggle_preview(picker)
-  picker.layout:toggle("preview")
-  picker:show_preview()
+  picker:toggle_preview()
 end
 
 function M.pick_win(picker, item, action)
@@ -135,7 +134,7 @@ function M.pick_win(picker, item, action)
         height = 3,
         text = ("       \n   %s   \n       "):format(c),
         wo = {
-          winhighlight = "NormalFloat:SnacksPickerPickWin",
+          winhighlight = "NormalFloat:SnacksPickerPickWin" .. (win == picker.main and "Current" or ""),
         },
       })
     end
@@ -145,10 +144,19 @@ function M.pick_win(picker, item, action)
   for _, overlay in pairs(overlays) do
     overlay:close()
   end
-  picker.layout:unhide()
-  local win = overlays[char]
+  local win = (char == Snacks.util.keycode("<cr>")) or overlays[char]
   if win then
-    picker.main = win.opts.win
+    if type(win) == "table" then
+      picker.main = win.opts.win
+    end
+    vim.defer_fn(function()
+      if not picker.closed then
+        picker.layout:unhide()
+      end
+    end, 100)
+  else
+    picker.layout:unhide()
+    return true
   end
 end
 

@@ -19,6 +19,28 @@ M.default = {
   },
 }
 
+M.sidebar = {
+  preview = "main",
+  layout = {
+    backdrop = false,
+    width = 40,
+    min_width = 40,
+    height = 0,
+    position = "left",
+    border = "none",
+    box = "vertical",
+    {
+      win = "input",
+      height = 1,
+      border = "rounded",
+      title = "{title} {live} {flags}",
+      title_pos = "center",
+    },
+    { win = "list", border = "none" },
+    { win = "preview", title = "{preview}", height = 0.4, border = "top" },
+  },
+}
+
 M.telescope = {
   reverse = true,
   layout = {
@@ -49,6 +71,26 @@ M.ivy = {
     row = -1,
     width = 0,
     height = 0.4,
+    border = "top",
+    title = " {title} {live} {flags}",
+    title_pos = "left",
+    { win = "input", height = 1, border = "bottom" },
+    {
+      box = "horizontal",
+      { win = "list", border = "none" },
+      { win = "preview", title = "{preview}", width = 0.6, border = "left" },
+    },
+  },
+}
+
+M.ivy_split = {
+  preview = "main",
+  layout = {
+    box = "vertical",
+    backdrop = false,
+    width = 0,
+    height = 0.4,
+    position = "bottom",
     border = "top",
     title = " {title} {live} {flags}",
     title_pos = "left",
@@ -109,7 +151,7 @@ M.select = {
     min_height = 10,
     box = "vertical",
     border = "rounded",
-    title = " Select ",
+    title = "{title}",
     title_pos = "center",
     { win = "input", height = 1, border = "bottom" },
     { win = "list", border = "none" },
