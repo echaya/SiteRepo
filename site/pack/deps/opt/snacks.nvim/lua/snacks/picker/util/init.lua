@@ -364,4 +364,50 @@ function M.shallow_copy(t)
   return setmetatable(ret, getmetatable(t))
 end
 
+---@param opts? {main?: number}
+function M.pick_win(opts)
+  opts = opts or {}
+  local overlays = {} ---@type snacks.win[]
+  local chars = "asdfghjkl"
+  local wins = {} ---@type number[]
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_get_config(win).relative == "" then
+      wins[#wins + 1] = win
+    end
+  end
+  if #wins == 1 then
+    return wins[1]
+  elseif #wins == 0 then
+    return
+  end
+  for _, win in ipairs(wins) do
+    local c = chars:sub(1, 1)
+    chars = chars:sub(2)
+    overlays[c] = Snacks.win({
+      backdrop = false,
+      win = win,
+      focusable = false,
+      enter = false,
+      relative = "win",
+      width = 7,
+      height = 3,
+      text = ("       \n   %s   \n       "):format(c),
+      wo = {
+        winhighlight = "NormalFloat:SnacksPickerPickWin" .. (win == opts.main and "Current" or ""),
+      },
+    })
+  end
+  vim.cmd([[redraw!]])
+  local char = vim.fn.getcharstr()
+  for _, overlay in pairs(overlays) do
+    overlay:close()
+  end
+  local win = (char == Snacks.util.keycode("<cr>")) or overlays[char]
+  if win and type(win) == "table" then
+    return win.opts.win
+  elseif win then
+    return opts.main
+  end
+end
+
 return M

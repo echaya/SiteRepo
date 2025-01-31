@@ -105,11 +105,26 @@ function M:update(main)
   end
 end
 
+--- refresh the preview after layout change
 ---@param picker snacks.Picker
-function M:show(picker)
+function M:refresh(picker)
+  self.item = nil
+  self:reset()
+  vim.schedule(function()
+    self:show(picker)
+  end)
+end
+
+---@param picker snacks.Picker
+---@param opts? {force?: boolean}
+function M:show(picker, opts)
+  if not self.win:valid() then
+    return
+  end
+  opts = opts or {}
   self.split_layout = not picker.layout.root:is_floating()
   local item, prev = picker:current({ resolve = false }), self.item
-  if self.item == item and self.pos == (item and item.pos or nil) then
+  if not opts.force and self.item == item and self.pos == (item and item.pos or nil) then
     return
   end
   Snacks.picker.util.resolve(item)

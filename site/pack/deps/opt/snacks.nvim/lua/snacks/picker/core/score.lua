@@ -5,7 +5,6 @@
 ---@field consecutive number
 ---@field prev? number
 ---@field prev_class number
----@field in_gap boolean
 ---@field is_file boolean
 ---@field first_bonus number
 ---@field str string
@@ -105,7 +104,6 @@ function M.new(opts)
   self.is_file = true
   self.consecutive = 0
   self.prev_class = CHAR_WHITE
-  self.in_gap = false
   self.str = ""
   self.first_bonus = 0
   return self
@@ -143,7 +141,6 @@ function M:init(str, first)
   then
     self.score = self.score + BONUS_NO_PATH_SEP
   end
-  self.in_gap = false
   self:update(first)
 end
 
@@ -157,14 +154,7 @@ function M:update(pos)
   if gap > 0 then
     self.prev_class = CHAR_CLASS[self.str:byte(pos - 1)] or CHAR_NONWORD
     bonus = BONUS_MATRIX[self.prev_class][class] or 0
-    if self.in_gap then
-      -- Already in a gap => extension penalty
-      self.score = self.score + gap * SCORE_GAP_EXTENSION
-    else
-      -- New gap => start penalty
-      self.score = self.score + SCORE_GAP_START + (gap - 1) * SCORE_GAP_EXTENSION
-      self.in_gap = true
-    end
+    self.score = self.score + SCORE_GAP_START + (gap - 1) * SCORE_GAP_EXTENSION
     self.consecutive = 0
     self.first_bonus = 0
   else
@@ -182,7 +172,6 @@ function M:update(pos)
       bonus = math.max(bonus, self.first_bonus, BONUS_CONSECUTIVE)
     end
     self.consecutive = self.consecutive + 1
-    self.in_gap = false
   end
 
   if not self.prev then

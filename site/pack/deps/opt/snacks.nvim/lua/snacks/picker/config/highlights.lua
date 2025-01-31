@@ -9,12 +9,10 @@ Snacks.util.set_hl({
   Special = "Special",
   Label = "SnacksPickerSpecial",
   Totals = "NonText",
-  File = "",
-  Flag = "DiagnosticVirtualTextInfo",
-  FlagHidden = "SnacksPickerFlag",
-  FlagIgnored = "SnacksPickerFlag",
-  FlagFollow = "SnacksPickerFlag",
-  Dir = "NonText",
+  File = "", -- basename of a file path
+  Directory = "Directory", -- basename of a directory path
+  Dir = "NonText", -- dirname of a path
+  Toggle = "DiagnosticVirtualTextInfo",
   Dimmed = "Conceal",
   Row = "String",
   Col = "LineNr",
@@ -28,7 +26,7 @@ Snacks.util.set_hl({
   Unselected = "NonText",
   Idx = "Number",
   Bold = "Bold",
-  Indent = "LineNr",
+  Tree = "LineNr",
   Italic = "Italic",
   Code = "@markup.raw.markdown_inline",
   AuPattern = "String",

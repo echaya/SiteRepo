@@ -67,6 +67,8 @@
 ---@field box_wins snacks.win[]
 ---@field win_opts table<string, snacks.win.Config>
 ---@field closed? boolean
+---@field split? boolean
+---@field screenpos number[]?
 Snacks.layout = {}
 ```
 

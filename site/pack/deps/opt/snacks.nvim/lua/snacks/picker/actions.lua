@@ -20,7 +20,15 @@ function M.jump(picker, _, action)
     return
   end
 
-  picker:close()
+  if picker.opts.jump.close then
+    picker:close()
+  else
+    picker.jumping = true
+    if vim.api.nvim_win_is_valid(picker.main) then
+      vim.api.nvim_set_current_win(picker.main)
+    end
+    picker.jumping = false
+  end
 
   if action.cmd then
     vim.cmd(action.cmd)
@@ -101,12 +109,28 @@ function M.jump(picker, _, action)
   end
 end
 
+function M.close(picker)
+  picker:close()
+end
+
 M.cancel = "close"
 M.edit = M.jump
 M.confirm = M.jump
-M.edit_split = { action = "jump", cmd = "split" }
-M.edit_vsplit = { action = "jump", cmd = "vsplit" }
-M.edit_tab = { action = "jump", cmd = "tabnew" }
+M.edit_split = { "split", "confirm" }
+M.edit_vsplit = { "vsplit", "confirm" }
+M.edit_tab = { "tab", "confirm" }
+
+function M.split()
+  vim.cmd("split")
+end
+
+function M.vsplit()
+  vim.cmd("vsplit")
+end
+
+function M.tab()
+  vim.cmd("tabnew")
+end
 
 function M.toggle_maximize(picker)
   picker.layout:maximize()
@@ -117,47 +141,18 @@ function M.toggle_preview(picker)
 end
 
 function M.pick_win(picker, item, action)
-  local overlays = {} ---@type snacks.win[]
   picker.layout:hide()
-  local chars = "asdfghjkl"
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    if vim.api.nvim_win_get_config(win).relative == "" then
-      local c = chars:sub(1, 1)
-      chars = chars:sub(2)
-      overlays[c] = Snacks.win({
-        backdrop = false,
-        win = win,
-        focusable = false,
-        enter = false,
-        relative = "win",
-        width = 7,
-        height = 3,
-        text = ("       \n   %s   \n       "):format(c),
-        wo = {
-          winhighlight = "NormalFloat:SnacksPickerPickWin" .. (win == picker.main and "Current" or ""),
-        },
-      })
-    end
-  end
-  vim.cmd([[redraw!]])
-  local char = vim.fn.getcharstr()
-  for _, overlay in pairs(overlays) do
-    overlay:close()
-  end
-  local win = (char == Snacks.util.keycode("<cr>")) or overlays[char]
-  if win then
-    if type(win) == "table" then
-      picker.main = win.opts.win
-    end
-    vim.defer_fn(function()
-      if not picker.closed then
-        picker.layout:unhide()
-      end
-    end, 100)
-  else
+  local win = Snacks.picker.util.pick_win({ main = picker.main })
+  if not win then
     picker.layout:unhide()
     return true
   end
+  picker.main = win
+  vim.defer_fn(function()
+    if not picker.closed then
+      picker.layout:unhide()
+    end
+  end, 100)
 end
 
 function M.bufdelete(picker)
@@ -368,20 +363,36 @@ function M.help(picker)
   end
 end
 
+function M.toggle_help_input(picker)
+  picker.input.win:toggle_help()
+end
+
+function M.toggle_help_list(picker)
+  picker.list.win:toggle_help()
+end
+
 function M.preview_scroll_down(picker)
-  picker.preview.win:scroll()
+  if picker.preview.win:valid() then
+    picker.preview.win:scroll()
+  end
 end
 
 function M.preview_scroll_up(picker)
-  picker.preview.win:scroll(true)
+  if picker.preview.win:valid() then
+    picker.preview.win:scroll(true)
+  end
 end
 
 function M.preview_scroll_left(picker)
-  picker.preview.win:hscroll(true)
+  if picker.preview.win:valid() then
+    picker.preview.win:hscroll(true)
+  end
 end
 
 function M.preview_scroll_right(picker)
-  picker.preview.win:hscroll()
+  if picker.preview.win:valid() then
+    picker.preview.win:hscroll()
+  end
 end
 
 function M.inspect(picker, item)
@@ -421,14 +432,10 @@ function M.cycle_win(picker)
   end
   win = wins[idx % #wins + 1] or 1 -- cycle
   vim.api.nvim_set_current_win(win)
-  if win == picker.input.win.win then
-    vim.cmd("startinsert!")
-  end
 end
 
 function M.focus_input(picker)
   picker.input.win:focus()
-  vim.cmd("startinsert!")
 end
 
 function M.focus_list(picker)
@@ -439,12 +446,6 @@ function M.focus_preview(picker)
   picker.preview.win:focus()
 end
 
-function M.toggle_ignored(picker)
-  local opts = picker.opts --[[@as snacks.picker.files.Config]]
-  opts.ignored = not opts.ignored
-  picker:find()
-end
-
 function M.item_action(picker, item, action)
   if item.action then
     picker:norm(function()
@@ -452,18 +453,6 @@ function M.item_action(picker, item, action)
       item.action(picker, item, action)
     end)
   end
-end
-
-function M.toggle_hidden(picker)
-  local opts = picker.opts --[[@as snacks.picker.files.Config]]
-  opts.hidden = not opts.hidden
-  picker:find()
-end
-
-function M.toggle_follow(picker)
-  local opts = picker.opts --[[@as snacks.picker.files.Config]]
-  opts.follow = not opts.follow
-  picker:find()
 end
 
 function M.list_top(picker)

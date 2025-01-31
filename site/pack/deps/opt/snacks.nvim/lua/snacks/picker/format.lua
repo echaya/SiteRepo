@@ -43,26 +43,36 @@ function M.filename(item, picker)
 
   if picker.opts.icons.files.enabled ~= false then
     local icon, hl = Snacks.util.icon(name, cat)
+    if item.dir and item.open then
+      icon = " "
+    end
     local padded_icon = icon:sub(-1) == " " and icon or icon .. " "
     ret[#ret + 1] = { padded_icon, hl, virtual = true }
   end
 
-  local dir, file = path:match("^(.*)/(.+)$")
+  local base_hl = item.dir and "SnacksPickerDirectory" or "SnacksPickerFile"
+  local dir_hl = "SnacksPickerDir"
+
   if picker.opts.formatters.file.filename_only then
-    dir = nil
     path = vim.fn.fnamemodify(path, ":t")
-  end
-  if file and dir then
-    if picker.opts.formatters.file.filename_first then
-      ret[#ret + 1] = { file, "SnacksPickerFile", field = "file" }
-      ret[#ret + 1] = { " " }
-      ret[#ret + 1] = { dir, "SnacksPickerDir", field = "file" }
-    else
-      ret[#ret + 1] = { dir .. "/", "SnacksPickerDir", field = "file" }
-      ret[#ret + 1] = { file, "SnacksPickerFile", field = "file" }
-    end
+    ret[#ret + 1] = { path, base_hl, field = "file" }
   else
-    ret[#ret + 1] = { path, "SnacksPickerFile", field = "file" }
+    if item.dir then
+      path = path .. "/"
+    end
+    local dir, base = path:match("^(.*)/(.+)$")
+    if base and dir then
+      if picker.opts.formatters.file.filename_first then
+        ret[#ret + 1] = { base, base_hl, field = "file" }
+        ret[#ret + 1] = { " " }
+        ret[#ret + 1] = { dir, dir_hl, field = "file" }
+      else
+        ret[#ret + 1] = { dir .. "/", dir_hl, field = "file" }
+        ret[#ret + 1] = { base, base_hl, field = "file" }
+      end
+    else
+      ret[#ret + 1] = { path, base_hl, field = "file" }
+    end
   end
   if item.pos and item.pos[1] > 0 then
     ret[#ret + 1] = { ":", "SnacksPickerDelim" }
@@ -87,6 +97,10 @@ function M.file(item, picker)
 
   if item.severity then
     vim.list_extend(ret, M.severity(item, picker))
+  end
+
+  if item.parent then
+    vim.list_extend(ret, M.tree(item, picker))
   end
 
   vim.list_extend(ret, M.filename(item, picker))
@@ -179,22 +193,22 @@ function M.git_stash(item, picker)
   return ret
 end
 
-function M.indent(item, picker)
+function M.tree(item, picker)
   local ret = {} ---@type snacks.picker.Highlight[]
-  local indents = picker.opts.icons.indent
+  local icons = picker.opts.icons.tree
   local indent = {} ---@type string[]
   local node = item
-  while node and node.depth > 0 do
+  while node and node.parent do
     local is_last, icon = node.last, ""
     if node ~= item then
-      icon = is_last and "  " or indents.vertical
+      icon = is_last and "  " or icons.vertical
     else
-      icon = is_last and indents.last or indents.middle
+      icon = is_last and icons.last or icons.middle
     end
     table.insert(indent, 1, icon)
     node = node.parent
   end
-  ret[#ret + 1] = { table.concat(indent), "SnacksPickerIndent" }
+  ret[#ret + 1] = { table.concat(indent), "SnacksPickerTree" }
   return ret
 end
 
@@ -207,7 +221,7 @@ function M.undo(item, picker)
   else
     ret[#ret + 1] = { a("", 2) }
   end
-  vim.list_extend(ret, M.indent(item, picker))
+  vim.list_extend(ret, M.tree(item, picker))
 
   ret[#ret + 1] = { a(tostring(entry.seq), 4), "SnacksPickerIdx" }
   ret[#ret + 1] = { " " }
@@ -230,8 +244,8 @@ end
 function M.lsp_symbol(item, picker)
   local opts = picker.opts --[[@as snacks.picker.lsp.symbols.Config]]
   local ret = {} ---@type snacks.picker.Highlight[]
-  if item.hierarchy and not opts.workspace then
-    vim.list_extend(ret, M.indent(item, picker))
+  if item.tree and not opts.workspace then
+    vim.list_extend(ret, M.tree(item, picker))
   end
   local kind = item.kind or "Unknown" ---@type string
   local kind_hl = "SnacksPickerIcon" .. kind

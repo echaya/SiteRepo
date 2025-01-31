@@ -272,7 +272,6 @@ function M.results_to_items(client, results, opts)
     local item = {
       kind = M.symbol_kind(result.kind),
       parent = parent,
-      depth = (parent.depth or 0) + 1,
       detail = result.detail,
       name = result.name,
       text = "",
@@ -281,7 +280,7 @@ function M.results_to_items(client, results, opts)
     local loc = result.location or { range = result.selectionRange or result.range, uri = uri }
     loc.uri = loc.uri or uri
     M.add_loc(item, loc, client)
-    local text = table.concat({ M.symbol_kind(result.kind), result.name, result.detail or "" }, " ")
+    local text = table.concat({ M.symbol_kind(result.kind), result.name }, " ")
     if opts.text_with_file and item.file then
       text = text .. " " .. item.file
     end
@@ -299,7 +298,7 @@ function M.results_to_items(client, results, opts)
     result.children = nil
   end
 
-  local root = { depth = 0, text = "" } ---@type snacks.picker.finder.Item
+  local root = { text = "" } ---@type snacks.picker.finder.Item
   ---@type snacks.picker.finder.Item
   for _, result in ipairs(results) do
     add(result, root)
@@ -370,7 +369,7 @@ function M.symbols(opts, ctx)
         end,
       })
       for _, item in ipairs(items) do
-        item.hierarchy = opts.hierarchy
+        item.tree = opts.tree
         ---@diagnostic disable-next-line: await-in-sync
         cb(item)
       end

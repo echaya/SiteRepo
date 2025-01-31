@@ -42,6 +42,7 @@ function M.get_root(path)
       return vim.fs.normalize(dir) or nil
     end
   end
+  return vim.env.GIT_WORK_TREE
 end
 
 --- Show git log for the current line.

@@ -8,6 +8,7 @@ local M = {}
 ---@alias snacks.picker.sort fun(a:snacks.picker.Item, b:snacks.picker.Item):boolean
 ---@alias snacks.picker.transform fun(item:snacks.picker.finder.Item, ctx:snacks.picker.finder.ctx):(boolean|snacks.picker.finder.Item|nil)
 ---@alias snacks.picker.Pos {[1]:number, [2]:number}
+---@alias snacks.picker.toggle {icon?:string, enabled?:boolean, value?:boolean}
 
 --- Generic filter used by finders to pre-filter items
 ---@class snacks.picker.filter.Config
@@ -83,6 +84,7 @@ local M = {}
 ---@field prompt? string prompt text / icon
 ---@field title? string defaults to a capitalized source name
 ---@field auto_close? boolean automatically close the picker when focusing another window (defaults to true)
+---@field focus? "input"|"list"|false where to focus when the picker is opened (defaults to "input")
 --- Preset options
 ---@field previewers? snacks.picker.previewers.Config|{}
 ---@field formatters? snacks.picker.formatters.Config|{}
@@ -97,10 +99,12 @@ local M = {}
 ---@field on_show? fun(picker:snacks.Picker) called when the picker is shown
 ---@field jump? snacks.picker.jump.Config|{}
 --- Other
+---@field config? fun(opts:snacks.picker.Config):snacks.picker.Config? custom config function
 ---@field debug? snacks.picker.debug|{}
 local defaults = {
   prompt = " ",
   sources = {},
+  focus = "input",
   layout = {
     cycle = true,
     --- Use the default layout or vertical if the window is too narrow
@@ -162,6 +166,15 @@ local defaults = {
     jumplist = true, -- save the current position in the jumplist
     tagstack = false, -- save the current position in the tagstack
     reuse_win = false, -- reuse an existing window if the buffer is already open
+    close = true, -- close the picker when jumping/editing to a location (defaults to true)
+  },
+  ---@type table<string, string|false|snacks.picker.toggle>
+  toggles = {
+    follow = "f",
+    hidden = "h",
+    ignored = "i",
+    modified = "m",
+    regex = { icon = "R", value = false },
   },
   win = {
     -- input window
@@ -179,7 +192,7 @@ local defaults = {
         ["k"] = "list_up",
         ["/"] = "toggle_focus",
         ["q"] = "close",
-        ["?"] = "toggle_help",
+        ["?"] = "toggle_help_input",
         ["<a-d>"] = { "inspect", mode = { "n", "i" } },
         ["<c-a>"] = { "select_all", mode = { "n", "i" } },
         ["<a-m>"] = { "toggle_maximize", mode = { "i", "n" } },
@@ -197,8 +210,6 @@ local defaults = {
         ["<c-k>"] = { "list_up", mode = { "i", "n" } },
         ["<c-n>"] = { "list_down", mode = { "i", "n" } },
         ["<c-p>"] = { "list_up", mode = { "i", "n" } },
-        ["<c-l>"] = { "preview_scroll_left", mode = { "i", "n" } },
-        ["<c-h>"] = { "preview_scroll_right", mode = { "i", "n" } },
         ["<c-b>"] = { "preview_scroll_up", mode = { "i", "n" } },
         ["<c-d>"] = { "list_scroll_down", mode = { "i", "n" } },
         ["<c-f>"] = { "preview_scroll_down", mode = { "i", "n" } },
@@ -227,8 +238,9 @@ local defaults = {
         ["j"] = "list_down",
         ["k"] = "list_up",
         ["q"] = "close",
-        ["<Tab>"] = "select_and_next",
-        ["<S-Tab>"] = "select_and_prev",
+        ["?"] = "toggle_help_list",
+        ["<Tab>"] = { "select_and_next", mode = { "n", "x" } },
+        ["<S-Tab>"] = { "select_and_prev", mode = { "n", "x" } },
         ["<Down>"] = "list_down",
         ["<Up>"] = "list_up",
         ["<a-d>"] = "inspect",
@@ -241,10 +253,10 @@ local defaults = {
         ["<ScrollWheelDown>"] = "list_scroll_wheel_down",
         ["<ScrollWheelUp>"] = "list_scroll_wheel_up",
         ["<c-a>"] = "select_all",
+        ["<a-m>"] = { "toggle_maximize" },
+        ["<a-p>"] = { "toggle_preview" },
         ["<c-f>"] = "preview_scroll_down",
         ["<c-b>"] = "preview_scroll_up",
-        ["<c-l>"] = "preview_scroll_right",
-        ["<c-h>"] = "preview_scroll_left",
         ["<c-v>"] = "edit_vsplit",
         ["<c-s>"] = "edit_split",
         ["<c-j>"] = "list_down",
@@ -253,6 +265,9 @@ local defaults = {
         ["<c-p>"] = "list_up",
         ["<a-w>"] = "cycle_win",
         ["<Esc>"] = "close",
+        ["<a-i>"] = "toggle_ignored",
+        ["<a-h>"] = "toggle_hidden",
+        ["<a-f>"] = "toggle_follow",
       },
       wo = {
         conceallevel = 2,
@@ -280,7 +295,7 @@ local defaults = {
     keymaps = {
       nowait = "󰓅 "
     },
-    indent = {
+    tree = {
       vertical    = "│ ",
       middle = "├╴",
       last   = "└╴",

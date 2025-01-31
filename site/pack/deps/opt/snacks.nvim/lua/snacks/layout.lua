@@ -5,6 +5,8 @@
 ---@field box_wins snacks.win[]
 ---@field win_opts table<string, snacks.win.Config>
 ---@field closed? boolean
+---@field split? boolean
+---@field screenpos number[]?
 local M = {}
 M.__index = M
 
@@ -49,12 +51,15 @@ function M.new(opts)
   -- wrap the split layout in a vertical box
   -- this is needed since a simple split window can't have borders/titles
   if self.opts.layout.position and self.opts.layout.position ~= "float" then
+    self.split = true
     local inner = self.opts.layout
     self.opts.layout = {
+      zindex = inner.zindex or 30,
       box = "vertical",
       position = inner.position,
       width = inner.width,
       height = inner.height,
+      backdrop = inner.backdrop,
       inner,
     }
     inner.width, inner.height, inner.col, inner.row, inner.position = 0, 0, 0, 0, nil
@@ -70,9 +75,18 @@ function M.new(opts)
       local has_border = box.border and box.border ~= "" and box.border ~= "none"
       local is_root = box.id == 1
       if is_root or has_border then
-        local backdrop = false ---@type boolean?
-        if is_root then
-          backdrop = nil
+        local backdrop = box.backdrop
+        if backdrop == nil then
+          backdrop = 60
+        end
+        if is_root and backdrop then
+          backdrop = type(backdrop) == "number" and { blend = backdrop } or backdrop
+          backdrop = backdrop == true and {} or backdrop
+          ---@cast backdrop snacks.win.Backdrop
+          backdrop.win = backdrop.win or {}
+          backdrop.win.zindex = 20
+        else
+          backdrop = false
         end
         self.box_wins[box.id] = Snacks.win(Snacks.win.resolve(box, {
           relative = is_root and (box.relative or "editor") or "win",
@@ -108,6 +122,19 @@ function M.new(opts)
         self:close()
         return true
       end
+    end
+  end)
+
+  self.root:on("WinResized", function(_, ev)
+    if self.closed then
+      return true
+    end
+    local sp = vim.fn.screenpos(self.root.win, 1, 1)
+    if not vim.deep_equal(sp, self.screenpos) then
+      self.screenpos = sp
+      return self:update()
+    elseif vim.tbl_contains(vim.v.event.windows, self.root.win) then
+      return self:update()
     end
   end)
 
@@ -183,23 +210,27 @@ function M:update()
   end
   if not self.root:valid() then
     self.root:show()
+    self.screenpos = vim.fn.screenpos(self.root.win, 1, 1)
   end
 
   -- Calculate offsets for vertical splits
-  local voffset = 0
+  local top, bottom = 0, 0
   local pos = self.opts.layout.position
-  if pos and (pos == "left" or pos == "right") then
-    voffset = (vim.o.cmdheight + (vim.o.laststatus == 3 and 1 or 0)) or 0
-    voffset = voffset
-      + (((vim.o.showtabline == 2 or (vim.o.showtabline == 1 and #vim.api.nvim_list_tabpages() > 1)) and 1 or 0) or 0)
+  if pos and (pos == "left" or pos == "right") or self.opts.fullscreen then
+    bottom = (vim.o.cmdheight + (vim.o.laststatus == 3 and 1 or 0)) or 0
+    top = (vim.o.showtabline == 2 or (vim.o.showtabline == 1 and #vim.api.nvim_list_tabpages() > 1)) and 1 or 0
   end
   self:update_box(layout, {
     col = 0,
-    row = 0,
+    row = self.opts.fullscreen and self.split and top or 0, -- only needed for fullscreen splits
     width = vim.o.columns,
-    height = vim.o.lines - voffset,
+    height = vim.o.lines - top - bottom,
   })
 
+  -- fix fullscreen float layouts
+  if self.opts.fullscreen and not self.split then
+    self.root.opts.row = self.root.opts.row + top
+  end
   for _, win in pairs(self:get_wins()) do
     if win:valid() then
       -- update windows with eventignore=all
@@ -217,10 +248,10 @@ function M:update()
       win:close()
     end
   end
+  vim.o.lazyredraw = false
   if self.opts.on_update then
     self.opts.on_update(self)
   end
-  vim.o.lazyredraw = false
 end
 
 ---@param box snacks.layout.Box
@@ -347,6 +378,15 @@ end
 ---@param parent snacks.win.Dim
 ---@private
 function M:dim_box(widget, parent)
+  -- honor the actual window size for split layouts
+  if not self.opts.fullscreen and widget.id == 1 and self.split and self.root:valid() then
+    return {
+      height = vim.api.nvim_win_get_height(self.root.win),
+      width = vim.api.nvim_win_get_width(self.root.win),
+      col = 0,
+      row = 0,
+    }, { left = 0, right = 0, top = 0, bottom = 0 }
+  end
   local opts = vim.deepcopy(widget) --[[@as snacks.win.Config]]
   -- adjust max width / height
   opts.max_width = math.min(parent.width, opts.max_width or parent.width)
@@ -381,6 +421,11 @@ function M:update_win(win, parent)
       zindex = self.root.opts.zindex + win.depth,
     }
   )
+  -- fix fullscreen for splits
+  if self.opts.fullscreen and self.split then
+    w.opts.relative = "editor"
+    w.opts.win = nil
+  end
   -- adjust max width / height
   w.opts.max_width = math.min(parent.width, w.opts.max_width or parent.width)
   w.opts.max_height = math.min(parent.height, w.opts.max_height or parent.height)

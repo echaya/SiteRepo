@@ -27,6 +27,7 @@ local _id = 0
 ---@field closed? boolean
 ---@field history snacks.picker.History
 ---@field visual? snacks.picker.Visual
+---@field jumping? boolean
 local M = {}
 M.__index = M
 
@@ -70,14 +71,16 @@ function M.new(opts)
     end,
   })
 
-  local picker_count = vim.tbl_count(M._pickers)
+  local picker_count = vim.tbl_count(M._pickers) - vim.tbl_count(M._active)
   if picker_count > 0 then
     -- clear items from previous pickers for garbage collection
     for picker, _ in pairs(M._pickers) do
-      picker.finder.items = {}
-      picker.list.items = {}
-      picker.list:clear()
-      picker.list.picker = nil
+      if not M._active[picker] then
+        picker.finder.items = {}
+        picker.list.items = {}
+        picker.list:clear()
+        picker.list.picker = nil
+      end
     end
   end
 
@@ -202,10 +205,7 @@ end
 
 function M:is_focused()
   local current = vim.api.nvim_get_current_win()
-  return vim.tbl_contains(
-    { self.input.win.win, self.list.win.win, self.preview.win.win, self.layout.root.win },
-    current
-  )
+  return vim.tbl_contains({ self.input.win.win, self.list.win.win, self.preview.win.win }, current)
 end
 
 --- Execute the callback in normal mode.
@@ -250,16 +250,39 @@ function M:init_layout(layout)
     hidden = { preview_hidden and "preview" or nil },
     on_update = function()
       self:update_titles()
-      self:show_preview()
+      self.preview:refresh(self)
       self.input:update()
+      self.list:update_cursorline()
     end,
     layout = {
       backdrop = backdrop,
     },
   }))
 
+  local left_picker = true -- left a picker window
+  self.layout.root:on("WinLeave", function()
+    left_picker = self:is_focused()
+  end)
+
+  local last_win = self.input.filter.current_win
+  local last_pwin ---@type number?
   self.layout.root:on("WinEnter", function()
-    self:action("focus_input")
+    local win = vim.api.nvim_get_current_win()
+    if self:is_focused() then
+      last_pwin = win
+    elseif win ~= self.layout.root.win then
+      last_win = win
+    end
+  end)
+
+  self.layout.root:on("WinEnter", function()
+    if left_picker and last_win and vim.api.nvim_win_is_valid(last_win) then
+      vim.api.nvim_set_current_win(last_win)
+    elseif last_pwin and vim.api.nvim_win_is_valid(last_pwin) then
+      vim.api.nvim_set_current_win(last_pwin)
+    else
+      self.input.win:focus()
+    end
   end, { buf = true })
 
   self.preview:update(preview_main and self.main or nil)
@@ -333,19 +356,25 @@ function M:update_titles()
     live = self.opts.live and self.opts.icons.ui.live or "",
     preview = vim.trim(self.preview.title or ""),
   }
-  local opts = self.opts --[[@as snacks.picker.files.Config]]
-  local flags = {} ---@type snacks.picker.Text[]
-  if opts.follow then
-    flags[#flags + 1] = { " " .. self.opts.icons.ui.follow .. " ", "SnacksPickerFlagFollow" }
-    flags[#flags + 1] = { " ", "FloatTitle" }
-  end
-  if opts.hidden then
-    flags[#flags + 1] = { " " .. self.opts.icons.ui.hidden .. " ", "SnacksPickerFlagHidden" }
-    flags[#flags + 1] = { " ", "FloatTitle" }
-  end
-  if opts.ignored then
-    flags[#flags + 1] = { " " .. self.opts.icons.ui.ignored .. " ", "SnacksPickerFlagIgnored" }
-    flags[#flags + 1] = { " ", "FloatTitle" }
+  local toggles = {} ---@type snacks.picker.Text[]
+  for name, toggle in pairs(self.opts.toggles) do
+    if toggle then
+      toggle = type(toggle) == "string" and { icon = toggle } or toggle
+      toggle = toggle == true and { icon = name:sub(1, 1) } or toggle
+      toggle = toggle == false and { enabled = false } or toggle
+      local want = toggle.value
+      if toggle.value == nil then
+        want = true
+      end
+      ---@cast toggle snacks.picker.toggle
+      if toggle.enabled ~= false and self.opts[name] == want then
+        local hl = table.concat(vim.tbl_map(function(a)
+          return a:sub(1, 1):upper() .. a:sub(2)
+        end, vim.split(name, "_")))
+        toggles[#toggles + 1] = { " " .. toggle.icon .. " ", "SnacksPickerToggle" .. hl }
+        toggles[#toggles + 1] = { " ", "FloatTitle" }
+      end
+    end
   end
   local wins = { self.layout.root }
   vim.list_extend(wins, vim.tbl_values(self.layout.wins))
@@ -358,7 +387,7 @@ function M:update_titles()
       local title = Snacks.picker.util.tpl(tpl, data)
       if title:find("{flags}", 1, true) then
         title = title:gsub("{flags}", "")
-        vim.list_extend(ret, flags)
+        vim.list_extend(ret, toggles)
       end
       title = vim.trim(title):gsub("%s+", " ")
       if title ~= "" then
@@ -436,7 +465,11 @@ function M:show()
   if self.preview.main then
     self.preview.win:show()
   end
-  self.input.win:focus()
+  if self.opts.focus == "input" then
+    self.input.win:focus()
+  elseif self.opts.focus == "list" then
+    self.list.win:focus()
+  end
   if self.opts.on_show then
     self.opts.on_show(self)
   end
@@ -454,14 +487,14 @@ end
 
 --- Returns an iterator over the filtered items in the picker.
 --- Items will be in sorted order.
----@return fun():snacks.picker.Item?
+---@return fun():(snacks.picker.Item?, number?)
 function M:iter()
   local i = 0
   local n = self.list:count()
   return function()
     i = i + 1
     if i <= n then
-      return self:resolve(self.list:get(i))
+      return self:resolve(self.list:get(i)), i
     end
   end
 end

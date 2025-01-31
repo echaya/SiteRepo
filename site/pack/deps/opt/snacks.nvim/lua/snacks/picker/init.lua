@@ -17,6 +17,9 @@ local M = setmetatable({}, {
   end,
   ---@param M snacks.picker
   __index = function(M, k)
+    if k == "current" then
+      return nil
+    end
     if type(k) ~= "string" then
       return
     end
@@ -68,6 +71,10 @@ function M.pick(source, opts)
   if not (opts.source or opts.items or opts.finder or opts.multi) then
     opts.source = "pickers"
     return M.pick(opts)
+  end
+  if opts.source and M.current and M.current.opts.source == opts.source then
+    M.current:close()
+    return
   end
   return require("snacks.picker.core.picker").new(opts)
 end

@@ -396,7 +396,6 @@ function M.undo(opts, ctx)
         current = entry.seq == tree.seq_cur,
         last = e == #entries,
         parent = parent,
-        depth = parent and parent.depth + 1 or 1,
         action = function()
           vim.api.nvim_buf_call(buf, function()
             vim.cmd("undo " .. entry.seq)

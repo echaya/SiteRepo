@@ -16,6 +16,7 @@ M.autocmds = {
 ---@field unloaded? boolean show loaded buffers
 ---@field current? boolean show current buffer
 ---@field nofile? boolean show `buftype=nofile` buffers
+---@field modified? boolean show only modified buffers
 ---@field sort_lastused? boolean sort by last used
 ---@field filter? snacks.picker.filter.Config
 M.buffers = {
@@ -33,6 +34,41 @@ M.buffers = {
       },
     },
     list = { keys = { ["dd"] = "bufdelete" } },
+  },
+}
+
+---@class snacks.picker.explorer.Config: snacks.picker.files.Config
+---@field follow_file? boolean follow the file from the current buffer
+---@field tree? boolean show the file tree (default: true)
+M.explorer = {
+  finder = "explorer",
+  sort = { fields = { "sort" } },
+  tree = true,
+  supports_live = true,
+  follow_file = true,
+  focus = "list",
+  auto_close = false,
+  jump = { close = false },
+  layout = { preset = "sidebar", preview = false },
+  formatters = { file = { filename_only = true } },
+  matcher = { sort_empty = true },
+  config = function(opts)
+    return require("snacks.picker.source.explorer").setup(opts)
+  end,
+  win = {
+    list = {
+      keys = {
+        ["<BS>"] = "explorer_up",
+        ["a"] = "explorer_add",
+        ["d"] = "explorer_del",
+        ["r"] = "explorer_rename",
+        ["c"] = "explorer_copy",
+        ["m"] = "explorer_move",
+        ["y"] = "explorer_yank",
+        ["<c-c>"] = "explorer_cd",
+        ["."] = "explorer_focus",
+      },
+    },
   },
 }
 
@@ -114,7 +150,7 @@ M.diagnostics_buffer = {
 }
 
 ---@class snacks.picker.files.Config: snacks.picker.proc.Config
----@field cmd? string
+---@field cmd? "fd"| "rg"| "find" command to use. Leave empty to auto-detect
 ---@field hidden? boolean show hidden files
 ---@field ignored? boolean show ignored files
 ---@field dirs? string[] directories to search
@@ -232,6 +268,7 @@ M.git_diff = {
 ---@field rtp? boolean search in runtimepath
 M.grep = {
   finder = "grep",
+  regex = true,
   format = "file",
   live = true, -- live grep by default
   supports_live = true,
@@ -417,13 +454,13 @@ M.lsp_references = {
 
 -- LSP document symbols
 ---@class snacks.picker.lsp.symbols.Config: snacks.picker.Config
----@field hierarchy? boolean show symbol hierarchy
+---@field tree? boolean show symbol tree
 ---@field filter table<string, string[]|boolean>? symbol kind filter
 ---@field workspace? boolean show workspace symbols
 M.lsp_symbols = {
   finder = "lsp_symbols",
   format = "lsp_symbol",
-  hierarchy = true,
+  tree = true,
   filter = {
     default = {
       "Class",
@@ -465,7 +502,7 @@ M.lsp_symbols = {
 ---@type snacks.picker.lsp.symbols.Config
 M.lsp_workspace_symbols = vim.tbl_extend("force", {}, M.lsp_symbols, {
   workspace = true,
-  hierarchy = false,
+  tree = false,
   supports_live = true,
   live = true, -- live by default
 })

@@ -6,28 +6,52 @@ local M = {}
 
 local uv = vim.uv or vim.loop
 
+---@type {cmd:string[], args:string[], enabled?:boolean}[]
 local commands = {
-  rg = { "--files", "--no-messages", "--color", "never", "-g", "!.git" },
-  fd = { "--type", "f", "--type", "l", "--color", "never", "-E", ".git" },
-  find = { ".", "-type", "f", "-not", "-path", "*/.git/*" },
+  {
+    cmd = { "fd", "fdfind" },
+    args = { "--type", "f", "--type", "l", "--color", "never", "-E", ".git" },
+  },
+  {
+    cmd = { "rg" },
+    args = { "--files", "--no-messages", "--color", "never", "-g", "!.git" },
+  },
+  {
+    cmd = { "find" },
+    args = { ".", "-type", "f", "-not", "-path", "*/.git/*" },
+    enabled = vim.fn.has("win-32") == 0,
+  },
 }
+
+---@param opts? snacks.picker.files.Config
+---@return string? cmd, string[]? args
+function M.get_cmd(opts)
+  opts = opts or {}
+  local checked = {} ---@type string[]
+  for _, command in ipairs(commands) do
+    if command.enabled ~= false and (not opts.cmd or vim.tbl_contains(command.cmd, opts.cmd)) then
+      for _, c in ipairs(command.cmd) do
+        table.insert(checked, c)
+        if vim.fn.executable(c) == 1 then
+          return c, vim.deepcopy(command.args)
+        end
+      end
+    end
+  end
+  checked = #checked == 0 and opts.cmd and { opts.cmd } or checked
+  checked = vim.tbl_map(function(c)
+    return "`" .. c .. "`"
+  end, checked)
+  Snacks.notify.error("No supported finder found:\n- " .. table.concat(checked, "\n-"))
+end
 
 ---@param opts snacks.picker.files.Config
 ---@param filter snacks.picker.Filter
 local function get_cmd(opts, filter)
-  local cmd, args ---@type string, string[]
-  if vim.fn.executable("fd") == 1 then
-    cmd, args = "fd", commands.fd
-  elseif vim.fn.executable("fdfind") == 1 then
-    cmd, args = "fdfind", commands.fd
-  elseif vim.fn.executable("rg") == 1 then
-    cmd, args = "rg", commands.rg
-  elseif vim.fn.executable("find") == 1 and vim.fn.has("win-32") == 0 then
-    cmd, args = "find", commands.find
-  else
-    error("No supported finder found")
+  local cmd, args = M.get_cmd(opts)
+  if not cmd or not args then
+    return
   end
-  args = vim.deepcopy(args)
   local is_fd, is_fd_rg, is_find, is_rg = cmd == "fd" or cmd == "fdfind", cmd ~= "find", cmd == "find", cmd == "rg"
 
   -- exclude
@@ -111,6 +135,9 @@ function M.files(opts, ctx)
       and vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".")
     or nil
   local cmd, args = get_cmd(opts, ctx.filter)
+  if not cmd then
+    return function() end
+  end
   return require("snacks.picker.source.proc").proc({
     opts,
     {

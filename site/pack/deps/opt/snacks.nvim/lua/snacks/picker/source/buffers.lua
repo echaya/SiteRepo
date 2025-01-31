@@ -21,6 +21,7 @@ function M.buffers(opts, ctx)
       and (opts.unloaded or vim.api.nvim_buf_is_loaded(buf))
       and (opts.current or buf ~= current_buf)
       and (opts.nofile or vim.bo[buf].buftype ~= "nofile")
+      and (not opts.modified or vim.bo[buf].modified)
     if keep then
       local name = vim.api.nvim_buf_get_name(buf)
       if name == "" then

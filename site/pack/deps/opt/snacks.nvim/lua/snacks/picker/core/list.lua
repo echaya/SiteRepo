@@ -14,6 +14,7 @@
 ---@field selected snacks.picker.Item[]
 ---@field selected_map table<string, snacks.picker.Item>
 ---@field matcher snacks.picker.Matcher matcher for formatting list items
+---@field target? {cursor: number, top?: number}
 local M = {}
 M.__index = M
 
@@ -92,12 +93,26 @@ function M.new(picker)
 end
 
 ---@param cursor number
----@param topline? number
-function M:view(cursor, topline)
-  if topline then
-    self:scroll(topline, true, false)
+---@param top? number
+---@param render? boolean
+function M:view(cursor, top, render)
+  if top then
+    self:scroll(top, true, false)
   end
-  self:move(cursor, true)
+  self:move(cursor, true, render)
+  if self.cursor < cursor then
+    self.target = { cursor = cursor, top = top }
+  else
+    self.target = nil
+  end
+end
+
+--- Sets the target cursor/top for the next render.
+--- Useful to keep the cursor/top, right before triggering a `find`.
+---@param cursor? number
+---@param top? number
+function M:set_target(cursor, top)
+  self.target = { cursor = cursor or self.cursor, top = top or self.top }
 end
 
 ---@param idx number
@@ -125,6 +140,7 @@ function M:on_show()
   self.state.mousescroll = tonumber(vim.o.mousescroll:match("ver:(%d+)")) or 1
   Snacks.util.wo(self.win.win, { scrolloff = 0 })
   self.dirty = true
+  self:update_cursorline()
 end
 
 function M:count()
@@ -280,6 +296,19 @@ end
 -- Toggle selection of current item
 ---@param item? snacks.picker.Item
 function M:select(item)
+  if item == nil and vim.fn.mode():find("^[vV]") and vim.api.nvim_get_current_buf() == self.win.buf then
+    -- stop visual mode
+    vim.cmd("normal! " .. vim.fn.mode():sub(1, 1))
+    local from = vim.api.nvim_buf_get_mark(0, "<")
+    local to = vim.api.nvim_buf_get_mark(0, ">")
+    for i = math.min(from[1], to[1]), math.max(from[1], to[1]) do
+      local it = self:get(self:row2idx(i))
+      if it then
+        self:select(it)
+      end
+    end
+    return
+  end
   item = item or self:current()
   if not item then
     return
@@ -443,7 +472,14 @@ function M:update_cursorline()
 end
 
 function M:render()
-  self:move(0, false, false)
+  if self.target then
+    self:view(self.target.cursor, self.target.top, false)
+    if not self.picker:is_active() then
+      self.target = nil
+    end
+  else
+    self:move(0, false, false)
+  end
 
   local redraw = false
   if self.dirty then

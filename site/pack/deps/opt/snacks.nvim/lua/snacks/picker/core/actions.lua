@@ -57,8 +57,10 @@ end
 ---@param action snacks.picker.Action.spec
 ---@param picker snacks.Picker
 ---@param name? string
+---@param stack? string[]
 ---@return snacks.picker.Action
-function M.resolve(action, picker, name)
+function M.resolve(action, picker, name, stack)
+  stack = stack or {}
   if not action then
     assert(name, "Missing action without name")
     local fn, desc = picker.input.win[name], name
@@ -72,15 +74,25 @@ function M.resolve(action, picker, name)
       desc = desc,
     }
   elseif type(action) == "string" then
+    if vim.tbl_contains(stack, action) then
+      if action == "confirm" or name == "confirm" then
+        action = "jump"
+      else
+        Snacks.notify.error("Circular action reference for `" .. action .. "`:\n- " .. table.concat(stack, "\n- "))
+        return {}
+      end
+    end
+    stack[#stack + 1] = action
     return M.resolve(
       (picker.opts.actions or {})[action] or require("snacks.picker.actions")[action],
       picker,
-      action:gsub("_ ", " ")
+      action,
+      stack
     )
   elseif type(action) == "table" and islist(action) then
     ---@type snacks.picker.Action[]
     local actions = vim.tbl_map(function(a)
-      return M.resolve(a, picker)
+      return M.resolve(a, picker, nil, stack)
     end, action)
     return {
       action = function(p, i, aa)
@@ -98,7 +110,7 @@ function M.resolve(action, picker, name)
   elseif type(action) == "table" then
     if type(action.action) ~= "function" then
       action = vim.deepcopy(action)
-      action.action = M.resolve(action.action, picker).action
+      action.action = M.resolve(action.action, picker, nil, stack).action
     end
     ---@cast action snacks.picker.Action
     return action

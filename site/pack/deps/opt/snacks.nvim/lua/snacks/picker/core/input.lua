@@ -19,11 +19,11 @@ function M.new(picker)
 
   self.win = Snacks.win(Snacks.win.resolve(picker.opts.win.input, {
     show = false,
-    enter = true,
+    enter = false,
     height = 1,
     text = picker.opts.live and self.filter.search or self.filter.pattern,
     ft = "regex",
-    on_win = function(win)
+    on_buf = function(win)
       -- HACK: set all other picker input prompt buffers to nofile.
       -- Otherwise when the prompt buffer is closed,
       -- Neovim always stops insert mode.
@@ -33,8 +33,7 @@ function M.new(picker)
         end
       end
       vim.fn.prompt_setprompt(win.buf, "")
-      win:focus()
-      vim.cmd("startinsert!")
+      vim.bo[win.buf].modified = false
     end,
     bo = {
       filetype = "snacks_picker_input",
@@ -47,6 +46,10 @@ function M.new(picker)
     },
   }))
 
+  self.win:on("BufEnter", function()
+    vim.cmd("startinsert!")
+  end, { buf = true })
+
   local ref = Snacks.util.ref(self)
   self.win:on(
     { "TextChangedI", "TextChanged" },
@@ -55,6 +58,7 @@ function M.new(picker)
       if not input or not input.win:valid() then
         return
       end
+      vim.bo[input.win.buf].modified = false
       -- only one line
       -- Can happen when someone pastes a multiline string
       if vim.api.nvim_buf_line_count(input.win.buf) > 1 then

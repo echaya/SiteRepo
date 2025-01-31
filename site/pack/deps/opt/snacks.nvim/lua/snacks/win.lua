@@ -518,7 +518,14 @@ function M:close(opts)
 
   local close = function()
     if win and vim.api.nvim_win_is_valid(win) then
-      vim.api.nvim_win_close(win, true)
+      local ok, err = pcall(vim.api.nvim_win_close, win, true)
+      if not ok and (err and err:find("E444")) then
+        -- last window, so creat a split and close it again
+        vim.cmd("silent! vsplit")
+        pcall(vim.api.nvim_win_close, win, true)
+      elseif not ok then
+        error(err)
+      end
     end
     if buf and vim.api.nvim_buf_is_valid(buf) then
       vim.api.nvim_buf_delete(buf, { force = true })
