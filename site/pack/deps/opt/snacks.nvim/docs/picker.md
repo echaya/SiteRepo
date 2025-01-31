@@ -90,7 +90,9 @@ Snacks.picker.pick({source = "files", ...})
 ---@field prompt? string prompt text / icon
 ---@field title? string defaults to a capitalized source name
 ---@field auto_close? boolean automatically close the picker when focusing another window (defaults to true)
+---@field show_empty? boolean show the picker even when there are no items
 ---@field focus? "input"|"list"|false where to focus when the picker is opened (defaults to "input")
+---@field toggles? table<string, string|false|snacks.picker.toggle>
 --- Preset options
 ---@field previewers? snacks.picker.previewers.Config|{}
 ---@field formatters? snacks.picker.formatters.Config|{}
@@ -174,7 +176,6 @@ Snacks.picker.pick({source = "files", ...})
     reuse_win = false, -- reuse an existing window if the buffer is already open
     close = true, -- close the picker when jumping/editing to a location (defaults to true)
   },
-  ---@type table<string, string|false|snacks.picker.toggle>
   toggles = {
     follow = "f",
     hidden = "h",
@@ -861,6 +862,7 @@ Neovim commands
 {
   finder = "files",
   format = "file",
+  show_empty = true,
   hidden = false,
   ignored = false,
   follow = false,
@@ -920,6 +922,7 @@ Find git files
 ---@field submodules? boolean show submodule files
 {
   finder = "git_files",
+  show_empty = true,
   format = "file",
   untracked = false,
   submodules = false,
@@ -1044,6 +1047,7 @@ Git log
   finder = "grep",
   regex = true,
   format = "file",
+  show_empty = true,
   live = true, -- live grep by default
   supports_live = true,
 }
@@ -1056,7 +1060,7 @@ Git log
 ```
 
 ```lua
----@type snacks.picker.grep.Config
+---@type snacks.picker.grep.Config|{}
 {
   finder = "grep",
   format = "file",
@@ -1074,7 +1078,7 @@ Git log
 ```
 
 ```lua
----@type snacks.picker.grep.Config
+---@type snacks.picker.grep.Config|{}
 {
   finder = "grep",
   format = "file",
@@ -1211,8 +1215,8 @@ Search for a lazy.nvim plugin spec
 ```lua
 {
   finder = "lazy_spec",
-  live = true,
-  search = "'",
+  live = false,
+  pattern = "'",
 }
 ```
 
@@ -2342,7 +2346,6 @@ Snacks.picker.actions.yank(_, item)
 ---@field closed? boolean
 ---@field history snacks.picker.History
 ---@field visual? snacks.picker.Visual
----@field jumping? boolean
 local M = {}
 ```
 

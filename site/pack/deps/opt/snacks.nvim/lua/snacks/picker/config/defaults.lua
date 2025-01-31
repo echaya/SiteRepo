@@ -84,7 +84,9 @@ local M = {}
 ---@field prompt? string prompt text / icon
 ---@field title? string defaults to a capitalized source name
 ---@field auto_close? boolean automatically close the picker when focusing another window (defaults to true)
+---@field show_empty? boolean show the picker even when there are no items
 ---@field focus? "input"|"list"|false where to focus when the picker is opened (defaults to "input")
+---@field toggles? table<string, string|false|snacks.picker.toggle>
 --- Preset options
 ---@field previewers? snacks.picker.previewers.Config|{}
 ---@field formatters? snacks.picker.formatters.Config|{}
@@ -168,7 +170,6 @@ local defaults = {
     reuse_win = false, -- reuse an existing window if the buffer is already open
     close = true, -- close the picker when jumping/editing to a location (defaults to true)
   },
-  ---@type table<string, string|false|snacks.picker.toggle>
   toggles = {
     follow = "f",
     hidden = "h",

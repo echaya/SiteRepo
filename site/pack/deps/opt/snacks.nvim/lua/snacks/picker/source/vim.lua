@@ -260,7 +260,10 @@ function M.keymaps(opts)
           item.preview = "file"
         end
       end
-      item.text = Snacks.picker.util.text(km, { "mode", "lhs", "rhs", "desc" }) .. (item.file or "")
+      item.text = Snacks.util.normkey(km.lhs)
+        .. " "
+        .. Snacks.picker.util.text(km, { "mode", "lhs", "rhs", "desc" })
+        .. (item.file or "")
       items[#items + 1] = item
     end
   end

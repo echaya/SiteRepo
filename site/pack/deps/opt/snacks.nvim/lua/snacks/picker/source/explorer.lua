@@ -53,7 +53,7 @@ function State:follow()
     return
   end
   local picker = self.picker()
-  if not picker or picker:is_focused() or picker.closed or picker.jumping then
+  if not picker or picker:is_focused() or picker.closed then
     return
   end
   local buf = vim.api.nvim_get_current_buf()

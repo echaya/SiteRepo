@@ -161,6 +161,7 @@ M.diagnostics_buffer = {
 M.files = {
   finder = "files",
   format = "file",
+  show_empty = true,
   hidden = false,
   ignored = false,
   follow = false,
@@ -189,6 +190,7 @@ M.git_branches = {
 ---@field submodules? boolean show submodule files
 M.git_files = {
   finder = "git_files",
+  show_empty = true,
   format = "file",
   untracked = false,
   submodules = false,
@@ -270,11 +272,12 @@ M.grep = {
   finder = "grep",
   regex = true,
   format = "file",
+  show_empty = true,
   live = true, -- live grep by default
   supports_live = true,
 }
 
----@type snacks.picker.grep.Config
+---@type snacks.picker.grep.Config|{}
 M.grep_buffers = {
   finder = "grep",
   format = "file",
@@ -284,7 +287,7 @@ M.grep_buffers = {
   supports_live = true,
 }
 
----@type snacks.picker.grep.Config
+---@type snacks.picker.grep.Config|{}
 M.grep_word = {
   finder = "grep",
   format = "file",
@@ -371,8 +374,8 @@ M.keymaps = {
 --- Search for a lazy.nvim plugin spec
 M.lazy = {
   finder = "lazy_spec",
-  live = true,
-  search = "'",
+  live = false,
+  pattern = "'",
 }
 
 -- Search lines in the current buffer

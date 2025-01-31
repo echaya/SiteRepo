@@ -20,14 +20,14 @@ function M.jump(picker, _, action)
     return
   end
 
+  local items = picker:selected({ fallback = true })
+
   if picker.opts.jump.close then
     picker:close()
   else
-    picker.jumping = true
     if vim.api.nvim_win_is_valid(picker.main) then
       vim.api.nvim_set_current_win(picker.main)
     end
-    picker.jumping = false
   end
 
   if action.cmd then
@@ -59,8 +59,6 @@ function M.jump(picker, _, action)
       vim.fn.settagstack(vim.fn.win_getid(win), { items = tagstack }, "t")
     end
   end
-
-  local items = picker:selected({ fallback = true })
 
   for _, item in ipairs(items) do
     -- load the buffer

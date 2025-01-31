@@ -16,7 +16,7 @@ function M.lines(opts)
     local item = {
       buf = buf,
       text = line,
-      pos = { l, 0 },
+      pos = { l, (line:find("%S") or 1) - 1 },
       highlights = extmarks[l],
     }
     items[#items + 1] = item
