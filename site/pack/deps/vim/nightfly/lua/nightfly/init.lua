@@ -158,9 +158,9 @@ M.style = function()
     g.terminal_color_9 = watermelon
     g.terminal_color_10 = emerald
     g.terminal_color_11 = tan
-    g.terminal_color_12 = blue
+    g.terminal_color_12 = malibu
     g.terminal_color_13 = purple
-    g.terminal_color_14 = turquoise
+    g.terminal_color_14 = lime
     g.terminal_color_15 = white_blue
   end
 
@@ -710,7 +710,7 @@ M.style = function()
   highlight(0, "shVariable", { link = "NightflyTurquoise" })
 
   -- XML
-  highlight(0, "xmlAttrib", { link = "NightflyGreen" })
+  highlight(0, "xmlAttrib", { link = "NightflyLime" })
   highlight(0, "xmlEndTag", { link = "NightflyBlue" })
   highlight(0, "xmlTag", { link = "NightflyGreen" })
   highlight(0, "xmlTagName", { link = "NightflyBlue" })
@@ -868,8 +868,10 @@ M.style = function()
   highlight(0, "LazyProgressDone", { link = "NightflyBlue" })
   highlight(0, "LazyProgressTodo", { link = "NightflyRegalBlue" })
   highlight(0, "LazyReasonCmd", { link = "NightflyGreen" })
+  highlight(0, "LazyReasonFt", { link = "NightflyLime" })
   highlight(0, "LazyReasonPlugin", { link = "NightflyOrchid" })
-  highlight(0, "LazyReasonRuntime", { link = "NightflyViolet" })
+  highlight(0, "LazyReasonRuntime", { link = "NightflyTurquoise" })
+  highlight(0, "LazyReasonSource", { link = "NightflyMalibu" })
   highlight(0, "LazySpecial", { link = "NightflyBlue" })
   highlight(0, "LazyButton", { bg = deep_blue, fg = white })
   highlight(0, "LazyButtonActive", { bg = bay_blue, fg = white_blue })
@@ -1349,10 +1351,6 @@ M.style = function()
   highlight(0, "CleverFDefaultLabel", { link = "NightflyWatermelon" })
   highlight(0, "CtrlPMatch", { link = "NightflyOrange" })
   highlight(0, "Directory", { link = "NightflyBlue" })
-  highlight(0, "erubyDelimiter", { link = "NightflyWatermelon" })
-  highlight(0, "jsonKeyword", { link = "NightflyLavender" })
-  highlight(0, "jsonQuote", { link = "NightflyWhite" })
-  highlight(0, "jsonString", { link = "NightflyLime" })
   highlight(0, "netrwClassify", { link = "NightflyWatermelon" })
   highlight(0, "netrwDir", { link = "NightflyBlue" })
   highlight(0, "netrwExe", { link = "NightflyTan" })

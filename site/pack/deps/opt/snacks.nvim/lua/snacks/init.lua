@@ -131,17 +131,25 @@ function M.setup(opts)
   local events = {
     BufReadPre = { "bigfile" },
     BufReadPost = { "quickfile", "indent" },
+    BufEnter = { "explorer" },
     LspAttach = { "words" },
     UIEnter = { "dashboard", "scroll", "input", "scope", "picker" },
   }
 
-  local function load(event)
-    for _, snack in ipairs(events[event] or {}) do
+  ---@param event string
+  ---@param ev? vim.api.keyset.create_autocmd.callback_args
+  local function load(event, ev)
+    local todo = events[event] or {}
+    events[event] = nil
+    for _, snack in ipairs(todo) do
       if M.config[snack] and M.config[snack].enabled then
-        (M[snack].setup or M[snack].enable)()
+        if M[snack].setup then
+          M[snack].setup(ev)
+        elseif M[snack].enable then
+          M[snack].enable()
+        end
       end
     end
-    events[event] = nil
   end
 
   if vim.v.vim_did_enter == 1 then
@@ -154,7 +162,7 @@ function M.setup(opts)
     once = true,
     nested = true,
     callback = function(ev)
-      load(ev.event)
+      load(ev.event, ev)
     end,
   })
 

@@ -57,9 +57,6 @@ function M.filename(item, picker)
     path = vim.fn.fnamemodify(item.file, ":t")
     ret[#ret + 1] = { path, base_hl, field = "file" }
   else
-    if item.dir then
-      path = path .. "/"
-    end
     local dir, base = path:match("^(.*)/(.+)$")
     if base and dir then
       if picker.opts.formatters.file.filename_first then
@@ -104,6 +101,10 @@ function M.file(item, picker)
   end
 
   vim.list_extend(ret, M.filename(item, picker))
+
+  if item.status then
+    vim.list_extend(ret, M.file_git_status(item, picker))
+  end
 
   if item.comment then
     table.insert(ret, { item.comment, "SnacksPickerComment" })
@@ -497,6 +498,37 @@ function M.git_status(item, picker)
   ret[#ret + 1] = { a(item.status, 2, { align = "right" }), hl }
   ret[#ret + 1] = { " " }
   vim.list_extend(ret, M.filename(item, picker))
+  return ret
+end
+
+function M.file_git_status(item, picker)
+  local ret = {} ---@type snacks.picker.Highlight[]
+  local status = require("snacks.picker.source.git").git_status(item.status)
+
+  local hl = "SnacksPickerGitStatus"
+  if status.unmerged then
+    hl = "SnacksPickerGitStatusUnmerged"
+  elseif status.staged then
+    hl = "SnacksPickerGitStatusStaged"
+  else
+    hl = "SnacksPickerGitStatus" .. status.status:sub(1, 1):upper() .. status.status:sub(2)
+  end
+
+  local icon = status.status:sub(1, 1):upper()
+  icon = status.status == "untracked" and "?" or status.status == "ignored" and "!" or icon
+  if picker.opts.icons.git.enabled then
+    icon = picker.opts.icons.git[status.status] or icon --[[@as string]]
+    if status.staged then
+      icon = picker.opts.icons.git.staged
+    end
+  end
+
+  ret[#ret + 1] = {
+    col = 0,
+    virt_text = { { icon, hl }, { " " } },
+    virt_text_pos = "right_align",
+    hl_mode = "combine",
+  }
   return ret
 end
 

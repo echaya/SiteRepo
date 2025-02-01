@@ -48,13 +48,24 @@ function M.new(opts)
   self.wins = self.opts.wins or {}
   self.box_wins = {}
 
+  local zindex = self.opts.layout.zindex or 50
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.w[win].snacks_layout then
+      local winc = vim.api.nvim_win_get_config(win)
+      if winc.zindex and winc.zindex >= zindex then
+        zindex = winc.zindex + 1
+      end
+    end
+  end
+  self.opts.layout.zindex = zindex
+
   -- wrap the split layout in a vertical box
   -- this is needed since a simple split window can't have borders/titles
   if self.opts.layout.position and self.opts.layout.position ~= "float" then
     self.split = true
     local inner = self.opts.layout
     self.opts.layout = {
-      zindex = inner.zindex or 30,
+      zindex = 30,
       box = "vertical",
       position = inner.position,
       width = inner.width,
@@ -99,6 +110,7 @@ function M.new(opts)
           backdrop = backdrop,
           zindex = (self.opts.layout.zindex or 50) + box.depth,
           bo = { filetype = "snacks_layout_box" },
+          w = { snacks_layout = true },
           border = box.border,
         }))
       end
@@ -419,6 +431,7 @@ function M:update_win(win, parent)
       backdrop = false,
       resize = false,
       zindex = self.root.opts.zindex + win.depth,
+      w = { snacks_layout = true },
     }
   )
   -- fix fullscreen for splits

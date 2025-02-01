@@ -245,12 +245,11 @@ function D:init()
     vim.keymap.set("n", "<esc>", "<cmd>bd<cr>", { silent = true, buffer = self.buf })
   end
   vim.keymap.set("n", "q", "<cmd>bd<cr>", { silent = true, buffer = self.buf })
-  vim.api.nvim_create_autocmd("WinResized", {
+  vim.api.nvim_create_autocmd({ "WinResized", "VimResized" }, {
     group = self.augroup,
-    buffer = self.buf,
-    callback = function(ev)
-      -- only re-render if the same window and size has changed
-      if tonumber(ev.match) == self.win and not vim.deep_equal(self._size, self:size()) then
+    callback = function()
+      -- only re-render if the size has changed
+      if not vim.deep_equal(self._size, self:size()) then
         self:update()
       end
     end,
@@ -1095,24 +1094,35 @@ M.status = {
 
 --- Check if the dashboard should be opened
 function M.setup()
+  local explorer = Snacks.config.get("explorer", defaults).enabled == true
+
   M.status.did_setup = true
   local buf = 1
 
+  local skip = false
+  if explorer and vim.fn.argc(-1) == 1 then
+    local arg = vim.fn.argv(0) --[[@as string]]
+    if arg ~= "" and vim.fn.isdirectory(arg) == 1 then
+      skip = true
+    end
+  end
+
   -- don't open the dashboard if there are any arguments
-  if vim.fn.argc(-1) > 0 then
+  if not skip and vim.fn.argc(-1) > 0 then
     M.status.reason = "argc(-1) > 0"
     return
   end
 
   -- don't open dashboard if Neovim was invoked for example `nvim +'Octo issue edit 1'`
-  if vim.api.nvim_buf_get_name(0) ~= "" then
+  if not skip and vim.api.nvim_buf_get_name(0) ~= "" then
     M.status.reason = "buffer has a name"
     return
   end
 
   -- there should be only one non-floating window and it should be the first buffer
   local wins = vim.tbl_filter(function(win)
-    return vim.api.nvim_win_get_config(win).relative == ""
+    local b = vim.api.nvim_win_get_buf(win)
+    return vim.api.nvim_win_get_config(win).relative == "" and not vim.bo[b].filetype:find("snacks")
   end, vim.api.nvim_list_wins())
   if #wins ~= 1 then
     M.status.reason = "more than one non-floating window"

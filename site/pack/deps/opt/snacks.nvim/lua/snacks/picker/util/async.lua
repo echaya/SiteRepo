@@ -189,6 +189,9 @@ end
 
 ---@async
 function Async:wait()
+  if not self:running() then
+    return self
+  end
   if coroutine.running() == self._co then
     error("Cannot wait on self")
   end

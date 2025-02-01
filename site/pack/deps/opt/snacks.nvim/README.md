@@ -14,6 +14,7 @@ A collection of small QoL plugins for Neovim.
 | [dashboard](https://github.com/folke/snacks.nvim/blob/main/docs/dashboard.md) |  Beautiful declarative dashboards | ‼️ |
 | [debug](https://github.com/folke/snacks.nvim/blob/main/docs/debug.md) | Pretty inspect & backtraces for debugging |  |
 | [dim](https://github.com/folke/snacks.nvim/blob/main/docs/dim.md) | Focus on the active scope by dimming the rest |  |
+| [explorer](https://github.com/folke/snacks.nvim/blob/main/docs/explorer.md) | A file explorer (picker in disguise) | ‼️ |
 | [git](https://github.com/folke/snacks.nvim/blob/main/docs/git.md) | Git utilities |  |
 | [gitbrowse](https://github.com/folke/snacks.nvim/blob/main/docs/gitbrowse.md) | Open the current file, branch, commit, or repo in a browser (e.g. GitHub, GitLab, Bitbucket) |  |
 | [indent](https://github.com/folke/snacks.nvim/blob/main/docs/indent.md) | Indent guides and scopes |  |
@@ -104,6 +105,7 @@ Please refer to the readme of each plugin for their specific configuration.
 ---@field bigfile? snacks.bigfile.Config
 ---@field dashboard? snacks.dashboard.Config
 ---@field dim? snacks.dim.Config
+---@field explorer? snacks.explorer.Config
 ---@field gitbrowse? snacks.gitbrowse.Config
 ---@field indent? snacks.indent.Config
 ---@field input? snacks.input.Config

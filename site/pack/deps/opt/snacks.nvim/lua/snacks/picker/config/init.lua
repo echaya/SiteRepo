@@ -134,7 +134,7 @@ function M.multi(opts)
       fopts = Snacks.config.merge({}, vim.deepcopy(source), fopts)
       -- Update source filter when needed
       if not vim.tbl_isempty(fopts.filter or {}) then
-        ctx = ctx:clone()
+        ctx = setmetatable({}, { __index = ctx })
         ctx.filter = ctx.filter:clone():init(fopts)
       end
       return finder(fopts, ctx)

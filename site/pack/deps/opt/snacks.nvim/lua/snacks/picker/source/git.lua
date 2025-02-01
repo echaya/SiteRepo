@@ -253,4 +253,91 @@ function M.stash(opts, ctx)
   }, ctx)
 end
 
+---@class snacks.picker.git.Status
+---@field xy string
+---@field status "modified" | "deleted" | "added" | "untracked" | "renamed" | "copied" | "ignored"
+---@field unmerged? boolean
+---@field staged? boolean
+---@field priority? number
+
+---@param xy string
+---@return snacks.picker.git.Status
+function M.git_status(xy)
+  local ss = {
+    A = "added",
+    D = "deleted",
+    M = "modified",
+    R = "renamed",
+    C = "copied",
+    ["?"] = "untracked",
+    ["!"] = "ignored",
+  }
+  local prios = "!?CRDAM"
+
+  ---@param status string
+  ---@param unmerged? boolean
+  ---@param staged? boolean
+  local function s(status, unmerged, staged)
+    local prio = (prios:find(status, 1, true) or 0) + (unmerged and 20 or 0)
+    if not staged and not status:find("[!]") then
+      prio = prio + 10
+    end
+    return {
+      xy = xy,
+      status = ss[status],
+      unmerged = unmerged,
+      staged = staged,
+      priority = prio,
+    }
+  end
+  ---@param c string
+  local function f(c)
+    return xy:gsub("T", "M"):match(c) --[[@as string?]]
+  end
+
+  if f("%?%?") then
+    return s("?")
+  elseif f("!!") then
+    return s("!")
+  elseif f("UU") then
+    return s("M", true)
+  elseif f("DD") then
+    return s("D", true)
+  elseif f("AA") then
+    return s("A", true)
+  elseif f("U") then
+    return s(f("A") and "A" or "D", true)
+  end
+
+  local m = f("^([MADRC])")
+  if m then
+    return s(m, nil, true)
+  end
+  m = f("([MADRC])$")
+  if m then
+    return s(m)
+  end
+  error("unknown status: " .. xy)
+end
+
+---@param a string
+---@param b string
+function M.merge_status(a, b)
+  if a == b then
+    return a
+  end
+  local as = M.git_status(a)
+  local bs = M.git_status(b)
+  if as.unmerged or bs.unmerged then
+    return as.priority > bs.priority and as.xy or bs.xy
+  end
+  if not as.staged or not bs.staged then
+    if as.status == bs.status then
+      return as.staged and b or a
+    end
+    return " M"
+  end
+  return "M "
+end
+
 return M

@@ -33,6 +33,7 @@ function M.truncpath(path, len, opts)
       path = "~" .. path:sub(#home + 1)
     end
   end
+  path = path:gsub("/$", "")
 
   if vim.api.nvim_strwidth(path) <= len then
     return path
@@ -371,7 +372,8 @@ function M.pick_win(opts)
   local chars = "asdfghjkl"
   local wins = {} ---@type number[]
   for _, win in ipairs(vim.api.nvim_list_wins()) do
-    if vim.api.nvim_win_get_config(win).relative == "" then
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.api.nvim_win_get_config(win).relative == "" and not vim.bo[buf].filetype:find("^snacks") then
       wins[#wins + 1] = win
     end
   end
@@ -407,6 +409,21 @@ function M.pick_win(opts)
     return win.opts.win
   elseif win then
     return opts.main
+  end
+end
+
+---@param path string
+---@param cwd? string
+---@return fun(): string?
+function M.parents(path, cwd)
+  cwd = cwd or uv.cwd()
+  if not (cwd and path:sub(1, #cwd) == cwd and #path > #cwd) then
+    return function() end
+  end
+  local to = #cwd + 1 ---@type number?
+  return function()
+    to = path:find("/", to + 1, true)
+    return to and path:sub(1, to - 1) or nil
   end
 end
 

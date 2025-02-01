@@ -27,6 +27,7 @@ Table of Contents                               *snacks-win-table-of-contents*
   - win:focus()                                |snacks-win-module-win:focus()|
   - win:has_border()                      |snacks-win-module-win:has_border()|
   - win:hide()                                  |snacks-win-module-win:hide()|
+  - win:hscroll()                            |snacks-win-module-win:hscroll()|
   - win:is_floating()                    |snacks-win-module-win:is_floating()|
   - win:line()                                  |snacks-win-module-win:line()|
   - win:lines()                                |snacks-win-module-win:lines()|
@@ -380,6 +381,14 @@ WIN:HIDE()                                      *snacks-win-module-win:hide()*
 
 >lua
     win:hide()
+<
+
+
+WIN:HSCROLL()                                *snacks-win-module-win:hscroll()*
+
+>lua
+    ---@param left? boolean
+    win:hscroll(left)
 <
 
 

@@ -7,6 +7,7 @@
 ---@field dashboard snacks.dashboard
 ---@field debug snacks.debug
 ---@field dim snacks.dim
+---@field explorer snacks.explorer
 ---@field git snacks.git
 ---@field gitbrowse snacks.gitbrowse
 ---@field health snacks.health
@@ -37,6 +38,7 @@
 ---@field bigfile? snacks.bigfile.Config|{}
 ---@field dashboard? snacks.dashboard.Config|{}
 ---@field dim? snacks.dim.Config|{}
+---@field explorer? snacks.explorer.Config|{}
 ---@field gitbrowse? snacks.gitbrowse.Config|{}
 ---@field indent? snacks.indent.Config|{}
 ---@field input? snacks.input.Config|{}

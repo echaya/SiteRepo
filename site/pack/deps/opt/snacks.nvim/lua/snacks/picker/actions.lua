@@ -83,8 +83,12 @@ function M.jump(picker, _, action)
     vim.api.nvim_win_set_buf(win, buf)
 
     -- set the cursor
-    if item.pos and item.pos[1] > 0 then
-      vim.api.nvim_win_set_cursor(win, { item.pos[1], item.pos[2] })
+    local pos = item.pos
+    if picker.opts.jump.match then
+      pos = picker.matcher:bufpos(buf, item) or pos
+    end
+    if pos and pos[1] > 0 then
+      vim.api.nvim_win_set_cursor(win, { pos[1], pos[2] })
     elseif item.search then
       vim.cmd(item.search)
       vim.cmd("noh")
@@ -118,16 +122,25 @@ M.edit_split = { "split", "confirm" }
 M.edit_vsplit = { "vsplit", "confirm" }
 M.edit_tab = { "tab", "confirm" }
 
-function M.split()
-  vim.cmd("split")
+local function wincmd(picker, cmd)
+  if vim.api.nvim_win_is_valid(picker.main) then
+    vim.api.nvim_win_call(picker.main, function()
+      vim.cmd(cmd)
+      picker.main = vim.api.nvim_get_current_win()
+    end)
+  end
 end
 
-function M.vsplit()
-  vim.cmd("vsplit")
+function M.split(picker)
+  wincmd(picker, "split")
 end
 
-function M.tab()
-  vim.cmd("tabnew")
+function M.vsplit(picker)
+  wincmd(picker, "vsplit")
+end
+
+function M.tab(picker)
+  wincmd(picker, "tabnew")
 end
 
 function M.toggle_maximize(picker)
@@ -139,18 +152,24 @@ function M.toggle_preview(picker)
 end
 
 function M.pick_win(picker, item, action)
-  picker.layout:hide()
+  if not picker.layout.split then
+    picker.layout:hide()
+  end
   local win = Snacks.picker.util.pick_win({ main = picker.main })
   if not win then
-    picker.layout:unhide()
+    if not picker.layout.split then
+      picker.layout:unhide()
+    end
     return true
   end
   picker.main = win
-  vim.defer_fn(function()
-    if not picker.closed then
-      picker.layout:unhide()
-    end
-  end, 100)
+  if not picker.layout.split then
+    vim.defer_fn(function()
+      if not picker.closed then
+        picker.layout:unhide()
+      end
+    end, 100)
+  end
 end
 
 function M.bufdelete(picker)
@@ -239,10 +258,10 @@ local function setqflist(items, opts)
   end
   if opts and opts.win then
     vim.fn.setloclist(opts.win, qf)
-    vim.cmd("lopen")
+    vim.cmd("botright lopen")
   else
     vim.fn.setqflist(qf)
-    vim.cmd("copen")
+    vim.cmd("botright copen")
   end
 end
 

@@ -32,6 +32,9 @@ function M.get(opts)
     if win == 0 or not vim.api.nvim_win_is_valid(win) then
       return false
     end
+    if vim.w[win].snacks_layout then
+      return false
+    end
     -- exclude non-file buffers
     if opts.file and vim.bo[vim.api.nvim_win_get_buf(win)].buftype ~= "" then
       return false

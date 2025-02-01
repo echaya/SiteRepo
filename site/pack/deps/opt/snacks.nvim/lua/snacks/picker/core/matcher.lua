@@ -85,7 +85,7 @@ function M:run(picker)
   -- PERF: fast path for empty pattern
   if not (self.sorting or picker.finder.task:running()) then
     picker.list.items = picker.finder.items
-    picker:update()
+    picker:update({ force = true })
     return
   end
 
@@ -151,7 +151,7 @@ function M:run(picker)
       end
     until idx >= #picker.finder.items and not picker.finder.task:running()
 
-    picker:update()
+    picker:update({ force = true })
   end)
 end
 
@@ -386,6 +386,20 @@ function M:positions(item)
     end
   end
   return ret
+end
+
+--- Returns the column of the first position of the matched pattern in the item.
+---@param buf number
+---@param item snacks.picker.Item
+---@return snacks.picker.Pos?
+function M:bufpos(buf, item)
+  if not item.pos then
+    return
+  end
+  local line = vim.api.nvim_buf_get_lines(buf, item.pos[1] - 1, item.pos[1], false)[1] or ""
+  local positions = self:positions({ text = line, idx = 1, score = 0 }).text or {}
+  table.sort(positions)
+  return #positions > 0 and { item.pos[1], positions[1] - 1 } or nil
 end
 
 ---@param str string

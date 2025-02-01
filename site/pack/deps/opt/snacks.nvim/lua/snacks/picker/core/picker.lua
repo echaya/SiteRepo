@@ -467,13 +467,17 @@ function M:show()
   if self.preview.main then
     self.preview.win:show()
   end
+  self:_focus()
+  if self.opts.on_show then
+    self.opts.on_show(self)
+  end
+end
+
+function M:_focus()
   if self.opts.focus == "input" then
     self.input.win:focus()
   elseif self.opts.focus == "list" then
     self.list.win:focus()
-  end
-  if self.opts.on_show then
-    self.opts.on_show(self)
   end
 end
 
@@ -619,7 +623,9 @@ function M:progress(ms)
 end
 
 ---@hide
-function M:update()
+---@param opts? {force?: boolean}
+function M:update(opts)
+  opts = opts or {}
   if self.closed then
     return
   end
@@ -627,7 +633,7 @@ function M:update()
   -- Schedule the update if we are in a fast event
   if vim.in_fast_event() then
     return vim.schedule(function()
-      self:update()
+      self:update(opts)
     end)
   end
 
@@ -670,6 +676,9 @@ function M:update()
     -- update list and input
     if not self.list.paused then
       self.input:update()
+    end
+    if opts.force then
+      self.list.dirty = true
     end
     self.list:update()
   end

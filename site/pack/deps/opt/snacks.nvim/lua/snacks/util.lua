@@ -73,7 +73,7 @@ function M.icon(name, cat)
     end,
     function()
       if cat == "directory" then
-        return " ", "Directory"
+        return "󰉋 ", "Directory"
       end
       local Icons = require("nvim-web-devicons")
       if cat == "filetype" then
@@ -92,7 +92,7 @@ function M.icon(name, cat)
       return ret[2], ret[3]
     end
   end
-  return " "
+  return "󰈔 "
 end
 
 -- Encodes a string to be used as a file name.

@@ -50,7 +50,7 @@ function M.get_root(path)
     end
   end
 
-  return vim.env.GIT_WORK_TREE
+  return os.getenv("GIT_WORK_TREE")
 end
 
 --- Show git log for the current line.

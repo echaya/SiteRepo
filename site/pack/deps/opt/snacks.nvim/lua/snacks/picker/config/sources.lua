@@ -37,13 +37,17 @@ M.buffers = {
   },
 }
 
----@class snacks.picker.explorer.Config: snacks.picker.files.Config
+---@class snacks.picker.explorer.Config: snacks.picker.files.Config|{}
 ---@field follow_file? boolean follow the file from the current buffer
 ---@field tree? boolean show the file tree (default: true)
+---@field git_status? boolean show git status (default: true)
+---@field git_status_open? boolean show recursive git status for open directories
 M.explorer = {
   finder = "explorer",
   sort = { fields = { "sort" } },
   tree = true,
+  git_status = true,
+  git_status_open = true,
   supports_live = true,
   follow_file = true,
   focus = "list",
@@ -59,6 +63,8 @@ M.explorer = {
     list = {
       keys = {
         ["<BS>"] = "explorer_up",
+        ["l"] = "confirm",
+        ["h"] = "explorer_close", -- close directory
         ["a"] = "explorer_add",
         ["d"] = "explorer_del",
         ["r"] = "explorer_rename",
@@ -388,6 +394,7 @@ M.lines = {
     preview = "main",
     preset = "ivy",
   },
+  jump = { match = true },
   -- allow any window to be used as the main window
   main = { current = true },
   ---@param picker snacks.Picker

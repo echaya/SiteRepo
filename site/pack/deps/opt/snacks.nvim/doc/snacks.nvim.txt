@@ -1,4 +1,4 @@
-*snacks.nvim.txt*            For Neovim           Last change: 2025 January 31
+*snacks.nvim.txt*           For Neovim           Last change: 2025 February 01
 
 ==============================================================================
 Table of Contents                              *snacks.nvim-table-of-contents*
@@ -38,7 +38,9 @@ FEATURES                                    *snacks.nvim-snacks.nvim-features*
   dim              Focus on the active scope by dimming  
                    the rest                              
 
-  git              Git utilities                         
+  explorer         A file explorer (picker in disguise)  
+
+  git              Gitutilities                          
 
   gitbrowse        Open the current file, branch,        
                    commit, or repo in a browser          
@@ -166,6 +168,7 @@ Default Options ~
     ---@field bigfile? snacks.bigfile.Config
     ---@field dashboard? snacks.dashboard.Config
     ---@field dim? snacks.dim.Config
+    ---@field explorer? snacks.explorer.Config
     ---@field gitbrowse? snacks.gitbrowse.Config
     ---@field indent? snacks.indent.Config
     ---@field input? snacks.input.Config
