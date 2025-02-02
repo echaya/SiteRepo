@@ -18,6 +18,7 @@ local defaults = {
   replace_netrw = true, -- Replace netrw with the snacks explorer
 }
 
+---@private
 ---@param event? vim.api.keyset.create_autocmd.callback_args
 function M.setup(event)
   local opts = Snacks.config.get("explorer", defaults)

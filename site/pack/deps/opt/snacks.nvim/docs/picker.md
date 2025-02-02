@@ -201,8 +201,6 @@ Snacks.picker.pick({source = "files", ...})
         ["<Esc>"] = "close",
         ["<S-CR>"] = { { "pick_win", "jump" }, mode = { "n", "i" } },
         ["<S-Tab>"] = { "select_and_prev", mode = { "i", "n" } },
-        ["<ScrollWheelDown>"] = { "list_scroll_wheel_down", mode = { "i", "n" } },
-        ["<ScrollWheelUp>"] = { "list_scroll_wheel_up", mode = { "i", "n" } },
         ["<Tab>"] = { "select_and_next", mode = { "i", "n" } },
         ["<Up>"] = { "list_up", mode = { "i", "n" } },
         ["<a-d>"] = { "inspect", mode = { "n", "i" } },
@@ -246,8 +244,6 @@ Snacks.picker.pick({source = "files", ...})
         ["<Esc>"] = "close",
         ["<S-CR>"] = { { "pick_win", "jump" } },
         ["<S-Tab>"] = { "select_and_prev", mode = { "n", "x" } },
-        ["<ScrollWheelDown>"] = "list_scroll_wheel_down",
-        ["<ScrollWheelUp>"] = "list_scroll_wheel_up",
         ["<Tab>"] = { "select_and_next", mode = { "n", "x" } },
         ["<Up>"] = "list_up",
         ["<a-d>"] = "inspect",
@@ -490,7 +486,7 @@ Snacks.picker.pick({source = "files", ...})
 
 ```lua
 ---@class snacks.picker.jump.Action: snacks.picker.Action
----@field cmd? string
+---@field cmd? snacks.picker.EditCmd
 ```
 
 ```lua
@@ -613,6 +609,15 @@ Snacks.picker()
 ```lua
 ---@type fun(opts: snacks.picker.Config): snacks.Picker
 Snacks.picker()
+```
+
+### `Snacks.picker.get()`
+
+Get active pickers, optionally filtered by source
+
+```lua
+---@param opts? {source?: string}
+Snacks.picker.get(opts)
 ```
 
 ### `Snacks.picker.pick()`
@@ -829,7 +834,7 @@ Neovim commands
   sort = { fields = { "sort" } },
   tree = true,
   git_status = true,
-  git_status_open = true,
+  git_status_open = false,
   supports_live = true,
   follow_file = true,
   focus = "list",
@@ -852,9 +857,17 @@ Neovim commands
         ["r"] = "explorer_rename",
         ["c"] = "explorer_copy",
         ["m"] = "explorer_move",
+        ["o"] = "explorer_open", -- open with system application
+        ["P"] = "toggle_preview",
         ["y"] = "explorer_yank",
+        ["u"] = "explorer_update",
         ["<c-c>"] = "explorer_cd",
         ["."] = "explorer_focus",
+        ["I"] = "toggle_ignored",
+        ["H"] = "toggle_hidden",
+        ["Z"] = "explorer_close_all",
+        ["]g"] = "explorer_git_next",
+        ["[g"] = "explorer_git_prev",
       },
     },
   },
@@ -2080,7 +2093,7 @@ Snacks.picker.actions.git_stash_apply(_, item)
 ### `Snacks.picker.actions.help()`
 
 ```lua
-Snacks.picker.actions.help(picker)
+Snacks.picker.actions.help(picker, item, action)
 ```
 
 ### `Snacks.picker.actions.history_back()`
@@ -2153,18 +2166,6 @@ Snacks.picker.actions.list_scroll_top(picker)
 
 ```lua
 Snacks.picker.actions.list_scroll_up(picker)
-```
-
-### `Snacks.picker.actions.list_scroll_wheel_down()`
-
-```lua
-Snacks.picker.actions.list_scroll_wheel_down(picker)
-```
-
-### `Snacks.picker.actions.list_scroll_wheel_up()`
-
-```lua
-Snacks.picker.actions.list_scroll_wheel_up(picker)
 ```
 
 ### `Snacks.picker.actions.list_top()`
@@ -2280,18 +2281,6 @@ and moves the cursor to the prev item.
 Snacks.picker.actions.select_and_prev(picker)
 ```
 
-### `Snacks.picker.actions.split()`
-
-```lua
-Snacks.picker.actions.split(picker)
-```
-
-### `Snacks.picker.actions.tab()`
-
-```lua
-Snacks.picker.actions.tab(picker)
-```
-
 ### `Snacks.picker.actions.toggle_focus()`
 
 ```lua
@@ -2328,12 +2317,6 @@ Snacks.picker.actions.toggle_maximize(picker)
 Snacks.picker.actions.toggle_preview(picker)
 ```
 
-### `Snacks.picker.actions.vsplit()`
-
-```lua
-Snacks.picker.actions.vsplit(picker)
-```
-
 ### `Snacks.picker.actions.yank()`
 
 ```lua
@@ -2348,6 +2331,7 @@ Snacks.picker.actions.yank(_, item)
 ---@class snacks.Picker
 ---@field id number
 ---@field opts snacks.picker.Config
+---@field init_opts? snacks.picker.Config
 ---@field finder snacks.picker.Finder
 ---@field format snacks.picker.format
 ---@field input snacks.picker.input
@@ -2356,6 +2340,7 @@ Snacks.picker.actions.yank(_, item)
 ---@field list snacks.picker.list
 ---@field matcher snacks.picker.Matcher
 ---@field main number
+---@field _main snacks.picker.Main
 ---@field preview snacks.picker.Preview
 ---@field shown? boolean
 ---@field sort snacks.picker.sort
@@ -2366,6 +2351,13 @@ Snacks.picker.actions.yank(_, item)
 ---@field history snacks.picker.History
 ---@field visual? snacks.picker.Visual
 local M = {}
+```
+
+### `Snacks.picker.picker.get()`
+
+```lua
+---@param opts? {source?: string}
+Snacks.picker.picker.get(opts)
 ```
 
 ### `picker:action()`
@@ -2484,6 +2476,12 @@ and then`vim.schedule` the callback.
 ```lua
 ---@param cb fun()
 picker:norm(cb)
+```
+
+### `picker:on_current_tab()`
+
+```lua
+picker:on_current_tab()
 ```
 
 ### `picker:ref()`

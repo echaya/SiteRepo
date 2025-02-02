@@ -10,6 +10,7 @@ local _id = 0
 ---@class snacks.Picker
 ---@field id number
 ---@field opts snacks.picker.Config
+---@field init_opts? snacks.picker.Config
 ---@field finder snacks.picker.Finder
 ---@field format snacks.picker.format
 ---@field input snacks.picker.input
@@ -18,6 +19,7 @@ local _id = 0
 ---@field list snacks.picker.list
 ---@field matcher snacks.picker.Matcher
 ---@field main number
+---@field _main snacks.picker.Main
 ---@field preview snacks.picker.Preview
 ---@field shown? boolean
 ---@field sort snacks.picker.sort
@@ -28,7 +30,6 @@ local _id = 0
 ---@field history snacks.picker.History
 ---@field visual? snacks.picker.Visual
 local M = {}
-M.__index = M
 
 --- Keep track of garbage collection
 ---@type table<snacks.Picker,boolean>
@@ -49,18 +50,52 @@ M.last = nil
 
 ---@alias snacks.picker.history.Record {pattern: string, search: string, live?: boolean}
 
+function M:__index(key)
+  if M[key] then
+    return M[key]
+  end
+  if key == "main" then
+    return self._main:get()
+  end
+end
+
+function M:__newindex(key, value)
+  if key == "main" then
+    self._main:set(value)
+  else
+    rawset(self, key, value)
+  end
+end
+
+---@param opts? {source?: string}
+function M.get(opts)
+  opts = opts or {}
+  local ret = {} ---@type snacks.Picker[]
+  for picker in pairs(M._active) do
+    if not opts.source or picker.opts.source == opts.source then
+      ret[#ret + 1] = picker
+    end
+  end
+  table.sort(ret, function(a, b)
+    return a.id < b.id
+  end)
+  return ret
+end
+
 ---@hide
 ---@param opts? snacks.picker.Config
+---@return snacks.Picker
 function M.new(opts)
   local self = setmetatable({}, M)
   _id = _id + 1
   self.id = _id
+  self.init_opts = opts
   self.opts = Snacks.picker.config.get(opts)
   if self.opts.source == "resume" then
     return M.resume()
   end
 
-  self.history = require("snacks.picker.util.history").new("picker", {
+  self.history = require("snacks.picker.util.history").new("picker_" .. (self.opts.source or "custom"), {
     ---@param hist snacks.picker.history.Record
     filter = function(hist)
       if hist.pattern == "" and hist.search == "" then
@@ -111,8 +146,7 @@ function M.new(opts)
 
   self.visual = Snacks.picker.util.visual()
   self.start_time = uv.hrtime()
-  Snacks.picker.current = self
-  self.main = require("snacks.picker.core.main").get(self.opts.main)
+  self._main = require("snacks.picker.core.main").new(self.opts.main)
   local actions = require("snacks.picker.core.actions").get(self)
   self.opts.win.input.actions = actions
   self.opts.win.list.actions = actions
@@ -140,14 +174,6 @@ function M.new(opts)
   self.list = require("snacks.picker.core.list").new(self)
   self.input = require("snacks.picker.core.input").new(self)
   self.preview = require("snacks.picker.core.preview").new(self.opts, layout.preview == "main" and self.main or nil)
-
-  M.last = {
-    opts = opts,
-    selected = {},
-    cursor = self.list.cursor,
-    filter = self.input.filter,
-    topline = self.list.top,
-  }
 
   self.title = self.opts.title or Snacks.picker.util.title(self.opts.source or "search")
 
@@ -208,6 +234,11 @@ end
 function M:is_focused()
   local current = vim.api.nvim_get_current_win()
   return vim.tbl_contains({ self.input.win.win, self.list.win.win, self.preview.win.win }, current)
+end
+
+function M:on_current_tab()
+  return self.layout:valid()
+    and vim.api.nvim_get_current_tabpage() == vim.api.nvim_win_get_tabpage(self.layout.root.win)
 end
 
 --- Execute the callback in normal mode.
@@ -285,7 +316,7 @@ function M:init_layout(layout)
     else
       self.input.win:focus()
     end
-  end, { buf = true })
+  end, { buf = true, nested = true })
 
   self.preview:update(preview_main and self.main or nil)
   -- apply box highlight groups
@@ -564,12 +595,16 @@ function M:close()
 
   self:hist_record(true)
   self.closed = true
-  M.last.selected = self:selected({ fallback = false })
-  M.last.cursor = self.list.cursor
-  M.last.topline = self.list.top
-  M.last.opts = M.last.opts or {}
+
+  M.last = {
+    opts = self.init_opts or {},
+    selected = self:selected({ fallback = false }),
+    cursor = self.list.cursor,
+    topline = self.list.top,
+    filter = self.input.filter,
+  }
   M.last.opts.live = self.opts.live
-  Snacks.picker.current = nil
+
   local current = vim.api.nvim_get_current_win()
   local is_picker_win = vim.tbl_contains({ self.input.win.win, self.list.win.win, self.preview.win.win }, current)
   if is_picker_win and vim.api.nvim_win_is_valid(self.main) then

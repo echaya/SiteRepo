@@ -85,10 +85,3 @@ Shortcut to open the explorer picker
 ---@param opts? snacks.picker.explorer.Config|{}
 Snacks.explorer.open(opts)
 ```
-
-### `Snacks.explorer.setup()`
-
-```lua
----@param event? vim.api.keyset.create_autocmd.callback_args
-Snacks.explorer.setup(event)
-```

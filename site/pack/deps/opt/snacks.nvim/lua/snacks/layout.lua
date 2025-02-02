@@ -478,11 +478,13 @@ function M:close(opts)
   for _, win in pairs(self.box_wins) do
     win:destroy()
   end
-  self.opts = nil
-  self.root = nil
-  self.wins = nil
-  self.box_wins = nil
-  self.win_opts = nil
+  vim.schedule(function()
+    self.opts = nil
+    self.root = nil
+    self.wins = nil
+    self.box_wins = nil
+    self.win_opts = nil
+  end)
 end
 
 --- Check if layout is valid (visible)

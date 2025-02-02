@@ -285,12 +285,30 @@ function M.normkey(key)
   if key_cache[key] then
     return key_cache[key]
   end
-  local k = key
-  key = key:gsub("<[aAmMcC]%-.>", string.lower)
-  if not key:match("^<[aAmMcC]%-.>$") then
-    key = vim.fn.keytrans(M.keycode(key))
+  local function norm(v)
+    return vim.fn.keytrans(M.keycode(("<%s>"):format(v)))
   end
-  key_cache[k] = key
+  local orig = key
+  ---@param v string
+  key = key:gsub("(%b<>)", function(v)
+    v = v:sub(2, -2)
+    if v:sub(2, 2) == "-" and v:sub(1, 1):find("[aAmMcCsS]") then
+      local m = v:sub(1, 1):upper()
+      m = m == "A" and "M" or m
+      local k = v:sub(3)
+      if #k > 1 then
+        return norm(v)
+      end
+      if m == "C" then
+        k = k:upper()
+      elseif m == "S" then
+        return k:upper()
+      end
+      return ("<%s-%s>"):format(m, k)
+    end
+    return norm(v)
+  end)
+  key_cache[orig] = key
   key_cache[key] = key
   return key
 end

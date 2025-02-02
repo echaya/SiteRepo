@@ -1134,9 +1134,9 @@ end
 --- Default choose
 ---
 --- Choose item. Logic follows the rules in |MiniPick-source.items-common|:
---- - File and directory are called with |:edit| in the target window, possibly
----   followed by setting cursor at the start of line/position/region.
---- - Buffer is set as current in target window.
+--- - File uses |bufadd()| and sets cursor at the start of line/position/region.
+--- - Buffer is set as current in target window and sets cursor similarly.
+--- - Directory is called with |:edit| in the target window.
 --- - Others have the output of |vim.inspect()| printed in Command line.
 ---
 --- Implements default value for |MiniPick-source.choose|.
@@ -3240,11 +3240,13 @@ H.choose_path = function(win_target, item_data)
   if item_data.type == 'directory' then
     return vim.api.nvim_win_call(win_target, function() vim.cmd('edit ' .. vim.fn.fnameescape(path)) end)
   end
+  pcall(vim.api.nvim_win_call, win_target, function() vim.cmd("normal! m'") end)
   H.edit(path, win_target)
   H.choose_set_cursor(win_target, item_data.lnum, item_data.col)
 end
 
 H.choose_buffer = function(win_target, item_data)
+  pcall(vim.api.nvim_win_call, win_target, function() vim.cmd("normal! m'") end)
   H.set_winbuf(win_target, item_data.buf_id)
   H.choose_set_cursor(win_target, item_data.lnum, item_data.col)
 end

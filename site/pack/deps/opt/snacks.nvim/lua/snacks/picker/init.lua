@@ -17,9 +17,6 @@ local M = setmetatable({}, {
   end,
   ---@param M snacks.picker
   __index = function(M, k)
-    if k == "current" then
-      return nil
-    end
     if type(k) ~= "string" then
       return
     end
@@ -72,8 +69,9 @@ function M.pick(source, opts)
     opts.source = "pickers"
     return M.pick(opts)
   end
-  if opts.source and M.current and M.current.opts.source == opts.source then
-    M.current:close()
+  local current = opts.source and M.get({ source = opts.source })[1]
+  if current then
+    current:close()
     return
   end
   return require("snacks.picker.core.picker").new(opts)
@@ -95,6 +93,12 @@ end
 ---@private
 function M.health()
   require("snacks.picker.core._health").health()
+end
+
+--- Get active pickers, optionally filtered by source
+---@param opts? {source?: string}
+function M.get(opts)
+  return require("snacks.picker.core.picker").get(opts)
 end
 
 return M

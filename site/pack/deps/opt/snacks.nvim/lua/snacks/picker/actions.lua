@@ -2,11 +2,18 @@
 ---@field [string] snacks.picker.Action.spec
 local M = {}
 
-local SCROLL_WHEEL_DOWN = Snacks.util.keycode("<ScrollWheelDown>")
-local SCROLL_WHEEL_UP = Snacks.util.keycode("<ScrollWheelUp>")
-
 ---@class snacks.picker.jump.Action: snacks.picker.Action
----@field cmd? string
+---@field cmd? snacks.picker.EditCmd
+
+---@enum (key) snacks.picker.EditCmd
+local edit_cmd = {
+  edit = "buffer",
+  split = "sbuffer",
+  vsplit = "vert sbuffer",
+  tab = "tab sbuffer",
+  drop = "drop",
+  tabdrop = "tab drop",
+}
 
 function M.jump(picker, _, action)
   ---@cast action snacks.picker.jump.Action
@@ -25,13 +32,11 @@ function M.jump(picker, _, action)
   if picker.opts.jump.close then
     picker:close()
   else
-    if vim.api.nvim_win_is_valid(picker.main) then
-      vim.api.nvim_set_current_win(picker.main)
-    end
+    vim.api.nvim_set_current_win(picker.main)
   end
 
-  if action.cmd then
-    vim.cmd(action.cmd)
+  if #items == 0 then
+    return
   end
 
   local win = vim.api.nvim_get_current_win()
@@ -60,42 +65,57 @@ function M.jump(picker, _, action)
     end
   end
 
-  for _, item in ipairs(items) do
-    -- load the buffer
-    local buf = item.buf ---@type number
-    if not buf then
-      local path = assert(Snacks.picker.util.path(item), "Either item.buf or item.file is required")
-      buf = vim.fn.bufadd(path)
-    end
+  local cmd = edit_cmd[action.cmd] or "buffer"
 
-    -- use an existing window if possible
-    if #items == 1 and picker.opts.jump.reuse_win and buf ~= current_buf then
-      win = vim.fn.win_findbuf(buf)[1] or win
-      vim.api.nvim_set_current_win(win)
+  if cmd:find("drop") then
+    local drop = {} ---@type string[]
+    for _, item in ipairs(items) do
+      local path = item.buf and vim.api.nvim_buf_get_name(item.buf) or Snacks.picker.util.path(item)
+      if not path then
+        Snacks.notify.error("Either item.buf or item.file is required", { title = "Snacks Picker" })
+        return
+      end
+      drop[#drop + 1] = vim.fn.fnameescape(path)
     end
+    vim.cmd(cmd .. " " .. table.concat(drop, " "))
+  else
+    for i, item in ipairs(items) do
+      -- load the buffer
+      local buf = item.buf ---@type number
+      if not buf then
+        local path = assert(Snacks.picker.util.path(item), "Either item.buf or item.file is required")
+        buf = vim.fn.bufadd(path)
+      end
 
-    if not vim.api.nvim_buf_is_loaded(buf) then
-      vim.cmd("buffer " .. buf)
+      -- use an existing window if possible
+      if #items == 1 and picker.opts.jump.reuse_win and buf ~= current_buf then
+        win = vim.fn.win_findbuf(buf)[1] or win
+        vim.api.nvim_set_current_win(win)
+      end
+
       vim.bo[buf].buflisted = true
-    end
 
-    -- set the buffer
-    vim.api.nvim_win_set_buf(win, buf)
-
-    -- set the cursor
-    local pos = item.pos
-    if picker.opts.jump.match then
-      pos = picker.matcher:bufpos(buf, item) or pos
+      -- open the first buffer
+      if i == 1 then
+        vim.cmd(("%s %d"):format(cmd, buf))
+      end
     end
-    if pos and pos[1] > 0 then
-      vim.api.nvim_win_set_cursor(win, { pos[1], pos[2] })
-    elseif item.search then
-      vim.cmd(item.search)
-      vim.cmd("noh")
-    end
-    -- center
-    vim.cmd("norm! zzzv")
   end
+
+  -- set the cursor
+  local item = items[1]
+  local pos = item.pos
+  if picker.opts.jump.match then
+    pos = picker.matcher:bufpos(vim.api.nvim_get_current_buf(), item) or pos
+  end
+  if pos and pos[1] > 0 then
+    vim.api.nvim_win_set_cursor(win, { pos[1], pos[2] })
+    vim.cmd("norm! zzzv")
+  elseif item.search then
+    vim.cmd(item.search)
+    vim.cmd("noh")
+  end
+
   -- HACK: this should fix folds
   if vim.wo.foldmethod == "expr" then
     vim.schedule(function()
@@ -116,32 +136,19 @@ function M.close(picker)
 end
 
 M.cancel = "close"
+M.confirm = M.jump -- default confirm action
+
+M.split = { action = "confirm", cmd = "split" }
+M.vsplit = { action = "confirm", cmd = "vsplit" }
+M.tab = { action = "confirm", cmd = "tab" }
+M.drop = { action = "confirm", cmd = "drop" }
+M.tabdrop = { action = "confirm", cmd = "tabdrop" }
+
+-- aliases
 M.edit = M.jump
-M.confirm = M.jump
-M.edit_split = { "split", "confirm" }
-M.edit_vsplit = { "vsplit", "confirm" }
-M.edit_tab = { "tab", "confirm" }
-
-local function wincmd(picker, cmd)
-  if vim.api.nvim_win_is_valid(picker.main) then
-    vim.api.nvim_win_call(picker.main, function()
-      vim.cmd(cmd)
-      picker.main = vim.api.nvim_get_current_win()
-    end)
-  end
-end
-
-function M.split(picker)
-  wincmd(picker, "split")
-end
-
-function M.vsplit(picker)
-  wincmd(picker, "vsplit")
-end
-
-function M.tab(picker)
-  wincmd(picker, "tabnew")
-end
+M.edit_split = M.split
+M.edit_vsplit = M.vsplit
+M.edit_tab = M.tab
 
 function M.toggle_maximize(picker)
   picker.layout:maximize()
@@ -372,11 +379,17 @@ function M.load_session(picker)
   end
 end
 
-function M.help(picker)
-  local item = picker:current()
+function M.help(picker, item, action)
+  ---@cast action snacks.picker.jump.Action
   if item then
     picker:close()
-    vim.cmd("help " .. item.text)
+    local cmd = "help " .. item.text
+    if action.cmd == "vsplit" then
+      cmd = "vert " .. cmd
+    elseif action.cmd == "tab" then
+      cmd = "tab " .. cmd
+    end
+    vim.cmd(cmd)
   end
 end
 
@@ -509,24 +522,6 @@ end
 
 function M.list_scroll_up(picker)
   picker.list:scroll(-picker.list.state.scroll)
-end
-
-function M.list_scroll_wheel_down(picker)
-  local mouse_win = vim.fn.getmousepos().winid
-  if mouse_win == picker.list.win.win then
-    picker.list:scroll(picker.list.state.mousescroll)
-  else
-    vim.api.nvim_feedkeys(SCROLL_WHEEL_DOWN, "n", true)
-  end
-end
-
-function M.list_scroll_wheel_up(picker)
-  local mouse_win = vim.fn.getmousepos().winid
-  if mouse_win == picker.list.win.win then
-    picker.list:scroll(-picker.list.state.mousescroll)
-  else
-    vim.api.nvim_feedkeys(SCROLL_WHEEL_UP, "n", true)
-  end
 end
 
 return M

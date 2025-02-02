@@ -30,6 +30,31 @@ local function minmax(value, min, max)
   return math.max(min, math.min(value, max))
 end
 
+local SCROLL_WHEEL_UP = Snacks.util.keycode("<ScrollWheelUp>")
+local SCROLL_WHEEL_DOWN = Snacks.util.keycode("<ScrollWheelDown>")
+
+---@type table<number, snacks.picker.list>
+local lists = setmetatable({}, { __mode = "v" })
+
+-- track mouse scrolling
+vim.on_key(function(key, typed)
+  key = typed or key
+  if key ~= SCROLL_WHEEL_UP and key ~= SCROLL_WHEEL_DOWN then
+    return
+  end
+  local up = key == SCROLL_WHEEL_UP
+  local mouse_win = vim.fn.getmousepos().winid
+  local list = lists[mouse_win]
+  if list and list.win:valid() then
+    vim.schedule(function()
+      if list and list.win:valid() then
+        list:scroll((up and -1 or 1) * list.state.mousescroll)
+      end
+    end)
+    return "" -- on Neovim 0.11, this will prevent the default scroll
+  end
+end)
+
 ---@param picker snacks.Picker
 function M.new(picker)
   local self = setmetatable({}, M)
@@ -43,6 +68,9 @@ function M.new(picker)
     enter = false,
     on_win = function()
       self:on_show()
+      lists[
+        self.win.win --[[@as number]]
+      ] = self
     end,
     minimal = true,
     bo = { modifiable = false, filetype = "snacks_picker_list" },
@@ -62,13 +90,16 @@ function M.new(picker)
     capacity = 1000,
     cmp = self.picker.sort,
   })
+
   self.win:on("CursorMoved", function()
     if not self.win:valid() then
       return
     end
     local cursor = vim.api.nvim_win_get_cursor(self.win.win)
+    local view = vim.api.nvim_win_call(self.win.win, vim.fn.winsaveview)
+    local row = cursor[1] - view.topline + 1
     if cursor[1] ~= self:idx2row(self.cursor) then
-      local idx = self:row2idx(cursor[1])
+      local idx = self:row2idx(row)
       self:_move(idx, true, true)
     end
   end, { buf = true })
@@ -78,6 +109,7 @@ function M.new(picker)
     self.dirty = true
     self:update()
   end)
+
   self.win:on("WinResized", function()
     if vim.tbl_contains(vim.v.event.windows, self.win.win) then
       self.state.height = vim.api.nvim_win_get_height(self.win.win)
@@ -85,6 +117,19 @@ function M.new(picker)
       self:update()
     end
   end)
+
+  -- reset topline. Only needed for Neovim < 0.11,
+  -- but won't hurt on newer versions
+  self.win:on("WinScrolled", function()
+    for win in pairs(vim.v.event) do
+      if (tonumber(win) or -1) == self.win.win then
+        vim.api.nvim_win_call(self.win.win, function()
+          vim.fn.winrestview({ topline = 1, leftcol = 0 })
+        end)
+      end
+    end
+  end)
+
   self.win:on({ "WinEnter", "WinLeave" }, function()
     self:update_cursorline()
   end)
@@ -150,6 +195,11 @@ end
 function M:close()
   self.win:destroy()
   self.picker = nil
+  for w, l in pairs(lists) do
+    if l == self then
+      lists[w] = nil
+    end
+  end
   -- Keep all items so actions can be performed on them,
   -- even when the picker closed
 end
@@ -166,8 +216,11 @@ end
 function M:_scroll(to, absolute, render)
   local old_top = self.top
   self.top = absolute and to or self.top + to
-  self.top = minmax(self.top, 1, self:count() - self:height() + 1)
-  self.cursor = absolute and to or self.cursor + to
+  local maxtop = self:count() - self:height() + 1
+  self.top = minmax(self.top, 1, maxtop)
+  if self.top == maxtop or self.top == 1 then
+    self.cursor = absolute and to or self.cursor + to
+  end
   local scrolloff = self:scrolloff()
   self.cursor = minmax(self.cursor, self.top + scrolloff, self.top + self:height() - 1 - scrolloff)
   self.dirty = self.dirty or self.top ~= old_top
@@ -467,7 +520,15 @@ end
 
 function M:update_cursorline()
   if self.win:win_valid() then
-    Snacks.util.wo(self.win.win, { cursorline = self:count() > 0 })
+    ---@type vim.wo|{}
+    local wo = {
+      cursorline = self:count() > 0,
+      winhighlight = self.win.opts.wo.winhighlight:gsub(
+        "CursorLine:.*CursorLine",
+        "CursorLine:" .. (self.picker:is_focused() and "SnacksPickerListCursorLine" or "CursorLine")
+      ),
+    }
+    Snacks.util.wo(self.win.win, wo)
   end
 end
 

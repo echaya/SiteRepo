@@ -6,7 +6,7 @@ local M = {}
 
 local uv = vim.uv or vim.loop
 
----@type {cmd:string[], args:string[], enabled?:boolean}[]
+---@type {cmd:string[], args:string[], enabled?:boolean, available?:boolean|string}[]
 local commands = {
   {
     cmd = { "fd", "fdfind" },
@@ -29,13 +29,23 @@ function M.get_cmd(opts)
   opts = opts or {}
   local checked = {} ---@type string[]
   for _, command in ipairs(commands) do
-    if command.enabled ~= false and (not opts.cmd or vim.tbl_contains(command.cmd, opts.cmd)) then
+    if
+      command.enabled ~= false
+      and command.available ~= false
+      and (not opts.cmd or vim.tbl_contains(command.cmd, opts.cmd))
+    then
+      if command.available then
+        assert(type(command.available) == "string", "available must be a string")
+        return command.available, vim.deepcopy(command.args)
+      end
       for _, c in ipairs(command.cmd) do
         table.insert(checked, c)
         if vim.fn.executable(c) == 1 then
+          command.available = c
           return c, vim.deepcopy(command.args)
         end
       end
+      command.available = false
     end
   end
   checked = #checked == 0 and opts.cmd and { opts.cmd } or checked
