@@ -223,10 +223,12 @@ function M.undo(item, picker)
     ret[#ret + 1] = { a("", 2) }
   end
   vim.list_extend(ret, M.tree(item, picker))
+  local w = vim.api.nvim_strwidth(ret[#ret][1])
 
-  ret[#ret + 1] = { a(tostring(entry.seq), 4), "SnacksPickerIdx" }
+  ret[#ret + 1] = { tostring(entry.seq), "SnacksPickerIdx" }
   ret[#ret + 1] = { " " }
-  ret[#ret + 1] = { a(Snacks.picker.util.reltime(entry.time), 13), "SnacksPickerTime" }
+  ret[#ret + 1] = { a(" ", 8 - w - #tostring(entry.seq)) }
+  ret[#ret + 1] = { a(Snacks.picker.util.reltime(entry.time), 15), "SnacksPickerTime" }
   ret[#ret + 1] = { " " }
   local function num(v, prefix)
     v = v or 0
