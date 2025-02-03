@@ -98,7 +98,7 @@ function M.log(opts, ctx)
   }, ctx)
 end
 
----@param opts snacks.picker.Config
+---@param opts snacks.picker.git.status.Config
 ---@type snacks.picker.finder
 function M.status(opts, ctx)
   local args = {
@@ -107,6 +107,9 @@ function M.status(opts, ctx)
     "-uall",
     "--porcelain=v1",
   }
+  if opts.ignored then
+    table.insert(args, "--ignored=matching")
+  end
 
   local cwd = vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
   cwd = Snacks.git.get_root(cwd)

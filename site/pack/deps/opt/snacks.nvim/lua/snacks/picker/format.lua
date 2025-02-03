@@ -51,6 +51,21 @@ function M.filename(item, picker)
   end
 
   local base_hl = item.dir and "SnacksPickerDirectory" or "SnacksPickerFile"
+  local function is(prop)
+    local it = item
+    while it do
+      if it[prop] then
+        return true
+      end
+      it = it.parent
+    end
+  end
+
+  if is("ignored") then
+    base_hl = "SnacksPickerPathIgnored"
+  elseif is("hidden") then
+    base_hl = "SnacksPickerPathHidden"
+  end
   local dir_hl = "SnacksPickerDir"
 
   if picker.opts.formatters.file.filename_only then
@@ -129,9 +144,10 @@ function M.git_log(item, picker)
   if item.date then
     ret[#ret + 1] = { a(item.date, 16), "SnacksPickerGitDate" }
   end
+  ret[#ret + 1] = { " " }
 
   local msg = item.msg ---@type string
-  local type, scope, breaking, body = msg:match("^(%S+)(%(.-%))(!?):%s*(.*)$")
+  local type, scope, breaking, body = msg:match("^(%S+)%s*(%(.-%))(!?):%s*(.*)$")
   if not type then
     type, breaking, body = msg:match("^(%S+)(!?):%s*(.*)$")
   end

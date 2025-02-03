@@ -4,6 +4,9 @@ local Async = require("snacks.picker.util.async")
 ---@field match_tick? number
 ---@field match_topk? number
 
+---@class snacks.picker.matcher.Config
+---@field regex? boolean used internally for positions of sources that use regex
+
 ---@class snacks.picker.Matcher
 ---@field opts snacks.picker.matcher.Config
 ---@field mods snacks.picker.matcher.Mods[][]
@@ -34,12 +37,13 @@ local YIELD_MATCH = 1 -- ms
 ---@field field? string
 ---@field ignorecase? boolean
 ---@field fuzzy? boolean
+---@field regex? boolean
 ---@field word? boolean
 ---@field exact_suffix? boolean
 ---@field exact_prefix? boolean
 ---@field inverse? boolean
 
----@param opts? snacks.picker.matcher.Config
+---@param opts? snacks.picker.matcher.Config|{}
 function M.new(opts)
   local self = setmetatable({}, M)
   self.opts = vim.tbl_deep_extend("force", {
@@ -172,20 +176,24 @@ function M:init(pattern)
   if pattern == "" then
     return true
   end
-  local is_or = false
-  for _, p in ipairs(vim.split(pattern, " +")) do
-    if p == "|" then
-      is_or = true
-    else
-      local mods = self:_prepare(p)
-      if mods.pattern ~= "" then
-        if is_or and #self.mods > 0 then
-          table.insert(self.mods[#self.mods], mods)
-        else
-          table.insert(self.mods, { mods })
+  if self.opts.regex then
+    self.mods = { { self:_prepare(pattern) } }
+  else
+    local is_or = false
+    for _, p in ipairs(vim.split(pattern, " +")) do
+      if p == "|" then
+        is_or = true
+      else
+        local mods = self:_prepare(p)
+        if mods.pattern ~= "" then
+          if is_or and #self.mods > 0 then
+            table.insert(self.mods[#self.mods], mods)
+          else
+            table.insert(self.mods, { mods })
+          end
         end
+        is_or = false
       end
-      is_or = false
     end
   end
   for _, ors in ipairs(self.mods) do
@@ -210,74 +218,79 @@ function M:_prepare(pattern)
   ---@type snacks.picker.matcher.Mods
   local mods = { pattern = pattern, entropy = 0, chars = {} }
 
-  local file_patterns = {
-    "^(.*[/\\].*):(%d*):(%d*)$",
-    "^(.*[/\\].*):(%d*)$",
-    "^(.+%.[a-z_]+):(%d*):(%d*)$",
-    "^(.+%.[a-z_]+):(%d*)$",
-  }
+  if self.opts.regex then
+    mods.regex = true
+  else
+    local file_patterns = {
+      "^(.*[/\\].*):(%d*):(%d*)$",
+      "^(.*[/\\].*):(%d*)$",
+      "^(.+%.[a-z_]+):(%d*):(%d*)$",
+      "^(.+%.[a-z_]+):(%d*)$",
+    }
 
-  for _, p in ipairs(file_patterns) do
-    local file, line, col = pattern:match(p)
-    if file then
-      mods.field = "file"
-      mods.pattern = file .. "$"
-      self.file = {
-        path = file,
-        pos = { tonumber(line) or 1, tonumber(col) or 0 },
-      }
-      break
+    for _, p in ipairs(file_patterns) do
+      local file, line, col = pattern:match(p)
+      if file then
+        mods.field = "file"
+        mods.pattern = file .. "$"
+        self.file = {
+          path = file,
+          pos = { tonumber(line) or 1, tonumber(col) or 0 },
+        }
+        break
+      end
     end
-  end
 
-  -- minimum two chars for field pattern
-  local field, p = pattern:match("^([%w_][%w_]+):(.*)$")
-  if field then
-    mods.field = field
-    mods.pattern = p
-  end
-  mods.ignorecase = self.opts.ignorecase
-  local is_lower = mods.pattern:lower() == mods.pattern
-  if self.opts.smartcase then
-    mods.ignorecase = is_lower
-  end
-  mods.fuzzy = self.opts.fuzzy
-  if not mods.fuzzy then
-    mods.entropy = mods.entropy + 10
-  end
-  if mods.pattern:sub(1, 1) == "!" then
-    mods.fuzzy, mods.inverse = false, true
-    mods.pattern = mods.pattern:sub(2)
-    mods.entropy = mods.entropy - 1
-  end
-  if mods.pattern:sub(1, 1) == "'" then
-    mods.fuzzy = false
-    mods.pattern = mods.pattern:sub(2)
-    mods.entropy = mods.entropy + 10
-    if mods.pattern:sub(-1, -1) == "'" then
-      mods.word = true
-      mods.pattern = mods.pattern:sub(1, -2)
+    -- minimum two chars for field pattern
+    local field, p = pattern:match("^([%w_][%w_]+):(.*)$")
+    if field then
+      mods.field = field
+      mods.pattern = p
+    end
+    mods.ignorecase = self.opts.ignorecase
+    local is_lower = mods.pattern:lower() == mods.pattern
+    if self.opts.smartcase then
+      mods.ignorecase = is_lower
+    end
+    mods.fuzzy = self.opts.fuzzy
+    if not mods.fuzzy then
       mods.entropy = mods.entropy + 10
     end
-  elseif mods.pattern:sub(1, 1) == "^" then
-    mods.fuzzy, mods.exact_prefix = false, true
-    mods.pattern = mods.pattern:sub(2)
-    mods.entropy = mods.entropy + 20
+    if mods.pattern:sub(1, 1) == "!" then
+      mods.fuzzy, mods.inverse = false, true
+      mods.pattern = mods.pattern:sub(2)
+      mods.entropy = mods.entropy - 1
+    end
+    if mods.pattern:sub(1, 1) == "'" then
+      mods.fuzzy = false
+      mods.pattern = mods.pattern:sub(2)
+      mods.entropy = mods.entropy + 10
+      if mods.pattern:sub(-1, -1) == "'" then
+        mods.word = true
+        mods.pattern = mods.pattern:sub(1, -2)
+        mods.entropy = mods.entropy + 10
+      end
+    elseif mods.pattern:sub(1, 1) == "^" then
+      mods.fuzzy, mods.exact_prefix = false, true
+      mods.pattern = mods.pattern:sub(2)
+      mods.entropy = mods.entropy + 20
+    end
+    if mods.pattern:sub(-1, -1) == "$" then
+      mods.fuzzy = false
+      mods.exact_suffix = true
+      mods.pattern = mods.pattern:sub(1, -2)
+      mods.entropy = mods.entropy + 20
+    end
+    local rare_chars = #mods.pattern:gsub("[%w%s]", "")
+    mods.entropy = mods.entropy + math.min(#mods.pattern, 20) + rare_chars * 2
+    if not mods.ignorecase and not is_lower then
+      mods.entropy = mods.entropy * 2
+    end
+    if mods.ignorecase then
+      mods.pattern = mods.pattern:lower()
+    end
   end
-  if mods.pattern:sub(-1, -1) == "$" then
-    mods.fuzzy = false
-    mods.exact_suffix = true
-    mods.pattern = mods.pattern:sub(1, -2)
-    mods.entropy = mods.entropy + 20
-  end
-  local rare_chars = #mods.pattern:gsub("[%w%s]", "")
-  mods.entropy = mods.entropy + math.min(#mods.pattern, 20) + rare_chars * 2
-  if not mods.ignorecase and not is_lower then
-    mods.entropy = mods.entropy * 2
-  end
-  if mods.ignorecase then
-    mods.pattern = mods.pattern:lower()
-  end
+
   for c = 1, #mods.pattern do
     mods.chars[c] = mods.pattern:sub(c, c)
   end
@@ -308,7 +321,9 @@ function M:update(item)
         item.frecency = item.frecency or self.frecency:get(item)
         score = score + (1 - 1 / (1 + item.frecency)) * BONUS_FRECENCY
       end
-      if self.opts.cwd_bonus and self.cwd == item.cwd or Snacks.picker.util.path(item):find(self.cwd, 1, true) == 1 then
+      if
+        self.opts.cwd_bonus and (self.cwd == item.cwd or Snacks.picker.util.path(item):find(self.cwd, 1, true) == 1)
+      then
         score = score + BONUS_CWD
       end
     end
@@ -413,12 +428,32 @@ function M:fuzzy_positions(str, pattern, from)
   return ret
 end
 
+---@param str string
+---@param pattern string
+---@return number? score, number? from, number? to, string? str
+function M:regex(str, pattern)
+  local ok, re = pcall(vim.regex, pattern)
+  if not ok then
+    return
+  end
+  local from, to = re:match_str(str)
+  if from and to then
+    from = from + 1
+    return self.score:get(str, from, to), from, to, str
+  end
+end
+
 ---@param item snacks.picker.Item
 ---@param mods snacks.picker.matcher.Mods
 ---@return number? score, number? from, number? to, string? str
 function M:_match(item, mods)
   self.score.is_file = item.file ~= nil
   local str = item.text
+
+  if mods.regex then
+    return self:regex(str, mods.pattern)
+  end
+
   if mods.field then
     if item[mods.field] == nil then
       if mods.inverse then

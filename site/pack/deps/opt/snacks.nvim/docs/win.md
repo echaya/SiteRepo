@@ -381,6 +381,13 @@ win:scratch()
 win:scroll(up)
 ```
 
+### `win:set_buf()`
+
+```lua
+---@param buf number
+win:set_buf(buf)
+```
+
 ### `win:set_title()`
 
 ```lua

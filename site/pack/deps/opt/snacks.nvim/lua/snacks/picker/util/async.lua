@@ -227,6 +227,9 @@ function Async:step()
 end
 
 function Async:abort()
+  if not self:running() then
+    return
+  end
   self._aborted = true
   if self._co and coroutine.running() == self._co then
     error("aborted", 2)

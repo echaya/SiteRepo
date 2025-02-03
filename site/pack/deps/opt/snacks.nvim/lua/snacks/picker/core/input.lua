@@ -27,6 +27,9 @@ function M.new(picker)
       vim.fn.prompt_setprompt(win.buf, "")
       vim.bo[win.buf].modified = false
     end,
+    on_win = function()
+      self:highlights()
+    end,
     bo = {
       filetype = "snacks_picker_input",
       buftype = "prompt",
@@ -72,6 +75,17 @@ function M.new(picker)
     { buf = true }
   )
   return self
+end
+
+function M:highlights()
+  local m = vim.fn.matchadd
+  vim.api.nvim_win_call(self.win.win, function()
+    m("@punctuation.delimiter", "\\v(^|\\s|:|\\!)\\zs['^]")
+    m("@punctuation.delimiter", "\\v['$]\\ze(\\s|$)")
+    m("DiagnosticWarn", "\\v(^|\\s|:)\\zs\\!")
+    m("@keyword", "\\v(^|\\s)\\zs\\w+:")
+    m("@operator", "\\v\\s\\zs\\|\\ze\\s")
+  end)
 end
 
 function M:close()

@@ -370,8 +370,7 @@ function M:set_layout(layout)
   self:init_layout(layout)
   self.layout:show()
   self.list.reverse = layout.reverse
-  self.list.dirty = true
-  self.list:update()
+  self.list:update({ force = true })
   self.input:update()
 end
 
@@ -712,10 +711,7 @@ function M:update(opts)
     if not self.list.paused then
       self.input:update()
     end
-    if opts.force then
-      self.list.dirty = true
-    end
-    self.list:update()
+    self.list:update(opts)
   end
 end
 

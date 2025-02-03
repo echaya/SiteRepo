@@ -11,6 +11,8 @@ Snacks.util.set_hl({
   Totals = "NonText",
   File = "", -- basename of a file path
   Directory = "Directory", -- basename of a directory path
+  PathIgnored = "NonText", -- any ignored file or directory
+  PathHidden = "NonText", -- any hidden file or directory
   Dir = "NonText", -- dirname of a path
   Toggle = "DiagnosticVirtualTextInfo",
   Dimmed = "Conceal",

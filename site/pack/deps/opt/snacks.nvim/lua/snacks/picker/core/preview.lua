@@ -47,7 +47,6 @@ function M.new(opts, main)
       enter = false,
       width = 0,
       height = 0,
-      fixbuf = false,
       on_win = function()
         self.item = nil
         self:reset()
@@ -110,6 +109,9 @@ end
 function M:refresh(picker)
   self.item = nil
   self:reset()
+  if self.main then
+    self.win:update()
+  end
   vim.schedule(function()
     self:show(picker)
   end)
@@ -182,12 +184,17 @@ function M:clear(buf)
   vim.api.nvim_buf_clear_namespace(buf, ns_loc, 0, -1)
 end
 
+---@param buf number
+function M:set_buf(buf)
+  self.win:set_buf(buf)
+end
+
 function M:reset()
   if not self.win:valid() then
     return
   end
   if self.win.scratch_buf and vim.api.nvim_buf_is_valid(self.win.scratch_buf) then
-    vim.api.nvim_win_set_buf(self.win.win, self.win.scratch_buf)
+    self.win:set_buf(self.win.scratch_buf)
   else
     self.win:scratch()
   end
@@ -214,7 +221,7 @@ function M:scratch()
   vim.o.eventignore = "all"
   vim.bo[buf].filetype = "snacks_picker_preview"
   vim.o.eventignore = ei
-  vim.api.nvim_win_set_buf(self.win.win, buf)
+  self.win:set_buf(buf)
   self.win:map()
   self:wo({ number = false, relativenumber = false, signcolumn = "no" })
   return buf

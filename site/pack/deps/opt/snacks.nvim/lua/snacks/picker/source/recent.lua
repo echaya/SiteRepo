@@ -3,8 +3,8 @@ local M = {}
 local uv = vim.uv or vim.loop
 
 ---@class snacks.picker
----@field recent fun(opts?: snacks.picker.recent.Config): snacks.Picker
----@field projects fun(opts?: snacks.picker.projects.Config): snacks.Picker
+---@field recent fun(opts?: snacks.picker.recent.Config|{}): snacks.Picker
+---@field projects fun(opts?: snacks.picker.projects.Config|{}): snacks.Picker
 
 ---@param filter snacks.picker.Filter
 ---@param extra? string[]
@@ -61,20 +61,55 @@ M.recent = M.files
 --- The default action will change the directory to the project root,
 --- try to restore the session and open the picker if the session is not restored.
 --- You can customize the behavior by providing a custom action.
----@param opts snacks.picker.recent.Config
+---@param opts snacks.picker.projects.Config
 ---@type snacks.picker.finder
 function M.projects(opts, ctx)
+  local args = {
+    "-H",
+    "-t",
+    "f",
+    "-t",
+    "s",
+    "-t",
+    "d",
+    "--max-depth",
+    "2",
+    "--follow",
+    "--absolute-path",
+  }
+  vim.list_extend(args, { "-g", "{" .. table.concat(opts.patterns or {}, ",") .. "}" })
+  local dev = type(opts.dev) == "string" and { opts.dev } or opts.dev or {}
+  ---@cast dev string[]
+  vim.list_extend(args, vim.tbl_map(vim.fs.normalize, dev))
+  local proc = require("snacks.picker.source.proc").proc({ cmd = "fd", args = args, notify = false }, ctx)
   ---@async
   ---@param cb async fun(item: snacks.picker.finder.Item)
   return function(cb)
     local dirs = {} ---@type table<string, boolean>
-    for file in oldfiles(ctx.filter) do
-      local dir = Snacks.git.get_root(file)
+    ---@async
+    local function add(dir)
       if dir and not dirs[dir] then
         dirs[dir] = true
-        cb({ file = dir, text = file, dir = dir })
+        cb({ file = dir, text = dir, dir = true })
       end
     end
+
+    if opts.recent then
+      for file in oldfiles(ctx.filter) do
+        local dir = Snacks.git.get_root(file)
+        add(dir)
+      end
+    end
+
+    ---@async
+    proc(function(item)
+      local path = item.text
+      path = path:sub(-1) == "/" and path:sub(1, -2) or path
+      path = vim.fs.dirname(path)
+      if ctx.filter:match({ file = path, text = path }) then
+        add(path)
+      end
+    end)
   end
 end
 

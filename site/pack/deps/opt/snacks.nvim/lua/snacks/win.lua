@@ -821,23 +821,28 @@ function M:show()
       -- find another window to swap with
       local main ---@type number?
       for _, win in ipairs(vim.api.nvim_list_wins()) do
-        local is_float = vim.api.nvim_win_get_config(win).relative ~= ""
-        if not is_float then
-          main = win
-          if win ~= self.win and vim.bo[vim.api.nvim_win_get_buf(win)].buftype == "" then
+        local win_buf = vim.api.nvim_win_get_buf(win)
+        local is_float = vim.api.nvim_win_get_config(win).zindex ~= nil
+        if win ~= self.win and not is_float then
+          if vim.bo[win_buf].buftype == "" then
+            main = win
             break
           end
         end
       end
+
       if main then
+        vim.api.nvim_win_set_buf(self.win, self.buf)
+        vim.api.nvim_win_set_buf(main, buf)
+        vim.api.nvim_set_current_win(main)
+        vim.cmd.stopinsert()
+      else
+        -- no main window found, so close this window
+        vim.api.nvim_win_set_buf(self.win, self.buf)
         vim.schedule(function()
-          if not self:valid() then
-            return
-          end
-          vim.api.nvim_win_set_buf(self.win, self.buf)
-          vim.api.nvim_win_set_buf(main, buf)
-          vim.api.nvim_set_current_win(main)
           vim.cmd.stopinsert()
+          vim.cmd("sbuffer " .. buf)
+          vim.api.nvim_win_close(self.win, true)
         end)
       end
     end,
@@ -847,6 +852,13 @@ function M:show()
   self:drop()
 
   return self
+end
+
+---@param buf number
+function M:set_buf(buf)
+  assert(self:valid(), "Window is not valid")
+  self.buf = buf
+  vim.api.nvim_win_set_buf(self.win, buf)
 end
 
 function M:map()

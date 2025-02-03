@@ -286,28 +286,58 @@ function M.normkey(key)
     return key_cache[key]
   end
   local function norm(v)
+    local l = v:lower()
+    if l == "leader" then
+      return M.normkey("<leader>")
+    elseif l == "localleader" then
+      return M.normkey("<localleader>")
+    end
     return vim.fn.keytrans(M.keycode(("<%s>"):format(v)))
   end
   local orig = key
-  ---@param v string
-  key = key:gsub("(%b<>)", function(v)
-    v = v:sub(2, -2)
-    if v:sub(2, 2) == "-" and v:sub(1, 1):find("[aAmMcCsS]") then
-      local m = v:sub(1, 1):upper()
-      m = m == "A" and "M" or m
-      local k = v:sub(3)
-      if #k > 1 then
-        return norm(v)
+  key = key:gsub("<lt>", "<")
+  local lower = key:lower()
+  if lower == "<leader>" then
+    key = vim.g.mapleader
+    key = vim.fn.keytrans((not key or key == "") and "\\" or key)
+  elseif lower == "<localleader>" then
+    key = vim.g.maplocalleader
+    key = vim.fn.keytrans((not key or key == "") and "\\" or key)
+  else
+    local extracted = {} ---@type string[]
+    local function extract(v)
+      v = v:sub(2, -2)
+      if v:sub(2, 2) == "-" and v:sub(1, 1):find("[aAmMcCsS]") then
+        local m = v:sub(1, 1):upper()
+        m = m == "A" and "M" or m
+        local k = v:sub(3)
+        if #k > 1 then
+          return norm(v)
+        end
+        if m == "C" then
+          k = k:upper()
+        elseif m == "S" then
+          return k:upper()
+        end
+        return ("<%s-%s>"):format(m, k)
       end
-      if m == "C" then
-        k = k:upper()
-      elseif m == "S" then
-        return k:upper()
-      end
-      return ("<%s-%s>"):format(m, k)
+      return norm(v)
     end
-    return norm(v)
-  end)
+    local placeholder = "_#_"
+    ---@param v string
+    key = key:gsub("(%b<>)", function(v)
+      table.insert(extracted, extract(v))
+      return placeholder
+    end)
+    key = vim.fn.keytrans(key):gsub("<lt>", "<")
+
+    -- Restore extracted %b<> sequences
+    local i = 0
+    key = key:gsub(placeholder, function()
+      i = i + 1
+      return extracted[i] or ""
+    end)
+  end
   key_cache[orig] = key
   key_cache[key] = key
   return key

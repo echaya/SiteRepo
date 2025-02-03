@@ -1,7 +1,10 @@
+local Async = require("snacks.picker.util.async")
+local Git = require("snacks.picker.source.git")
+
 local M = {}
 
 ---@class snacks.picker
----@field explorer fun(opts?: snacks.picker.explorer.Config): snacks.Picker
+---@field explorer fun(opts?: snacks.picker.explorer.Config|{}): snacks.Picker
 
 ---@type table<snacks.Picker, snacks.picker.explorer.State>
 M._state = setmetatable({}, { __mode = "k" })
@@ -129,15 +132,21 @@ function Tree:dirs(cwd, ret)
   return ret
 end
 local tree = Tree.new()
+-- global git status
+local git_tree_status = {} ---@type table<string, string>
 
 ---@class snacks.picker.explorer.State
 ---@field cwd string
+---@field tick number
 ---@field tree snacks.picker.explorer.Tree
 ---@field all? boolean
 ---@field ref snacks.Picker.ref
 ---@field opts snacks.picker.explorer.Config
 ---@field on_find? fun()?
 ---@field git_status {file: string, status: string, sort?:string}[]
+---@field expanded table<string, boolean>
+---@field cache table<string, snacks.picker.explorer.Item[]>
+---@field cache_opts? snacks.picker.explorer.Config|{}
 local State = {}
 State.__index = State
 ---@param picker snacks.Picker
@@ -148,7 +157,10 @@ function State.new(picker)
   local filter = picker:filter()
   self.cwd = filter.cwd
   self.tree = tree
+  self.tick = 0
   self.git_status = {}
+  self.expanded = {}
+  self.cache = {}
   local buf = vim.api.nvim_win_get_buf(picker.main)
   local buf_file = vim.fs.normalize(vim.api.nvim_buf_get_name(buf))
   if uv.fs_stat(buf_file) then
@@ -162,11 +174,11 @@ function State.new(picker)
     end)
   end)
   picker.list.win:on("TermClose", function()
-    self:update()
+    self:update({ force = true })
   end, { pattern = "*lazygit" })
   picker.list.win:on("BufWritePost", function(_, ev)
     if self:is_visible(ev.file) then
-      self:update()
+      self:update({ force = true })
     end
   end)
   picker.list.win:on("DirChanged", function(_, ev)
@@ -181,7 +193,8 @@ function State.new(picker)
   return self
 end
 
-function State:sort_git_status()
+function State:update_git_status()
+  -- Setup hierarchical sorting
   for _, s in ipairs(self.git_status) do
     if self.tree:in_cwd(self.cwd, s.file) then
       local parts = vim.split(s.file:sub(#self.cwd + 2), "/", { plain = true })
@@ -197,6 +210,27 @@ function State:sort_git_status()
   table.sort(self.git_status, function(a, b)
     return a.sort < b.sort
   end)
+
+  -- Update tree status
+  git_tree_status = {}
+
+  ---@param path string
+  ---@param status string
+  local function add_git_status(path, status)
+    git_tree_status[path] = git_tree_status[path] and Git.merge_status(git_tree_status[path], status) or status
+  end
+
+  -- Add git status to files and parents
+  for _, s in ipairs(self.git_status) do
+    local path = s.file:gsub("/$", "")
+    add_git_status(path, s.status)
+    if s.status:sub(1, 1) ~= "!" then -- don't propagate ignored status
+      add_git_status(self.cwd, s.status)
+      for dir in Snacks.picker.util.parents(path, self.cwd) do
+        add_git_status(dir, s.status)
+      end
+    end
+  end
 end
 
 function State:picker()
@@ -287,6 +321,7 @@ end
 ---@param opts snacks.picker.explorer.Config
 ---@param ctx snacks.picker.finder.ctx
 function State:setup(opts, ctx)
+  self.tick = self.tick + 1
   opts = Snacks.picker.util.shallow_copy(opts)
   opts.cmd = "fd"
   opts.cwd = self.cwd
@@ -299,6 +334,7 @@ function State:setup(opts, ctx)
     "--follow", -- always needed to make sure we see symlinked dirs as dirs
   }
   self.all = #ctx.filter.search > 0
+  self.expanded = {}
   if self.all then
     local picker = self:picker()
     if not picker then
@@ -318,14 +354,20 @@ function State:setup(opts, ctx)
     end
   else
     opts.dirs = self.tree:dirs(self.cwd)
+    for _, dir in ipairs(opts.dirs or {}) do
+      self.expanded[dir] = true
+    end
     vim.list_extend(opts.args, { "--max-depth", "1" })
   end
   return opts
 end
 
----@param opts? {target?: boolean, on_done?: fun()}
+---@param opts? {target?: boolean, on_done?: fun(), force?: boolean}
 function State:update(opts)
   opts = opts or {}
+  if opts.force then
+    self.cache = {}
+  end
   local picker = self:picker()
   if picker then
     if opts.target ~= false then
@@ -373,10 +415,20 @@ function M.setup(opts)
   })
 end
 
+---@param prompt string
+---@param fn fun()
+function M.confirm(prompt, fn)
+  Snacks.picker.select({ "Yes", "No" }, { prompt = prompt }, function(_, idx)
+    if idx == 1 then
+      fn()
+    end
+  end)
+end
+
 ---@type table<string, snacks.picker.Action.spec>
 M.actions = {
   explorer_update = function(picker)
-    M.get_state(picker):update()
+    M.get_state(picker):update({ force = true })
   end,
   explorer_up = function(picker)
     M.get_state(picker):up()
@@ -419,7 +471,7 @@ M.actions = {
         end
         io.open(path, "w"):close()
       end
-      state:update()
+      state:update({ force = true })
     end)
   end,
   explorer_rename = function(picker, item)
@@ -431,7 +483,7 @@ M.actions = {
       file = item.file,
       on_rename = function(new)
         state:open(new)
-        state:update()
+        state:update({ force = true })
       end,
     })
   end,
@@ -465,57 +517,58 @@ M.actions = {
     ---@type string[]
     local paths = vim.tbl_map(Snacks.picker.util.path, picker:selected())
     if #paths == 0 then
-      Snacks.notify.warn("No files selected to move")
-      return
+      Snacks.notify.warn("No files selected to move. Renaming instead.")
+      return M.actions.explorer_rename(picker, picker:current())
     end
     local target = state:dir()
     local what = #paths == 1 and vim.fn.fnamemodify(paths[1], ":p:~:.") or #paths .. " files"
     local t = vim.fn.fnamemodify(target, ":p:~:.")
 
-    Snacks.picker.select({ "Yes", "No" }, { prompt = "Move " .. what .. " to " .. t .. "?" }, function(_, idx)
-      if idx == 1 then
-        for _, from in ipairs(paths) do
-          local to = target .. "/" .. vim.fn.fnamemodify(from, ":t")
-          Snacks.rename.on_rename_file(from, to, function()
-            local ok, err = pcall(vim.fn.rename, from, to)
-            if not ok then
-              Snacks.notify.error("Failed to move `" .. from .. "`:\n- " .. err)
-            end
-          end)
-        end
-        state:update()
+    M.confirm("Move " .. what .. " to " .. t .. "?", function()
+      for _, from in ipairs(paths) do
+        local to = target .. "/" .. vim.fn.fnamemodify(from, ":t")
+        Snacks.rename.on_rename_file(from, to, function()
+          local ok, err = pcall(vim.fn.rename, from, to)
+          if not ok then
+            Snacks.notify.error("Failed to move `" .. from .. "`:\n- " .. err)
+          end
+        end)
       end
+      picker.list:set_selected() -- clear selection
+      state:update({ force = true })
     end)
   end,
   explorer_copy = function(picker, item)
     if not item then
       return
     end
-    if item.dir then
-      Snacks.notify.warn("Cannot copy directories")
+    local state = M.get_state(picker)
+    ---@type string[]
+    local paths = vim.tbl_map(Snacks.picker.util.path, picker:selected())
+    -- Copy selection
+    if #paths > 0 then
+      local dir = state:dir()
+      Snacks.picker.util.copy(paths, dir)
+      state:open(dir)
+      picker.list:set_selected() -- clear selection
+      state:update({ force = true })
       return
     end
-    local state = M.get_state(picker)
     Snacks.input({
       prompt = "Copy to",
     }, function(value)
       if not value or value:find("^%s$") then
         return
       end
-      local dir = state:dir()
-      local path = vim.fs.normalize(dir .. "/" .. value)
-      vim.fn.mkdir(vim.fs.dirname(path), "p")
-      state:open(dir)
-      if uv.fs_stat(path) then
-        Snacks.notify.warn("File already exists:\n- `" .. path .. "`")
+      local dir = vim.fs.dirname(item.file)
+      local to = vim.fs.normalize(dir .. "/" .. value)
+      if uv.fs_stat(to) then
+        Snacks.notify.warn("File already exists:\n- `" .. to .. "`")
         return
       end
-      uv.fs_copyfile(item.file, path, function(err)
-        if err then
-          Snacks.notify.error("Failed to copy `" .. item.file .. "` to `" .. path .. "`:\n- " .. err)
-        end
-        state:update()
-      end)
+      Snacks.picker.util.copy_path(item.file, to)
+      state:open(dir)
+      state:update({ force = true })
     end)
   end,
   explorer_del = function(picker)
@@ -526,16 +579,14 @@ M.actions = {
       return
     end
     local what = #paths == 1 and vim.fn.fnamemodify(paths[1], ":p:~:.") or #paths .. " files"
-    Snacks.picker.select({ "Yes", "No" }, { prompt = "Delete " .. what .. "?" }, function(_, idx)
-      if idx == 1 then
-        for _, path in ipairs(paths) do
-          local ok, err = pcall(vim.fn.delete, path, "rf")
-          if not ok then
-            Snacks.notify.error("Failed to delete `" .. path .. "`:\n- " .. err)
-          end
+    M.confirm("Delete " .. what .. "?", function()
+      for _, path in ipairs(paths) do
+        local ok, err = pcall(vim.fn.delete, path, "rf")
+        if not ok then
+          Snacks.notify.error("Failed to delete `" .. path .. "`:\n- " .. err)
         end
-        state:update()
       end
+      state:update({ force = true })
     end)
   end,
   explorer_focus = function(picker)
@@ -563,7 +614,6 @@ M.actions = {
   end,
   confirm = function(picker, item, action)
     local state = M.get_state(picker)
-    local item = picker:current()
     if not item then
       return
     elseif item.dir then
@@ -592,25 +642,38 @@ end
 function M.explorer(opts, ctx)
   local state = M.get_state(ctx.picker)
   opts = state:setup(opts, ctx)
+  local tick = state.tick
   opts.notify = false
   local expanded = {} ---@type table<string, boolean>
+  local cache_opts = { hidden = opts.hidden, ignored = opts.ignored }
+
+  local use_cache = not state.all and vim.deep_equal(state.cache_opts, cache_opts)
   for _, dir in ipairs(opts.dirs or {}) do
     expanded[dir] = true
+    use_cache = use_cache and state.cache[dir] ~= nil
   end
-  -- vim.notify(table.concat(opts.dirs or {}, "\n"), "info")
+
+  if not use_cache then
+    state.cache = {}
+    state.cache_opts = cache_opts
+  end
 
   ---@param path string
   local function is_open(path)
     return state.all or expanded[path]
   end
 
-  local Git = require("snacks.picker.source.git")
-
-  local files = require("snacks.picker.source.files").files(opts, ctx)
-  local git = Git.status(opts, ctx)
-
-  local dirs = {} ---@type table<string, snacks.picker.explorer.Item>
-  local last = {} ---@type table<snacks.picker.finder.Item, snacks.picker.finder.Item>
+  ---@param item snacks.picker.explorer.Item
+  local function add_git_status(item)
+    item.status = git_tree_status[item.file or ""] or nil
+    local ignored = item.status and item.status:sub(1, 1) == "!"
+    if item.open and not opts.git_status_open and not ignored then
+      item.status = nil
+    end
+    if item.status and ignored then
+      item.ignored = true
+    end
+  end
 
   ---@type snacks.picker.explorer.Item
   local root = {
@@ -621,18 +684,39 @@ function M.explorer(opts, ctx)
     sort = "",
     internal = true,
   }
+
+  if use_cache then
+    local ret = { root } ---@type snacks.picker.explorer.Item[]
+    for _, dir in ipairs(opts.dirs or {}) do
+      for _, item in ipairs(state.cache[dir]) do
+        item.open = is_open(item.file)
+        add_git_status(item)
+        table.insert(ret, item)
+      end
+    end
+    if state.on_find then
+      state.on_find()
+      state.on_find = nil
+    end
+    return ret
+  end
+
+  local files = require("snacks.picker.source.files").files(opts, ctx)
+  local git = Git.status(opts, ctx)
+
+  local dirs = {} ---@type table<string, snacks.picker.explorer.Item>
+  local last = {} ---@type table<snacks.picker.finder.Item, snacks.picker.finder.Item>
+
   local cwd = state.cwd
   dirs[cwd] = root
   state.git_status = {}
 
-  local items = {} ---@type table<string, snacks.picker.explorer.Item>
   ---@async
   return function(cb)
     if state.on_find then
       ctx.picker.matcher.task:on("done", vim.schedule_wrap(state.on_find))
       state.on_find = nil
     end
-    items[cwd] = root
     cb(root)
 
     ---@param item snacks.picker.explorer.Item
@@ -641,12 +725,19 @@ function M.explorer(opts, ctx)
       dirname, basename = dirname or "", basename or item.file
       local parent = dirs[dirname] ~= item and dirs[dirname] or root
 
+      state.cache[dirname] = state.cache[dirname] or {}
+      table.insert(state.cache[dirname], item)
+
       -- hierarchical sorting
       if item.dir then
         item.sort = parent.sort .. "!" .. basename .. " "
       else
         item.sort = parent.sort .. "#" .. basename .. " "
       end
+      if basename:sub(1, 1) == "." then
+        item.hidden = true
+      end
+      add_git_status(item)
 
       if opts.tree then
         -- tree
@@ -659,24 +750,10 @@ function M.explorer(opts, ctx)
           last[parent] = item
         end
       end
-      items[item.file] = item
       -- add to picker
       cb(item)
     end
-
-    -- gather git status in a separate coroutine,
-    -- so that both git and fd can run in parallel
-    local git_async ---@type snacks.picker.Async?
-    if opts.git_status then
-      git_async = require("snacks.picker.util.async").new(function()
-        git(function(item)
-          local path = Snacks.picker.util.path(item)
-          if path then
-            table.insert(state.git_status, { file = path, status = item.status })
-          end
-        end)
-      end)
-    end
+    -- ctx.async:sleep(1000)
 
     -- get files and directories
     files(function(item)
@@ -712,35 +789,38 @@ function M.explorer(opts, ctx)
       add(item)
     end)
 
-    -- wait for git status to finish
-    if git_async then
-      git_async:wait()
-    end
+    -- gather git status in a separate coroutine,
+    -- so that git doesn't block the picker
+    if opts.git_status then
+      ---@async
+      Async.new(function()
+        local me = Async.running()
 
-    local function add_git_status(path, status)
-      if not opts.git_status_open and is_open(path) then
-        return
-      end
-      local item = items[path]
-      if item then
-        if item.status then
-          item.status = Git.merge_status(item.status, status)
-        else
-          item.status = status
+        local check = function() -- check if we need to abort
+          return state.tick ~= tick or ctx.picker.closed and me:abort()
         end
-      end
-    end
 
-    state:sort_git_status()
+        -- fetch git status
+        git(function(item)
+          check()
+          table.insert(state.git_status, {
+            file = Snacks.picker.util.path(item),
+            status = item.status,
+          })
+        end)
+        check()
 
-    -- Add git status to files and parents
-    for _, s in ipairs(state.git_status) do
-      local file, status = s.file, s.status
-      add_git_status(file, status)
-      add_git_status(cwd, status)
-      for dir in Snacks.picker.util.parents(file, cwd) do
-        add_git_status(dir, status)
-      end
+        state:update_git_status()
+
+        ctx.async:wait() -- wait till fd is done
+        check()
+        -- add git status to picker items
+        for item in ctx.picker:iter() do
+          ---@cast item snacks.picker.explorer.Item
+          add_git_status(item)
+        end
+        ctx.picker:update({ force = true })
+      end)
     end
   end
 end

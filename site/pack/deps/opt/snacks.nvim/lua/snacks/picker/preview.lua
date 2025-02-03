@@ -74,7 +74,7 @@ function M.file(ctx)
     local name = vim.api.nvim_buf_get_name(ctx.item.buf)
     name = uv.fs_stat(name) and vim.fn.fnamemodify(name, ":t") or name
     ctx.preview:set_title(name)
-    vim.api.nvim_win_set_buf(ctx.win, ctx.item.buf)
+    ctx.preview:set_buf(ctx.item.buf)
   else
     local path = Snacks.picker.util.path(ctx.item)
     if not path then

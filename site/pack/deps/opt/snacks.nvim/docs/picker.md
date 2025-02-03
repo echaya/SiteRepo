@@ -132,6 +132,7 @@ Snacks.picker.pick({source = "files", ...})
     -- so this can have a performance impact for large lists and increase memory usage
     cwd_bonus = false, -- give bonus for matching files in the cwd
     frecency = false, -- frecency bonus
+    history_bonus = false, -- give more weight to chronological order
   },
   sort = {
     -- default sort is by score, text length and index
@@ -386,6 +387,52 @@ Snacks.picker.pick({source = "files", ...})
 
 ## 🚀 Examples
 
+### `flash`
+
+```lua
+{
+  "folke/flash.nvim",
+  optional = true,
+  specs = {
+    {
+      "folke/snacks.nvim",
+      opts = {
+        picker = {
+          win = {
+            input = {
+              keys = {
+                ["<a-s>"] = { "flash", mode = { "n", "i" } },
+                ["s"] = { "flash" },
+              },
+            },
+          },
+          actions = {
+            flash = function(picker)
+              require("flash").jump({
+                pattern = "^",
+                label = { after = { 0, 0 } },
+                search = {
+                  mode = "search",
+                  exclude = {
+                    function(win)
+                      return vim.bo[vim.api.nvim_win_get_buf(win)].filetype ~= "snacks_picker_list"
+                    end,
+                  },
+                },
+                action = function(match)
+                  local idx = picker.list:row2idx(match.pos[1])
+                  picker.list:_move(idx, true, true)
+                end,
+              })
+            end,
+          },
+        },
+      },
+    },
+  },
+}
+```
+
 ### `general`
 
 ```lua
@@ -395,19 +442,25 @@ Snacks.picker.pick({source = "files", ...})
     picker = {},
   },
   keys = {
+    { "<leader><space>", function() Snacks.picker.smart() end, desc = "Smart Find Files" },
     { "<leader>,", function() Snacks.picker.buffers() end, desc = "Buffers" },
     { "<leader>/", function() Snacks.picker.grep() end, desc = "Grep" },
     { "<leader>:", function() Snacks.picker.command_history() end, desc = "Command History" },
-    { "<leader><space>", function() Snacks.picker.files() end, desc = "Find Files" },
+    { "<leader>n", function() Snacks.picker.notifications() end, desc = "Notification History" },
+    { "<leader>e", function() Snacks.explorer() end, desc = "File Explorer" },
     -- find
     { "<leader>fb", function() Snacks.picker.buffers() end, desc = "Buffers" },
     { "<leader>fc", function() Snacks.picker.files({ cwd = vim.fn.stdpath("config") }) end, desc = "Find Config File" },
     { "<leader>ff", function() Snacks.picker.files() end, desc = "Find Files" },
     { "<leader>fg", function() Snacks.picker.git_files() end, desc = "Find Git Files" },
+    { "<leader>fp", function() Snacks.picker.projects() end, desc = "Projects" },
     { "<leader>fr", function() Snacks.picker.recent() end, desc = "Recent" },
     -- git
-    { "<leader>gc", function() Snacks.picker.git_log() end, desc = "Git Log" },
+    { "<leader>gl", function() Snacks.picker.git_log() end, desc = "Git Log" },
+    { "<leader>gL", function() Snacks.picker.git_log_line() end, desc = "Git Log Line" },
     { "<leader>gs", function() Snacks.picker.git_status() end, desc = "Git Status" },
+    { "<leader>gd", function() Snacks.picker.git_diff() end, desc = "Git Diff (Hunks)" },
+    { "<leader>gf", function() Snacks.picker.git_log_file() end, desc = "Git Log File" },
     -- Grep
     { "<leader>sb", function() Snacks.picker.lines() end, desc = "Buffer Lines" },
     { "<leader>sB", function() Snacks.picker.grep_buffers() end, desc = "Grep Open Buffers" },
@@ -415,27 +468,34 @@ Snacks.picker.pick({source = "files", ...})
     { "<leader>sw", function() Snacks.picker.grep_word() end, desc = "Visual selection or word", mode = { "n", "x" } },
     -- search
     { '<leader>s"', function() Snacks.picker.registers() end, desc = "Registers" },
+    { '<leader>s/', function() Snacks.picker.search_history() end, desc = "Search History" },
     { "<leader>sa", function() Snacks.picker.autocmds() end, desc = "Autocmds" },
+    { "<leader>sb", function() Snacks.picker.lines() end, desc = "Buffer Lines" },
     { "<leader>sc", function() Snacks.picker.command_history() end, desc = "Command History" },
     { "<leader>sC", function() Snacks.picker.commands() end, desc = "Commands" },
     { "<leader>sd", function() Snacks.picker.diagnostics() end, desc = "Diagnostics" },
+    { "<leader>sd", function() Snacks.picker.diagnostics_buffer() end, desc = "Buffer Diagnostics" },
     { "<leader>sh", function() Snacks.picker.help() end, desc = "Help Pages" },
     { "<leader>sH", function() Snacks.picker.highlights() end, desc = "Highlights" },
+    { "<leader>si", function() Snacks.picker.icons() end, desc = "Icons" },
     { "<leader>sj", function() Snacks.picker.jumps() end, desc = "Jumps" },
     { "<leader>sk", function() Snacks.picker.keymaps() end, desc = "Keymaps" },
     { "<leader>sl", function() Snacks.picker.loclist() end, desc = "Location List" },
-    { "<leader>sM", function() Snacks.picker.man() end, desc = "Man Pages" },
     { "<leader>sm", function() Snacks.picker.marks() end, desc = "Marks" },
-    { "<leader>sR", function() Snacks.picker.resume() end, desc = "Resume" },
+    { "<leader>sM", function() Snacks.picker.man() end, desc = "Man Pages" },
+    { "<leader>sp", function() Snacks.picker.lazy() end, desc = "Search for Plugin Spec" },
     { "<leader>sq", function() Snacks.picker.qflist() end, desc = "Quickfix List" },
+    { "<leader>sR", function() Snacks.picker.resume() end, desc = "Resume" },
+    { "<leader>su", function() Snacks.picker.undo() end, desc = "Undo History" },
     { "<leader>uC", function() Snacks.picker.colorschemes() end, desc = "Colorschemes" },
-    { "<leader>qp", function() Snacks.picker.projects() end, desc = "Projects" },
     -- LSP
     { "gd", function() Snacks.picker.lsp_definitions() end, desc = "Goto Definition" },
+    { "gD", function() Snacks.picker.lsp_declarations() end, desc = "Goto Declaration" },
     { "gr", function() Snacks.picker.lsp_references() end, nowait = true, desc = "References" },
     { "gI", function() Snacks.picker.lsp_implementations() end, desc = "Goto Implementation" },
     { "gy", function() Snacks.picker.lsp_type_definitions() end, desc = "Goto T[y]pe Definition" },
     { "<leader>ss", function() Snacks.picker.lsp_symbols() end, desc = "LSP Symbols" },
+    { "<leader>sS", function() Snacks.picker.lsp_workspace_symbols() end, desc = "LSP Workspace Symbols" },
   },
 }
 ```
@@ -841,6 +901,9 @@ Neovim commands
   auto_close = false,
   jump = { close = false },
   layout = { preset = "sidebar", preview = false },
+  -- to show the explorer to the right, add the below to
+  -- your config under `opts.picker.sources.explorer`
+  -- layout = { layout = { position = "right" } },
   formatters = { file = { filename_only = true } },
   matcher = { sort_empty = true },
   config = function(opts)
@@ -1039,6 +1102,8 @@ Git log
 ```
 
 ```lua
+---@class snacks.picker.git.status.Config: snacks.picker.Config
+---@field ignored? boolean show ignored files
 {
   finder = "git_status",
   format = "git_status",
@@ -1617,13 +1682,43 @@ Open recent projects
 ```lua
 ---@class snacks.picker.projects.Config: snacks.picker.Config
 ---@field filter? snacks.picker.filter.Config
+---@field dev? string|string[] top-level directories containing multiple projects (sub-folders that contains a root pattern)
+---@field projects? string[] list of project directories
+---@field patterns? string[] patterns to detect project root directories
+---@field recent? boolean include project directories of recent files
 {
   finder = "recent_projects",
   format = "file",
+  dev = { "~/dev", "~/projects" },
   confirm = "load_session",
+  patterns = { ".git", "_darcs", ".hg", ".bzr", ".svn", "package.json", "Makefile" },
+  recent = true,
+  matcher = {
+    frecency = true, -- use frecency boosting
+    sort_empty = true, -- sort even when the filter is empty
+    cwd_bonus = false,
+  },
+  sort = { fields = { "score:desc", "idx" } },
   win = {
-    preview = {
-      minimal = true,
+    preview = { minimal = true },
+    input = {
+      keys = {
+        -- every action will always first change the cwd of the current tabpage to the project
+        ["<c-e>"] = { { "tcd", "picker_explorer" }, mode = { "n", "i" } },
+        ["<c-f>"] = { { "tcd", "picker_files" }, mode = { "n", "i" } },
+        ["<c-g>"] = { { "tcd", "picker_grep" }, mode = { "n", "i" } },
+        ["<c-r>"] = { { "tcd", "picker_recent" }, mode = { "n", "i" } },
+        ["<c-w>"] = { { "tcd" }, mode = { "n", "i" } },
+        ["<c-t>"] = {
+          function(picker)
+            vim.cmd("tabnew")
+            Snacks.notify("New tab opened")
+            picker:close()
+            Snacks.picker.projects()
+          end,
+          mode = { "n", "i" },
+        },
+      },
     },
   },
 }
@@ -2045,6 +2140,12 @@ local M = {}
 Snacks.picker.actions.bufdelete(picker)
 ```
 
+### `Snacks.picker.actions.cd()`
+
+```lua
+Snacks.picker.actions.cd(_, item)
+```
+
 ### `Snacks.picker.actions.close()`
 
 ```lua
@@ -2135,6 +2236,12 @@ Snacks.picker.actions.item_action(picker, item, action)
 Snacks.picker.actions.jump(picker, _, action)
 ```
 
+### `Snacks.picker.actions.lcd()`
+
+```lua
+Snacks.picker.actions.lcd(_, item)
+```
+
 ### `Snacks.picker.actions.list_bottom()`
 
 ```lua
@@ -2194,7 +2301,7 @@ Snacks.picker.actions.list_up(picker)
 Tries to load the session, if it fails, it will open the picker.
 
 ```lua
-Snacks.picker.actions.load_session(picker)
+Snacks.picker.actions.load_session(picker, item)
 ```
 
 ### `Snacks.picker.actions.loclist()`
@@ -2209,6 +2316,30 @@ Snacks.picker.actions.loclist(picker)
 
 ```lua
 Snacks.picker.actions.pick_win(picker, item, action)
+```
+
+### `Snacks.picker.actions.picker_explorer()`
+
+```lua
+Snacks.picker.actions.picker_explorer(_, item)
+```
+
+### `Snacks.picker.actions.picker_files()`
+
+```lua
+Snacks.picker.actions.picker_files(_, item)
+```
+
+### `Snacks.picker.actions.picker_grep()`
+
+```lua
+Snacks.picker.actions.picker_grep(_, item)
+```
+
+### `Snacks.picker.actions.picker_recent()`
+
+```lua
+Snacks.picker.actions.picker_recent(_, item)
 ```
 
 ### `Snacks.picker.actions.preview_scroll_down()`
@@ -2288,6 +2419,12 @@ and moves the cursor to the prev item.
 
 ```lua
 Snacks.picker.actions.select_and_prev(picker)
+```
+
+### `Snacks.picker.actions.tcd()`
+
+```lua
+Snacks.picker.actions.tcd(_, item)
 ```
 
 ### `Snacks.picker.actions.toggle_focus()`

@@ -38,6 +38,7 @@ Table of Contents                               *snacks-win-table-of-contents*
   - win:redraw()                              |snacks-win-module-win:redraw()|
   - win:scratch()                            |snacks-win-module-win:scratch()|
   - win:scroll()                              |snacks-win-module-win:scroll()|
+  - win:set_buf()                            |snacks-win-module-win:set_buf()|
   - win:set_title()                        |snacks-win-module-win:set_title()|
   - win:show()                                  |snacks-win-module-win:show()|
   - win:size()                                  |snacks-win-module-win:size()|
@@ -466,6 +467,14 @@ WIN:SCROLL()                                  *snacks-win-module-win:scroll()*
 >lua
     ---@param up? boolean
     win:scroll(up)
+<
+
+
+WIN:SET_BUF()                                *snacks-win-module-win:set_buf()*
+
+>lua
+    ---@param buf number
+    win:set_buf(buf)
 <
 
 

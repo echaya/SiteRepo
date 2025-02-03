@@ -365,15 +365,22 @@ function M.shallow_copy(t)
   return setmetatable(ret, getmetatable(t))
 end
 
----@param opts? {main?: number}
+---@param opts? {main?: number, float?:boolean, filter?: fun(win:number, buf:number):boolean?}
 function M.pick_win(opts)
-  opts = opts or {}
+  opts = Snacks.config.merge({
+    filter = function(win, buf)
+      return not vim.bo[buf].filetype:find("^snacks")
+    end,
+  }, opts)
+
   local overlays = {} ---@type snacks.win[]
   local chars = "asdfghjkl"
   local wins = {} ---@type number[]
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     local buf = vim.api.nvim_win_get_buf(win)
-    if vim.api.nvim_win_get_config(win).relative == "" and not vim.bo[buf].filetype:find("^snacks") then
+    local keep = (opts.float or vim.api.nvim_win_get_config(win).relative == "")
+      and (not opts.filter or opts.filter(win, buf))
+    if keep then
       wins[#wins + 1] = win
     end
   end
@@ -424,6 +431,75 @@ function M.parents(path, cwd)
   return function()
     to = path:find("/", to + 1, true)
     return to and path:sub(1, to - 1) or nil
+  end
+end
+
+--- Checks if the path is a directory,
+--- if not it returns the parent directory
+---@param item string|snacks.picker.Item
+function M.dir(item)
+  local path = type(item) == "table" and M.path(item) or item
+  ---@cast path string
+  path = vim.fs.normalize(path)
+  return vim.fn.isdirectory(path) == 1 and path or vim.fs.dirname(path)
+end
+
+---@param paths string[]
+---@param dir string
+function M.copy(paths, dir)
+  dir = vim.fs.normalize(dir)
+  paths = vim.tbl_map(vim.fs.normalize, paths) ---@type string[]
+  for _, path in ipairs(paths) do
+    local name = vim.fn.fnamemodify(path, ":t")
+    local to = dir .. "/" .. name
+    M.copy_path(path, to)
+  end
+end
+
+---@param from string
+---@param to string
+function M.copy_path(from, to)
+  if not uv.fs_stat(from) then
+    Snacks.notify.error(("File `%s` does not exist"):format(from))
+    return
+  end
+  if vim.fn.isdirectory(from) == 1 then
+    M.copy_dir(from, to)
+  else
+    M.copy_file(from, to)
+  end
+end
+
+---@param from string
+---@param to string
+function M.copy_file(from, to)
+  if vim.fn.filereadable(from) == 0 then
+    Snacks.notify.error(("File `%s` is not readable"):format(from))
+    return
+  end
+  if uv.fs_stat(to) then
+    Snacks.notify.error(("File `%s` already exists"):format(to))
+    return
+  end
+  local dir = vim.fs.dirname(to)
+  vim.fn.mkdir(dir, "p")
+  local ok, err = uv.fs_copyfile(from, to, { excl = true, ficlone = true })
+  if not ok then
+    Snacks.notify.error(("Failed to copy file:\n - from: `%s`\n- to: `%s`\n%s"):format(from, to, err))
+  end
+end
+
+---@param from string
+---@param to string
+function M.copy_dir(from, to)
+  if vim.fn.isdirectory(from) == 0 then
+    Snacks.notify.error(("Directory `%s` does not exist"):format(from))
+    return
+  end
+  vim.fn.mkdir(to, "p")
+  for fname in vim.fs.dir(from, { follow = false }) do
+    local path = from .. "/" .. fname
+    M.copy_path(path, to .. "/" .. fname)
   end
 end
 

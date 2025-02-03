@@ -31,6 +31,12 @@ function M.health()
   if not have_fd then
     Snacks.health.warn("'fd' is required for `Snacks.picker.explorer()`")
   end
+  local ok = pcall(require, "snacks.picker.util.db")
+  if ok then
+    Snacks.health.ok("`SQLite3` is available")
+  else
+    Snacks.health.warn("`SQLite3` is not available. Frecency and history will be stored in a file instead.")
+  end
 end
 
 return M

@@ -158,6 +158,52 @@ function M.toggle_preview(picker)
   picker:toggle_preview()
 end
 
+function M.picker_grep(_, item)
+  if item then
+    Snacks.picker.grep({ cwd = Snacks.picker.util.dir(item) })
+  end
+end
+
+function M.cd(_, item)
+  if item then
+    vim.fn.chdir(Snacks.picker.util.dir(item))
+  end
+end
+
+function M.tcd(_, item)
+  if item then
+    vim.cmd.tcd(Snacks.picker.util.dir(item))
+  end
+end
+
+function M.lcd(_, item)
+  if item then
+    vim.cmd.lcd(Snacks.picker.util.dir(item))
+  end
+end
+
+function M.picker_files(_, item)
+  if item then
+    Snacks.picker.files({ cwd = Snacks.picker.util.dir(item) })
+  end
+end
+
+function M.picker_explorer(_, item)
+  if item then
+    local p = Snacks.picker.get({ source = "explorer" })[1]
+    if p then
+      p:close()
+    end
+    Snacks.picker.explorer({ cwd = Snacks.picker.util.dir(item) })
+  end
+end
+
+function M.picker_recent(_, item)
+  if item then
+    Snacks.picker.recent({ filter = { cwd = Snacks.picker.util.dir(item) } })
+  end
+end
+
 function M.pick_win(picker, item, action)
   if not picker.layout.split then
     picker.layout:hide()
@@ -340,7 +386,11 @@ function M.cmd(picker, item)
   picker:close()
   if item and item.cmd then
     vim.schedule(function()
-      vim.cmd(item.cmd)
+      if item.command and (item.command.nargs ~= "0") then
+        vim.api.nvim_input(":" .. item.cmd .. " ")
+      else
+        vim.cmd(item.cmd)
+      end
     end)
   end
 end
@@ -353,9 +403,8 @@ function M.search(picker, item)
 end
 
 --- Tries to load the session, if it fails, it will open the picker.
-function M.load_session(picker)
+function M.load_session(picker, item)
   picker:close()
-  local item = picker:current()
   if not item then
     return
   end

@@ -54,6 +54,9 @@ M.explorer = {
   auto_close = false,
   jump = { close = false },
   layout = { preset = "sidebar", preview = false },
+  -- to show the explorer to the right, add the below to
+  -- your config under `opts.picker.sources.explorer`
+  -- layout = { layout = { position = "right" } },
   formatters = { file = { filename_only = true } },
   matcher = { sort_empty = true },
   config = function(opts)
@@ -249,6 +252,8 @@ M.git_stash = {
   confirm = "git_stash_apply",
 }
 
+---@class snacks.picker.git.status.Config: snacks.picker.Config
+---@field ignored? boolean show ignored files
 M.git_status = {
   finder = "git_status",
   format = "git_status",
@@ -607,13 +612,43 @@ M.picker_preview = {
 -- Open recent projects
 ---@class snacks.picker.projects.Config: snacks.picker.Config
 ---@field filter? snacks.picker.filter.Config
+---@field dev? string|string[] top-level directories containing multiple projects (sub-folders that contains a root pattern)
+---@field projects? string[] list of project directories
+---@field patterns? string[] patterns to detect project root directories
+---@field recent? boolean include project directories of recent files
 M.projects = {
   finder = "recent_projects",
   format = "file",
+  dev = { "~/dev", "~/projects" },
   confirm = "load_session",
+  patterns = { ".git", "_darcs", ".hg", ".bzr", ".svn", "package.json", "Makefile" },
+  recent = true,
+  matcher = {
+    frecency = true, -- use frecency boosting
+    sort_empty = true, -- sort even when the filter is empty
+    cwd_bonus = false,
+  },
+  sort = { fields = { "score:desc", "idx" } },
   win = {
-    preview = {
-      minimal = true,
+    preview = { minimal = true },
+    input = {
+      keys = {
+        -- every action will always first change the cwd of the current tabpage to the project
+        ["<c-e>"] = { { "tcd", "picker_explorer" }, mode = { "n", "i" } },
+        ["<c-f>"] = { { "tcd", "picker_files" }, mode = { "n", "i" } },
+        ["<c-g>"] = { { "tcd", "picker_grep" }, mode = { "n", "i" } },
+        ["<c-r>"] = { { "tcd", "picker_recent" }, mode = { "n", "i" } },
+        ["<c-w>"] = { { "tcd" }, mode = { "n", "i" } },
+        ["<c-t>"] = {
+          function(picker)
+            vim.cmd("tabnew")
+            Snacks.notify("New tab opened")
+            picker:close()
+            Snacks.picker.projects()
+          end,
+          mode = { "n", "i" },
+        },
+      },
     },
   },
 }

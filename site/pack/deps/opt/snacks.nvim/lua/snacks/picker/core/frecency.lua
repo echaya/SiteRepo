@@ -100,6 +100,17 @@ function M:get(item, opts)
   if not path then
     return 0
   end
+  if item.dir then
+    -- frecency of a directory is the sum of frecencies of all files in it
+    local score = 0
+    local prefix = path .. "/"
+    for k, v in pairs(self.cache) do
+      if k:find(prefix, 1, true) == 1 then
+        score = score + self:to_score(v)
+      end
+    end
+    return score
+  end
   local deadline = self.cache[path]
   if not deadline then
     return opts.seed ~= false and self:seed(item) or 0
