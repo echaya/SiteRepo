@@ -34,7 +34,7 @@ function M.select(items, opts, on_choice)
     layout = {
       preview = false,
       layout = {
-        height = math.floor(math.min(vim.o.lines * 0.8 - 10, #items + 2) + 0.5) + 10,
+        height = math.floor(math.min(vim.o.lines * 0.8 - 10, #items + 2) + 0.5),
       },
     },
     actions = {

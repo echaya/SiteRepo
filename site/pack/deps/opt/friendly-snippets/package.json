@@ -23,7 +23,7 @@
                 "path": "./snippets/lua/luadoc.json"
             },
             {
-                "language": "markdown",
+                "language": ["markdown", "vimwiki"],
                 "path": "./snippets/markdown.json"
             },
             {

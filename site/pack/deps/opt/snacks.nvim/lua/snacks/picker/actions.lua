@@ -5,6 +5,9 @@ local M = {}
 ---@class snacks.picker.jump.Action: snacks.picker.Action
 ---@field cmd? snacks.picker.EditCmd
 
+---@class snacks.picker.layout.Action: snacks.picker.Action
+---@field layout? snacks.picker.layout.Config|string
+
 ---@enum (key) snacks.picker.EditCmd
 local edit_cmd = {
   edit = "buffer",
@@ -86,18 +89,23 @@ function M.jump(picker, _, action)
         local path = assert(Snacks.picker.util.path(item), "Either item.buf or item.file is required")
         buf = vim.fn.bufadd(path)
       end
+      vim.bo[buf].buflisted = true
 
       -- use an existing window if possible
-      if #items == 1 and picker.opts.jump.reuse_win and buf ~= current_buf then
-        win = vim.fn.win_findbuf(buf)[1] or win
-        vim.api.nvim_set_current_win(win)
+      if cmd == "buffer" and #items == 1 and picker.opts.jump.reuse_win and buf ~= current_buf then
+        for _, w in ipairs(vim.fn.win_findbuf(buf)) do
+          if vim.api.nvim_win_get_config(w).relative == "" then
+            win = w
+            vim.api.nvim_set_current_win(win)
+            break
+          end
+        end
       end
-
-      vim.bo[buf].buflisted = true
 
       -- open the first buffer
       if i == 1 then
         vim.cmd(("%s %d"):format(cmd, buf))
+        win = vim.api.nvim_get_current_win()
       end
     end
   end
@@ -150,6 +158,27 @@ M.edit_split = M.split
 M.edit_vsplit = M.vsplit
 M.edit_tab = M.tab
 
+function M.layout(picker, _, action)
+  ---@cast action snacks.picker.layout.Action
+  assert(action.layout, "Layout action requires a layout")
+  local opts = type(action.layout) == "table" and { layout = action.layout } or action.layout
+  ---@cast opts snacks.picker.Config
+  local layout = Snacks.picker.config.layout(opts)
+  picker:set_layout(layout)
+  -- Adjust some options for split layouts
+  if (layout.layout.position or "float") ~= "float" then
+    picker.opts.auto_close = false
+    picker.opts.jump.close = false
+    picker:toggle_preview(false)
+    picker.list.win:focus()
+  end
+end
+
+M.layout_top = { action = "layout", layout = "top" }
+M.layout_bottom = { action = "layout", layout = "bottom" }
+M.layout_left = { action = "layout", layout = "left" }
+M.layout_right = { action = "layout", layout = "right" }
+
 function M.toggle_maximize(picker)
   picker.layout:maximize()
 end
@@ -182,27 +211,25 @@ function M.lcd(_, item)
   end
 end
 
-function M.picker_files(_, item)
-  if item then
-    Snacks.picker.files({ cwd = Snacks.picker.util.dir(item) })
+function M.picker(picker, item, action)
+  if not item then
+    return
   end
+  local source = action.source or "files"
+  for _, p in ipairs(Snacks.picker.get({ source = source })) do
+    p:close()
+  end
+  Snacks.picker(source, {
+    cwd = Snacks.picker.util.dir(item),
+    on_show = function()
+      picker:close()
+    end,
+  })
 end
 
-function M.picker_explorer(_, item)
-  if item then
-    local p = Snacks.picker.get({ source = "explorer" })[1]
-    if p then
-      p:close()
-    end
-    Snacks.picker.explorer({ cwd = Snacks.picker.util.dir(item) })
-  end
-end
-
-function M.picker_recent(_, item)
-  if item then
-    Snacks.picker.recent({ filter = { cwd = Snacks.picker.util.dir(item) } })
-  end
-end
+M.picker_files = { action = "picker", source = "files" }
+M.picker_explorer = { action = "picker", source = "explorer" }
+M.picker_recent = { action = "picker", source = "recent" }
 
 function M.pick_win(picker, item, action)
   if not picker.layout.split then
@@ -226,6 +253,7 @@ function M.pick_win(picker, item, action)
 end
 
 function M.bufdelete(picker)
+  picker.preview:reset()
   local non_buf_delete_requested = false
   for _, item in ipairs(picker:selected({ fallback = true })) do
     if item.buf then
@@ -233,19 +261,13 @@ function M.bufdelete(picker)
     else
       non_buf_delete_requested = true
     end
-    picker.list:unselect(item)
   end
-
   if non_buf_delete_requested then
     Snacks.notify.warn("Only open buffers can be deleted", { title = "Snacks Picker" })
   end
-
-  local cursor = picker.list.cursor
-  picker:find({
-    on_done = function()
-      picker.list:view(cursor)
-    end,
-  })
+  picker.list:set_selected()
+  picker.list:set_target()
+  picker:find()
 end
 
 function M.git_stage(picker)
@@ -301,9 +323,9 @@ local function setqflist(items, opts)
       filename = Snacks.picker.util.path(item),
       bufnr = item.buf,
       lnum = item.pos and item.pos[1] or 1,
-      col = item.pos and item.pos[2] or 1,
+      col = item.pos and item.pos[2] + 1 or 1,
       end_lnum = item.end_pos and item.end_pos[1] or nil,
-      end_col = item.end_pos and item.end_pos[2] or nil,
+      end_col = item.end_pos and item.end_pos[2] + 1 or nil,
       text = item.line or item.comment or item.label or item.name or item.detail or item.text,
       pattern = item.search,
       valid = true,

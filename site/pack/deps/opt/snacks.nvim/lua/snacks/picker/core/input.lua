@@ -24,6 +24,12 @@ function M.new(picker)
     text = picker.opts.live and self.filter.search or self.filter.pattern,
     ft = "regex",
     on_buf = function(win)
+      -- HACK: this is needed to prevent Neovim from stopping insert mode,
+      -- for any other picker input we are leaving.
+      local buf = vim.api.nvim_get_current_buf()
+      if buf ~= win.buf and vim.bo[buf].filetype == "snacks_picker_input" then
+        vim.bo[buf].buftype = "nofile"
+      end
       vim.fn.prompt_setprompt(win.buf, "")
       vim.bo[win.buf].modified = false
     end,
@@ -42,6 +48,7 @@ function M.new(picker)
   }))
 
   self.win:on("BufEnter", function()
+    vim.bo[self.win.buf].buftype = "prompt"
     vim.cmd("startinsert!")
   end, { buf = true })
 
@@ -171,6 +178,7 @@ function M:set(pattern, search)
   vim.api.nvim_buf_set_lines(self.win.buf, 0, -1, false, {
     self.picker.opts.live and self.filter.search or self.filter.pattern,
   })
+  vim.bo[self.win.buf].modified = false
   vim.api.nvim_win_set_cursor(self.win.win, { 1, #self:get() + 1 })
   self.totals = ""
   self.win.opts.wo.statuscolumn = ""

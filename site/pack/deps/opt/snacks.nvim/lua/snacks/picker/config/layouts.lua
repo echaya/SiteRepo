@@ -148,7 +148,7 @@ M.select = {
     width = 0.5,
     min_width = 80,
     height = 0.4,
-    min_height = 10,
+    min_height = 3,
     box = "vertical",
     border = "rounded",
     title = "{title}",
@@ -174,5 +174,10 @@ M.vscode = {
     { win = "preview", title = "{preview}", border = "rounded" },
   },
 }
+
+M.left = M.sidebar
+M.right = { preset = "sidebar", layout = { position = "right" } }
+M.top = { preset = "ivy", layout = { position = "top" } }
+M.bottom = { preset = "ivy", layout = { position = "bottom" } }
 
 return M
