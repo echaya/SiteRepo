@@ -5,7 +5,7 @@ local M = {}
 function M.lines(opts)
   local buf = opts.buf or 0
   buf = buf == 0 and vim.api.nvim_get_current_buf() or buf
-  local extmarks = require("snacks.picker.util.highlight").get_highlights({ buf = buf })
+  local extmarks = require("snacks.picker.util.highlight").get_highlights({ buf = buf, extmarks = true })
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
   local items = {} ---@type snacks.picker.finder.Item[]
   for l, line in ipairs(lines) do

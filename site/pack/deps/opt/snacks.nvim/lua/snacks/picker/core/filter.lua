@@ -51,6 +51,10 @@ function M:init(opts)
   return self
 end
 
+function M:is_empty()
+  return vim.trim(self.pattern) == "" and vim.trim(self.search) == ""
+end
+
 ---@param cwd string
 function M:set_cwd(cwd)
   self.cwd = cwd

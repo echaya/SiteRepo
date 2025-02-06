@@ -10,6 +10,7 @@
 ---@field winhl string
 ---@field title? string
 ---@field split_layout? boolean
+---@field opts? snacks.picker.previewers.Config
 local M = {}
 M.__index = M
 
@@ -28,6 +29,7 @@ local ns_loc = vim.api.nvim_create_namespace("snacks.picker.preview.loc")
 ---@param main? number
 function M.new(opts, main)
   local self = setmetatable({}, M)
+  self.opts = opts.previewers
   self.winhl = Snacks.picker.highlight.winhl("SnacksPickerPreview", { CursorLine = "Visual" })
   local win_opts = Snacks.win.resolve(
     {
@@ -237,11 +239,10 @@ function M:highlight(opts)
       filename = opts.file,
     })
   end
-  local lang = opts.lang or ft and vim.treesitter.language.get_lang(ft)
-  if not (lang and pcall(vim.treesitter.start, self.win.buf, lang)) then
-    if ft then
-      vim.bo[self.win.buf].syntax = ft
-    end
+  self:check_big()
+  local lang = Snacks.picker.highlight.get_lang({ lang = opts.lang, ft = ft })
+  if not (lang and pcall(vim.treesitter.start, self.win.buf, lang)) and ft then
+    vim.bo[self.win.buf].syntax = ft
   end
 end
 
@@ -310,6 +311,23 @@ function M:loc()
       end
     end)
   end
+end
+
+function M:check_big()
+  local big = self:is_big()
+  vim.b[self.win.buf].snacks_scroll = not big
+end
+
+function M:is_big()
+  local lines = vim.api.nvim_buf_line_count(self.win.buf)
+  if lines > 1000 then
+    return true
+  end
+  local path = self.item and self.item.file and Snacks.picker.util.path(self.item)
+  if path and vim.fn.getfsize(path) > 1.5 * 1024 * 1024 then
+    return true
+  end
+  return false
 end
 
 ---@param lines string[]

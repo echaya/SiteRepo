@@ -78,7 +78,7 @@ function M.new(picker)
       vim.schedule(function()
         input.picker:find({ refresh = false })
       end)
-    end, { ms = picker.opts.live and 100 or 30 }),
+    end, { ms = picker.opts.live and 200 or 30 }),
     { buf = true }
   )
   return self

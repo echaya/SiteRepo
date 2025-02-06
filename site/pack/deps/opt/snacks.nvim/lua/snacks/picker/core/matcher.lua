@@ -179,7 +179,10 @@ function M:init(pattern)
   self.tick = self.tick + 1
   self.file = nil
   self.mods = {}
-  self.subset = self.pattern ~= "" and pattern:find(self.pattern, 1, true) == 1 and not pattern:find("|", 1, true)
+  self.subset = self.pattern ~= ""
+    and pattern:find(self.pattern, 1, true) == 1
+    and not pattern:find("|", 1, true)
+    and not pattern:find("!", 1, true)
   self.pattern = pattern
   self:abort()
   self.one = nil
@@ -313,8 +316,8 @@ function M:update(item)
   if item.match_pos then
     item.pos = nil
   end
-  item.match_topk = nil
   local score = self:match(item)
+  item.match_tick, item.match_topk = self.tick, nil
   if score ~= 0 then
     if item.score_add then
       score = score + item.score_add
@@ -332,16 +335,19 @@ function M:update(item)
         score = score + (1 - 1 / (1 + item.frecency)) * BONUS_FRECENCY
       end
       if
-        self.opts.cwd_bonus and (self.cwd == item.cwd or Snacks.picker.util.path(item):find(self.cwd, 1, true) == 1)
+        self.opts.cwd_bonus
+        and (self.cwd == item.cwd or Snacks.picker.util.path(item):find(self.cwd, 1, true) == 1)
       then
         score = score + BONUS_CWD
       end
     end
+    item.score = score
     if self.opts.on_match then
       self.opts.on_match(self, item)
     end
+  else
+    item.score = 0
   end
-  item.match_tick, item.score, item.match_topk = self.tick, score, nil
   return score > 0
 end
 

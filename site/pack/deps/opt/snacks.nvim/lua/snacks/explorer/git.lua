@@ -15,7 +15,7 @@ M.state = {} ---@type table<string, {tick: number, last: number}>
 function M.refresh(path)
   for root in pairs(M.state) do
     if path == root or path:find(root .. "/", 1, true) == 1 then
-      M.state[root] = nil
+      M.state[root].last = 0
     end
   end
 end
@@ -26,7 +26,7 @@ function M.is_dirty(cwd)
   if not root then
     return false
   end
-  return M.state[root] == nil
+  return M.state[root] == nil or M.state[root].last == 0
 end
 
 ---@param cwd string

@@ -921,6 +921,7 @@ Neovim commands
 {
   finder = "explorer",
   sort = { fields = { "sort" } },
+  supports_live = true,
   tree = true,
   watch = true,
   git_status = true,
@@ -1005,6 +1006,14 @@ Neovim commands
   format = "git_branch",
   preview = "git_log",
   confirm = "git_checkout",
+  win = {
+    input = {
+      keys = {
+        ["<c-a>"] = { "git_branch_add", mode = { "n", "i" } },
+        ["<c-x>"] = { "git_branch_del", mode = { "n", "i" } },
+      },
+    },
+  },
   on_show = function(picker)
     for i, item in ipairs(picker:items()) do
       if item.current then
@@ -2233,6 +2242,18 @@ Snacks.picker.actions.focus_list(picker)
 
 ```lua
 Snacks.picker.actions.focus_preview(picker)
+```
+
+### `Snacks.picker.actions.git_branch_add()`
+
+```lua
+Snacks.picker.actions.git_branch_add(picker)
+```
+
+### `Snacks.picker.actions.git_branch_del()`
+
+```lua
+Snacks.picker.actions.git_branch_del(picker, item)
 ```
 
 ### `Snacks.picker.actions.git_checkout()`

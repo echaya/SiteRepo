@@ -1,7 +1,22 @@
 ---@class snacks.picker.highlight
 local M = {}
 
----@param opts? {buf?:number, code?:string, ft?:string, lang?:string, file?:string}
+M.langs = {} ---@type table<string, boolean>
+
+---@param opts? {lang?:string, ft?:string}
+function M.get_lang(opts)
+  opts = opts or {}
+  local lang = opts.lang or (opts.ft and vim.treesitter.language.get_lang(opts.ft)) or nil
+  if not lang then
+    return
+  end
+  if M.langs[lang] == nil then
+    M.langs[lang] = pcall(vim.treesitter.language.add, lang)
+  end
+  return M.langs[lang] and lang or nil
+end
+
+---@param opts? {buf?:number, code?:string, ft?:string, lang?:string, file?:string, extmarks?:boolean}
 function M.get_highlights(opts)
   opts = opts or {}
   local source = assert(opts.buf or opts.code, "buf or code is required")
@@ -13,7 +28,7 @@ function M.get_highlights(opts)
     or (opts.buf and vim.bo[opts.buf].filetype)
     or (opts.file and vim.filetype.match({ filename = opts.file, buf = 0 }))
     or vim.bo.filetype
-  local lang = opts.lang or vim.treesitter.language.get_lang(ft)
+  local lang = M.get_lang({ lang = opts.lang, ft = ft })
   local parser ---@type vim.treesitter.LanguageTree?
   if lang then
     local ok = false
@@ -65,7 +80,7 @@ function M.get_highlights(opts)
   end
 
   --- Add buffer extmarks
-  if opts.buf then
+  if opts.buf and opts.extmarks then
     local extmarks = vim.api.nvim_buf_get_extmarks(opts.buf, -1, 0, -1, { details = true })
     for _, extmark in pairs(extmarks) do
       local row = extmark[2] + 1
@@ -115,8 +130,15 @@ end
 function M.format(item, text, line, opts)
   opts = opts or {}
   local offset = M.offset(line)
-  local highlights = M.get_highlights({ code = text, ft = item.ft, lang = opts.lang or item.lang, file = item.file })[1]
-    or {}
+  item._ = item._ or {}
+  item._.ts = item._.ts or {}
+  local highlights = item._.ts[text] ---@type table<number, snacks.picker.Extmark[]>?
+  if not highlights then
+    highlights = M.get_highlights({ code = text, ft = item.ft, lang = opts.lang or item.lang, file = item.file })[1]
+      or {}
+    item._.ts[text] = highlights
+  end
+  highlights = vim.deepcopy(highlights)
   for _, extmark in ipairs(highlights) do
     extmark.col = extmark.col + offset
     extmark.end_col = extmark.end_col + offset

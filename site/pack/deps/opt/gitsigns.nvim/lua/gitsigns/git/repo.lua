@@ -23,7 +23,7 @@ local M = {}
 
 --- Run git command the with the objects gitdir and toplevel
 --- @async
---- @param args string[]
+--- @param args table<any,any>
 --- @param spec? Gitsigns.Git.JobSpec
 --- @return string[] stdout
 --- @return string? stderr
@@ -32,15 +32,12 @@ function M:command(args, spec)
   spec = spec or {}
   spec.cwd = self.toplevel
 
-  local args1 = { '--git-dir', self.gitdir }
-
-  if self.detached then
-    vim.list_extend(args1, { '--work-tree', self.toplevel })
-  end
-
-  vim.list_extend(args1, args)
-
-  return git_command(args1, spec)
+  return git_command({
+    '--git-dir',
+    self.gitdir,
+    self.detached and { '--work-tree', self.toplevel },
+    args,
+  }, spec)
 end
 
 --- @param base string?
@@ -204,9 +201,9 @@ end
 --- @async
 --- @param cwd string
 --- @param gitdir? string
---- @param toplevel? string
+--- @param worktree? string
 --- @return Gitsigns.RepoInfo? info, string? err
-function M.get_info(cwd, gitdir, toplevel)
+function M.get_info(cwd, gitdir, worktree)
   -- Does git rev-parse have --absolute-git-dir, added in 2.13:
   --    https://public-inbox.org/git/20170203024829.8071-16-szeder.dev@gmail.com/
   local has_abs_gd = check_version(2, 13)
@@ -214,27 +211,29 @@ function M.get_info(cwd, gitdir, toplevel)
   -- Wait for internal scheduler to settle before running command (#215)
   async.scheduler()
 
-  local args = {}
-
-  if gitdir then
-    vim.list_extend(args, { '--git-dir', gitdir })
-  end
-
-  if toplevel then
-    vim.list_extend(args, { '--work-tree', toplevel })
-  end
-
-  vim.list_extend(args, {
+  -- gitdir and worktree must be provided together from `man git`:
+  -- > Specifying the location of the ".git" directory using this option (or GIT_DIR environment
+  -- > variable) turns off the repository discovery that tries to find a directory with ".git"
+  -- > subdirectory (which is how the repository and the top-level of the working tree are
+  -- > discovered), and tells Git that you are at the top level of the working tree. If you are
+  -- > not at the top-level directory of the working tree, you should tell Git where the
+  -- > top-level of the working tree is, with the --work-tree=<path> option (or GIT_WORK_TREE
+  -- > environment variable)
+  local stdout, stderr, code = git_command({
+    gitdir and worktree and {
+      '--git-dir',
+      gitdir,
+      '--work-tree',
+      worktree,
+    },
     'rev-parse',
     '--show-toplevel',
     has_abs_gd and '--absolute-git-dir' or '--git-dir',
     '--abbrev-ref',
     'HEAD',
-  })
-
-  local stdout, stderr, code = git_command(args, {
+  }, {
     ignore_error = true,
-    cwd = toplevel or cwd,
+    cwd = worktree or cwd,
   })
 
   -- If the repo has no commits yet, rev-parse will fail. Ignore this error.
@@ -255,6 +254,10 @@ function M.get_info(cwd, gitdir, toplevel)
 
   if not has_abs_gd then
     gitdir_r = assert(uv.fs_realpath(gitdir_r))
+  end
+
+  if gitdir and not worktree and gitdir ~= gitdir_r then
+    log.eprintf('expected gitdir to be %s, got %s', gitdir, gitdir_r)
   end
 
   return {
@@ -318,22 +321,16 @@ function M:ls_files(file)
   -- --others + --exclude-standard means ignored files won't return info, but
   -- untracked files will. Unlike file_info_tree which won't return untracked
   -- files.
-  local cmd = {
+  local results, stderr, code = self:command({
     '-c',
     'core.quotepath=off',
     'ls-files',
     '--stage',
     '--others',
     '--exclude-standard',
-  }
-
-  if has_eol then
-    cmd[#cmd + 1] = '--eol'
-  end
-
-  cmd[#cmd + 1] = file
-
-  local results, stderr, code = self:command(cmd, { ignore_error = true })
+    has_eol and '--eol',
+    file,
+  }, { ignore_error = true })
 
   -- ignore_error for the cases when we run:
   --    git ls-files --others exists/nonexist
@@ -418,13 +415,12 @@ end
 --- @param path string
 --- @param add? boolean
 function M:update_index(mode_bits, object, path, add)
-  local cmd = { 'update-index' }
-  if add then
-    cmd[#cmd + 1] = '--add'
-  end
-  cmd[#cmd + 1] = '--cacheinfo'
-  cmd[#cmd + 1] = ('%s,%s,%s'):format(mode_bits, object, path)
-  self:command(cmd)
+  self:command({
+    'update-index',
+    add and '--add',
+    '--cacheinfo',
+    ('%s,%s,%s'):format(mode_bits, object, path),
+  })
 end
 
 --- @param path string

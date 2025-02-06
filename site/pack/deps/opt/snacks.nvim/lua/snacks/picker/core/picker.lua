@@ -499,7 +499,7 @@ M._throttled_preview = M._show_preview
 -- otherwise throttle the preview.
 function M:show_preview()
   if not self.preview.item then
-    self:_show_preview()
+    return self:_show_preview()
   end
   return self:_throttled_preview()
 end

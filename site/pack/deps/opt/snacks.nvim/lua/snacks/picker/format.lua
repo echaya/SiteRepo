@@ -374,7 +374,7 @@ function M.diagnostic(item, picker)
     vim.list_extend(ret, M.severity(item, picker))
   end
 
-  local message = diag.message:gsub("\n", " ")
+  local message = diag.message
   ret[#ret + 1] = { message }
   Snacks.picker.highlight.markdown(ret)
   ret[#ret + 1] = { " " }

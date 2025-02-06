@@ -37,6 +37,8 @@ function State.new(picker)
     return v and not v.closed and v or nil
   end
 
+  Tree:refresh(picker:cwd())
+
   local buf = vim.api.nvim_win_get_buf(picker.main)
   local buf_file = vim.fs.normalize(vim.api.nvim_buf_get_name(buf))
   if uv.fs_stat(buf_file) then
@@ -104,7 +106,7 @@ function State:setup(ctx)
   if opts.watch then
     require("snacks.explorer.watch").watch(ctx.filter.cwd)
   end
-  return #ctx.filter.pattern > 0
+  return not ctx.filter:is_empty()
 end
 
 ---@param opts snacks.picker.explorer.Config
@@ -121,7 +123,7 @@ function M.setup(opts)
       ---@param filter snacks.picker.Filter
       transform = function(picker, filter)
         ref = picker:ref()
-        local s = #filter.pattern > 0
+        local s = not filter:is_empty()
         if searching ~= s then
           searching = s
           filter.meta.searching = searching
@@ -144,6 +146,7 @@ function M.setup(opts)
             if parent.score == 0 or parent.match_tick ~= matcher.tick then
               parent.score = 1
               parent.match_tick = matcher.tick
+              parent.match_topk = nil
               picker.list:add(parent)
             else
               break
