@@ -296,6 +296,9 @@ The other options are used with `:lua Snacks.dashboard()`
   wo = {
     winhighlight = "NormalFloat:Normal",
   },
+  w = {
+    snacks_main = true,
+  },
 }
 ```
 

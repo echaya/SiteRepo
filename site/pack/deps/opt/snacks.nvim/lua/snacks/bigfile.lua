@@ -12,6 +12,7 @@ M.meta = {
 local defaults = {
   notify = true, -- show notification when big file detected
   size = 1.5 * 1024 * 1024, -- 1.5MB
+  line_length = 1000, -- average line length (useful for minified files)
   -- Enable or disable features when big file detected
   ---@param ctx {buf: number, ft:string}
   setup = function(ctx)
@@ -36,12 +37,21 @@ function M.setup()
     pattern = {
       [".*"] = {
         function(path, buf)
-          return vim.bo[buf]
-              and vim.bo[buf].filetype ~= "bigfile"
-              and path
-              and vim.fn.getfsize(path) > opts.size
-              and "bigfile"
-            or nil
+          if not path or not buf or vim.bo[buf].filetype == "bigfile" then
+            return
+          end
+          if path ~= vim.api.nvim_buf_get_name(buf) then
+            return
+          end
+          local size = vim.fn.getfsize(path)
+          if size <= 0 then
+            return
+          end
+          if size > opts.size then
+            return "bigfile"
+          end
+          local lines = vim.api.nvim_buf_line_count(buf)
+          return (size - lines) / lines > opts.line_length and "bigfile" or nil
         end,
       },
     },

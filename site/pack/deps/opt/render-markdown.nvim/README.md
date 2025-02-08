@@ -265,7 +265,7 @@ require('render-markdown').setup({
         -- Replaces '#+' of 'atx_h._marker'
         -- The number of '#' in the heading determines the 'level'
         -- The 'level' is used to index into the list using a cycle
-        -- If the value is a function the input is the nesting level of the heading within sections
+        -- If the value is a function the input context contains the nesting level of the heading within sections
         icons = { '󰲡 ', '󰲣 ', '󰲥 ', '󰲧 ', '󰲩 ', '󰲫 ' },
         -- Determines how icons fill the available space:
         --  right:   '#'s are concealed and icon is appended to right side
@@ -328,6 +328,14 @@ require('render-markdown').setup({
             'RenderMarkdownH5',
             'RenderMarkdownH6',
         },
+        -- Define custom heading patterns which allow you to override various properties
+        -- based on the contents of a heading. Each entry should consist of a string key,
+        -- which is used mostly as an identifier, and a table value with:
+        --   'pattern':    Matched against the heading text see :h lua-pattern
+        --   'icon':       Optional override for the icon
+        --   'background': Optional override for the background
+        --   'foreground': Optional override for the foreground
+        custom = {},
     },
     paragraph = {
         -- Turn on / off paragraph rendering
@@ -427,20 +435,20 @@ require('render-markdown').setup({
         render_modes = false,
         -- Replaces '-'|'+'|'*' of 'list_item'
         -- How deeply nested the list is determines the 'level', how far down at that level determines the 'index'
-        -- If a function is provided both of these values are passed in using 1 based indexing
+        -- If a function is provided both of these values are provided in the context using 1 based indexing
         -- If a list is provided we index into it using a cycle based on the level
         -- If the value at that level is also a list we further index into it using a clamp based on the index
         -- If the item is a 'checkbox' a conceal is used to hide the bullet instead
         icons = { '●', '○', '◆', '◇' },
         -- Replaces 'n.'|'n)' of 'list_item'
         -- How deeply nested the list is determines the 'level', how far down at that level determines the 'index'
-        -- If a function is provided both of these values are passed in using 1 based indexing
+        -- If a function is provided both of these values are provided in the context using 1 based indexing
         -- If a list is provided we index into it using a cycle based on the level
         -- If the value at that level is also a list we further index into it using a clamp based on the index
-        ordered_icons = function(level, index, value)
-            value = vim.trim(value)
-            local value_index = tonumber(value:sub(1, #value - 1))
-            return string.format('%d.', value_index > 1 and value_index or index)
+        ordered_icons = function(ctx)
+            local value = vim.trim(ctx.value)
+            local index = tonumber(value:sub(1, #value - 1))
+            return string.format('%d.', index > 1 and index or ctx.index)
         end,
         -- Padding to add to the left of bullet point
         left_pad = 0,
@@ -704,6 +712,7 @@ require('render-markdown').setup({
         -- Override for different buftype values, see :h 'buftype'
         buftype = {
             nofile = {
+                render_modes = true,
                 padding = { highlight = 'NormalFloat' },
                 sign = { enabled = false },
             },
@@ -746,7 +755,7 @@ require('render-markdown').setup({
         -- Replaces '#+' of 'atx_h._marker'
         -- The number of '#' in the heading determines the 'level'
         -- The 'level' is used to index into the list using a cycle
-        -- If the value is a function the input is the nesting level of the heading within sections
+        -- If the value is a function the input context contains the nesting level of the heading within sections
         icons = { '󰲡 ', '󰲣 ', '󰲥 ', '󰲧 ', '󰲩 ', '󰲫 ' },
         -- Determines how icons fill the available space:
         --  right:   '#'s are concealed and icon is appended to right side
@@ -809,6 +818,14 @@ require('render-markdown').setup({
             'RenderMarkdownH5',
             'RenderMarkdownH6',
         },
+        -- Define custom heading patterns which allow you to override various properties
+        -- based on the contents of a heading. Each entry should consist of a string key,
+        -- which is used mostly as an identifier, and a table value with:
+        --   'pattern':    Matched against the heading text see :h lua-pattern
+        --   'icon':       Optional override for the icon
+        --   'background': Optional override for the background
+        --   'foreground': Optional override for the foreground
+        custom = {},
     },
 })
 ```
@@ -968,20 +985,20 @@ require('render-markdown').setup({
         render_modes = false,
         -- Replaces '-'|'+'|'*' of 'list_item'
         -- How deeply nested the list is determines the 'level', how far down at that level determines the 'index'
-        -- If a function is provided both of these values are passed in using 1 based indexing
+        -- If a function is provided both of these values are provided in the context using 1 based indexing
         -- If a list is provided we index into it using a cycle based on the level
         -- If the value at that level is also a list we further index into it using a clamp based on the index
         -- If the item is a 'checkbox' a conceal is used to hide the bullet instead
         icons = { '●', '○', '◆', '◇' },
         -- Replaces 'n.'|'n)' of 'list_item'
         -- How deeply nested the list is determines the 'level', how far down at that level determines the 'index'
-        -- If a function is provided both of these values are passed in using 1 based indexing
+        -- If a function is provided both of these values are provided in the context using 1 based indexing
         -- If a list is provided we index into it using a cycle based on the level
         -- If the value at that level is also a list we further index into it using a clamp based on the index
-        ordered_icons = function(level, index, value)
-            value = vim.trim(value)
-            local value_index = tonumber(value:sub(1, #value - 1))
-            return string.format('%d.', value_index > 1 and value_index or index)
+        ordered_icons = function(ctx)
+            local value = vim.trim(ctx.value)
+            local index = tonumber(value:sub(1, #value - 1))
+            return string.format('%d.', index > 1 and index or ctx.index)
         end,
         -- Padding to add to the left of bullet point
         left_pad = 0,

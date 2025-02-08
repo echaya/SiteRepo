@@ -104,6 +104,9 @@ function M.grep(opts, ctx)
   local absolute = (opts.dirs and #opts.dirs > 0) or opts.buffers or opts.rtp
   local cwd = not absolute and vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
   local cmd, args = get_cmd(opts, ctx.filter)
+  if opts.debug.grep then
+    Snacks.notify.info("grep: " .. cmd .. " " .. table.concat(args, " "))
+  end
   return require("snacks.picker.source.proc").proc({
     opts,
     {

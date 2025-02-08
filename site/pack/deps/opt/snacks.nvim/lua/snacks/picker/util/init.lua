@@ -503,4 +503,32 @@ function M.copy_dir(from, to)
   end
 end
 
+---@param buf number
+---@return (vim.bo|vim.wo)?
+function M.modeline(buf)
+  if not vim.api.nvim_buf_is_valid(buf) then
+    return
+  end
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, vim.o.modelines, false)
+  vim.list_extend(lines, vim.api.nvim_buf_get_lines(buf, -vim.o.modelines, -1, false))
+  for _, line in ipairs(lines) do
+    local m, options = line:match("%S*%s+(%w+):%s*(.-)%s*$")
+    if vim.tbl_contains({ "vi", "vim", "ex" }, m) and options then
+      local set = vim.split(options, "[:%s]+")
+      local ret = {} ---@type table<string, any>
+      for _, v in ipairs(set) do
+        if v ~= "" then
+          local k, val = v:match("([^=]+)=(.+)")
+          if k then
+            ret[k] = tonumber(val) or val
+          else
+            ret[v:gsub("^no", "")] = v:find("^no") and false or true
+          end
+        end
+      end
+      return ret
+    end
+  end
+end
+
 return M

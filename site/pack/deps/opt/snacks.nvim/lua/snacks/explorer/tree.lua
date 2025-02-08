@@ -2,7 +2,8 @@
 ---@field path string
 ---@field name string
 ---@field hidden? boolean
----@field status? string
+---@field status? string merged git status
+---@field dir_status? string git status of the directory
 ---@field ignored? boolean
 ---@field type "file"|"directory"|"link"|"fifo"|"socket"|"char"|"block"|"unknown"
 ---@field dir? boolean
@@ -12,6 +13,7 @@
 ---@field last? boolean child of the parent
 ---@field utime? number
 ---@field children table<string, snacks.picker.explorer.Node>
+---@field severity? number
 
 local uv = vim.uv or vim.loop
 
@@ -268,6 +270,38 @@ function Tree:close_all(cwd)
   self:walk(self:find(cwd), function(node)
     node.open = false
   end, { all = true })
+end
+
+---@param cwd string
+---@param filter fun(node: snacks.picker.explorer.Node):boolean?
+---@param opts? {up?: boolean, path?: string}
+function Tree:next(cwd, filter, opts)
+  opts = opts or {}
+  local path = opts.path or cwd
+  local root = self:node(cwd) or nil
+  if not root then
+    return
+  end
+  local first ---@type snacks.picker.explorer.Node?
+  local last ---@type snacks.picker.explorer.Node?
+  local prev ---@type snacks.picker.explorer.Node?
+  local next ---@type snacks.picker.explorer.Node?
+  local found = false
+  self:walk(root, function(node)
+    local want = not node.dir and filter(node) and not node.ignored
+    if node.path == path then
+      found = true
+    end
+    if want then
+      first, last = first or node, node
+      next = next or (found and node.path ~= path and node) or nil
+      prev = not found and node or prev
+    end
+  end, { all = true })
+  if opts.up then
+    return prev or last
+  end
+  return next or first
 end
 
 return Tree.new()

@@ -77,7 +77,11 @@ function M.projects(opts, ctx)
   local dev = type(opts.dev) == "string" and { opts.dev } or opts.dev or {}
   ---@cast dev string[]
   vim.list_extend(args, vim.tbl_map(vim.fs.normalize, dev))
-  local proc = require("snacks.picker.source.proc").proc({ cmd = "fd", args = args, notify = false }, ctx)
+  local fd = require("snacks.picker.source.files").get_fd()
+  if not fd then
+    Snacks.notify.warn("`fd` or `fdfind` is required for projects")
+  end
+  local proc = fd and require("snacks.picker.source.proc").proc({ cmd = fd, args = args, notify = false }, ctx)
   ---@async
   ---@param cb async fun(item: snacks.picker.finder.Item)
   return function(cb)
@@ -95,6 +99,12 @@ function M.projects(opts, ctx)
         local dir = Snacks.git.get_root(file)
         add(dir)
       end
+    end
+
+    vim.tbl_map(add, opts.projects or {})
+
+    if not proc then
+      return
     end
 
     ---@async

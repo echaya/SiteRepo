@@ -231,7 +231,8 @@ function M._get()
     end
   end
 
-  return table.concat(components, "")
+  local ret = table.concat(components, "")
+  return "%@v:lua.require'snacks.statuscolumn'.click_fold@" .. ret .. "%T"
 end
 
 function M.get()
@@ -257,6 +258,14 @@ function M.health()
   elseif not config.enabled and ready then
     Snacks.health.ok(("is manually configured\n- `vim.o.statuscolumn = %q`"):format(vim.o.statuscolumn))
   end
+end
+
+function M.click_fold()
+  local pos = vim.fn.getmousepos()
+  vim.api.nvim_win_set_cursor(pos.winid, { pos.line, 1 })
+  vim.api.nvim_win_call(pos.winid, function()
+    vim.cmd("normal! za")
+  end)
 end
 
 return M

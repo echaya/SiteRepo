@@ -19,17 +19,12 @@ local commands = {
   },
 }
 
----@param opts? snacks.picker.files.Config
+---@param cmd? string
 ---@return string? cmd, string[]? args
-function M.get_cmd(opts)
-  opts = opts or {}
+function M.get_cmd(cmd)
   local checked = {} ---@type string[]
   for _, command in ipairs(commands) do
-    if
-      command.enabled ~= false
-      and command.available ~= false
-      and (not opts.cmd or vim.tbl_contains(command.cmd, opts.cmd))
-    then
+    if command.enabled ~= false and command.available ~= false and (not cmd or vim.tbl_contains(command.cmd, cmd)) then
       if command.available then
         assert(type(command.available) == "string", "available must be a string")
         return command.available, vim.deepcopy(command.args)
@@ -44,17 +39,21 @@ function M.get_cmd(opts)
       command.available = false
     end
   end
-  checked = #checked == 0 and opts.cmd and { opts.cmd } or checked
+  checked = #checked == 0 and cmd and { cmd } or checked
   checked = vim.tbl_map(function(c)
     return "`" .. c .. "`"
   end, checked)
   Snacks.notify.error("No supported finder found:\n- " .. table.concat(checked, "\n-"))
 end
 
+function M.get_fd()
+  return M.get_cmd("fd")
+end
+
 ---@param opts snacks.picker.files.Config
 ---@param filter snacks.picker.Filter
 local function get_cmd(opts, filter)
-  local cmd, args = M.get_cmd(opts)
+  local cmd, args = M.get_cmd(opts.cmd)
   if not cmd or not args then
     return
   end

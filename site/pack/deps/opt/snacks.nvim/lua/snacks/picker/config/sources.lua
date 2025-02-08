@@ -42,6 +42,9 @@ M.buffers = {
 ---@field tree? boolean show the file tree (default: true)
 ---@field git_status? boolean show git status (default: true)
 ---@field git_status_open? boolean show recursive git status for open directories
+---@field git_untracked? boolean needed to show untracked git status
+---@field diagnostics? boolean show diagnostics
+---@field diagnostics_open? boolean show recursive diagnostics for open directories
 ---@field watch? boolean watch for file changes
 M.explorer = {
   finder = "explorer",
@@ -49,8 +52,11 @@ M.explorer = {
   supports_live = true,
   tree = true,
   watch = true,
+  diagnostics = true,
+  diagnostics_open = false,
   git_status = true,
   git_status_open = false,
+  git_untracked = true,
   follow_file = true,
   focus = "list",
   auto_close = false,
@@ -59,7 +65,10 @@ M.explorer = {
   -- to show the explorer to the right, add the below to
   -- your config under `opts.picker.sources.explorer`
   -- layout = { layout = { position = "right" } },
-  formatters = { file = { filename_only = true } },
+  formatters = {
+    file = { filename_only = true },
+    severity = { pos = "right" },
+  },
   matcher = { sort_empty = false, fuzzy = false },
   config = function(opts)
     return require("snacks.picker.source.explorer").setup(opts)
@@ -80,12 +89,20 @@ M.explorer = {
         ["y"] = "explorer_yank",
         ["u"] = "explorer_update",
         ["<c-c>"] = "tcd",
+        ["<leader>/"] = "picker_grep",
+        ["<c-t>"] = "terminal",
         ["."] = "explorer_focus",
         ["I"] = "toggle_ignored",
         ["H"] = "toggle_hidden",
         ["Z"] = "explorer_close_all",
         ["]g"] = "explorer_git_next",
         ["[g"] = "explorer_git_prev",
+        ["]d"] = "explorer_diagnostic_next",
+        ["[d"] = "explorer_diagnostic_prev",
+        ["]w"] = "explorer_warn_next",
+        ["[w"] = "explorer_warn_prev",
+        ["]e"] = "explorer_error_next",
+        ["[e"] = "explorer_error_prev",
       },
     },
   },
@@ -221,6 +238,22 @@ M.git_files = {
   format = "file",
   untracked = false,
   submodules = false,
+}
+
+-- Grep in git files
+---@class snacks.picker.git.grep.Config: snacks.picker.Config
+---@field untracked? boolean search in untracked files
+---@field submodules? boolean search in submodule files
+---@field need_search? boolean require a search pattern
+M.git_grep = {
+  finder = "git_grep",
+  format = "file",
+  untracked = false,
+  need_search = true,
+  submodules = false,
+  show_empty = true,
+  supports_live = true,
+  live = true,
 }
 
 -- Git log
@@ -403,7 +436,6 @@ M.keymaps = {
 --- Search for a lazy.nvim plugin spec
 M.lazy = {
   finder = "lazy_spec",
-  live = false,
   pattern = "'",
 }
 
@@ -737,6 +769,29 @@ M.spelling = {
   confirm = "item_action",
 }
 
+---@class snacks.picker.treesitter.Config: snacks.picker.Config
+---@field filter table<string, string[]|boolean>? symbol kind filter
+M.treesitter = {
+  finder = "treesitter_symbols",
+  format = "lsp_symbol",
+  filter = {
+    default = {
+      "Class",
+      "Enum",
+      "Field",
+      "Function",
+      "Method",
+      "Module",
+      "Namespace",
+      "Struct",
+      "Trait",
+    },
+    -- set to `true` to include all symbols
+    markdown = true,
+    help = true,
+  },
+}
+
 ---@class snacks.picker.undo.Config: snacks.picker.Config
 ---@field diff? vim.diff.Opts
 M.undo = {
@@ -744,7 +799,19 @@ M.undo = {
   format = "undo",
   preview = "preview",
   confirm = "item_action",
-  win = { preview = { wo = { number = false, relativenumber = false, signcolumn = "no" } } },
+  win = {
+    preview = { wo = { number = false, relativenumber = false, signcolumn = "no" } },
+    input = {
+      keys = {
+        ["<c-y>"] = { "yank_add", mode = { "n", "i" } },
+        ["<c-s-y>"] = { "yank_del", mode = { "n", "i" } },
+      },
+    },
+  },
+  actions = {
+    yank_add = { action = "yank", field = "added_lines" },
+    yank_del = { action = "yank", field = "removed_lines" },
+  },
   icons = { tree = { last = "┌╴" } }, -- the tree is upside down
   diff = {
     ctxlen = 4,

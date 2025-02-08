@@ -8,6 +8,10 @@ local M = {}
 ---@class snacks.picker.layout.Action: snacks.picker.Action
 ---@field layout? snacks.picker.layout.Config|string
 
+---@class snacks.picker.yank.Action: snacks.picker.Action
+---@field reg? string
+---@field field? string
+
 ---@enum (key) snacks.picker.EditCmd
 local edit_cmd = {
   edit = "buffer",
@@ -192,6 +196,12 @@ end
 function M.picker_grep(_, item)
   if item then
     Snacks.picker.grep({ cwd = Snacks.picker.util.dir(item) })
+  end
+end
+
+function M.terminal(_, item)
+  if item then
+    Snacks.terminal(nil, { cwd = Snacks.picker.util.dir(item) })
   end
 end
 
@@ -415,9 +425,15 @@ function M.loclist(picker)
   setqflist(items, { win = picker.main })
 end
 
-function M.yank(_, item)
+function M.yank(picker, item, action)
+  ---@cast action snacks.picker.yank.Action
   if item then
-    vim.fn.setreg("+", item.data or item.text)
+    local reg = action.reg or "+"
+    local value = item[action.field] or item.data or item.text
+    vim.fn.setreg(reg, value)
+    local buf = item.buf or vim.api.nvim_win_get_buf(picker.main)
+    local ft = vim.bo[buf].filetype
+    Snacks.notify(("Yanked to register `%s`:\n```%s\n%s\n```"):format(reg, ft, value), { title = "Snacks Picker" })
   end
 end
 M.copy = M.yank

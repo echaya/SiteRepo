@@ -15,7 +15,7 @@
     "revision": "017696bdf47ca2b10948c5a511f9ab387722d0f3"
   },
   "asm": {
-    "revision": "55b2b913f1e71136027d6fce8212e760c64f3532"
+    "revision": "5bb5b03e3c1ce5853b5282b9fba060f7c7bbf11e"
   },
   "astro": {
     "revision": "0ad33e32ae9726e151d16ca20ba3e507ff65e01f"
@@ -90,7 +90,7 @@
     "revision": "594289eadfec719198e560f9d7fd243c4db678d5"
   },
   "cpp": {
-    "revision": "1e75b69fc8e7a2d9bfc67c2ea6b024affcb5b97c"
+    "revision": "e5cea0ec884c5c3d2d1e41a741a66ce13da4d945"
   },
   "css": {
     "revision": "6e327db434fec0ee90f006697782e43ec855adf5"
@@ -159,7 +159,7 @@
     "revision": "f742f2fe327463335e8671a87c0b9b396905d1d1"
   },
   "elixir": {
-    "revision": "0e8eb7fc1dfb3d855398870827a9866a1529a5e4"
+    "revision": "86ec2ed45d6d9433b4e0b88cd3d96796bd45625f"
   },
   "elm": {
     "revision": "e34bdc5c512918628b05b48e633f711123204e45"
@@ -173,8 +173,11 @@
   "embedded_template": {
     "revision": "8495d106154741e6d35d37064f864758ece75de6"
   },
+  "enforce": {
+    "revision": "9db7a49f3d73222c05b75dcfa8892f5e93542d1e"
+  },
   "erlang": {
-    "revision": "90f1fcb7a9c9fff2442c00d087368d5bc2c94407"
+    "revision": "9cea919877741b2ed87cf215c0a06feb9a1930bf"
   },
   "facility": {
     "revision": "e4bfd3e960de9f4b4648acb1c92e9b95b47d8cfb"
@@ -243,7 +246,7 @@
     "revision": "f4685bf11ac466dd278449bcfe5fd014e94aa504"
   },
   "gleam": {
-    "revision": "066704e4826699e754d351e3bbe12bf2e51de9d8"
+    "revision": "af6043419f5aa0f8b6c2a26db0187aefa46c7f5f"
   },
   "glimmer": {
     "revision": "da605af8c5999b43e6839b575eae5e6cafabb06f"
@@ -376,6 +379,12 @@
   },
   "javascript": {
     "revision": "6fbef40512dcd9f0a61ce03a4c9ae7597b36ab5c"
+  },
+  "jinja": {
+    "revision": "41b17a33f335130ce9861fd21bffeb88fd768ef4"
+  },
+  "jinja_inline": {
+    "revision": "41b17a33f335130ce9861fd21bffeb88fd768ef4"
   },
   "jq": {
     "revision": "13990f530e8e6709b7978503da9bc8701d366791"
@@ -795,7 +804,7 @@
     "revision": "3db655924b2ff1c54fdf6371b5425ea6b5dccefe"
   },
   "templ": {
-    "revision": "a9178bfc9cc8040c08f39b47bae5400a2bf06e50"
+    "revision": "def9849184de71a797c4e2b2837df85abeccf92c"
   },
   "terraform": {
     "revision": "9e3ec9848f28d26845ba300fd73c740459b83e9b"
@@ -927,9 +936,9 @@
     "revision": "b670c8df85a1568f498aa5c8cae42f51a90473c0"
   },
   "ziggy": {
-    "revision": "3518133e9ebea7c372eff4def368eda8488fad18"
+    "revision": "acf2b6b5aa8b9ce93f4a1ef1adf4e95c06db7831"
   },
   "ziggy_schema": {
-    "revision": "3518133e9ebea7c372eff4def368eda8488fad18"
+    "revision": "acf2b6b5aa8b9ce93f4a1ef1adf4e95c06db7831"
   }
 }

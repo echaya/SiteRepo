@@ -57,6 +57,9 @@ function M:find()
     if win == 0 or not vim.api.nvim_win_is_valid(win) then
       return false
     end
+    if vim.w[win].snacks_main then
+      return true
+    end
     local win_config = vim.api.nvim_win_get_config(win)
     local is_float = win_config.relative ~= ""
     if not is_float then

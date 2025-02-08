@@ -60,7 +60,6 @@ function M.proc(opts, ctx)
         vim.list_extend(full, opts.args or {})
         Snacks.notify.error(("Command failed:\n- cmd: `%s`"):format(table.concat(full, " ")))
       end
-      stdout:close()
       handle:close()
       self:resume()
     end)
@@ -72,6 +71,10 @@ function M.proc(opts, ctx)
     local queue = require("snacks.picker.util.queue").new()
 
     self:on("abort", function()
+      stdout:read_stop()
+      if not stdout:is_closing() then
+        stdout:close()
+      end
       aborted = true
       queue:clear()
       cb = function() end
@@ -115,10 +118,12 @@ function M.proc(opts, ctx)
     end
 
     stdout:read_start(function(err, data)
-      if aborted then
+      assert(not err, err)
+      if aborted or not data then
+        stdout:close()
+        self:resume()
         return
       end
-      assert(not err, err)
       if M.USE_QUEUE then
         queue:push(data)
         self:resume()
@@ -127,7 +132,7 @@ function M.proc(opts, ctx)
       end
     end)
 
-    while not (handle:is_closing() and queue:empty()) do
+    while not (stdout:is_closing() and queue:empty()) do
       if queue:empty() then
         self:suspend()
       else

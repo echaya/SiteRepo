@@ -1,6 +1,10 @@
 local Git = require("snacks.explorer.git")
 local Tree = require("snacks.explorer.tree")
 
+---@class snacks.explorer.diagnostic.Action: snacks.picker.Action
+---@field severity? number
+---@field up? boolean
+
 local uv = vim.uv or vim.loop
 
 local M = {}
@@ -259,5 +263,25 @@ function M.actions.confirm(picker, item, action)
     Snacks.picker.actions.jump(picker, item, action)
   end
 end
+
+function M.actions.explorer_diagnostic(picker, item, action)
+  ---@cast action snacks.explorer.diagnostic.Action
+  local node = Tree:next(picker:cwd(), function(node)
+    if not node.severity then
+      return false
+    end
+    return action.severity == nil or node.severity == action.severity
+  end, { up = action.up, path = item and item.file })
+  if node then
+    M.update(picker, { target = node.path })
+  end
+end
+
+M.actions.explorer_diagnostic_next = { action = "explorer_diagnostic" }
+M.actions.explorer_diagnostic_prev = { action = "explorer_diagnostic", up = true }
+M.actions.explorer_warn_next = { action = "explorer_diagnostic", severity = vim.diagnostic.severity.WARN }
+M.actions.explorer_warn_prev = { action = "explorer_diagnostic", severity = vim.diagnostic.severity.WARN, up = true }
+M.actions.explorer_error_next = { action = "explorer_diagnostic", severity = vim.diagnostic.severity.ERROR }
+M.actions.explorer_error_prev = { action = "explorer_diagnostic", severity = vim.diagnostic.severity.ERROR, up = true }
 
 return M

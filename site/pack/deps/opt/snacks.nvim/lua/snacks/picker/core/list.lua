@@ -16,6 +16,7 @@
 ---@field matcher snacks.picker.Matcher matcher for formatting list items
 ---@field matcher_regex snacks.picker.Matcher matcher for formatting list items
 ---@field target? {cursor: number, top?: number}
+---@field visible snacks.picker.Item[]
 local M = {}
 M.__index = M
 
@@ -36,6 +37,8 @@ local SCROLL_WHEEL_DOWN = Snacks.util.keycode("<ScrollWheelDown>")
 
 ---@type table<number, snacks.picker.list>
 local lists = setmetatable({}, { __mode = "v" })
+
+local stats = { render = 0, render_full = 0 }
 
 -- track mouse scrolling
 vim.on_key(function(key, typed)
@@ -85,6 +88,8 @@ function M.new(picker)
       breakindent = true,
     },
   })
+  self.visible = {}
+  self.visible_count = 0
   self.win = Snacks.win(win_opts)
   self.top, self.cursor = 1, 1
   self.items = {}
@@ -300,20 +305,22 @@ end
 function M:add(item, sort)
   local idx = #self.items + 1
   self.items[idx] = item
+  -- if the visible items are less than the height, then we need to render
+  self.dirty = self.dirty or #self.visible < (self.state.height or 50)
   if sort ~= false then
     local added, prev = self.topk:add(item)
     if added then
+      -- check if item is before the last visible item
+      if not self.dirty and #self.visible > 0 then
+        self.dirty = self.topk.cmp(item, self.visible[#self.visible])
+      end
       item.match_topk = item.match_tick
-      self.dirty = true
+      if prev then
+        -- replace with previous item, since new item is now in topk
+        self.items[idx] = prev
+        prev.match_topk = nil
+      end
     end
-    if prev then
-      -- replace with previous item, since new item is now in topk
-      self.items[idx] = prev
-      prev.match_topk = nil
-    end
-  end
-  if not self.dirty then
-    self.dirty = idx >= self.top and idx <= self.top + (self.state.height or 50)
   end
 end
 
@@ -517,14 +524,8 @@ function M:_render(item, row)
     extmark.row = nil
     extmark.field = nil
     local ok, err = pcall(vim.api.nvim_buf_set_extmark, self.win.buf, ns, row - 1, col, extmark)
-    if not ok then
-      Snacks.notify.error(
-        "Failed to set extmark. This should not happen. Please report.\n"
-          .. err
-          .. "\n```lua\n"
-          .. vim.inspect(extmark)
-          .. "\n```"
-      )
+    if not ok and self.picker.opts.debug.extmarks then
+      Snacks.notify.error("Failed to set extmark.\n" .. err .. "\n```lua\n" .. vim.inspect(extmark) .. "\n```")
     end
   end
 end
@@ -544,6 +545,7 @@ function M:update_cursorline()
 end
 
 function M:render()
+  stats.render = stats.render + 1
   if self.target then
     self:view(self.target.cursor, self.target.top, false)
     if not self.picker:is_active() then
@@ -555,6 +557,7 @@ function M:render()
 
   local redraw = false
   if self.dirty then
+    stats.render_full = stats.render_full + 1
     local height = self:height()
     self.dirty = false
     vim.api.nvim_win_call(self.win.win, function()
@@ -577,9 +580,11 @@ function M:render()
       self.matcher_regex:init(search)
     end
 
+    self.visible = {}
     -- render items
     for i = self.top, math.min(self:count(), self.top + height - 1) do
       local item = assert(self:get(i), "item not found")
+      self.visible[i - self.top + 1] = item
       local row = self:idx2row(i)
       self:_render(item, row)
     end
@@ -617,5 +622,13 @@ function M:render()
     end
   end
 end
+
+-- vim.uv.new_timer():start(
+--   500,
+--   500,
+--   vim.schedule_wrap(function()
+--     Snacks.notify(vim.inspect(stats), { ft = "lua", id = "list_stats" })
+--   end)
+-- )
 
 return M

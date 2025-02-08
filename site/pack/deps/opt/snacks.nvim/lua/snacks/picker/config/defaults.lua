@@ -143,6 +143,7 @@ local defaults = {
       filename_first = false, -- display filename before the file path
       truncate = 40, -- truncate the file path to (roughly) this length
       filename_only = false, -- only show the filename
+      icon_width = 2, -- width of the icon (in characters)
     },
     selected = {
       show_always = false, -- only show the selected column when there are multiple selections
@@ -151,6 +152,8 @@ local defaults = {
     severity = {
       icons = true, -- show severity icons
       level = false, -- show severity level
+      ---@type "left"|"right"
+      pos = "left", -- position of the diagnostics
     },
   },
   ---@class snacks.picker.previewers.Config
@@ -395,6 +398,8 @@ local defaults = {
     leaks = false, -- show when pickers don't get garbage collected
     explorer = false, -- show explorer debug info
     files = false, -- show file debug info
+    grep = false, -- show file debug info
+    extmarks = false, -- show extmarks errors
   },
 }
 

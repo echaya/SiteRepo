@@ -392,7 +392,7 @@ function M:dim_box(widget, parent)
   -- honor the actual window size for split layouts
   if not self.opts.fullscreen and widget.id == 1 and self.split and self.root:valid() then
     return {
-      height = vim.api.nvim_win_get_height(self.root.win),
+      height = vim.api.nvim_win_get_height(self.root.win) - (vim.wo[self.root.win].winbar == "" and 0 or 1),
       width = vim.api.nvim_win_get_width(self.root.win),
       col = 0,
       row = 0,

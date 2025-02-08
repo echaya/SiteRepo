@@ -248,29 +248,8 @@ end
 function M.results_to_items(client, results, opts)
   opts = opts or {}
   local items = {} ---@type snacks.picker.finder.Item[]
-  local locs = {} ---@type lsp.Loc[]
-
-  ---@param result lsp.ResultItem
-  local function process(result)
-    local uri = result.location and result.location.uri or result.uri or opts.default_uri
-    local loc = result.location or { range = result.selectionRange or result.range, uri = uri }
-    loc.uri = loc.uri or uri
-    if not loc.uri then
-      assert(loc.uri, "missing uri in result:\n" .. vim.inspect(result))
-    end
-    if not opts.filter or opts.filter(result) then
-      locs[#locs + 1] = loc
-    end
-    for _, child in ipairs(result.children or {}) do
-      process(child)
-    end
-  end
-
-  for _, result in ipairs(results) do
-    process(result)
-  end
-
   local last = {} ---@type table<snacks.picker.finder.Item, snacks.picker.finder.Item>
+
   ---@param result lsp.ResultItem
   ---@param parent snacks.picker.finder.Item
   local function add(result, parent)
@@ -375,6 +354,29 @@ function M.symbols(opts, ctx)
           return want(M.symbol_kind(item.kind))
         end,
       })
+
+      -- Fix sorting
+      table.sort(items, function(a, b)
+        if a.pos[1] == b.pos[1] then
+          return a.pos[2] < b.pos[2]
+        end
+        return a.pos[1] < b.pos[1]
+      end)
+
+      -- fix last
+      local last = {} ---@type table<snacks.picker.finder.Item, snacks.picker.finder.Item>
+      for _, item in ipairs(items) do
+        item.last = nil
+        local parent = item.parent
+        if parent then
+          if last[parent] then
+            last[parent].last = nil
+          end
+          last[parent] = item
+          item.last = true
+        end
+      end
+
       for _, item in ipairs(items) do
         item.tree = opts.tree
         item.buf = bufmap[item.file]

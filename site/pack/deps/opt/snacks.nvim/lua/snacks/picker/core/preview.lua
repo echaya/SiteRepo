@@ -233,6 +233,10 @@ end
 function M:highlight(opts)
   opts = opts or {}
   local ft = opts.ft
+  if not ft and opts.buf then
+    local modeline = Snacks.picker.util.modeline(opts.buf)
+    ft = modeline and modeline.ft
+  end
   if not ft and (opts.file or opts.buf) then
     ft = vim.filetype.match({
       buf = opts.buf or self.win.buf,

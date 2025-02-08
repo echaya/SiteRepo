@@ -1,8 +1,8 @@
 ---@meta
 
 ---@class (exact) render.md.Callback
----@field public attach fun(buf: integer)
----@field public render fun(buf: integer)
+---@field public attach fun(ctx: render.md.CallbackContext)
+---@field public render fun(ctx: render.md.CallbackContext)
 
 ---@class (exact) render.md.Injection
 ---@field public enabled boolean
@@ -159,6 +159,7 @@
 ---@field public below string
 ---@field public backgrounds string[]
 ---@field public foregrounds string[]
+---@field public custom table<string, render.md.HeadingCustom>
 
 ---@class (exact) render.md.Padding
 ---@field public highlight string

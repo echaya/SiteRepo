@@ -6,7 +6,7 @@ function M.spec(opts, ctx)
   local Util = require("lazy.core.util")
   local paths = {} ---@type string[]
   for _, import in ipairs(spec.modules) do
-    Util.lsmod(import, function(modname, modpath)
+    Util.lsmod(import, function(_, modpath)
       paths[#paths + 1] = modpath
     end)
   end
@@ -17,21 +17,25 @@ function M.spec(opts, ctx)
       names[#names + 1] = name
     end
   end
-  local matcher = require("snacks.picker.core.matcher").new(ctx.picker.opts.matcher)
-  matcher:init(ctx.filter.search)
-  local regex = {} ---@type string[]
-  for _, name in ipairs(names) do
-    local item = { text = name } ---@type snacks.picker.finder.Item
-    if matcher:match(item) > 0 then
-      table.insert(regex, '"' .. name .. '"')
+  local regex = "\\M\\['\"]\\(" .. table.concat(names, "\\|") .. "\\)\\['\"]"
+  local re = vim.regex(regex)
+  local ret = {} ---@type snacks.picker.finder.Item[]
+  for _, path in ipairs(paths) do
+    local lines = Snacks.picker.util.lines(path)
+    for l, line in ipairs(lines) do
+      local from, to = re:match_str(line)
+      if from then
+        ret[#ret + 1] = {
+          file = path,
+          line = line,
+          text = line,
+          pos = { l, from },
+          end_pos = { l, to },
+        }
+      end
     end
   end
-  ctx.filter.search = "^(?:(?!\\s*--)).*(?:" .. table.concat(regex, "|") .. ")"
-  opts = vim.tbl_extend("force", vim.deepcopy(opts), {
-    dirs = paths,
-    args = { "--pcre2" },
-  })
-  return require("snacks.picker.source.grep").grep(opts, ctx)
+  return ret
 end
 
 return M

@@ -121,7 +121,10 @@ docs for more information on how to customize these styles
 ---@class snacks.terminal.Opts: snacks.terminal.Config
 ---@field cwd? string
 ---@field env? table<string, string>
----@field interactive? boolean
+---@field start_insert? boolean start insert mode when starting the terminal
+---@field auto_insert? boolean start insert mode when entering the terminal buffer
+---@field auto_close? boolean close the terminal buffer when the process exits
+---@field interactive? boolean shortcut for `start_insert`, `auto_close` and `auto_insert` (default: true)
 ```
 
 ## 📦 Module
@@ -166,6 +169,13 @@ The terminal id is based on the `cmd`, `cwd`, `env` and `vim.v.count1` options.
 ---@param opts? snacks.terminal.Opts| {create?: boolean}
 ---@return snacks.win? terminal, boolean? created
 Snacks.terminal.get(cmd, opts)
+```
+
+### `Snacks.terminal.list()`
+
+```lua
+---@return snacks.win[]
+Snacks.terminal.list()
 ```
 
 ### `Snacks.terminal.open()`

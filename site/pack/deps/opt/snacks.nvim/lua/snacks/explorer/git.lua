@@ -30,7 +30,7 @@ function M.is_dirty(cwd)
 end
 
 ---@param cwd string
----@param opts? {on_update?: fun(), ttl?: number, force?: boolean}
+---@param opts? {on_update?: fun(), ttl?: number, force?: boolean, untracked?: boolean}
 function M.update(cwd, opts)
   opts = opts or {}
   local ttl = opts.ttl or CACHE_TTL
@@ -62,13 +62,12 @@ function M.update(cwd, opts)
     args = {
       "--no-pager",
       "status",
-      "-uall",
       "--porcelain=v1",
       "--ignored=matching",
       "-z",
+      opts.untracked and "-unormal" or "-uno",
     },
   }, function()
-    stdout:close()
     handle:close()
   end)
 
@@ -83,11 +82,13 @@ function M.update(cwd, opts)
     local ret = {} ---@type snacks.explorer.git.Status[]
     for _, line in ipairs(vim.split(output, "\0")) do
       if line ~= "" then
-        local status, file = line:sub(1, 2), line:sub(4)
-        ret[#ret + 1] = {
-          status = status,
-          file = root .. "/" .. file,
-        }
+        local status, file = line:match("^(..) (.+)$")
+        if status then
+          ret[#ret + 1] = {
+            status = status,
+            file = root .. "/" .. file,
+          }
+        end
       end
     end
     M._update(cwd, ret)
@@ -102,6 +103,7 @@ function M.update(cwd, opts)
       output = output .. data
     else
       process()
+      stdout:close()
     end
   end)
 end
@@ -135,6 +137,10 @@ function M._update(cwd, results)
     if not deleted then
       add_git_status(path, s.status)
     end
+    if is_dir then
+      local n = Tree:find(path)
+      n.dir_status = s.status
+    end
     if s.status:sub(1, 1) ~= "!" then -- don't propagate ignored status
       add_git_status(cwd, s.status)
       for dir in Snacks.picker.util.parents(path, cwd) do
@@ -149,31 +155,9 @@ end
 ---@param up? boolean
 function M.next(cwd, path, up)
   local Tree = require("snacks.explorer.tree")
-  path = path or cwd
-  local root = Tree:node(cwd) or nil
-  if not root then
-    return
-  end
-  local first ---@type snacks.picker.explorer.Node?
-  local last ---@type snacks.picker.explorer.Node?
-  local prev ---@type snacks.picker.explorer.Node?
-  local next ---@type snacks.picker.explorer.Node?
-  local found = false
-  Tree:walk(root, function(node)
-    local want = not node.dir and node.status and not node.ignored
-    if node.path == path then
-      found = true
-    end
-    if want then
-      first, last = first or node, node
-      next = next or (found and node.path ~= path and node) or nil
-      prev = not found and node or prev
-    end
-  end, { all = true })
-  if up then
-    return prev or last
-  end
-  return next or first
+  return Tree:next(cwd, function(node)
+    return node.status ~= nil
+  end, { up = up, path = path })
 end
 
 return M

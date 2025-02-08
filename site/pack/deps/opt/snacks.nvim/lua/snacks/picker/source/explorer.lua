@@ -46,8 +46,12 @@ function State.new(picker)
   end
 
   if opts.watch then
-    picker.opts.on_close = function()
+    local on_close = picker.opts.on_close
+    picker.opts.on_close = function(p)
       require("snacks.explorer.watch").abort()
+      if on_close then
+        on_close(p)
+      end
     end
   end
 
@@ -63,6 +67,15 @@ function State.new(picker)
     local p = ref()
     if p then
       p:set_cwd(vim.fs.normalize(ev.file))
+      p:find()
+    end
+  end)
+
+  picker.list.win:on("DiagnosticChanged", function(_, ev)
+    local p = ref()
+    if p then
+      require("snacks.explorer.diagnostics").update(p:cwd())
+      p.list:set_target()
       p:find()
     end
   end)
@@ -198,6 +211,7 @@ function M.explorer(opts, ctx)
 
   if opts.git_status then
     require("snacks.explorer.git").update(ctx.filter.cwd, {
+      untracked = opts.git_untracked,
       on_update = function()
         if ctx.picker.closed then
           return
@@ -206,6 +220,10 @@ function M.explorer(opts, ctx)
         ctx.picker:find()
       end,
     })
+  end
+
+  if opts.diagnostics then
+    require("snacks.explorer.diagnostics").update(ctx.filter.cwd)
   end
 
   return function(cb)
@@ -217,17 +235,24 @@ function M.explorer(opts, ctx)
     local top = Tree:find(ctx.filter.cwd)
     local last = {} ---@type table<snacks.picker.explorer.Node, snacks.picker.explorer.Item>
     Tree:get(ctx.filter.cwd, function(node)
+      local parent = node.parent and items[node.parent.path] or nil
+      local status = node.status
+      if not status and parent and parent.dir_status then
+        status = parent.dir_status
+      end
       local item = {
         file = node.path,
         dir = node.dir,
         open = node.open,
+        dir_status = node.dir_status or parent and parent.dir_status,
         text = node.path,
-        parent = node.parent and items[node.parent.path] or nil,
+        parent = parent,
         hidden = node.hidden,
         ignored = node.ignored,
-        status = (not node.dir or not node.open or opts.git_status_open) and node.status or nil,
+        status = (not node.dir or not node.open or opts.git_status_open) and status or nil,
         last = true,
         type = node.type,
+        severity = (not node.dir or not node.open or opts.diagnostics_open) and node.severity or nil,
       }
       if last[node.parent] then
         last[node.parent].last = false
@@ -255,7 +280,6 @@ function M.search(opts, ctx)
     "d", -- include directories
     "--path-separator", -- same everywhere
     "/",
-    "--follow", -- always needed to make sure we see symlinked dirs as dirs
   }
   opts.dirs = { ctx.filter.cwd }
   ctx.picker.list:set_target()
@@ -291,12 +315,12 @@ function M.search(opts, ctx)
       else
         item.sort = parent.sort .. "#" .. basename .. " "
       end
-      if basename:sub(1, 1) == "." then
-        item.hidden = true
-      end
+      item.hidden = basename:sub(1, 1) == "."
       item.text = item.text:sub(1, #opts.cwd) == opts.cwd and item.text:sub(#opts.cwd + 2) or item.text
-      local node = Tree:find(item.file)
+      local node = Tree:node(item.file)
       if node then
+        item.dir = node.dir
+        item.type = node.type
         item.status = (not node.dir or opts.git_status_open) and node.status or nil
       end
 
@@ -334,7 +358,9 @@ function M.search(opts, ctx)
 
       -- Add parents when needed
       for dir in Snacks.picker.util.parents(item.file, opts.cwd) do
-        if not dirs[dir] then
+        if dirs[dir] then
+          break
+        else
           dirs[dir] = {
             text = dir,
             file = dir,

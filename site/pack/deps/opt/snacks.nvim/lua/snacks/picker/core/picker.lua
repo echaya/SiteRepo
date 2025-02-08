@@ -335,7 +335,7 @@ function M:init_layout(layout)
     end
   end, { buf = true, nested = true })
 
-  self.preview:update(preview_main and not preview_hidden and self.main or nil)
+  self.preview:update(preview_main and self.main or nil)
   -- apply box highlight groups
   local boxwhl = Snacks.picker.highlight.winhl("SnacksPickerBox")
   for _, win in pairs(self.layout.box_wins) do
@@ -511,7 +511,7 @@ function M:show()
   end
   self.shown = true
   self.layout:show()
-  if self.preview.main then
+  if self.preview.main and self:preview_opts().enabled then
     self.preview.win:show()
   end
   self:_focus()

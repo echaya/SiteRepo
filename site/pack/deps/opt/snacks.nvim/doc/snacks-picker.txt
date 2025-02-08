@@ -97,6 +97,8 @@ Table of Contents                            *snacks-picker-table-of-contents*
   - Snacks.picker.actions.focus_input()|snacks-picker-snacks.picker.actions-snacks.picker.actions.focus_input()|
   - Snacks.picker.actions.focus_list()|snacks-picker-snacks.picker.actions-snacks.picker.actions.focus_list()|
   - Snacks.picker.actions.focus_preview()|snacks-picker-snacks.picker.actions-snacks.picker.actions.focus_preview()|
+  - Snacks.picker.actions.git_branch_add()|snacks-picker-snacks.picker.actions-snacks.picker.actions.git_branch_add()|
+  - Snacks.picker.actions.git_branch_del()|snacks-picker-snacks.picker.actions-snacks.picker.actions.git_branch_del()|
   - Snacks.picker.actions.git_checkout()|snacks-picker-snacks.picker.actions-snacks.picker.actions.git_checkout()|
   - Snacks.picker.actions.git_stage()|snacks-picker-snacks.picker.actions-snacks.picker.actions.git_stage()|
   - Snacks.picker.actions.git_stash_apply()|snacks-picker-snacks.picker.actions-snacks.picker.actions.git_stash_apply()|
@@ -1118,6 +1120,7 @@ EXPLORER                                      *snacks-picker-sources-explorer*
     {
       finder = "explorer",
       sort = { fields = { "sort" } },
+      supports_live = true,
       tree = true,
       watch = true,
       git_status = true,
@@ -1207,8 +1210,8 @@ GIT_BRANCHES                              *snacks-picker-sources-git_branches*
       win = {
         input = {
           keys = {
-            ["<c-a>"] = { "git_create_branch", mode = { "n", "i" } },
-            ["<c-x>"] = { "git_delete_branch", mode = { "n", "i" } },
+            ["<c-a>"] = { "git_branch_add", mode = { "n", "i" } },
+            ["<c-x>"] = { "git_branch_del", mode = { "n", "i" } },
           },
         },
       },
@@ -2507,6 +2510,20 @@ SNACKS.PICKER.ACTIONS.FOCUS_PREVIEW()*snacks-picker-snacks.picker.actions-snacks
 
 >lua
     Snacks.picker.actions.focus_preview(picker)
+<
+
+
+SNACKS.PICKER.ACTIONS.GIT_BRANCH_ADD()*snacks-picker-snacks.picker.actions-snacks.picker.actions.git_branch_add()*
+
+>lua
+    Snacks.picker.actions.git_branch_add(picker)
+<
+
+
+SNACKS.PICKER.ACTIONS.GIT_BRANCH_DEL()*snacks-picker-snacks.picker.actions-snacks.picker.actions.git_branch_del()*
+
+>lua
+    Snacks.picker.actions.git_branch_del(picker, item)
 <
 
 

@@ -59,6 +59,9 @@ Snacks.config.style("zen", {
   wo = {
     winhighlight = "NormalFloat:Normal",
   },
+  w = {
+    snacks_main = true,
+  },
 })
 
 -- fullscreen indicator

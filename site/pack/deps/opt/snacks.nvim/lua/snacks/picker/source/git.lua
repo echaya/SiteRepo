@@ -32,6 +32,49 @@ function M.files(opts, ctx)
   }, ctx)
 end
 
+---@param opts snacks.picker.git.grep.Config
+---@type snacks.picker.finder
+function M.grep(opts, ctx)
+  if opts.need_search ~= false and ctx.filter.search == "" then
+    return function() end
+  end
+  local args = { "-c", "core.quotepath=false", "grep", "--line-number", "--column", "--no-color", "-I" }
+  if opts.untracked then
+    table.insert(args, "--untracked")
+  elseif opts.submodules then
+    table.insert(args, "--recurse-submodules")
+  end
+  table.insert(args, ctx.filter.search)
+  if not opts.cwd then
+    opts.cwd = Snacks.git.get_root() or uv.cwd() or "."
+    ctx.picker:set_cwd(opts.cwd)
+  end
+  local cwd = vim.fs.normalize(opts.cwd) or nil
+  return require("snacks.picker.source.proc").proc({
+    opts,
+    {
+      cmd = "git",
+      args = args,
+      notify = false,
+      ---@param item snacks.picker.finder.Item
+      transform = function(item)
+        item.cwd = cwd
+        local file, line, col, text = item.text:match("^(.+):(%d+):(%d+):(.*)$")
+        if not file then
+          if not item.text:match("WARNING") then
+            Snacks.notify.error("invalid grep output:\n" .. item.text)
+          end
+          return false
+        else
+          item.line = text
+          item.file = file
+          item.pos = { tonumber(line), tonumber(col) - 1 }
+        end
+      end,
+    },
+  }, ctx)
+end
+
 ---@param opts snacks.picker.git.log.Config
 ---@type snacks.picker.finder
 function M.log(opts, ctx)
@@ -104,6 +147,7 @@ function M.status(opts, ctx)
 
   local cwd = vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
   cwd = Snacks.git.get_root(cwd)
+  local prev ---@type snacks.picker.finder.Item?
   return require("snacks.picker.source.proc").proc({
     opts,
     {
@@ -113,10 +157,18 @@ function M.status(opts, ctx)
       args = args,
       ---@param item snacks.picker.finder.Item
       transform = function(item)
-        local status, file = item.text:sub(1, 2), item.text:sub(4)
-        item.cwd = cwd
-        item.status = status
-        item.file = file
+        local status, file = item.text:match("^(..) (.+)$")
+        if status then
+          item.cwd = cwd
+          item.status = status
+          item.file = file
+          prev = item
+        elseif prev and prev.status:find("R") then
+          prev.rename = item.text
+          return false
+        else
+          return false
+        end
       end,
     },
   }, ctx)
@@ -128,6 +180,7 @@ function M.diff(opts, ctx)
   local args = { "--no-pager", "diff", "--no-color", "--no-ext-diff" }
   local file, line ---@type string?, number?
   local header, hunk = {}, {} ---@type string[], string[]
+  local header_len = 4
   local finder = require("snacks.picker.source.proc").proc({
     opts,
     { cmd = "git", args = args },
@@ -151,7 +204,11 @@ function M.diff(opts, ctx)
         add()
         file = text:match("^diff .* a/(.*) b/.*$")
         header = { text }
-      elseif file and #header < 4 then
+        header_len = 4
+      elseif file and #header < header_len then
+        if text:find("^deleted file") then
+          header_len = 5
+        end
         header[#header + 1] = text
       elseif text:find("@", 1, true) == 1 then
         add()

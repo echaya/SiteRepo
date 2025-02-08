@@ -15,14 +15,27 @@ function M.severity(item, picker)
   local lower = severity:lower()
   local cap = severity:sub(1, 1):upper() .. lower:sub(2)
 
+  if picker.opts.formatters.severity.pos == "right" then
+    return {
+      {
+        col = 0,
+        virt_text = { { picker.opts.icons.diagnostics[cap], "Diagnostic" .. cap } },
+        virt_text_pos = "right_align",
+        hl_mode = "combine",
+      },
+    }
+  end
+
   if picker.opts.formatters.severity.icons then
     ret[#ret + 1] = { picker.opts.icons.diagnostics[cap], "Diagnostic" .. cap, virtual = true }
     ret[#ret + 1] = { " ", virtual = true }
   end
+
   if picker.opts.formatters.severity.level then
     ret[#ret + 1] = { lower:upper(), "Diagnostic" .. cap, virtual = true }
     ret[#ret + 1] = { " ", virtual = true }
   end
+
   return ret
 end
 
@@ -48,8 +61,8 @@ function M.filename(item, picker)
     if item.dir and item.open then
       icon = " "
     end
-    local padded_icon = icon:sub(-1) == " " and icon or icon .. " "
-    ret[#ret + 1] = { padded_icon, hl, virtual = true }
+    icon = Snacks.picker.util.align(icon, picker.opts.formatters.file.icon_width or 2)
+    ret[#ret + 1] = { icon, hl, virtual = true }
   end
 
   local base_hl = item.dir and "SnacksPickerDirectory" or "SnacksPickerFile"
@@ -120,19 +133,19 @@ function M.file(item, picker)
     ret[#ret + 1] = { " ", virtual = true }
   end
 
-  if item.severity then
-    vim.list_extend(ret, M.severity(item, picker))
-  end
-
   if item.parent then
     vim.list_extend(ret, M.tree(item, picker))
   end
 
-  vim.list_extend(ret, M.filename(item, picker))
-
   if item.status then
     vim.list_extend(ret, M.file_git_status(item, picker))
   end
+
+  if item.severity then
+    vim.list_extend(ret, M.severity(item, picker))
+  end
+
+  vim.list_extend(ret, M.filename(item, picker))
 
   if item.comment then
     table.insert(ret, { item.comment, "SnacksPickerComment" })
@@ -528,6 +541,16 @@ function M.git_status(item, picker)
   local hl = hls[s] or "SnacksPickerGitStatus"
   ret[#ret + 1] = { a(item.status, 2, { align = "right" }), hl }
   ret[#ret + 1] = { " " }
+  if item.rename then
+    local file = item.file
+    item.file = item.rename
+    item._path = nil
+    vim.list_extend(ret, M.filename(item, picker))
+    item.file = file
+    item._path = nil
+    ret[#ret + 1] = { "-> ", "SnacksPickerDelim" }
+    ret[#ret + 1] = { " " }
+  end
   vim.list_extend(ret, M.filename(item, picker))
   return ret
 end
