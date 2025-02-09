@@ -199,6 +199,7 @@ function M:reset()
   else
     self.win:scratch()
   end
+  vim.api.nvim_buf_clear_namespace(self.win.buf, -1, 0, -1)
   self:set_title()
   vim.treesitter.stop(self.win.buf)
   vim.bo[self.win.buf].modifiable = true

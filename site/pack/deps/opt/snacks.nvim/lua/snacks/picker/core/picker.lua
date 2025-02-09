@@ -639,7 +639,7 @@ function M:close()
   local current = vim.api.nvim_get_current_win()
   local is_picker_win = vim.tbl_contains({ self.input.win.win, self.list.win.win, self.preview.win.win }, current)
   if is_picker_win and vim.api.nvim_win_is_valid(self.main) then
-    vim.api.nvim_set_current_win(self.main)
+    pcall(vim.api.nvim_set_current_win, self.main)
   end
   self.updater:stop()
   if not self.updater:is_closing() then

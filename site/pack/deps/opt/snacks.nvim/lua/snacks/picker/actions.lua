@@ -634,11 +634,11 @@ function M.list_bottom(picker)
 end
 
 function M.list_down(picker)
-  picker.list:move(1)
+  picker.list:move(vim.v.count1)
 end
 
 function M.list_up(picker)
-  picker.list:move(-1)
+  picker.list:move(-vim.v.count1)
 end
 
 function M.list_scroll_top(picker)

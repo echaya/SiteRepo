@@ -179,10 +179,7 @@ function M:init(pattern)
   self.tick = self.tick + 1
   self.file = nil
   self.mods = {}
-  self.subset = self.pattern ~= ""
-    and pattern:find(self.pattern, 1, true) == 1
-    and not pattern:find("|", 1, true)
-    and not pattern:find("!", 1, true)
+  self.subset = self.pattern ~= "" and pattern:find(self.pattern, 1, true) == 1 and not pattern:find("[^%s%w]")
   self.pattern = pattern
   self:abort()
   self.one = nil
