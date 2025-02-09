@@ -215,6 +215,10 @@ function M:reset()
   vim.o.eventignore = ei
 end
 
+function M:minimal()
+  self:wo({ number = false, relativenumber = false, signcolumn = "no" })
+end
+
 -- create a new scratch buffer
 function M:scratch()
   local buf = vim.api.nvim_create_buf(false, true)
@@ -225,7 +229,7 @@ function M:scratch()
   vim.o.eventignore = ei
   self.win:set_buf(buf)
   self.win:map()
-  self:wo({ number = false, relativenumber = false, signcolumn = "no" })
+  self:minimal()
   return buf
 end
 

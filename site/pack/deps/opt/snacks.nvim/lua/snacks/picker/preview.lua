@@ -7,6 +7,10 @@ local ns = vim.api.nvim_create_namespace("snacks.picker.preview")
 ---@param ctx snacks.picker.preview.ctx
 function M.directory(ctx)
   ctx.preview:reset()
+  ctx.preview:minimal()
+  local path = Snacks.picker.util.path(ctx.item)
+  local name = path and vim.fn.fnamemodify(path, ":t")
+  ctx.preview:set_title(ctx.item.title or name)
   local ls = {} ---@type {file:string, type:"file"|"directory"}[]
   for file, t in vim.fs.dir(ctx.item.file) do
     ls[#ls + 1] = { file = file, type = t }
