@@ -5,7 +5,7 @@ local state = require('render-markdown.state')
 local M = {}
 
 ---@private
-M.version = '8.0.2'
+M.version = '8.0.3'
 
 function M.check()
     M.start('version')
@@ -24,20 +24,13 @@ function M.check()
     local latex = state.get(0).latex
     local latex_advice = 'Disable LaTeX support to avoid this warning by setting { latex = { enabled = false } }'
 
-    M.start('nvim-treesitter')
-    local has_treesitter = pcall(require, 'nvim-treesitter')
-    if has_treesitter then
-        vim.health.ok('installed')
-        for _, language in ipairs({ 'markdown', 'markdown_inline' }) do
-            M.check_parser(language)
-            M.check_highlight(language)
-        end
-        if latex.enabled then
-            M.check_parser('latex', latex_advice)
-        end
-    else
-        vim.health.error('not installed')
+    M.start('treesitter')
+    M.check_parser('markdown')
+    M.check_parser('markdown_inline')
+    if latex.enabled then
+        M.check_parser('latex', latex_advice)
     end
+    M.check_highlight('markdown')
 
     M.start('icons')
     local provider = Icons.provider()
@@ -88,8 +81,8 @@ end
 ---@param language string
 ---@param advice? string
 function M.check_parser(language, advice)
-    local parsers = require('nvim-treesitter.parsers')
-    if parsers.has_parser(language) then
+    local has_parser = pcall(vim.treesitter.get_parser, 0, language)
+    if has_parser then
         vim.health.ok(language .. ': parser installed')
     elseif advice == nil then
         vim.health.error(language .. ': parser not installed')
@@ -99,13 +92,18 @@ function M.check_parser(language, advice)
 end
 
 ---@private
----@param language string
-function M.check_highlight(language)
-    local configs = require('nvim-treesitter.configs')
-    if configs.is_enabled('highlight', language, 0) then
-        vim.health.ok(language .. ': highlight enabled')
+---@param filetype string
+function M.check_highlight(filetype)
+    -- As nvim-treesitter is removing module support it cannot be used to check
+    -- if highlights are enabled, so we create a buffer and check the state
+    local bufnr = vim.api.nvim_create_buf(false, true)
+    vim.bo[bufnr].filetype = filetype
+    local has_highlighter = vim.treesitter.highlighter.active[bufnr] ~= nil
+    vim.api.nvim_buf_delete(bufnr, { force = true })
+    if has_highlighter then
+        vim.health.ok(filetype .. ': highlight enabled')
     else
-        vim.health.error(language .. ': highlight not enabled')
+        vim.health.error(filetype .. ': highlight not enabled')
     end
 end
 

@@ -180,6 +180,7 @@ You can view this list in vim with `:help conform-formatters`
 
 <!-- FORMATTERS -->
 
+- [air](https://github.com/posit-dev/air) - R formatter and language server.
 - [alejandra](https://kamadorueda.com/alejandra/) - The Uncompromising Nix Code Formatter.
 - [asmfmt](https://github.com/klauspost/asmfmt) - Go Assembler Formatter
 - [ast-grep](https://ast-grep.github.io/) - A CLI tool for code structural search, lint and rewriting. Written in Rust.
@@ -209,6 +210,7 @@ You can view this list in vim with `:help conform-formatters`
 - [cljfmt](https://github.com/weavejester/cljfmt) - cljfmt is a tool for detecting and fixing formatting errors in Clojure code.
 - [cljstyle](https://github.com/greglook/cljstyle) - Formatter for Clojure code.
 - [cmake_format](https://github.com/cheshirekow/cmake_format) - Parse cmake listfiles and format them nicely.
+- [codeql](https://docs.github.com/en/code-security/codeql-cli/codeql-cli-manual/query-format) - Format queries and libraries with CodeQL.
 - [codespell](https://github.com/codespell-project/codespell) - Check code for common misspellings.
 - [commitmsgfmt](https://gitlab.com/mkjeldsen/commitmsgfmt) - Formats commit messages better than fmt(1) and Vim.
 - [crlfmt](https://github.com/cockroachdb/crlfmt) - Formatter for CockroachDB's additions to the Go style guide.
@@ -299,6 +301,7 @@ You can view this list in vim with `:help conform-formatters`
 - [nixfmt](https://github.com/NixOS/nixfmt) - The official (but not yet stable) formatter for Nix code.
 - [nixpkgs_fmt](https://github.com/nix-community/nixpkgs-fmt) - nixpkgs-fmt is a Nix code formatter for nixpkgs.
 - [nomad_fmt](https://developer.hashicorp.com/nomad/docs/commands/fmt) - The fmt commands check the syntax and rewrites Nomad configuration and jobspec files to canonical format.
+- [nph](https://github.com/arnetheduck/nph) - An opinionated code formatter for Nim.
 - [npm-groovy-lint](https://github.com/nvuillam/npm-groovy-lint) - Lint, format and auto-fix your Groovy / Jenkinsfile / Gradle files using command line.
 - [nufmt](https://github.com/nushell/nufmt) - The nushell formatter.
 - [ocamlformat](https://github.com/ocaml-ppx/ocamlformat) - Auto-formatter for OCaml code.
@@ -323,6 +326,7 @@ You can view this list in vim with `:help conform-formatters`
 - [pyink](https://github.com/google/pyink) - A Python formatter, forked from Black with a few different formatting behaviors.
 - [pyproject-fmt](https://github.com/tox-dev/toml-fmt/tree/main/pyproject-fmt) - Apply a consistent format to your pyproject.toml file with comment support.
 - [python-ly](https://github.com/frescobaldi/python-ly) - A Python package and commandline tool to manipulate LilyPond files.
+- [reformat-gherkin](https://github.com/ducminh-phan/reformat-gherkin) - Formatter for Gherkin language.
 - [reorder-python-imports](https://github.com/asottile/reorder-python-imports) - Rewrites source to reorder python imports
 - [rescript-format](https://rescript-lang.org/) - The built-in ReScript formatter.
 - [roc](https://github.com/roc-lang/roc) - A fast, friendly, functional language.
@@ -360,7 +364,7 @@ You can view this list in vim with `:help conform-formatters`
 - [swiftlint](https://github.com/realm/SwiftLint) - A tool to enforce Swift style and conventions.
 - [syntax_tree](https://github.com/ruby-syntax-tree/syntax_tree) - Syntax Tree is a suite of tools built on top of the internal CRuby parser.
 - [taplo](https://github.com/tamasfe/taplo) - A TOML toolkit written in Rust.
-- [templ](https://templ.guide/commands-and-tools/cli/#formatting-templ-files) - Formats templ template files.
+- [templ](https://templ.guide/developer-tools/cli/#formatting-templ-files) - Formats templ template files.
 - [terraform_fmt](https://www.terraform.io/docs/cli/commands/fmt.html) - The terraform-fmt command rewrites `terraform` configuration files to a canonical format and style.
 - [terragrunt_hclfmt](https://terragrunt.gruntwork.io/docs/reference/cli-options/#hclfmt) - Format hcl files into a canonical format.
 - [tex-fmt](https://github.com/WGUNDERWOOD/tex-fmt) - An extremely fast LaTeX formatter written in Rust.

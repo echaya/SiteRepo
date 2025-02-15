@@ -15,6 +15,10 @@
     - 'OXY2DEV/helpview.nvim'
     - 'OXY2DEV/markview.nvim'
 
+## mini.comment
+
+- FEATURE: update textobject to respect `ignore_blank_line` option. Blank lines between commented lines are treated as part of a textobject.
+
 ## mini.hues
 
 - FEATURE: add support for colored markdown headings.
@@ -34,6 +38,11 @@
 
 - FEATURE: surrounding identifier can now be any single character supported by `:h getcharstr()`. This also makes it possible to use characters outside of Latin alphanumeric and punctuation sets as `custom_surroundings` keys.
 - FEATURE: update `gen_spec.input.treesitter()` to respect capture ranges specified by query directives (like `(#offset! @table.inner 0 1 0 -1)`).
+
+## mini.tabline
+
+- FEATURE: add support for showing special (truncation) characters at left and/or right if there are more tabs to the left and/or right. They are shown with the new `MiniTablineTrunc` highlight group in case 'list' option is enabled (i.e. user deliberately enabled similar functionality for windows). Exact characters are taken from 'listchars' option: `precedes` and `extends` fields.
+- FEATURE: labels for quickfix and location lists are now different.
 
 
 # Version 0.15.0

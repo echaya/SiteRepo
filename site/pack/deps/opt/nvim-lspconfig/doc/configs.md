@@ -558,7 +558,7 @@ Default config:
   ```lua
   { "typescript", "html", "typescriptreact", "typescript.tsx", "htmlangular" }
   ```
-- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/angularls.lua:39](../lua/lspconfig/configs/angularls.lua#L39)
+- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/angularls.lua:41](../lua/lspconfig/configs/angularls.lua#L41)
 
 
 ## ansiblels
@@ -8425,7 +8425,7 @@ Default config:
   ```
 - `filetypes` :
   ```lua
-  { "r", "rmd" }
+  { "r", "rmd", "quarto" }
   ```
 - `log_level` :
   ```lua
@@ -11721,10 +11721,15 @@ A SystemVerilog LanguageServer.
 
 Download the latest release for your OS from the releases page
 
-# install with slang feature, if C++17 compiler is available
+Install with slang feature, if C++17 compiler is available:
+```
 cargo install --git https://github.com/vivekmalneedi/veridian.git --all-features
-# install if C++17 compiler is not available
+```
+
+Install if C++17 compiler is not available:
+```
 cargo install --git https://github.com/vivekmalneedi/veridian.git
+```
 
 Snippet to enable the language server:
 ```lua
