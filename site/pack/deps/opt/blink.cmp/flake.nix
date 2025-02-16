@@ -38,8 +38,8 @@
           # nvim source files
           # all that are not nix, nor rust, nor other ignored files
           nvimFs =
-            fs.difference ./. (fs.unions [ nixFs rustFs ./docs ./repro.lua ]);
-          version = "0.11.0";
+            fs.difference ./. (fs.unions [ nixFs rustFs ./doc ./repro.lua ]);
+          version = "0.12.2";
         in {
           blink-fuzzy-lib = let
             inherit (inputs'.fenix.packages.minimal) toolchain;

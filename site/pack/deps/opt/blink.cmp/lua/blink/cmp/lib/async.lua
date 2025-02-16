@@ -4,7 +4,7 @@
 --- @field status blink.cmp.TaskStatus
 --- @field result any | nil
 --- @field error any | nil
---- @field new fun(fn: fun(resolve: fun(result: any), reject: fun(err: any))): blink.cmp.Task
+--- @field new fun(fn: fun(resolve: fun(result: any), reject: fun(err: any)): fun()?): blink.cmp.Task
 ---
 --- @field cancel fun(self: blink.cmp.Task)
 --- @field map fun(self: blink.cmp.Task, fn: fun(result: any): blink.cmp.Task | any): blink.cmp.Task
@@ -105,7 +105,7 @@ function task:map(fn)
     end)
     self:on_failure(reject)
     self:on_cancel(function() chained_task:cancel() end)
-    return function() chained_task:cancel() end
+    return function() self:cancel() end
   end)
   return chained_task
 end
@@ -222,6 +222,12 @@ function task.await_all(tasks)
           all_task:cancel()
         end
       end)
+    end
+
+    return function()
+      for _, task in ipairs(tasks) do
+        task:cancel()
+      end
     end
   end)
   return all_task

@@ -40,7 +40,14 @@ function lsp:get_completions(context, callback)
       for _, response in ipairs(responses) do
         final.is_incomplete_forward = final.is_incomplete_forward or response.is_incomplete_forward
         final.is_incomplete_backward = final.is_incomplete_backward or response.is_incomplete_backward
-        vim.list_extend(final.items, response.items)
+
+        -- for performance, we append the shorter list to the longer one
+        if #final.items > #response.items then
+          vim.list_extend(final.items, response.items)
+        else
+          vim.list_extend(response.items, final.items)
+          final.items = response.items
+        end
       end
       callback(final)
     end)
@@ -145,6 +152,20 @@ function lsp:get_signature_help(context, callback)
     -- TODO: pick intelligently
     callback(signature_helps[1])
   end)
+end
+
+--- Execute ---
+
+function lsp:execute(_, item, callback)
+  local client = vim.lsp.get_client_by_id(item.client_id)
+  if client and item.command then
+    local success, request_id = client.request('workspace/executeCommand', item.command, function() callback() end)
+    if success and request_id ~= nil then
+      return function() client.cancel_request(request_id) end
+    end
+  else
+    callback()
+  end
 end
 
 return lsp

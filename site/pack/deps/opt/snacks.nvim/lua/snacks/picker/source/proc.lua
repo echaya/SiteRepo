@@ -164,12 +164,18 @@ function M.debug(opts)
         lines[#lines] = lines[#lines] .. " " .. arg
       end
     end
+    local id = opts.cmd
+    for _, a in ipairs(opts.args or {}) do
+      if a:find("^-") then
+        id = id .. " " .. a
+      end
+    end
     Snacks.notify.info(
       ("- **cwd**: `%s`\n```sh\n%s\n```"):format(
         vim.fn.fnamemodify(vim.fs.normalize(opts.cwd or uv.cwd() or "."), ":~"),
         table.concat(lines, "\n")
       ),
-      { id = "snacks.picker.proc." .. opts.cmd, title = "Snacks Proc" }
+      { id = "snacks.picker.proc." .. id, title = "Snacks Proc" }
     )
   end)
 end

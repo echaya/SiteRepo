@@ -31,8 +31,13 @@ keymap = {
     'select_next'
   },
 
-  -- optionally, separate cmdline keymaps
-  -- cmdline = {}
+  -- optionally, separate cmdline and terminal keymaps
+  cmdline = {
+    -- sets <CR> to accept the item and run the command immediately
+    -- use `select_accept_and_enter` to accept the item or the first item if none are selected
+    ['<CR>'] = { 'accept_and_enter', 'fallback' },
+  }
+  -- term = {}
 }
 ```
 
@@ -44,8 +49,12 @@ keymap = {
 - `cancel`: Reverts `completion.list.selection.auto_insert` and hides the completion menu
 - `accept`: Accepts the currently selected item
   - Optionally pass an index to select a specific item in the list: `function(cmp) cmp.accept({ index = 1 }) end`
-  - Optionally pass a `callback` to run after the item is accepted: `function(cmp) cmp.accept({ callback = function() vim.api.nvim_feedkeys('\n', 'n', true) end }) end`
+  - Optionally pass a `callback` to run after the item is accepted: `function(cmp) cmp.accept({ callback = function() some_function() end`
+- `accept_and_enter`: Accepts the currently selected item and feeds an enter key to neovim
+  - Useful in `cmdline` mode to accept the current item and run the command
 - `select_and_accept`: Accepts the currently selected item, or the first item if none are selected
+- `select_accept_and_enter`: Accepts the currently selected item, or the first item if none are selected, and feeds an enter key to neovim
+  - Useful in `cmdline` mode to accept the current item and run the command
 - `select_prev`: Selects the previous item, cycling to the bottom of the list if at the top, if `completion.list.cycle.from_top == true`
   - Optionally control the `auto_insert` property of `completion.list.selection`: `function(cmp) cmp.select_prev({ auto_insert = false }) end`
 - `select_next`: Selects the next item, cycling to the top of the list if at the bottom, if `completion.list.cycle.from_bottom == true`
@@ -62,18 +71,23 @@ keymap = {
 - `snippet_backward`: Jumps to the previous snippet placeholder
 - `fallback`: Runs the next non-blink keymap, or runs the built-in neovim binding
 
-## Cmdline
+## Cmdline and Terminal
 
-You may set a separate keymap for cmdline by defining `keymap.cmdline`, with an identical structure to `keymap`.
+You may set a separate keymap for cmdline by defining `cmdline.keymap`, with an identical structure to `keymap`. The same applies for terminal keymaps, under `term.keymap`.
 
 ```lua
-keymap = {
-  preset = 'default',
+cmdline.keymap = {
+  preset = 'enter',
+
+  -- OPTIONAL: sets <CR> to accept the item and run the command immediately
+  -- use `select_accept_and_enter` to accept the item or the first item if none are selected
+  ['<CR>'] = { 'accept_and_enter', 'fallback' },
+
   ...
-  cmdline = {
-    preset = 'enter',
-    ...
-  }
+},
+term.keymap = {
+  preset = 'super-tab',
+  ...
 }
 ```
 

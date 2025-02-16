@@ -497,6 +497,10 @@ function M:show_preview()
   if self.closed then
     return
   end
+  -- don't show preview when cursor is not on target
+  if self.list.target then
+    return
+  end
   if not self.preview.item then
     return self:_show_preview()
   end

@@ -4,25 +4,35 @@
 
 Image viewer using the [Kitty Graphics Protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol/).
 
-Supported terminals:
+Terminal support:
 
 - [kitty](https://sw.kovidgoyal.net/kitty/)
-- [wezterm](https://wezfurlong.org/wezterm/)
 - [ghostty](https://ghostty.org/)
+- [wezterm](https://wezfurlong.org/wezterm/)
+  Wezterm has only limited support for the kitty graphics protocol.
+  Inline image rendering is not supported.
+- [tmux](https://github.com/tmux/tmux)
+  Snacks automatically tries to enable `allow-passthrough=on` for tmux,
+  but you may need to enable it manually in your tmux configuration.
+- [zellij](https://github.com/zellij-org/zellij) is **not** supported,
+  since they don't have any support for passthrough
 
-In order to automatically display the image when openinng an image file,
+Image will be transferred to the terminal by filename or by sending the image
+date in case `ssh` is detected.
+
+In some cases you may need to force snacks to detect or not detect a certain
+environment. You can do this by setting `SNACKS_${ENV_NAME}` to `true` or `false`.
+
+For example, to force detection of **ghostty** you can set `SNACKS_GHOSTTY=true`.
+
+In order to automatically display the image when opening an image file,
+or to have imaged displayed in supported document formats like `markdown` or `html`,
 you need to enable the `image` plugin in your `snacks` config.
-
-Supported image formats:
-
-- PNG
-- JPEG/JPG
-- GIF
-- BMP
-- WEBP
 
 [ImageMagick](https://imagemagick.org/index.php) is required to convert images
 to the supported formats (all except PNG).
+
+In case of issues, make sure to run `:checkhealth snacks`.
 
 <!-- docgen -->
 
@@ -58,12 +68,19 @@ to the supported formats (all except PNG).
 {
   formats = { "png", "jpg", "jpeg", "gif", "bmp", "webp", "tiff", "heic", "avif", "mp4", "mov", "avi", "mkv", "webm" },
   force = false, -- try displaying the image, even if the terminal does not support it
-  markdown = {
-    -- enable image viewer for markdown files
-    -- if your env doesn't support unicode placeholders, this will be disabled
+  doc = {
+    -- enable image viewer for documents
+    -- a treesitter parser must be available for the enabled languages.
+    -- supported language injections: markdown, html
     enabled = true,
-    inline = true, -- render the image inline in the buffer (takes precedence over `opts.float` on supported terminals)
-    float = true, -- render the image in a floating window
+    lang = { "markdown", "html", "norg" },
+    -- render the image inline in the buffer
+    -- if your env doesn't support unicode placeholders, this will be disabled
+    -- takes precedence over `opts.float` on supported terminals
+    inline = true,
+    -- render the image in a floating window
+    -- only used if `opts.inline` is disabled
+    float = true,
     max_width = 80,
     max_height = 40,
   },
@@ -139,49 +156,23 @@ docs for more information on how to customize these styles
 
 ## 📦 Module
 
-### `Snacks.image.attach()`
-
 ```lua
----@param buf number
----@param opts? snacks.image.Opts|{src?: string}
-Snacks.image.attach(buf, opts)
+---@class snacks.image
+---@field terminal snacks.image.terminal
+---@field image snacks.Image
+---@field placement snacks.image.Placement
+---@field util snacks.image.util
+---@field buf snacks.image.buf
+---@field doc snacks.image.doc
+Snacks.image = {}
 ```
 
-### `Snacks.image.dim()`
+### `Snacks.image.hover()`
 
-Get the dimensions of a PNG file
-
-```lua
----@param file string
----@return number width, number height
-Snacks.image.dim(file)
-```
-
-### `Snacks.image.env()`
+Show the image at the cursor in a floating window
 
 ```lua
-Snacks.image.env()
-```
-
-### `Snacks.image.markdown()`
-
-```lua
----@param buf? number
-Snacks.image.markdown(buf)
-```
-
-### `Snacks.image.request()`
-
-```lua
----@param opts table<string, string|number>|{data?: string}
-Snacks.image.request(opts)
-```
-
-### `Snacks.image.set_cursor()`
-
-```lua
----@param pos {[1]: number, [2]: number}
-Snacks.image.set_cursor(pos)
+Snacks.image.hover()
 ```
 
 ### `Snacks.image.supports()`

@@ -16,7 +16,6 @@
 --- ```
 --- @field default string[] | fun(): string[]
 --- @field per_filetype table<string, string[] | fun(): string[]>
---- @field cmdline string[] | fun(): string[]
 ---
 --- @field transform_items fun(ctx: blink.cmp.Context, items: blink.cmp.CompletionItem[]): blink.cmp.CompletionItem[] Function to transform the items before they're returned
 --- @field min_keyword_length number | fun(ctx: blink.cmp.Context): number Minimum number of characters in the keyword to trigger
@@ -45,14 +44,6 @@ local sources = {
   default = {
     default = { 'lsp', 'path', 'snippets', 'buffer' },
     per_filetype = {},
-    cmdline = function()
-      local type = vim.fn.getcmdtype()
-      -- Search forward and backward
-      if type == '/' or type == '?' then return { 'buffer' } end
-      -- Commands
-      if type == ':' or type == '@' then return { 'cmdline' } end
-      return {}
-    end,
 
     transform_items = function(_, items) return items end,
     min_keyword_length = 0,
@@ -63,13 +54,6 @@ local sources = {
         module = 'blink.cmp.sources.lsp',
         fallbacks = { 'buffer' },
         transform_items = function(_, items)
-          -- demote snippets
-          for _, item in ipairs(items) do
-            if item.kind == require('blink.cmp.types').CompletionItemKind.Snippet then
-              item.score_offset = item.score_offset - 3
-            end
-          end
-
           -- filter out text items, since we have the buffer source
           return vim.tbl_filter(
             function(item) return item.kind ~= require('blink.cmp.types').CompletionItemKind.Text end,
@@ -97,6 +81,17 @@ local sources = {
         name = 'cmdline',
         module = 'blink.cmp.sources.cmdline',
       },
+      omni = {
+        name = 'Omni',
+        module = 'blink.cmp.sources.omni',
+      },
+      -- NOTE: in future we may want a built-in terminal source. For now
+      -- the infrastructure exists, e.g. so community terminal sources can be
+      -- added, but this functionality is not baked into blink.cmp.
+      -- term = {
+      --   name = 'term',
+      --   module = 'blink.cmp.sources.term',
+      -- },
     },
   },
 }
@@ -106,11 +101,12 @@ function sources.validate(config)
     config.completion == nil,
     '`sources.completion.enabled_providers` has been replaced with `sources.default`. !!Note!! Be sure to update `opts_extend` as well if you have it set'
   )
+  assert(config.cmdline == nil, '`sources.cmdline` has been replaced with `cmdline.sources`')
+  assert(config.term == nil, '`sources.term` has been replaced with `term.sources`')
 
   validate('sources', {
     default = { config.default, { 'function', 'table' } },
     per_filetype = { config.per_filetype, 'table' },
-    cmdline = { config.cmdline, { 'function', 'table' } },
 
     transform_items = { config.transform_items, 'function' },
     min_keyword_length = { config.min_keyword_length, { 'number', 'function' } },

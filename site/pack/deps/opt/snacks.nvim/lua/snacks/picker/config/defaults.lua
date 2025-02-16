@@ -313,6 +313,9 @@ local defaults = {
   icons = {
     files = {
       enabled = true, -- show file icons
+      dir = "󰉋 ",
+      dir_open = "󰝰 ",
+      file = "󰈔 "
     },
     keymaps = {
       nowait = "󰓅 "

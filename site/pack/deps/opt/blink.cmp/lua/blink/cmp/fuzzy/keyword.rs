@@ -1,13 +1,19 @@
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
+
 use regex::Regex;
 
-lazy_static! {
-    static ref BACKWARD_REGEX: Regex = Regex::new(r"[\p{L}0-9_][\p{L}0-9_\\-]*$").unwrap();
-    static ref FORWARD_REGEX: Regex = Regex::new(r"^[\p{L}0-9_\\-]+").unwrap();
-}
+static BACKWARD_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"[\p{L}0-9_][\p{L}0-9_\\-]*$").unwrap());
+static FORWARD_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[\p{L}0-9_\\-]+").unwrap());
 
 /// Given a line and cursor position, returns the start and end indices of the keyword
 pub fn get_keyword_range(line: &str, col: usize, match_suffix: bool) -> (usize, usize) {
+    let col = line
+        .char_indices()
+        .find(|(idx, _)| *idx >= col)
+        .map(|(idx, _)| idx)
+        .unwrap_or(line.len());
+
     let before_match_start = BACKWARD_REGEX
         .find(&line[0..col.min(line.len())])
         .map(|m| m.start());

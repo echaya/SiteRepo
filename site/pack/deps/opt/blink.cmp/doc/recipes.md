@@ -14,6 +14,23 @@ enabled = function()
 end,
 ```
 
+### Disable completion in *only* shell command mode
+
+Windows when inside of git bash or WSL may cause a hang with shell commands. This disables cmdline completions only when running shell commands ( i.e. [ ':!' , ':%!' ] ), but still allows completion in other command modes ( i.e. [ ':' , ':help', '/' , '?' ] etc ).
+
+```lua
+sources = {
+  providers = {
+    cmdline = {
+      -- ignores cmdline completions when executing shell commands
+      enabled = function()
+        return vim.fn.getcmdtype() ~= ':' or not vim.fn.getcmdline():match("^[%%0-9,'<>%-]*!")
+      end
+    }
+  }
+}
+```
+
 ### Border
 
 ```lua
@@ -32,29 +49,6 @@ completion = {
     selection = {
       preselect = function(ctx) return ctx.mode ~= 'cmdline' end,
       auto_insert = function(ctx) return ctx.mode ~= 'cmdline' end
-    }
-  }
-}
-```
-
-### Buffer completion from all open buffers
-
-The default behavior is to only show completions from **visible** "normal" buffers (i.e. it woudldn't include neo-tree). This will instead show completions from all buffers, even if they're not visible on screen. Note that the performance impact of this has not been tested. 
-
-```lua
-sources = {
-  providers = {
-    buffer = {
-      opts = {
-        -- get all buffers, even ones like neo-tree
-        get_bufnrs = vim.api.nvim_list_bufs
-        -- or (recommended) filter to only "normal" buffers
-        get_bufnrs = function()
-          return vim.tbl_filter(function(bufnr)
-            return vim.bo[bufnr].buftype == ''
-          end, vim.api.nvim_list_bufs())
-        end
-      }
     }
   }
 }
@@ -113,33 +107,6 @@ completion = {
 }
 ```
 
-### `mini.icons`
-
-[Original discussion](https://github.com/Saghen/blink.cmp/discussions/458)
-
-```lua
-completion = {
-  menu = {
-    draw = {
-      components = {
-        kind_icon = {
-          ellipsis = false,
-          text = function(ctx)
-            local kind_icon, _, _ = require('mini.icons').get('lsp', ctx.kind)
-            return kind_icon
-          end,
-          -- Optionally, you may also use the highlights from mini.icons
-          highlight = function(ctx)
-            local _, hl, _ = require('mini.icons').get('lsp', ctx.kind)
-            return hl
-          end,
-        }
-      }
-    }
-  }
-}
-```
-
 ### Hide Copilot on suggestion
 
 ```lua
@@ -175,7 +142,125 @@ sources.providers.lsp.override.get_trigger_characters = function(self)
 end
 ```
 
+### Deprioritize specific LSP
+
+You may use a custom sort function to deprioritize LSPs such as Emmet Language Server (`emmet_ls`)
+
+```lua
+fuzzy = {
+  sorts = {
+    function(a, b)
+      if a.client_name == nil or b.client_name == nil then return end
+      return b.client_name == 'emmet_ls'
+    end,
+    -- default sorts
+    'score',
+    'sort_text',
+}
+```
+
+## Completion menu drawing
+
+### `mini.icons`
+
+[Original discussion](https://github.com/Saghen/blink.cmp/discussions/458)
+
+```lua
+completion = {
+  menu = {
+    draw = {
+      components = {
+        kind_icon = {
+          ellipsis = false,
+          text = function(ctx)
+            local kind_icon, _, _ = require('mini.icons').get('lsp', ctx.kind)
+            return kind_icon
+          end,
+          -- Optionally, you may also use the highlights from mini.icons
+          highlight = function(ctx)
+            local _, hl, _ = require('mini.icons').get('lsp', ctx.kind)
+            return hl
+          end,
+        }
+      }
+    }
+  }
+}
+```
+
+### `nvim-web-devicons` + `lspkind`
+
+[Original discussion](https://github.com/Saghen/blink.cmp/discussions/1146)
+
+```lua
+completion = {
+  menu = {
+    draw = {
+      components = {
+        kind_icon = {
+          ellipsis = false,
+          text = function(ctx)
+            local lspkind = require("lspkind")
+            local icon = ctx.kind_icon
+            if vim.tbl_contains({ "Path" }, ctx.source_name) then
+                local dev_icon, _ = require("nvim-web-devicons").get_icon(ctx.label)
+                if dev_icon then
+                    icon = dev_icon
+                end
+            else
+                icon = require("lspkind").symbolic(ctx.kind, {
+                    mode = "symbol",
+                })
+            end
+
+            return icon .. ctx.icon_gap
+          end,
+
+          -- Optionally, use the highlight groups from nvim-web-devicons
+          -- You can also add the same function for `kind.highlight` if you want to
+          -- keep the highlight groups in sync with the icons.
+          highlight = function(ctx)
+            local hl = "BlinkCmpKind" .. ctx.kind
+              or require("blink.cmp.completion.windows.render.tailwind").get_hl(ctx)
+            if vim.tbl_contains({ "Path" }, ctx.source_name) then
+              local dev_icon, dev_hl = require("nvim-web-devicons").get_icon(ctx.label)
+              if dev_icon then
+                hl = dev_hl
+              end
+            end
+            return hl
+          end,
+        }
+      }
+    }
+  }
+}
+```
+
 ## Sources
+
+### Buffer completion from all open buffers
+
+The default behavior is to only show completions from **visible** "normal" buffers (i.e. it woudldn't include neo-tree). This will instead show completions from all buffers, even if they're not visible on screen. Note that the performance impact of this has not been tested. 
+
+```lua
+sources = {
+  providers = {
+    buffer = {
+      opts = {
+        -- get all buffers, even ones like neo-tree
+        get_bufnrs = vim.api.nvim_list_bufs
+        -- or (recommended) filter to only "normal" buffers
+        get_bufnrs = function()
+          return vim.tbl_filter(function(bufnr)
+            return vim.bo[bufnr].buftype == ''
+          end, vim.api.nvim_list_bufs())
+        end
+      }
+    }
+  }
+}
+```
 
 ### Dynamically picking providers by treesitter node/filetype
 
@@ -193,9 +278,6 @@ end
 ```
 
 ### Hide snippets after trigger character
-
-> [!NOTE]
-> Untested, might not work well, please open a PR if you find a better solution!
 
 Trigger characters are defined by the sources. For example, for Lua, the trigger characters are `.`, `"`, `'`.
 
@@ -230,6 +312,26 @@ sources = {
   end
 }
 ```
+
+### Path completion from `cwd` instead of current buffer's directory
+
+It's common to run code from the root of your repository, in which case relative paths will start from that directory. In that case, you may want path completions to be relative to your current working directory rather than the default, which is the current buffer's parent directory.
+
+```lua
+sources = {
+  providers = {
+    path = {
+      opts = {
+        get_cwd = function(_)
+          return vim.fn.getcwd()
+        end,
+      },
+    },
+  },
+},
+```
+
+This also makes it easy to `:cwd` to the desired base directory for path completion.
 
 ## For writers
 

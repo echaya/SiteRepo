@@ -1,7 +1,9 @@
 # Reference
 
-> [!IMPORTANT]
-> Do not copy the default configuration! Only include options you want to change in your configuration
+::: warning
+Do not copy the default configuration! Only include options you want to change in your configuration
+:::
+
 ```lua
 -- Enables keymaps, completions and signature help when true
 enabled = function() return vim.bo.buftype ~= "prompt" and vim.b.completion ~= false end,
@@ -30,7 +32,7 @@ snippets = {
 ```lua
 completion.keyword = {
   -- 'prefix' will fuzzy match on the text before the cursor
-  -- 'full' will fuzzy match on the text before *and* after the cursor
+  -- 'full' will fuzzy match on the text before _and_ after the cursor
   -- example: 'foo_|_bar' will match 'foo_' for 'prefix' and 'foo__bar' for 'full'
   range = 'prefix',
 }
@@ -55,16 +57,12 @@ completion.trigger = {
   -- LSPs can indicate when to show the completion window via trigger characters
   -- however, some LSPs (i.e. tsserver) return characters that would essentially
   -- always show the window. We block these by default.
-  show_on_blocked_trigger_characters = function()
-    if vim.api.nvim_get_mode().mode == 'c' then return {} end
-
-    -- you can also block per filetype, for example:
-    -- if vim.bo.filetype == 'markdown' then
-    --   return { ' ', '\n', '\t', '.', '/', '(', '[' }
-    -- end
-
-    return { ' ', '\n', '\t' }
-  end,
+  show_on_blocked_trigger_characters = { ' ', '\n', '\t' },
+  -- You can also block per filetype with a function:
+  -- show_on_blocked_trigger_characters = function(ctx)
+  --   if vim.bo.filetype == 'markdown' then return { ' ', '\n', '\t', '.', '/', '(', '[' } end
+  --   return { ' ', '\n', '\t' }
+  -- end,
 
   -- When both this and show_on_trigger_character are true, will show the completion window
   -- when the cursor comes after a trigger character after accepting an item
@@ -102,11 +100,11 @@ completion.list = {
   },
 
   cycle = {
-    -- When `true`, calling `select_next` at the *bottom* of the completion list
-    -- will select the *first* completion item.
+    -- When `true`, calling `select_next` at the _bottom_ of the completion list
+    -- will select the _first_ completion item.
     from_bottom = true,
-    -- When `true`, calling `select_prev` at the *top* of the completion list
-    -- will select the *last* completion item.
+    -- When `true`, calling `select_prev` at the _top_ of the completion list
+    -- will select the _last_ completion item.
     from_top = true,
   },
 },
@@ -116,6 +114,8 @@ completion.list = {
 
 ```lua
 completion.accept = {
+  -- Write completions to the `.` register
+  dot_repeat = true,
   -- Create an undo point when accepting a completion item
   create_undo_point = true,
   -- How long to wait for the LSP to resolve the item with additional information before continuing as-is
@@ -267,6 +267,8 @@ completion.documentation = {
   update_delay_ms = 50,
   -- Whether to use treesitter highlighting, disable if you run into performance issues
   treesitter_highlighting = true,
+  -- Draws the item in the documentation window, by default using an internal treessitter based implementation
+  draw = function(opts) opts.default_implementation() end,
   window = {
     min_width = 10,
     max_width = 80,
@@ -381,6 +383,8 @@ fuzzy = {
 
 ## Sources
 
+See the [mode specific configurations](#mode-specific) for setting sources for `cmdline` and `term`.
+
 ```lua
 sources = {
   -- Static list of providers to enable, or a function to dynamically enable/disable providers based on the context
@@ -390,17 +394,6 @@ sources = {
   per_filetype = {
     -- lua = { 'lsp', 'path' },
   },
-
-  -- By default, we choose providers for the cmdline based on the current cmdtype
-  -- You may disable cmdline completions by replacing this with an empty table
-  cmdline = function()
-    local type = vim.fn.getcmdtype()
-    -- Search forward and backward
-    if type == '/' or type == '?' then return { 'buffer' } end
-    -- Commands
-    if type == ':' or type == '@' then return { 'cmdline' } end
-    return {}
-  end,
 
   -- Function to use when transforming the items before they're returned for all providers
   -- The default will lower the score for snippets to sort them lower in the list
@@ -423,18 +416,13 @@ sources.providers = {
     fallbacks = { 'buffer' },
     -- Filter text items from the LSP provider, since we have the buffer provider for that
     transform_items = function(_, items)
-      for _, item in ipairs(items) do
-        if item.kind == require('blink.cmp.types').CompletionItemKind.Snippet then
-          item.score_offset = item.score_offset - 3
-        end
-      end
-
       return vim.tbl_filter(
         function(item) return item.kind ~= require('blink.cmp.types').CompletionItemKind.Text end,
         items
       )
     end,
 
+    --- These properties apply to !!ALL sources!!
     --- NOTE: All of these options may be functions to get dynamic behavior
     --- See the type definitions for more information
     enabled = true, -- Whether or not to enable the provider
@@ -511,6 +499,14 @@ sources.providers = {
       end,
     }
   },
+
+  omni = {
+    name = 'Omni',
+    module = 'blink.cmp.sources.omni',
+    opts = {
+      disable_omnifuncs = { 'v:lua.vim.lsp.omnifunc' },
+    },
+  },
 }
 ```
 
@@ -560,3 +556,61 @@ appearance = {
   },
 }
 ```
+
+## Mode specific
+
+You may set configurations which will override the default configuration, specifically for that mode. Only properties in the top level config that support `fun()` may be overridden, as well as `sources` and `keymap`.
+
+### Cmdline
+
+```lua
+cmdline = {
+  enabled = true,
+  keymap = nil, -- Inherits from top level `keymap` config when not set
+  sources = function()
+    local type = vim.fn.getcmdtype()
+    -- Search forward and backward
+    if type == '/' or type == '?' then return { 'buffer' } end
+    -- Commands
+    if type == ':' or type == '@' then return { 'cmdline' } end
+    return {}
+  end,
+  completion = {
+    trigger = {
+      show_on_blocked_trigger_characters = {},
+      show_on_x_blocked_trigger_characters = nil, -- Inherits from top level `completion.trigger.show_on_blocked_trigger_characters` config when not set
+    },
+    menu = {
+      auto_show = nil, -- Inherits from top level `completion.menu.auto_show` config when not set
+      draw = {
+        columns = { { 'label', 'label_description', gap = 1 } },
+      },
+    }
+  }
+}
+```
+
+### Terminal
+
+::: warning
+Terminal completions are nightly only! Known bugs in v0.10
+:::
+
+```lua
+term = {
+  enabled = false,
+  keymap = nil, -- Inherits from top level `keymap` config when not set
+  sources = {},
+  completion = {
+    trigger = {
+      show_on_blocked_trigger_characters = {},
+      show_on_x_blocked_trigger_characters = nil, -- Inherits from top level `completion.trigger.show_on_blocked_trigger_characters` config when not set
+    },
+    menu = {
+      auto_show = nil, -- Inherits from top level `completion.menu.auto_show` config when not set
+      draw = {
+        columns = { { 'label', 'label_description', gap = 1 } },
+      },
+    }
+  }
+}

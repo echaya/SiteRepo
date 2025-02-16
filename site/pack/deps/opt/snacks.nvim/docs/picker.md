@@ -316,6 +316,9 @@ Snacks.picker.pick({source = "files", ...})
   icons = {
     files = {
       enabled = true, -- show file icons
+      dir = "󰉋 ",
+      dir_open = "󰝰 ",
+      file = "󰈔 "
     },
     keymaps = {
       nowait = "󰓅 "
@@ -796,7 +799,6 @@ Snacks.picker.select(...)
   win = {
     input = {
       keys = {
-        ["dd"] = "bufdelete",
         ["<c-x>"] = { "bufdelete", mode = { "n", "i" } },
       },
     },
@@ -991,7 +993,8 @@ Neovim commands
         ["m"] = "explorer_move",
         ["o"] = "explorer_open", -- open with system application
         ["P"] = "toggle_preview",
-        ["y"] = "explorer_yank",
+        ["y"] = { "explorer_yank", mode = { "n", "x" } },
+        ["p"] = "explorer_paste",
         ["u"] = "explorer_update",
         ["<c-c>"] = "tcd",
         ["<leader>/"] = "picker_grep",
@@ -1119,6 +1122,7 @@ Grep in git files
 
 ```lua
 ---@class snacks.picker.git.grep.Config: snacks.picker.Config
+---@field args? string[] additional arguments to pass to `git grep`
 ---@field untracked? boolean search in untracked files
 ---@field submodules? boolean search in submodule files
 ---@field need_search? boolean require a search pattern

@@ -97,15 +97,18 @@ end
 --- Get an icon from `mini.icons` or `nvim-web-devicons`.
 ---@param name string
 ---@param cat? string defaults to "file"
+---@param opts? { fallback?: {dir?:string, file?:string} }
 ---@return string, string?
-function M.icon(name, cat)
+function M.icon(name, cat, opts)
+  opts = opts or {}
+  opts.fallback = opts.fallback or {}
   local try = {
     function()
       return require("mini.icons").get(cat or "file", name)
     end,
     function()
       if cat == "directory" then
-        return "󰉋 ", "Directory"
+        return opts.fallback.dir or "󰉋 ", "Directory"
       end
       local Icons = require("nvim-web-devicons")
       if cat == "filetype" then
@@ -124,7 +127,7 @@ function M.icon(name, cat)
       return ret[2], ret[3]
     end
   end
-  return "󰈔 "
+  return opts.fallback.file or "󰈔 "
 end
 
 -- Encodes a string to be used as a file name.

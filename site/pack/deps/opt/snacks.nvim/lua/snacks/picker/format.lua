@@ -57,9 +57,11 @@ function M.filename(item, picker)
   end
 
   if picker.opts.icons.files.enabled ~= false then
-    local icon, hl = Snacks.util.icon(name, cat)
+    local icon, hl = Snacks.util.icon(name, cat, {
+      fallback = picker.opts.icons.files,
+    })
     if item.dir and item.open then
-      icon = " "
+      icon = picker.opts.icons.files.dir_open
     end
     icon = Snacks.picker.util.align(icon, picker.opts.formatters.file.icon_width or 2)
     ret[#ret + 1] = { icon, hl, virtual = true }

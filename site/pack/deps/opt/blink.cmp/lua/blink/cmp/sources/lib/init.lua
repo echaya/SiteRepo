@@ -50,9 +50,15 @@ function sources.get_all_providers()
 end
 
 function sources.get_enabled_provider_ids(mode)
-  local enabled_providers = mode ~= 'default' and config.sources[mode]
+  if (mode == 'cmdline' and not config.cmdline.enabled) or (mode == 'term' and not config.term.enabled) then
+    return {}
+  end
+
+  local enabled_providers = mode == 'cmdline' and config.cmdline.sources
+    or mode == 'term' and config.term.sources
     or config.sources.per_filetype[vim.bo.filetype]
     or config.sources.default
+
   if type(enabled_providers) == 'function' then return enabled_providers() end
   --- @cast enabled_providers string[]
   return enabled_providers
@@ -118,8 +124,7 @@ function sources.request_completions(context)
   -- create a new context if the id changed or if we haven't created one yet
   if sources.completions_queue == nil or context.id ~= sources.completions_queue.id then
     if sources.completions_queue ~= nil then sources.completions_queue:destroy() end
-    sources.completions_queue =
-      require('blink.cmp.sources.lib.queue').new(context, sources.get_all_providers(), sources.emit_completions)
+    sources.completions_queue = require('blink.cmp.sources.lib.queue').new(context, sources.emit_completions)
   -- send cached completions if they exist to immediately trigger updates
   elseif sources.completions_queue:get_cached_completions() ~= nil then
     sources.emit_completions(
@@ -275,6 +280,8 @@ function sources.get_lsp_capabilities(override, include_nvim_defaults)
               'documentation',
               'detail',
               'additionalTextEdits',
+              'command',
+              'data',
               -- todo: support more properties? should test if it improves latency
             },
           },

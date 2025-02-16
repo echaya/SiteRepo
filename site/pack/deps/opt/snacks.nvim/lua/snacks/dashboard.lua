@@ -742,18 +742,8 @@ end
 ---@param cat? string
 ---@return snacks.dashboard.Text
 function M.icon(name, cat)
-  -- stylua: ignore
-  local try = {
-    function() return require("mini.icons").get(cat or "file", name) end,
-    function() return require("nvim-web-devicons").get_icon(name) end,
-  }
-  for _, fn in ipairs(try) do
-    local ok, icon, hl = pcall(fn)
-    if ok then
-      return { icon, hl = hl, width = 2 }
-    end
-  end
-  return { " ", hl = "icon", width = 2 }
+  local icon, hl = Snacks.util.icon(name, cat)
+  return { icon or " ", hl = hl or "icon", width = 2 }
 end
 
 -- Used by the default preset to pick something

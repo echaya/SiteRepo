@@ -622,6 +622,10 @@ function M:render()
     self.win:redraw()
   end
 
+  if self.target then
+    return
+  end
+
   -- check if current item changed
   local current = self:current()
   if self._current ~= current then

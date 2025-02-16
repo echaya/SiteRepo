@@ -1,8 +1,9 @@
 # Installation
 
-> [!IMPORTANT]
-> Blink uses a prebuilt binary for the fuzzy matcher which will be downloaded automatically when on a tag.
-> You may build from source with rust nightly. See the [fuzzy documentation](./configuration/fuzzy.md) for more information.
+::: warning
+Blink uses a prebuilt binary for the fuzzy matcher which will be downloaded automatically when on a tag.
+You may build from source with rust nightly. See the [fuzzy documentation](./configuration/fuzzy.md) for more information.
+:::
 
 ## Requirements
 
@@ -57,16 +58,17 @@
 }
 ```
 
-> [!IMPORTANT]
-> On Neovim 0.11+ and Blink.cmp 0.10+ with `vim.lsp.config`, you may skip this step.
-> This is still required when using `nvim-lspconfig` until [this issue is completed](https://github.com/neovim/nvim-lspconfig/issues/3494)
+::: warning
+On Neovim 0.11+ and Blink.cmp 0.10+ with `vim.lsp.config`, you may skip this step.
+This is still required when using `nvim-lspconfig` until [this issue is completed](https://github.com/neovim/nvim-lspconfig/issues/3494)
+:::
 
 Setting capabilities for `nvim-lspconfig`:
 
 ```lua
 -- LSP servers and clients communicate which features they support through "capabilities".
 --  By default, Neovim supports a subset of the LSP specification.
---  With blink.cmp, Neovim has *more* capabilities which are communicated to the LSP servers.
+--  With blink.cmp, Neovim has _more_ capabilities which are communicated to the LSP servers.
 --  Explanation from TJ: https://youtu.be/m8C0Cq9Uv9o?t=1275
 --
 -- This can vary by config, but in general for nvim-lspconfig:

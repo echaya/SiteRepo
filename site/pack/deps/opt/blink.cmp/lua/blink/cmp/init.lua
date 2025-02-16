@@ -148,6 +148,28 @@ function cmp.select_and_accept(opts)
   return true
 end
 
+--- Select the first completion item, if there's no selection, and enter
+--- @param opts? blink.cmp.CompletionListSelectAndAcceptOpts
+function cmp.accept_and_enter(opts)
+  return cmp.accept({
+    callback = function()
+      if opts and opts.callback then opts.callback() end
+      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<CR>', true, false, true), 'n', false)
+    end,
+  })
+end
+
+--- Select the first completion item, if there's no selection, and enter
+--- @param opts? blink.cmp.CompletionListSelectAndAcceptOpts
+function cmp.select_accept_and_enter(opts)
+  return cmp.select_and_accept({
+    callback = function()
+      if opts and opts.callback then opts.callback() end
+      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<CR>', true, false, true), 'n', false)
+    end,
+  })
+end
+
 --- Select the previous completion item
 --- @param opts? blink.cmp.CompletionListSelectOpts
 function cmp.select_prev(opts)
@@ -248,6 +270,12 @@ function cmp.snippet_backward()
   if not snippets.active({ direction = -1 }) then return end
   vim.schedule(function() snippets.jump(-1) end)
   return true
+end
+
+--- Ensures that blink.cmp will be notified last when a user adds a character
+function cmp.resubscribe()
+  local trigger = require('blink.cmp.completion.trigger')
+  trigger.resubscribe()
 end
 
 --- Tells the sources to reload a specific provider or all providers (when nil)

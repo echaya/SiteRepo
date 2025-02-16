@@ -410,6 +410,7 @@ below.
             ["<c-p>"] = { "list_up", mode = { "i", "n" } },
             ["<c-q>"] = { "qflist", mode = { "i", "n" } },
             ["<c-s>"] = { "edit_split", mode = { "i", "n" } },
+            ["<c-t>"] = { "tab", mode = { "n", "i" } },
             ["<c-u>"] = { "list_scroll_up", mode = { "i", "n" } },
             ["<c-v>"] = { "edit_vsplit", mode = { "i", "n" } },
             ["<c-w>H"] = "layout_left",
@@ -454,7 +455,9 @@ below.
             ["<c-k>"] = "list_up",
             ["<c-n>"] = "list_down",
             ["<c-p>"] = "list_up",
+            ["<c-q>"] = "qflist",
             ["<c-s>"] = "edit_split",
+            ["<c-t>"] = "tab",
             ["<c-u>"] = "list_scroll_up",
             ["<c-v>"] = "edit_vsplit",
             ["<c-w>H"] = "layout_left",
@@ -788,6 +791,23 @@ TROUBLE                                       *snacks-picker-examples-trouble*
 <
 
 >lua
+    ---@alias snacks.Picker.ref (fun():snacks.Picker?)|{value?: snacks.Picker}
+<
+
+>lua
+    ---@class snacks.picker.Last
+    ---@field cursor number
+    ---@field topline number
+    ---@field opts? snacks.picker.Config
+    ---@field selected snacks.picker.Item[]
+    ---@field filter snacks.picker.Filter
+<
+
+>lua
+    ---@alias snacks.picker.history.Record {pattern: string, search: string, live?: boolean}
+<
+
+>lua
     ---@alias snacks.picker.Extmark vim.api.keyset.set_extmark|{col:number, row?:number, field?:string}
     ---@alias snacks.picker.Text {[1]:string, [2]:string?, virtual?:boolean, field?:string}
     ---@alias snacks.picker.Highlight snacks.picker.Text|snacks.picker.Extmark
@@ -863,23 +883,6 @@ that shows a preview based on the item data.
     ---@field input? snacks.win.Config|{} input window config
     ---@field list? snacks.win.Config|{} result list window config
     ---@field preview? snacks.win.Config|{} preview window config
-<
-
->lua
-    ---@alias snacks.Picker.ref (fun():snacks.Picker?)|{value?: snacks.Picker}
-<
-
->lua
-    ---@class snacks.picker.Last
-    ---@field cursor number
-    ---@field topline number
-    ---@field opts? snacks.picker.Config
-    ---@field selected snacks.picker.Item[]
-    ---@field filter snacks.picker.Filter
-<
-
->lua
-    ---@alias snacks.picker.history.Record {pattern: string, search: string, live?: boolean}
 <
 
 
@@ -991,7 +994,6 @@ BUFFERS                                        *snacks-picker-sources-buffers*
       win = {
         input = {
           keys = {
-            ["dd"] = "bufdelete",
             ["<c-x>"] = { "bufdelete", mode = { "n", "i" } },
           },
         },
@@ -1326,6 +1328,7 @@ Grep in git files
 
 >lua
     ---@class snacks.picker.git.grep.Config: snacks.picker.Config
+    ---@field args? string[] additional arguments to pass to `git grep`
     ---@field untracked? boolean search in untracked files
     ---@field submodules? boolean search in submodule files
     ---@field need_search? boolean require a search pattern

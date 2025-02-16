@@ -5,7 +5,9 @@
 --- | 'hide' Hide the completion window
 --- | 'cancel' Cancel the current completion, undoing the preview from auto_insert
 --- | 'accept' Accept the current completion item
+--- | 'accept_and_enter' Accept the current completion item and feed an enter key to neovim (i.e. to execute the current command in cmdline mode)
 --- | 'select_and_accept' Select the first completion item, if there's no selection, and accept
+--- | 'select_accept_and_enter' Select the first completion item, if there's no selection, accept and feed an enter key to neovim (i.e. to execute the current command in cmdline mode)
 --- | 'select_prev' Select the previous completion item
 --- | 'select_next' Select the next completion item
 --- | 'show_documentation' Show the documentation window
@@ -37,6 +39,8 @@
 ---
 ---   ['<Tab>'] = { 'snippet_forward', 'fallback' },
 ---   ['<S-Tab>'] = { 'snippet_backward', 'fallback' },
+---
+---   ['<C-k>'] = { 'show_signature', 'hide_signature', 'fallback' },
 --- }
 --- ```
 --- | 'default'
@@ -107,16 +111,18 @@
 ---   cmdline = {
 ---     preset = 'cmdline',
 ---   }
+---
+---   -- optionally, define different keymaps for Neovim's built-in terminal
+---   term = {
+---     preset = 'term',
+---   }
 --- }
 --- ```
 ---
 --- When defining your own keymaps without a preset, no keybinds will be assigned automatically.
---- @class (exact) blink.cmp.BaseKeymapConfig
+--- @class (exact) blink.cmp.KeymapConfig
 --- @field preset? blink.cmp.KeymapPreset
 --- @field [string] blink.cmp.KeymapCommand[] Table of keys => commands[]
-
---- @class (exact) blink.cmp.KeymapConfig : blink.cmp.BaseKeymapConfig
---- @field cmdline? blink.cmp.BaseKeymapConfig Optionally, define a separate keymap for cmdline
 
 local keymap = {
   --- @type blink.cmp.KeymapConfig
@@ -127,6 +133,9 @@ local keymap = {
 
 --- @param config blink.cmp.KeymapConfig
 function keymap.validate(config)
+  assert(config.cmdline == nil, '`keymap.cmdline` has been replaced with `cmdline.keymap`')
+  assert(config.term == nil, '`keymap.term` has been replaced with `term.keymap`')
+
   local commands = {
     'fallback',
     'show',
@@ -134,7 +143,9 @@ function keymap.validate(config)
     'hide',
     'cancel',
     'accept',
+    'accept_and_enter',
     'select_and_accept',
+    'select_accept_and_enter',
     'select_prev',
     'select_next',
     'show_documentation',
@@ -150,12 +161,8 @@ function keymap.validate(config)
 
   local validation_schema = {}
   for key, value in pairs(config) do
-    -- nested cmdline keymap
-    if key == 'cmdline' then
-      keymap.validate(value)
-
     -- preset
-    elseif key == 'preset' then
+    if key == 'preset' then
       validation_schema[key] = {
         value,
         function(preset) return vim.tbl_contains(presets, preset) end,
