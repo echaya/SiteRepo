@@ -29,6 +29,17 @@ In order to automatically display the image when opening an image file,
 or to have imaged displayed in supported document formats like `markdown` or `html`,
 you need to enable the `image` plugin in your `snacks` config.
 
+Supported document formats are:
+
+- markdown
+- html
+- norg
+- tsx
+- javascript
+- css
+- vue
+- angular
+
 [ImageMagick](https://imagemagick.org/index.php) is required to convert images
 to the supported formats (all except PNG).
 
@@ -73,7 +84,6 @@ In case of issues, make sure to run `:checkhealth snacks`.
     -- a treesitter parser must be available for the enabled languages.
     -- supported language injections: markdown, html
     enabled = true,
-    lang = { "markdown", "html", "norg" },
     -- render the image inline in the buffer
     -- if your env doesn't support unicode placeholders, this will be disabled
     -- takes precedence over `opts.float` on supported terminals
@@ -97,6 +107,7 @@ In case of issues, make sure to run `:checkhealth snacks`.
     spell = false,
     statuscolumn = "",
   },
+  cache = vim.fn.stdpath("cache") .. "/snacks/image",
   env = {},
 }
 ```
@@ -173,6 +184,13 @@ Show the image at the cursor in a floating window
 
 ```lua
 Snacks.image.hover()
+```
+
+### `Snacks.image.langs()`
+
+```lua
+---@return string[]
+Snacks.image.langs()
 ```
 
 ### `Snacks.image.supports()`

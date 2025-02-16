@@ -90,7 +90,7 @@ In case of issues, make sure to run `:checkhealth snacks`.
         -- a treesitter parser must be available for the enabled languages.
         -- supported language injections: markdown, html
         enabled = true,
-        lang = { "markdown", "html" },
+        lang = { "markdown", "html", "norg", "tsx", "javascript", "css", "vue", "angular" },
         -- render the image inline in the buffer
         -- if your env doesn't support unicode placeholders, this will be disabled
         -- takes precedence over `opts.float` on supported terminals
@@ -144,6 +144,8 @@ SNACKS_IMAGE                                *snacks-image-styles-snacks_image*
 
 ==============================================================================
 4. Types                                                  *snacks-image-types*
+
+TODO: - tsx / jsx - url decode? - look for all images?
 
 >lua
     ---@alias snacks.image.Size {width: number, height: number}

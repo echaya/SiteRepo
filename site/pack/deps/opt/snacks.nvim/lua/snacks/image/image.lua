@@ -59,7 +59,7 @@ function M:on_send()
 end
 
 function M:ready()
-  return (not self._convert or self._convert:is_closing()) and (self.file and vim.fn.filereadable(self.file) == 1)
+  return (not self._convert or self._convert:is_closing()) and self.file and vim.fn.filereadable(self.file) == 1
 end
 
 function M:convert()
@@ -75,7 +75,7 @@ function M:convert()
     src = vim.fs.normalize(src)
   end
   local fin = src .. "[0]"
-  local root = vim.fn.stdpath("cache") .. "/snacks/image"
+  local root = Snacks.image.config.cache
   vim.fn.mkdir(root, "p")
   src = root .. "/" .. Snacks.util.file_encode(fin) .. ".png"
   if vim.fn.filereadable(src) == 1 then
@@ -91,7 +91,7 @@ function M:convert()
       end)
     end
   end)
-  return self.src
+  return src
 end
 
 -- create the image

@@ -6,99 +6,33 @@ local M = {}
 ---@field win snacks.win
 ---@field buf number
 
----@class snacks.image.Query
----@field setup fun():vim.treesitter.Query
----@field query? vim.treesitter.Query|false
----@field transform? fun(buf:number, anchor: TSNode, image: TSNode): string
+---@alias snacks.image.transform fun(buf:number, src:string, anchor: TSNode, image: TSNode): string
 
----@type table<string, {setup:(fun():vim.treesitter.Query), query?:vim.treesitter.Query|false}>
-M._queries = {
-  markdown = {
-    setup = function()
-      return vim.treesitter.query.parse("markdown_inline", [[(image (link_destination) @image) @anchor]])
-    end,
-  },
-  html = {
-    setup = function()
-      return vim.treesitter.query.parse(
-        "html",
-        [[
-          (element
-            (start_tag
-              (tag_name) @tag (#eq? @tag "img")
-              (attribute
-              (attribute_name) @attr_name (#eq? @attr_name "src")
-              (quoted_attribute_value (attribute_value) @image)
-              )
-            )
-          ) @anchor
-          (self_closing_tag
-            (tag_name) @tag (#eq? @tag "img")
-            (attribute
-              (attribute_name) @attr_name (#eq? @attr_name "src")
-              (quoted_attribute_value (attribute_value) @image)
-            )
-          ) @anchor
-        ]]
-      )
-    end,
-  },
-  css = {
-    setup = function()
-      return vim.treesitter.query.parse(
-        "css",
-        [[
-          (declaration
-            (call_expression
-              (function_name) @fn (#eq? @fn "url")
-              (arguments  [(plain_value) @image (string_value (string_content) @image)]))
-          ) @anchor
-        ]]
-      )
-    end,
-  },
-  norg = {
-    setup = function()
-      return vim.treesitter.query.parse(
-        "norg",
-        [[
-          (infirm_tag
-            (tag_name) @tag (#eq? @tag "image")
-            (tag_parameters (tag_param) @image)
-          ) @anchor
-        ]]
-      )
-    end,
-    ---@param anchor TSNode
-    ---@param img TSNode
-    transform = function(buf, anchor, img)
-      local row, col = img:start()
-      local line = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
-      return line:sub(col + 1)
-    end,
-  },
+---@type table<string, snacks.image.transform>
+M.transforms = {
+  ---@param anchor TSNode
+  ---@param img TSNode
+  norg = function(buf, _, anchor, img)
+    local row, col = img:start()
+    local line = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
+    return line:sub(col + 1)
+  end,
 }
 
 local hover ---@type snacks.image.Hover?
 local uv = vim.uv or vim.loop
 
-function M.queries()
-  local ret = {} ---@type snacks.image.Query[]
-  for _, query in pairs(M._queries) do
-    if query.query == nil then
-      local ok, q = pcall(query.setup)
-      query.query = ok and q or false
-    end
-    if query.query then
-      table.insert(ret, query)
-    end
-  end
-  return ret
+---@param str string
+function M.url_decode(str)
+  return str:gsub("+", " "):gsub("%%(%x%x)", function(hex)
+    return string.char(tonumber(hex, 16))
+  end)
 end
 
 ---@param buf number
 ---@param src string
 function M.resolve(buf, src)
+  src = M.url_decode(src)
   local file = vim.fs.normalize(vim.api.nvim_buf_get_name(buf))
   local s = Snacks.image.config.resolve and Snacks.image.config.resolve(file, src) or nil
   if s then
@@ -129,36 +63,39 @@ function M.find(buf, from, to)
   end
   parser:parse(from and to and { from, to } or true)
   local ret = {} ---@type {id:string, pos:snacks.image.Pos, src:string}[]
-  parser:for_each_tree(function(tstree)
+  parser:for_each_tree(function(tstree, tree)
     if not tstree then
       return
     end
-    for _, query in ipairs(M.queries()) do
-      for _, match in query.query:iter_matches(tstree:root(), buf, from and from - 1 or nil, to and to - 1 or nil) do
-        local src, pos, nid ---@type string, snacks.image.Pos, string
-        local anchor, image ---@type TSNode, TSNode
-        for id, nodes in pairs(match) do
-          nodes = type(nodes) == "userdata" and { nodes } or nodes
-          local name = query.query.captures[id]
-          for _, node in ipairs(nodes) do
-            if name == "image" then
-              image = node
-              src = vim.treesitter.get_node_text(node, buf)
-            elseif name == "anchor" then
-              anchor = node
-              local range = { node:range() }
-              pos = { range[1] + 1, range[2] }
-              nid = node:id()
-            end
+    local query = vim.treesitter.query.get(tree:lang(), "images")
+    if not query then
+      return
+    end
+    for _, match, meta in query:iter_matches(tstree:root(), buf, from and from - 1 or nil, to and to - 1 or nil) do
+      local src, pos, nid ---@type string, snacks.image.Pos, string
+      local anchor, image ---@type TSNode, TSNode
+      for id, nodes in pairs(match) do
+        nodes = type(nodes) == "userdata" and { nodes } or nodes
+        local name = query.captures[id]
+        for _, node in ipairs(nodes) do
+          if name == "image" then
+            image = node
+            src = vim.treesitter.get_node_text(node, buf, { metadata = meta[id] })
+          elseif name == "anchor" then
+            anchor = node
+            local range = { node:range() }
+            pos = { range[1] + 1, range[2] }
+            nid = node:id()
           end
         end
-        if src and pos and nid then
-          if query.transform then
-            src = query.transform(buf, anchor, image)
-          end
-          src = M.resolve(buf, src)
-          ret[#ret + 1] = { id = nid, pos = pos, src = src }
+      end
+      if src and pos and nid then
+        local transform = M.transforms[tree:lang()]
+        if transform then
+          src = transform(buf, src, anchor, image)
         end
+        src = M.resolve(buf, src)
+        ret[#ret + 1] = { id = nid, pos = pos, src = src }
       end
     end
   end)
@@ -170,6 +107,16 @@ function M.hover_close()
     hover.win:close()
     hover.img:close()
     hover = nil
+  end
+end
+
+--- Get the image at the cursor (if any)
+---@return string? image_src, snacks.image.Pos? image_pos
+function M.at_cursor()
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local img = M.find(vim.api.nvim_get_current_buf(), cursor[1], cursor[1] + 1)[1]
+  if img then
+    return img.src, img.pos
   end
 end
 
@@ -185,13 +132,12 @@ function M.hover()
     M.hover_close()
   end
 
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  local img = M.find(current_buf, cursor[1], cursor[1] + 1)[1]
-  if not img then
+  local src = M.at_cursor()
+  if not src then
     return M.hover_close()
   end
 
-  if hover and hover.img.img.src ~= img.src then
+  if hover and hover.img.img.src ~= src then
     M.hover_close()
   elseif hover then
     hover.img:update()
@@ -219,7 +165,7 @@ function M.hover()
   hover = {
     win = win,
     buf = current_buf,
-    img = Snacks.image.placement.new(win.buf, img.src, o),
+    img = Snacks.image.placement.new(win.buf, src, o),
   }
   vim.api.nvim_create_autocmd({ "BufWritePost", "CursorMoved", "ModeChanged", "BufLeave" }, {
     buffer = current_buf,

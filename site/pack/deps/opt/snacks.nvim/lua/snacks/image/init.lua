@@ -51,7 +51,6 @@ local defaults = {
     -- a treesitter parser must be available for the enabled languages.
     -- supported language injections: markdown, html
     enabled = true,
-    lang = { "markdown", "html", "norg" },
     -- render the image inline in the buffer
     -- if your env doesn't support unicode placeholders, this will be disabled
     -- takes precedence over `opts.float` on supported terminals
@@ -75,6 +74,7 @@ local defaults = {
     spell = false,
     statuscolumn = "",
   },
+  cache = vim.fn.stdpath("cache") .. "/snacks/image",
   debug = false,
   env = {},
 }
@@ -126,6 +126,14 @@ function M.hover()
   M.doc.hover()
 end
 
+---@return string[]
+function M.langs()
+  local queries = vim.api.nvim_get_runtime_file("queries/*/images.scm", true)
+  return vim.tbl_map(function(q)
+    return q:match("queries/(.-)/images%.scm")
+  end, queries)
+end
+
 ---@private
 ---@param ev? vim.api.keyset.create_autocmd.callback_args
 function M.setup(ev)
@@ -155,12 +163,13 @@ function M.setup(ev)
     })
   end
   if M.config.enabled and M.config.doc.enabled then
+    local langs = M.langs()
     vim.api.nvim_create_autocmd("FileType", {
       group = group,
       callback = function(e)
         local ft = vim.bo[e.buf].filetype
         local lang = vim.treesitter.language.get_lang(ft)
-        if vim.tbl_contains(M.config.doc.lang, lang) then
+        if vim.tbl_contains(langs, lang) then
           vim.schedule(function()
             M.doc.attach(e.buf)
           end)
@@ -207,14 +216,15 @@ function M.health()
     )
   )
 
-  M.doc.queries()
-  for lang, q in pairs(M.doc._queries) do
-    if q.query then
-      Snacks.health.ok("Images rendering for `" .. lang .. "` is available")
+  for _, lang in ipairs(M.langs()) do
+    local ok, parser = pcall(vim.treesitter.get_string_parser, "", lang)
+    if ok and parser then
+      Snacks.health.ok("Image rendering for `" .. lang .. "` is available")
     else
-      Snacks.health.warn("Images rendering for `" .. lang .. "` is not available.\nMissing treesitter parser.")
+      Snacks.health.error("Image rendering for `" .. lang .. "` is not available")
     end
   end
+
   if env.supported then
     Snacks.health.ok("your terminal supports the kitty graphics protocol")
   elseif M.config.force then
