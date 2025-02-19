@@ -1,4 +1,4 @@
-*snacks-util.txt*                                                  snacks.nvim
+*snacks-util*                                                  snacks_util
 
 ==============================================================================
 Table of Contents                              *snacks-util-table-of-contents*
@@ -22,6 +22,7 @@ Table of Contents                              *snacks-util-table-of-contents*
   - Snacks.util.redraw_range() |snacks-util-module-snacks.util.redraw_range()|
   - Snacks.util.ref()                   |snacks-util-module-snacks.util.ref()|
   - Snacks.util.set_hl()             |snacks-util-module-snacks.util.set_hl()|
+  - Snacks.util.spinner()           |snacks-util-module-snacks.util.spinner()|
   - Snacks.util.throttle()         |snacks-util-module-snacks.util.throttle()|
   - Snacks.util.var()                   |snacks-util-module-snacks.util.var()|
   - Snacks.util.winhl()               |snacks-util-module-snacks.util.winhl()|
@@ -63,7 +64,7 @@ Set buffer-local options.
 `Snacks.util.color()`                                    *Snacks.util.color()*
 
 >lua
-    ---@param group string hl group to get color from
+    ---@param group string|string[] hl group to get color from
     ---@param prop? string property to get. Defaults to "fg"
     Snacks.util.color(group, prop)
 <
@@ -208,6 +209,13 @@ Ensures the hl groups are always set, even after a colorscheme change.
     ---@param groups snacks.util.hl
     ---@param opts? { prefix?:string, default?:boolean, managed?:boolean }
     Snacks.util.set_hl(groups, opts)
+<
+
+
+`Snacks.util.spinner()`                                *Snacks.util.spinner()*
+
+>lua
+    Snacks.util.spinner()
 <
 
 

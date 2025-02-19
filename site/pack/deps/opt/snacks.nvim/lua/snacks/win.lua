@@ -544,10 +544,24 @@ function M:close(opts)
   local try_close ---@type fun()
   try_close = function()
     local ok, err = pcall(close)
-    if not ok and err and err:find("E565") and retries < 10 then
+    if ok or not err then
+      return
+    end
+
+    -- command window is open
+    if err:find("E11") then
+      vim.defer_fn(try_close, 200)
+      return
+    end
+
+    -- text lock
+    if err:find("E565") and retries < 20 then
       retries = retries + 1
       vim.defer_fn(try_close, 50)
-    elseif not ok then
+      return
+    end
+
+    if not ok then
       Snacks.notify.error("Failed to close window: " .. err)
     end
   end

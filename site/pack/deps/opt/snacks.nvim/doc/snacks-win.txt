@@ -1,4 +1,4 @@
-*snacks-win.txt*                                                   snacks.nvim
+*snacks-win*                                                    snacks_win
 
 ==============================================================================
 Table of Contents                               *snacks-win-table-of-contents*

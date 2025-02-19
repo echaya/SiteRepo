@@ -6,27 +6,80 @@ local M = {}
 ---@field win snacks.win
 ---@field buf number
 
----@alias snacks.image.transform fun(buf:number, src:string, anchor: TSNode, image: TSNode): string
+---@alias TSMatch {node:TSNode, meta:vim.treesitter.query.TSMetadata}
+---@alias snacks.image.ctx {buf:number, pos?: TSMatch, src?: TSMatch, content?: TSMatch}
+---@alias snacks.image.match {id: string, pos: snacks.image.Pos, src?: string, content?: string, ext?: string, range?:Range4}
+---@alias snacks.image.transform fun(match: snacks.image.match, ctx: snacks.image.ctx)
 
 ---@type table<string, snacks.image.transform>
 M.transforms = {
-  ---@param anchor TSNode
-  ---@param img TSNode
-  norg = function(buf, _, anchor, img)
-    local row, col = img:start()
-    local line = vim.api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
-    return line:sub(col + 1)
+  norg = function(img, ctx)
+    local row, col = ctx.src.node:start()
+    local line = vim.api.nvim_buf_get_lines(ctx.buf, row, row + 1, false)[1]
+    img.src = line:sub(col + 1)
+  end,
+  typst = function(img, ctx)
+    if not img.content then
+      return
+    end
+    local fg = Snacks.util.color("SnacksImageMath") or "#000000"
+    img.content = ([[
+#set page(width: auto, height: auto, margin: (x: 2pt, y: 2pt))
+#set text(size: 12pt, fill: rgb("%s"))
+%s]]):format(fg, img.content)
+  end,
+  latex = function(img, ctx)
+    if not img.content then
+      return
+    end
+    local fg = Snacks.util.color("SnacksImageMath") or "#000000"
+    img.ext = "math.tex"
+    local content = vim.trim(img.content or "")
+    content = content:gsub("^%$+`?", ""):gsub("`?%$+$", "")
+    content = content:gsub("^\\[%[%(]", ""):gsub("\\[%]%)]$", "")
+    if not content:find("^\\begin") then
+      content = ("\\[%s\\]"):format(content)
+    end
+    local packages = { "xcolor" }
+    vim.list_extend(packages, Snacks.image.config.convert.math.packages)
+    for _, line in ipairs(vim.api.nvim_buf_get_lines(ctx.buf, 0, -1, false)) do
+      if line:find("\\usepackage") then
+        for _, p in ipairs(vim.split(line:match("{(.-)}") or "", ",%s*")) do
+          if not vim.tbl_contains(packages, p) then
+            packages[#packages + 1] = p
+          end
+        end
+      end
+    end
+    table.sort(packages)
+    img.content = ([[
+\documentclass[preview,border=2pt,varwidth]{standalone}
+\usepackage{%s}
+\begin{document}
+{ \Large \color[HTML]{%s}
+%s}
+\end{document}
+    ]]):format(table.concat(packages, ", "), fg:upper():sub(2), content)
   end,
 }
 
 local hover ---@type snacks.image.Hover?
 local uv = vim.uv or vim.loop
+local dir_cache = {} ---@type table<string, boolean>
 
 ---@param str string
 function M.url_decode(str)
   return str:gsub("+", " "):gsub("%%(%x%x)", function(hex)
     return string.char(tonumber(hex, 16))
   end)
+end
+
+---@param dir string
+function M.is_dir(dir)
+  if dir_cache[dir] == nil then
+    dir_cache[dir] = vim.fn.isdirectory(dir) == 1
+  end
+  return dir_cache[dir]
 end
 
 ---@param buf number
@@ -39,13 +92,18 @@ function M.resolve(buf, src)
     return s
   end
   if not src:find("^%w%w+://") then
-    if src:find("^%.") or src:find("^%w") then
-      for _, dir in ipairs({ vim.fs.dirname(file), uv.cwd() }) do
-        local path = dir .. "/" .. src
-        if vim.fn.filereadable(path) == 1 then
-          src = path
-          break
-        end
+    local cwd = uv.cwd() or "."
+    local checks = { src, vim.fs.dirname(file) .. "/" .. src }
+    for _, dir in ipairs(Snacks.image.config.img_dirs) do
+      dir = cwd .. "/" .. dir
+      if M.is_dir(dir) then
+        checks[#checks + 1] = dir .. "/" .. src
+      end
+    end
+    for _, f in ipairs(checks) do
+      if vim.fn.filereadable(f) == 1 then
+        src = uv.fs_realpath(f) or f
+        break
       end
     end
     src = vim.fs.normalize(src)
@@ -62,7 +120,7 @@ function M.find(buf, from, to)
     return {}
   end
   parser:parse(from and to and { from, to } or true)
-  local ret = {} ---@type {id:string, pos:snacks.image.Pos, src:string}[]
+  local ret = {} ---@type snacks.image.match[]
   parser:for_each_tree(function(tstree, tree)
     if not tstree then
       return
@@ -72,31 +130,61 @@ function M.find(buf, from, to)
       return
     end
     for _, match, meta in query:iter_matches(tstree:root(), buf, from and from - 1 or nil, to and to - 1 or nil) do
-      local src, pos, nid ---@type string, snacks.image.Pos, string
-      local anchor, image ---@type TSNode, TSNode
+      local ctx = { buf = buf } ---@type snacks.image.ctx
+      local lang = meta["injection.language"] or tree:lang()
       for id, nodes in pairs(match) do
         nodes = type(nodes) == "userdata" and { nodes } or nodes
         local name = query.captures[id]
-        for _, node in ipairs(nodes) do
-          if name == "image" then
-            image = node
-            src = vim.treesitter.get_node_text(node, buf, { metadata = meta[id] })
-          elseif name == "anchor" then
-            anchor = node
-            local range = { node:range() }
-            pos = { range[1] + 1, range[2] }
-            nid = node:id()
-          end
+        local field = name == "image" and "pos" or name:match("^image%.(.*)$")
+        if field then
+          ctx[field] = { node = nodes[1], meta = meta[id] or {} }
         end
       end
-      if src and pos and nid then
-        local transform = M.transforms[tree:lang()]
-        if transform then
-          src = transform(buf, src, anchor, image)
-        end
-        src = M.resolve(buf, src)
-        ret[#ret + 1] = { id = nid, pos = pos, src = src }
+      assert(ctx.src or ctx.content, "no image src or content")
+      ctx.pos = ctx.pos or ctx.src or ctx.content
+      assert(ctx.pos, "no image node")
+
+      local range = vim.treesitter.get_range(ctx.pos.node, buf, ctx.pos.meta)
+      local lines = vim.api.nvim_buf_get_lines(buf, range[1], range[4] + 1, false)
+      while #lines > 0 and vim.trim(lines[#lines]) == "" do
+        table.remove(lines)
       end
+      ---@type snacks.image.match
+      local img = {
+        ext = meta["image.ext"],
+        id = ctx.pos.node:id(),
+        range = { range[1] + 1, range[2], range[4] + 1, range[5] },
+        pos = {
+          range[1] + #lines,
+          math.min(range[2], range[5]),
+        },
+      }
+      img.pos[1] = math.min(img.pos[1], vim.api.nvim_buf_line_count(buf))
+      if ctx.src then
+        img.src = vim.treesitter.get_node_text(ctx.src.node, buf, { metadata = ctx.src.meta })
+      end
+      if ctx.content then
+        img.content = vim.treesitter.get_node_text(ctx.content.node, buf, { metadata = ctx.content.meta })
+      end
+
+      local transform = M.transforms[lang]
+      if transform then
+        transform(img, ctx)
+      end
+      if img.src then
+        img.src = M.resolve(buf, img.src)
+      end
+      if img.content and not img.src then
+        local root = Snacks.image.config.cache
+        vim.fn.mkdir(root, "p")
+        img.src = root .. "/" .. vim.fn.sha256(img.content):sub(1, 8) .. "-content." .. (img.ext or "png")
+        if vim.fn.filereadable(img.src) == 0 then
+          local fd = assert(io.open(img.src, "w"), "failed to open " .. img.src)
+          fd:write(img.content)
+          fd:close()
+        end
+      end
+      ret[#ret + 1] = img
     end
   end)
   return ret
@@ -114,9 +202,17 @@ end
 ---@return string? image_src, snacks.image.Pos? image_pos
 function M.at_cursor()
   local cursor = vim.api.nvim_win_get_cursor(0)
-  local img = M.find(vim.api.nvim_get_current_buf(), cursor[1], cursor[1] + 1)[1]
-  if img then
-    return img.src, img.pos
+  local imgs = M.find(vim.api.nvim_get_current_buf(), cursor[1], cursor[1] + 1)
+  for _, img in ipairs(imgs) do
+    local range = img.range
+    if range then
+      if
+        (range[1] == range[3] and cursor[2] >= range[2] and cursor[2] <= range[4])
+        or (range[1] ~= range[3] and cursor[1] >= range[1] and cursor[1] <= range[3])
+      then
+        return img.src, img.pos
+      end
+    end
   end
 end
 
@@ -168,9 +264,16 @@ function M.hover()
     img = Snacks.image.placement.new(win.buf, src, o),
   }
   vim.api.nvim_create_autocmd({ "BufWritePost", "CursorMoved", "ModeChanged", "BufLeave" }, {
-    buffer = current_buf,
-    once = true,
-    callback = M.hover,
+    group = vim.api.nvim_create_augroup("snacks.image.hover", { clear = true }),
+    callback = function()
+      if not hover then
+        return true
+      end
+      M.hover()
+      if not hover then
+        return true
+      end
+    end,
   })
 end
 

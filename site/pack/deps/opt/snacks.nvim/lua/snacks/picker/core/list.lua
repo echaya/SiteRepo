@@ -226,7 +226,7 @@ function M:close()
 end
 
 function M:scrolloff()
-  local scrolloff = math.min(self.state.scrolloff, math.floor(self:height() / 2))
+  local scrolloff = math.min(self.state.scrolloff, math.floor((self:height() - 1) / 2))
   local offset = math.min(self.cursor, self:count() - self.cursor)
   return offset > scrolloff and scrolloff or 0
 end
