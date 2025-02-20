@@ -7,7 +7,7 @@ local dims = {} ---@type table<string, snacks.image.Size>
 ---@param file string
 ---@return snacks.image.Size
 function M.dim(file)
-  file = vim.fs.normalize(file)
+  file = svim.fs.normalize(file)
   if dims[file] then
     return dims[file]
   end
@@ -39,8 +39,8 @@ end
 ---@return snacks.image.Size
 function M.norm(size)
   return {
-    width = math.max(1, math.floor(size.width + 0.5)),
-    height = math.max(1, math.floor(size.height + 0.5)),
+    width = math.max(1, math.ceil(size.width)),
+    height = math.max(1, math.ceil(size.height)),
   }
 end
 

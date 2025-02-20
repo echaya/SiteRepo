@@ -93,6 +93,7 @@ Table of Contents                            *snacks-picker-table-of-contents*
   - vscode                                      |snacks-picker-layouts-vscode|
 10. snacks.picker.actions                |snacks-picker-snacks.picker.actions|
   - Snacks.picker.actions.bufdelete()|snacks-picker-snacks.picker.actions-snacks.picker.actions.bufdelete()|
+  - Snacks.picker.actions.cancel()|snacks-picker-snacks.picker.actions-snacks.picker.actions.cancel()|
   - Snacks.picker.actions.cd()|snacks-picker-snacks.picker.actions-snacks.picker.actions.cd()|
   - Snacks.picker.actions.close()|snacks-picker-snacks.picker.actions-snacks.picker.actions.close()|
   - Snacks.picker.actions.cmd()|snacks-picker-snacks.picker.actions-snacks.picker.actions.cmd()|
@@ -348,11 +349,11 @@ below.
       ---@class snacks.picker.previewers.Config
       previewers = {
         diff = {
-          native = false, -- use native (terminal) or Neovim for previewing git diffs and commits
+          builtin = true, -- use Neovim for previewing diffs (true) or use an external tool (false)
           cmd = { "delta" }, -- example to show a diff with delta
         },
         git = {
-          native = false, -- use native (terminal) or Neovim for previewing git diffs and commits
+          builtin = true, -- use Neovim for previewing git output (true) or use git (false)
           args = {}, -- additional arguments passed to the git command. Useful to set pager options usin `-c ...`
         },
         file = {
@@ -387,11 +388,11 @@ below.
             ["/"] = "toggle_focus",
             ["<C-Down>"] = { "history_forward", mode = { "i", "n" } },
             ["<C-Up>"] = { "history_back", mode = { "i", "n" } },
-            ["<C-c>"] = { "close", mode = "i" },
+            ["<C-c>"] = { "cancel", mode = "i" },
             ["<C-w>"] = { "<c-s-w>", mode = { "i" }, expr = true, desc = "delete word" },
             ["<CR>"] = { "confirm", mode = { "n", "i" } },
             ["<Down>"] = { "list_down", mode = { "i", "n" } },
-            ["<Esc>"] = "close",
+            ["<Esc>"] = "cancel",
             ["<S-CR>"] = { { "pick_win", "jump" }, mode = { "n", "i" } },
             ["<S-Tab>"] = { "select_and_prev", mode = { "i", "n" } },
             ["<Tab>"] = { "select_and_next", mode = { "i", "n" } },
@@ -439,7 +440,7 @@ below.
             ["<2-LeftMouse>"] = "confirm",
             ["<CR>"] = "confirm",
             ["<Down>"] = "list_down",
-            ["<Esc>"] = "close",
+            ["<Esc>"] = "cancel",
             ["<S-CR>"] = { { "pick_win", "jump" } },
             ["<S-Tab>"] = { "select_and_prev", mode = { "n", "x" } },
             ["<Tab>"] = { "select_and_next", mode = { "n", "x" } },
@@ -487,7 +488,7 @@ below.
         -- preview window
         preview = {
           keys = {
-            ["<Esc>"] = "close",
+            ["<Esc>"] = "cancel",
             ["q"] = "close",
             ["i"] = "focus_input",
             ["<ScrollWheelDown>"] = "list_scroll_wheel_down",
@@ -798,6 +799,23 @@ TROUBLE                                       *snacks-picker-examples-trouble*
 <
 
 >lua
+    ---@alias snacks.Picker.ref (fun():snacks.Picker?)|{value?: snacks.Picker}
+<
+
+>lua
+    ---@class snacks.picker.Last
+    ---@field cursor number
+    ---@field topline number
+    ---@field opts? snacks.picker.Config
+    ---@field selected snacks.picker.Item[]
+    ---@field filter snacks.picker.Filter
+<
+
+>lua
+    ---@alias snacks.picker.history.Record {pattern: string, search: string, live?: boolean}
+<
+
+>lua
     ---@alias snacks.picker.Extmark vim.api.keyset.set_extmark|{col:number, row?:number, field?:string}
     ---@alias snacks.picker.Text {[1]:string, [2]:string?, virtual?:boolean, field?:string}
     ---@alias snacks.picker.Highlight snacks.picker.Text|snacks.picker.Extmark
@@ -873,23 +891,6 @@ that shows a preview based on the item data.
     ---@field input? snacks.win.Config|{} input window config
     ---@field list? snacks.win.Config|{} result list window config
     ---@field preview? snacks.win.Config|{} preview window config
-<
-
->lua
-    ---@alias snacks.Picker.ref (fun():snacks.Picker?)|{value?: snacks.Picker}
-<
-
->lua
-    ---@class snacks.picker.Last
-    ---@field cursor number
-    ---@field topline number
-    ---@field opts? snacks.picker.Config
-    ---@field selected snacks.picker.Item[]
-    ---@field filter snacks.picker.Filter
-<
-
->lua
-    ---@alias snacks.picker.history.Record {pattern: string, search: string, live?: boolean}
 <
 
 
@@ -1302,7 +1303,7 @@ GIT_DIFF                                      *snacks-picker-sources-git_diff*
     {
       finder = "git_diff",
       format = "file",
-      preview = "preview",
+      preview = "diff",
     }
 <
 
@@ -1622,11 +1623,14 @@ KEYMAPS                                        *snacks-picker-sources-keymaps*
       plugs = false,
       ["local"] = true,
       modes = { "n", "v", "x", "s", "o", "i", "c", "t" },
+      ---@param picker snacks.Picker
       confirm = function(picker, item)
-        picker:close()
-        if item then
-          vim.api.nvim_input(item.item.lhs)
-        end
+        picker:norm(function()
+          if item then
+            picker:close()
+            vim.api.nvim_input(item.item.lhs)
+          end
+        end)
       end,
       actions = {
         toggle_global = function(picker)
@@ -2624,6 +2628,13 @@ SNACKS.PICKER.ACTIONS.BUFDELETE()*snacks-picker-snacks.picker.actions-snacks.pic
 
 >lua
     Snacks.picker.actions.bufdelete(picker)
+<
+
+
+SNACKS.PICKER.ACTIONS.CANCEL()*snacks-picker-snacks.picker.actions-snacks.picker.actions.cancel()*
+
+>lua
+    Snacks.picker.actions.cancel(picker)
 <
 
 

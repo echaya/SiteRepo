@@ -84,7 +84,7 @@ function M.find(opts, ctx)
       if type(cmd) == "table" and #cmd > 0 then
         ---@type string[]
         cmd = vim.deepcopy(cmd)
-        cmd[1] = vim.fs.normalize(cmd[1])
+        cmd[1] = svim.fs.normalize(cmd[1])
         if cmd[1]:find("/") then
           installed = vim.fn.filereadable(cmd[1]) == 1
           bin = cmd[1]

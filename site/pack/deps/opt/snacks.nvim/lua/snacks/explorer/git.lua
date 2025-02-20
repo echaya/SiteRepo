@@ -91,8 +91,7 @@ function M.update(cwd, opts)
         end
       end
     end
-    M._update(cwd, ret)
-    if opts and opts.on_update then
+    if M._update(cwd, ret) and opts and opts.on_update then
       vim.schedule(opts.on_update)
     end
   end
@@ -114,6 +113,8 @@ function M._update(cwd, results)
   local Tree = require("snacks.explorer.tree")
   local Git = require("snacks.picker.source.git")
   local node = Tree:find(cwd)
+
+  local snapshot = Tree:snapshot(node, { "status", "ignored" })
 
   Tree:walk(node, function(n)
     n.status = nil
@@ -152,6 +153,7 @@ function M._update(cwd, results)
       end
     end
   end
+  return Tree:changed(node, snapshot)
 end
 
 ---@param cwd string

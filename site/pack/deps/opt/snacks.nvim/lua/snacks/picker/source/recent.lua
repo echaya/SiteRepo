@@ -14,7 +14,7 @@ local function oldfiles(filter, extra)
     for f = i + 1, #files do
       i = f
       local file = files[f]
-      file = vim.fs.normalize(file, { _fast = true, expand_env = false })
+      file = svim.fs.normalize(file, { _fast = true, expand_env = false })
       local want = not done[file] and filter:match({ file = file, text = "" })
       done[file] = true
       if want and uv.fs_stat(file) then
@@ -29,7 +29,7 @@ end
 ---@param opts snacks.picker.recent.Config
 ---@type snacks.picker.finder
 function M.files(opts, ctx)
-  local current_file = vim.fs.normalize(vim.api.nvim_buf_get_name(0), { _fast = true })
+  local current_file = svim.fs.normalize(vim.api.nvim_buf_get_name(0), { _fast = true })
   ---@type number[]
   local bufs = vim.tbl_filter(function(b)
     return vim.api.nvim_buf_get_name(b) ~= "" and vim.bo[b].buftype == "" and vim.bo[b].buflisted
@@ -76,7 +76,7 @@ function M.projects(opts, ctx)
   vim.list_extend(args, { "-g", "{" .. table.concat(opts.patterns or {}, ",") .. "}" })
   local dev = type(opts.dev) == "string" and { opts.dev } or opts.dev or {}
   ---@cast dev string[]
-  vim.list_extend(args, vim.tbl_map(vim.fs.normalize, dev))
+  vim.list_extend(args, vim.tbl_map(svim.fs.normalize, dev))
   local fd = require("snacks.picker.source.files").get_fd()
   if not fd then
     Snacks.notify.warn("`fd` or `fdfind` is required for projects")

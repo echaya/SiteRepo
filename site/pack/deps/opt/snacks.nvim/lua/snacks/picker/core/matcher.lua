@@ -85,7 +85,7 @@ function M:run(picker)
   self.task:abort()
   picker.list:clear()
 
-  self.cwd = vim.fs.normalize(picker.opts.cwd or (vim.uv or vim.loop).cwd() or ".")
+  self.cwd = svim.fs.normalize(picker.opts.cwd or (vim.uv or vim.loop).cwd() or ".")
   self.sorting = not self:empty() or picker.opts.matcher.sort_empty
 
   -- PERF: fast path for empty pattern

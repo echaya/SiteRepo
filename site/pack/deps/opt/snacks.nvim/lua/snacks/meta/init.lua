@@ -26,7 +26,7 @@ M.meta = {
 M.root = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":h:h")
 
 function M.file(name)
-  return vim.fs.normalize(("%s/%s"):format(M.root, name))
+  return svim.fs.normalize(("%s/%s"):format(M.root, name))
 end
 
 --- Get the metadata for all snacks plugins

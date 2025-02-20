@@ -5,8 +5,6 @@ local Async = require("snacks.picker.util.async")
 
 local M = {}
 
-local islist = vim.islist or vim.tbl_islist
-
 ---@alias lsp.Symbol lsp.SymbolInformation|lsp.DocumentSymbol
 ---@alias lsp.Loc lsp.Location|lsp.LocationLink
 
@@ -180,7 +178,7 @@ function M.get_locations(method, opts, filter)
   local win = filter.current_win
   local buf = filter.current_buf
   local fname = vim.api.nvim_buf_get_name(buf)
-  fname = vim.fs.normalize(fname)
+  fname = svim.fs.normalize(fname)
   local cursor = vim.api.nvim_win_get_cursor(win)
   local bufmap = M.bufmap()
 
@@ -195,7 +193,7 @@ function M.get_locations(method, opts, filter)
     end, function(client, result)
       result = result or {}
       -- Result can be a single item or a list of items
-      result = vim.tbl_isempty(result) and {} or islist(result) and result or { result }
+      result = vim.tbl_isempty(result) and {} or svim.islist(result) and result or { result }
 
       local items = vim.lsp.util.locations_to_items(result or {}, client.offset_encoding)
       M.fix_locs(items)
@@ -203,7 +201,7 @@ function M.get_locations(method, opts, filter)
       if not opts.include_current then
         ---@param item vim.quickfix.entry
         items = vim.tbl_filter(function(item)
-          if vim.fs.normalize(item.filename) ~= fname then
+          if svim.fs.normalize(item.filename) ~= fname then
             return true
           end
           if not item.lnum then

@@ -88,7 +88,7 @@ local function get_cmd(opts, filter)
 
   -- dirs
   if #paths > 0 then
-    paths = vim.tbl_map(vim.fs.normalize, paths) ---@type string[]
+    paths = vim.tbl_map(svim.fs.normalize, paths) ---@type string[]
     vim.list_extend(args, paths)
   end
 
@@ -102,7 +102,7 @@ function M.grep(opts, ctx)
     return function() end
   end
   local absolute = (opts.dirs and #opts.dirs > 0) or opts.buffers or opts.rtp
-  local cwd = not absolute and vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
+  local cwd = not absolute and svim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
   local cmd, args = get_cmd(opts, ctx.filter)
   if opts.debug.grep then
     Snacks.notify.info("grep: " .. cmd .. " " .. table.concat(args, " "))

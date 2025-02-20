@@ -5,7 +5,6 @@ local M = {}
 
 local uv = vim.uv or vim.loop
 M.USE_QUEUE = true
-local islist = vim.islist or vim.tbl_islist
 
 ---@class snacks.picker.proc.Config: snacks.picker.Config
 ---@field cmd string
@@ -19,7 +18,7 @@ local islist = vim.islist or vim.tbl_islist
 ---@param opts snacks.picker.proc.Config|{[1]: snacks.picker.Config, [2]: snacks.picker.proc.Config}
 ---@type snacks.picker.finder
 function M.proc(opts, ctx)
-  if islist(opts) then
+  if svim.islist(opts) then
     local transform = opts[2].transform
     opts = Snacks.config.merge(unpack(vim.deepcopy(opts))) --[[@as snacks.picker.proc.Config]]
     opts.transform = transform
@@ -54,7 +53,7 @@ function M.proc(opts, ctx)
     local spawn_opts = {
       args = opts.args,
       stdio = { nil, stdout, nil },
-      cwd = opts.cwd and vim.fs.normalize(opts.cwd) or nil,
+      cwd = opts.cwd and svim.fs.normalize(opts.cwd) or nil,
       env = opts.env,
       hide = true,
     }
@@ -174,7 +173,7 @@ function M.debug(opts)
     end
     Snacks.notify.info(
       ("- **cwd**: `%s`\n```sh\n%s\n```"):format(
-        vim.fn.fnamemodify(vim.fs.normalize(opts.cwd or uv.cwd() or "."), ":~"),
+        vim.fn.fnamemodify(svim.fs.normalize(opts.cwd or uv.cwd() or "."), ":~"),
         table.concat(lines, "\n")
       ),
       { id = "snacks.picker.proc." .. id, title = "Snacks Proc" }

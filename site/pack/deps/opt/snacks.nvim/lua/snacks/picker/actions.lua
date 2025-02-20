@@ -150,7 +150,14 @@ function M.close(picker)
   end)
 end
 
-M.cancel = "close"
+function M.cancel(picker)
+  picker:norm(function()
+    local main = require("snacks.picker.core.main").new({ float = false, file = false })
+    vim.api.nvim_set_current_win(main:get())
+    picker:close()
+  end)
+end
+
 M.confirm = M.jump -- default confirm action
 
 M.split = { action = "confirm", cmd = "split" }

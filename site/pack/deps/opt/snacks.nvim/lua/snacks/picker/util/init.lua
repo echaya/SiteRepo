@@ -10,7 +10,7 @@ function M.path(item)
     return
   end
   item._path = item._path
-    or vim.fs.normalize(item.cwd and item.cwd .. "/" .. item.file or item.file, { _fast = true, expand_env = false })
+    or svim.fs.normalize(item.cwd and item.cwd .. "/" .. item.file or item.file, { _fast = true, expand_env = false })
   return item._path
 end
 
@@ -18,9 +18,9 @@ end
 ---@param len? number
 ---@param opts? {cwd?: string}
 function M.truncpath(path, len, opts)
-  local cwd = vim.fs.normalize(opts and opts.cwd or vim.fn.getcwd(), { _fast = true, expand_env = false })
-  local home = vim.fs.normalize("~")
-  path = vim.fs.normalize(path, { _fast = true, expand_env = false })
+  local cwd = svim.fs.normalize(opts and opts.cwd or vim.fn.getcwd(), { _fast = true, expand_env = false })
+  local home = svim.fs.normalize("~")
+  path = svim.fs.normalize(path, { _fast = true, expand_env = false })
 
   if path:find(cwd .. "/", 1, true) == 1 and #path > #cwd then
     path = path:sub(#cwd + 2)
@@ -440,15 +440,15 @@ end
 function M.dir(item)
   local path = type(item) == "table" and M.path(item) or item
   ---@cast path string
-  path = vim.fs.normalize(path)
+  path = svim.fs.normalize(path)
   return vim.fn.isdirectory(path) == 1 and path or vim.fs.dirname(path)
 end
 
 ---@param paths string[]
 ---@param dir string
 function M.copy(paths, dir)
-  dir = vim.fs.normalize(dir)
-  paths = vim.tbl_map(vim.fs.normalize, paths) ---@type string[]
+  dir = svim.fs.normalize(dir)
+  paths = vim.tbl_map(svim.fs.normalize, paths) ---@type string[]
   for _, path in ipairs(paths) do
     local name = vim.fn.fnamemodify(path, ":t")
     local to = dir .. "/" .. name
@@ -539,7 +539,7 @@ function M.get_bins()
   local path = vim.split(os.getenv("PATH") or "", is_win and ";" or ":", { plain = true })
   local bins = {} ---@type table<string, string>
   for _, p in ipairs(path) do
-    p = vim.fs.normalize(p)
+    p = svim.fs.normalize(p)
     for file, t in vim.fs.dir(p) do
       if t ~= "directory" then
         local fpath = p .. "/" .. file

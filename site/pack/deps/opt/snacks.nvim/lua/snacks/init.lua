@@ -10,6 +10,7 @@ setmetatable(M, {
 })
 
 _G.Snacks = M
+_G.svim = vim.fn.has("nvim-0.11") == 1 and vim or require("snacks.compat")
 
 ---@class snacks.Config.base
 ---@field example? string
@@ -53,9 +54,8 @@ M.config = setmetatable({}, {
   end,
 })
 
-local islist = vim.islist or vim.tbl_islist
 local is_dict_like = function(v) -- has string and number keys
-  return type(v) == "table" and (vim.tbl_isempty(v) or not islist(v))
+  return type(v) == "table" and (vim.tbl_isempty(v) or not svim.islist(v))
 end
 local is_dict = function(v) -- has only string keys
   return type(v) == "table" and (vim.tbl_isempty(v) or not v[1])

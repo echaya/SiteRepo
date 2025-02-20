@@ -9,8 +9,6 @@ local M = {}
 ---@field desc? string
 ---@field name? string
 
-local islist = vim.islist or vim.tbl_islist
-
 ---@param picker snacks.Picker
 function M.get(picker)
   local ref = picker:ref()
@@ -91,7 +89,7 @@ function M.resolve(action, picker, name, stack)
       action,
       stack
     )
-  elseif type(action) == "table" and islist(action) then
+  elseif type(action) == "table" and svim.islist(action) then
     ---@type snacks.picker.Action[]
     local actions = vim.tbl_map(function(a)
       return M.resolve(a, picker, nil, stack)

@@ -19,7 +19,7 @@ local uv = vim.uv or vim.loop
 ---@field status? string
 
 local function norm(path)
-  return vim.fs.normalize(path)
+  return svim.fs.normalize(path)
 end
 
 ---@class snacks.picker.explorer.State
@@ -40,7 +40,7 @@ function State.new(picker)
   Tree:refresh(picker:cwd())
 
   local buf = vim.api.nvim_win_get_buf(picker.main)
-  local buf_file = vim.fs.normalize(vim.api.nvim_buf_get_name(buf))
+  local buf_file = svim.fs.normalize(vim.api.nvim_buf_get_name(buf))
   if uv.fs_stat(buf_file) then
     Tree:open(buf_file)
   end
@@ -66,18 +66,27 @@ function State.new(picker)
   picker.list.win:on("DirChanged", function(_, ev)
     local p = ref()
     if p then
-      p:set_cwd(vim.fs.normalize(ev.file))
+      p:set_cwd(svim.fs.normalize(ev.file))
       p:find()
     end
   end)
 
   if opts.diagnostics then
-    picker.list.win:on("DiagnosticChanged", function(_, ev)
+    local dirty = false
+    local diag_update = Snacks.util.debounce(function()
+      dirty = false
       local p = ref()
       if p then
-        require("snacks.explorer.diagnostics").update(p:cwd())
-        p.list:set_target()
-        p:find()
+        if require("snacks.explorer.diagnostics").update(p:cwd()) then
+          p.list:set_target()
+          p:find()
+        end
+      end
+    end, { ms = 200 })
+    picker.list.win:on({ "InsertLeave", "DiagnosticChanged" }, function(_, ev)
+      dirty = dirty or ev.event == "DiagnosticChanged"
+      if vim.fn.mode() == "n" and dirty then
+        diag_update()
       end
     end)
   end

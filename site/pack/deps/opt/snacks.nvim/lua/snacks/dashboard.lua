@@ -792,14 +792,14 @@ function M.oldfiles(opts)
 
   local filter = {} ---@type {path:string, want:boolean}[]
   for path, want in pairs(opts.filter or {}) do
-    table.insert(filter, { path = vim.fs.normalize(path), want = want })
+    table.insert(filter, { path = svim.fs.normalize(path), want = want })
   end
   local done = {} ---@type table<string, boolean>
   local i = 1
   local oldfiles = vim.v.oldfiles
   return function()
     while oldfiles[i] do
-      local file = vim.fs.normalize(oldfiles[i], { _fast = true, expand_env = false })
+      local file = svim.fs.normalize(oldfiles[i], { _fast = true, expand_env = false })
       local want = not done[file]
       if want then
         done[file] = true
@@ -850,7 +850,7 @@ function M.sections.recent_files(opts)
   return function()
     opts = opts or {}
     local limit = opts.limit or 5
-    local root = opts.cwd and vim.fs.normalize(opts.cwd == true and vim.fn.getcwd() or opts.cwd) or ""
+    local root = opts.cwd and svim.fs.normalize(opts.cwd == true and vim.fn.getcwd() or opts.cwd) or ""
     local ret = {} ---@type snacks.dashboard.Section
     for file in M.oldfiles({ filter = { [root] = true } }) do
       if not opts.filter or opts.filter(file) then

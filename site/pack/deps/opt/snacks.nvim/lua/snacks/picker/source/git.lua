@@ -27,7 +27,7 @@ function M.files(opts, ctx)
     opts.cwd = Snacks.git.get_root() or uv.cwd() or "."
     ctx.picker:set_cwd(opts.cwd)
   end
-  local cwd = vim.fs.normalize(opts.cwd) or nil
+  local cwd = svim.fs.normalize(opts.cwd) or nil
   return require("snacks.picker.source.proc").proc({
     opts,
     {
@@ -59,7 +59,7 @@ function M.grep(opts, ctx)
     opts.cwd = Snacks.git.get_root() or uv.cwd() or "."
     ctx.picker:set_cwd(opts.cwd)
   end
-  local cwd = vim.fs.normalize(opts.cwd) or nil
+  local cwd = svim.fs.normalize(opts.cwd) or nil
   return require("snacks.picker.source.proc").proc({
     opts,
     {
@@ -121,9 +121,9 @@ function M.log(opts, ctx)
   end
 
   local Proc = require("snacks.picker.source.proc")
-  file = file and vim.fs.normalize(file) or nil
+  file = file and svim.fs.normalize(file) or nil
 
-  local cwd = vim.fs.normalize(file and vim.fn.fnamemodify(file, ":h") or opts and opts.cwd or uv.cwd() or ".") or nil
+  local cwd = svim.fs.normalize(file and vim.fn.fnamemodify(file, ":h") or opts and opts.cwd or uv.cwd() or ".") or nil
   cwd = Snacks.git.get_root(cwd) or cwd
 
   local renames = { file } ---@type string[]
@@ -180,7 +180,7 @@ function M.status(opts, ctx)
     table.insert(args, "--ignored=matching")
   end
 
-  local cwd = vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
+  local cwd = svim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
   cwd = Snacks.git.get_root(cwd)
   local prev ---@type snacks.picker.finder.Item?
   return require("snacks.picker.source.proc").proc({
@@ -226,6 +226,7 @@ function M.diff(opts, ctx)
         local diff = table.concat(header, "\n") .. "\n" .. table.concat(hunk, "\n")
         cb({
           text = file .. ":" .. line,
+          diff = diff,
           file = file,
           pos = { line, 0 },
           preview = { text = diff, ft = "diff", loc = false },
@@ -265,7 +266,7 @@ end
 ---@type snacks.picker.finder
 function M.branches(opts, ctx)
   local args = git_args(opts.args, "--no-pager", "branch", "--no-color", "-vvl")
-  local cwd = vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
+  local cwd = svim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
   cwd = Snacks.git.get_root(cwd)
 
   local patterns = {
@@ -309,7 +310,7 @@ end
 ---@type snacks.picker.finder
 function M.stash(opts, ctx)
   local args = git_args(opts.args, "--no-pager", "stash", "list")
-  local cwd = vim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
+  local cwd = svim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
   cwd = Snacks.git.get_root(cwd)
 
   return require("snacks.picker.source.proc").proc({
