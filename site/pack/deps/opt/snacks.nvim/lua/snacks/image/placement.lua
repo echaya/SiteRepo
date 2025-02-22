@@ -187,9 +187,11 @@ function M:render_grid(loc)
     },
   })
   local lines = {} ---@type string[]
-  for r = 1, loc.height do
+  local height = math.min(#diacritics, loc.height)
+  local width = math.min(#diacritics, loc.width)
+  for r = 1, height do
     local line = {} ---@type string[]
-    for c = 1, loc.width do
+    for c = 1, width do
       -- cell positions are encoded as diacritics for the placeholder unicode character
       line[#line + 1] = PLACEHOLDER
       line[#line + 1] = positions[r]
@@ -225,7 +227,7 @@ function M:render_grid(loc)
     vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, lines)
     vim.bo[self.buf].modifiable = false
     vim.bo[self.buf].modified = false
-    for r = 1, loc.height do
+    for r = 1, #lines do
       vim.api.nvim_buf_set_extmark(self.buf, self.ns, r - 1, 0, {
         end_col = #lines[r],
         hl_group = hl,

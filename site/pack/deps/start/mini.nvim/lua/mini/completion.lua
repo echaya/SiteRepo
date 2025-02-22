@@ -877,19 +877,15 @@ H.lsp_completion_response_items_to_complete_items = function(items, client_id)
 
   local res, item_kinds = {}, vim.lsp.protocol.CompletionItemKind
   for _, item in pairs(items) do
-    -- Documentation info
-    local docs = item.documentation
-    local info = H.table_get(docs, { 'value' })
-    if not info and type(docs) == 'string' then info = docs end
-    info = info or ''
-
+    local label_details, menu = item.labelDetails, nil
+    if label_details ~= nil then menu = (label_details.detail or '') .. (label_details.description or '') end
     table.insert(res, {
       word = H.get_completion_word(item),
       abbr = item.label,
       kind = item_kinds[item.kind] or 'Unknown',
       kind_hlgroup = item.kind_hlgroup,
-      menu = item.detail or '',
-      info = info,
+      menu = menu,
+      -- Do not set `info` field in favor of trying to first resolve it
       icase = 1,
       dup = 1,
       empty = 1,
@@ -965,81 +961,75 @@ H.show_info_window = function()
   local event = H.info.event
   if not event then return end
 
-  -- Try first to take lines from LSP request result.
-  local lines
-  if H.info.lsp.status == 'received' then
-    lines = H.process_lsp_response(H.info.lsp.result, function(response)
-      if not response.documentation then return {} end
-      local res = vim.lsp.util.convert_input_to_markdown_lines(response.documentation)
-      return H.normalize_lines(res)
-    end)
+  -- Get info lines to show
+  local lines = H.info_window_lines(H.info.id)
+  if lines == nil or H.is_whitespace(lines) then return end
 
-    H.info.lsp.status = 'done'
-  else
-    lines = H.info_window_lines(H.info.id)
-  end
-
-  -- Don't show anything if there is nothing to show
-  if not lines or H.is_whitespace(lines) then return end
-
-  -- If not already, create a permanent buffer where info will be
-  -- displayed. For some reason, it is important to have it created not in
-  -- `setup()` because in that case there is a small flash (which is really a
-  -- brief open of window at screen top, focus on it, and its close) on the
-  -- first show of info window.
+  -- Ensure permanent buffer with "markdown" highlighting to display info
   H.ensure_buffer(H.info, 'MiniCompletion:completion-item-info')
-
-  -- Add `lines` to info buffer. Use `wrap_at` to have proper width of
-  -- 'non-UTF8' section separators.
-  H.stylize_markdown(H.info.bufnr, lines, { wrap_at = H.get_config().window.info.width })
+  H.ensure_highlight(H.info, 'markdown')
+  vim.api.nvim_buf_set_lines(H.info.bufnr, 0, -1, false, lines)
 
   -- Compute floating window options
   local opts = H.info_window_options()
+  -- Adjust to hide top/bottom code block delimiters (as they are concealed)
+  local top_is_codeblock_start = lines[1]:find('^```%S*$')
+  if top_is_codeblock_start then opts.height = opts.height - 1 end
+  if lines[#lines]:find('^```$') then opts.height = opts.height - 1 end
+
+  -- Adjust section separator with better visual alternative
+  lines = vim.tbl_map(function(l) return l:gsub('^%-%-%-%-*$', string.rep('─', opts.width)) end, lines)
+  vim.api.nvim_buf_set_lines(H.info.bufnr, 0, -1, false, lines)
 
   -- Defer execution because of textlock during `CompleteChanged` event
   vim.schedule(function()
     -- Ensure that window doesn't open when it shouldn't be
     if not (H.pumvisible() and vim.fn.mode() == 'i') then return end
     H.open_action_window(H.info, opts)
+    local win_id = H.info.win_id
+    if not H.is_valid_win(win_id) then return end
+
+    -- Hide helper syntax elements (like ``` code blocks, etc.)
+    vim.wo[H.info.win_id].conceallevel = 3
+
+    -- Scroll past first line if it is a start of a code block
+    if top_is_codeblock_start then vim.api.nvim_win_call(win_id, function() vim.fn.winrestview({ topline = 2 }) end) end
   end)
 end
 
 H.info_window_lines = function(info_id)
-  -- Try to use 'info' field of Neovim's completion item
   local completed_item = H.table_get(H.info, { 'event', 'completed_item' }) or {}
-  local text = completed_item.info or ''
 
-  if not H.is_whitespace(text) then
-    -- Use `<text></text>` to be properly processed by `stylize_markdown()`
-    local lines = { '<text>' }
-    vim.list_extend(lines, vim.split(text, '\n'))
-    table.insert(lines, '</text>')
+  -- If popup is not from LSP, try using 'info' field of completion item
+  if H.completion.source ~= 'lsp' then
+    local text = completed_item.info or ''
+    return (not H.is_whitespace(text)) and vim.split(text, '\n') or nil
+  end
+
+  -- Try to get documentation from LSP's latest completion result
+  if H.info.lsp.status == 'received' then
+    local lines = H.process_lsp_response(H.info.lsp.result, H.normalize_item_doc)
+    H.info.lsp.status = 'done'
     return lines
   end
 
-  -- If popup is not from LSP then there is nothing more to do
-  if H.completion.source ~= 'lsp' then return nil end
+  -- If server doesn't support resolving completion item, reuse first response
+  local lsp_data = H.table_get(completed_item, { 'user_data', 'nvim', 'lsp' })
+  -- NOTE: If there is no LSP's completion item, then there is no point to
+  -- proceed as it should serve as parameters to LSP request
+  if lsp_data.completion_item == nil then return end
 
-  -- Try to get documentation from LSP's initial completion result
-  local lsp_completion_item = H.table_get(completed_item, { 'user_data', 'nvim', 'lsp', 'completion_item' })
-  -- If there is no LSP's completion item, then there is no point to proceed as
-  -- it should serve as parameters to LSP request
-  if not lsp_completion_item then return end
-  local doc = lsp_completion_item.documentation
-  if doc then
-    local lines = vim.lsp.util.convert_input_to_markdown_lines(doc)
-    return H.normalize_lines(lines)
-  end
+  local client = vim.lsp.get_client_by_id(lsp_data.client_id) or {}
+  local can_resolve = H.table_get(client.server_capabilities, { 'completionProvider', 'resolveProvider' })
+  if not can_resolve then return H.normalize_item_doc(lsp_data.completion_item) end
 
-  -- Finally, try request to resolve current completion to add documentation
+  -- Finally, request to resolve current completion to add more documentation
   local bufnr = vim.api.nvim_get_current_buf()
-  local params = lsp_completion_item
-
   local current_id = H.info.lsp.id + 1
   H.info.lsp.id = current_id
   H.info.lsp.status = 'sent'
 
-  local cancel_fun = vim.lsp.buf_request_all(bufnr, 'completionItem/resolve', params, function(result)
+  local cancel_fun = vim.lsp.buf_request_all(bufnr, 'completionItem/resolve', lsp_data.completion_item, function(result)
     -- Don't do anything if there is other LSP request in action
     if not H.is_lsp_current(H.info, current_id) then return end
 
@@ -1053,8 +1043,6 @@ H.info_window_lines = function(info_id)
   end)
 
   H.info.lsp.cancel_fun = cancel_fun
-
-  return nil
 end
 
 H.info_window_options = function()
@@ -1136,19 +1124,13 @@ H.show_signature_window = function()
     return
   end
 
-  -- Make markdown code block
-  table.insert(lines, 1, '```' .. vim.bo.filetype)
-  table.insert(lines, '```')
-
-  -- If not already, create a permanent buffer for signature
+  -- Ensure permanent buffer with current highlighting to display signature
   H.ensure_buffer(H.signature, 'MiniCompletion:signature-help')
-
-  -- Add `lines` to signature buffer. Use `wrap_at` to have proper width of
-  -- 'non-UTF8' section separators.
-  local buf_id = H.signature.bufnr
-  H.stylize_markdown(buf_id, lines, { wrap_at = H.get_config().window.signature.width })
+  H.ensure_highlight(H.signature, vim.bo.filetype)
+  vim.api.nvim_buf_set_lines(H.signature.bufnr, 0, -1, false, lines)
 
   -- Add highlighting of active parameter
+  local buf_id = H.signature.bufnr
   for i, hl_range in ipairs(hl_ranges) do
     if not vim.tbl_isempty(hl_range) and hl_range.first and hl_range.last then
       local first, last = hl_range.first, hl_range.last
@@ -1285,12 +1267,26 @@ end
 
 -- Helpers for floating windows -----------------------------------------------
 H.ensure_buffer = function(cache, name)
-  if type(cache.bufnr) == 'number' and vim.api.nvim_buf_is_valid(cache.bufnr) then return end
+  if H.is_valid_buf(cache.bufnr) then return end
 
-  cache.bufnr = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_name(cache.bufnr, name)
-  -- Make this buffer a scratch (can close without saving)
-  vim.fn.setbufvar(cache.bufnr, '&buftype', 'nofile')
+  local buf_id = vim.api.nvim_create_buf(false, true)
+  cache.bufnr = buf_id
+  vim.api.nvim_buf_set_name(buf_id, name)
+  vim.bo[buf_id].buftype = 'nofile'
+end
+
+H.ensure_highlight = function(cache, filetype)
+  if cache.hl_filetype == filetype then return end
+  cache.hl_filetype = filetype
+  local buf_id = cache.bufnr
+
+  local has_lang, lang = pcall(vim.treesitter.language.get_lang, filetype)
+  lang = has_lang and lang or filetype
+  -- TODO: Remove `opts.error` after compatibility with Neovim=0.11 is dropped
+  local has_parser, parser = pcall(vim.treesitter.get_parser, buf_id, lang, { error = false })
+  has_parser = has_parser and parser ~= nil
+  if has_parser then has_parser = pcall(vim.treesitter.start, buf_id, lang) end
+  if not has_parser then vim.bo[buf_id].syntax = filetype end
 end
 
 -- Returns tuple of height and width
@@ -1298,8 +1294,8 @@ H.floating_dimensions = function(lines, max_height, max_width)
   max_height, max_width = math.max(max_height, 1), math.max(max_width, 1)
 
   -- Simulate how lines will look in window with `wrap` and `linebreak`.
-  -- This is not 100% accurate (mostly when multibyte characters are present
-  -- manifesting into empty space at bottom), but does the job
+  -- This is not 100% accurate (mostly because of concealed characters and
+  -- multibyte manifest into empty space at bottom), but does the job
   local lines_wrap = {}
   for _, l in pairs(lines) do
     vim.list_extend(lines_wrap, H.wrap_line(l, max_width))
@@ -1336,13 +1332,11 @@ end
 H.close_action_window = function(cache, keep_timer)
   if not keep_timer then cache.timer:stop() end
 
-  if type(cache.win_id) == 'number' and vim.api.nvim_win_is_valid(cache.win_id) then
-    vim.api.nvim_win_close(cache.win_id, true)
-  end
+  if H.is_valid_win(cache.win_id) then vim.api.nvim_win_close(cache.win_id, true) end
   cache.win_id = nil
 
   -- For some reason 'buftype' might be reset. Ensure that buffer is scratch.
-  if cache.bufnr then vim.fn.setbufvar(cache.bufnr, '&buftype', 'nofile') end
+  if H.is_valid_buf(cache.bufnr) then vim.bo[cache.bufnr].buftype = 'nofile' end
 end
 
 -- Utilities ------------------------------------------------------------------
@@ -1352,6 +1346,10 @@ H.check_type = function(name, val, ref, allow_nil)
   if type(val) == ref or (ref == 'callable' and vim.is_callable(val)) or (allow_nil and val == nil) then return end
   H.error(string.format('`%s` should be %s, not %s', name, ref, type(val)))
 end
+
+H.is_valid_buf = function(buf_id) return type(buf_id) == 'number' and vim.api.nvim_buf_is_valid(buf_id) end
+
+H.is_valid_win = function(win_id) return type(win_id) == 'number' and vim.api.nvim_win_is_valid(win_id) end
 
 H.is_char_keyword = function(char)
   -- Using Vim's `match()` and `keyword` enables respecting Cyrillic letters
@@ -1452,14 +1450,29 @@ H.map = function(mode, lhs, rhs, opts)
   vim.keymap.set(mode, lhs, rhs, opts)
 end
 
-H.normalize_lines = function(lines)
-  -- Enaure no newline characters and no leading/trailing empty lines
-  lines = table.concat(lines, '\n'):gsub('^\n+', ''):gsub('\n+$', '')
-  return vim.split(lines, '\n')
-end
+H.normalize_item_doc = function(completion_item)
+  local detail, doc = completion_item.detail, completion_item.documentation
+  if detail == nil and doc == nil then return {} end
 
-H.stylize_markdown = function(buf_id, lines, opts)
-  return vim.lsp.util.stylize_markdown(buf_id, H.normalize_lines(lines), opts)
+  -- Extract string content. Treat markdown and plain kinds the same.
+  -- Show both `detail` and `documentation` if the first provides new info.
+  detail, doc = detail or '', (type(doc) == 'table' and doc.value or doc) or ''
+  detail = (H.is_whitespace(detail) or doc:find(detail, 1, true) ~= nil) and ''
+    -- Wrap details in language's code block to (usually) improve highlighting
+    -- This approach seems to work in 'hrsh7th/nvim-cmp'
+    or string.format('```%s\n%s\n```\n', vim.bo.filetype:match('^[^%.]*'), vim.trim(detail))
+  local text = detail .. doc
+
+  -- Ensure consistent line separators
+  text = text:gsub('\r\n?', '\n')
+  -- Remove trailing whitespace (converts blank lines to empty)
+  text = text:gsub('[ \t]+\n', '\n'):gsub('[ \t]+$', '\n')
+  -- Collapse multiple empty lines, remove top and bottom padding
+  text = text:gsub('\n\n+', '\n\n'):gsub('^\n+', ''):gsub('\n+$', '')
+  -- Remove padding around code blocks as they are concealed and appear empty
+  text = text:gsub('\n*(\n```%S+\n)', '%1'):gsub('(\n```\n?)\n*', '%1')
+
+  return text == '' and {} or vim.split(text, '\n')
 end
 
 -- TODO: Remove after compatibility with Neovim=0.9 is dropped

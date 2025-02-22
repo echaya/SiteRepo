@@ -261,6 +261,9 @@ function M:init_layout(layout)
       self.list:update({ force = true })
       self:update_titles()
     end,
+    on_update_pre = function()
+      self:update_titles()
+    end,
     layout = {
       backdrop = backdrop,
     },

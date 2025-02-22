@@ -41,13 +41,11 @@ M.transforms = {
     if not img.content then
       return
     end
-    local fg = Snacks.util.color("SnacksImageMath") or "#000000"
-    img.content = ([[
-#set page(width: auto, height: auto, margin: (x: 2pt, y: 2pt))
-#show math.equation.where(block: false): set text(top-edge: "bounds", bottom-edge: "bounds")
-#set text(size: 12pt, fill: rgb("%s"))
-%s
-%s]]):format(fg, M.get_header(ctx.buf), img.content)
+    img.content = Snacks.picker.util.tpl(Snacks.image.config.math.typst.tpl, {
+      color = Snacks.util.color("SnacksImageMath") or "#000000",
+      header = M.get_header(ctx.buf),
+      content = img.content,
+    }, { indent = true, prefix = "$" })
   end,
   latex = function(img, ctx)
     if not img.content then
@@ -62,7 +60,7 @@ M.transforms = {
       content = ("\\[%s\\]"):format(content)
     end
     local packages = { "xcolor" }
-    vim.list_extend(packages, Snacks.image.config.convert.math.packages)
+    vim.list_extend(packages, Snacks.image.config.math.latex.packages)
     for _, line in ipairs(vim.api.nvim_buf_get_lines(ctx.buf, 0, -1, false)) do
       if line:find("\\usepackage") then
         for _, p in ipairs(vim.split(line:match("{(.-)}") or "", ",%s*")) do
@@ -73,17 +71,13 @@ M.transforms = {
       end
     end
     table.sort(packages)
-    local fs = Snacks.image.config.convert.math.font_size or "large"
-    img.content = ([[
-\documentclass[preview,border=2pt,varwidth,12pt]{standalone}
-\usepackage{%s}
-\begin{document}
-%s
-{ \%s \selectfont
-  \color[HTML]{%s}
-%s}
-\end{document}
-    ]]):format(table.concat(packages, ", "), M.get_header(ctx.buf), fs, fg:upper():sub(2), content)
+    img.content = Snacks.picker.util.tpl(Snacks.image.config.math.latex.tpl, {
+      font_size = Snacks.image.config.math.latex.font_size or "large",
+      packages = table.concat(packages, ", "),
+      header = M.get_header(ctx.buf),
+      color = fg:upper():sub(2),
+      content = content,
+    }, { indent = true, prefix = "$" })
   end,
 }
 
@@ -233,7 +227,7 @@ function M._img(ctx)
   if img.src then
     img.src = M.resolve(ctx.buf, img.src)
   end
-  if not Snacks.image.config.doc.math and img.ext and img.ext:find("math") then
+  if not Snacks.image.config.math.enabled and img.ext and img.ext:find("math") then
     return
   end
   if img.content and not img.src then

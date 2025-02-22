@@ -1302,6 +1302,7 @@ Git log
 ---@type snacks.picker.grep.Config|{}
 {
   finder = "grep",
+  regex = false,
   format = "file",
   search = function(picker)
     return picker:word()

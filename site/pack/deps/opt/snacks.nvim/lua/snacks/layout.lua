@@ -32,6 +32,7 @@ M.meta = {
 ---@field fullscreen? boolean open in fullscreen
 ---@field hidden? string[] list of windows that will be excluded from the layout (but can be toggled)
 ---@field on_update? fun(layout: snacks.layout)
+---@field on_update_pre? fun(layout: snacks.layout)
 local defaults = {
   layout = {
     width = 0.6,
@@ -260,6 +261,11 @@ function M:update()
   if self.opts.fullscreen and not self.split then
     self.root.opts.row = self.root.opts.row + top
   end
+
+  if self.opts.on_update_pre then
+    self.opts.on_update_pre(self)
+  end
+
   for _, win in pairs(self:get_wins()) do
     if win:valid() then
       -- update windows with eventignore=all
