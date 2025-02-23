@@ -158,9 +158,9 @@ Snacks.scope.attach(cb, opts)
 ### `Snacks.scope.get()`
 
 ```lua
----@param opts? snacks.scope.Opts
----@return snacks.scope.Scope?
-Snacks.scope.get(opts)
+---@param cb fun(scope?: snacks.scope.Scope)
+---@param opts? snacks.scope.Opts|{parse?:boolean}
+Snacks.scope.get(cb, opts)
 ```
 
 ### `Snacks.scope.jump()`

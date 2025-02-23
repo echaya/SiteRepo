@@ -57,8 +57,8 @@ local queue = {} ---@type string[]?
 vim.defer_fn(function()
   if queue and #queue > 0 then
     io.stdout:write(table.concat(queue, ""))
-    queue = nil
   end
+  queue = nil
 end, 100)
 
 function M.size()
