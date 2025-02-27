@@ -64,7 +64,7 @@ function Render:setup()
         padding = left_padding,
         max_width = max_width,
         empty_rows = empty_rows,
-        indent = self:indent(),
+        indent = self:indent_size(),
     }
 
     return true
@@ -203,7 +203,7 @@ function Render:background(start_row, end_row)
     local win_col, padding = 0, {}
     if self.code.width == 'block' then
         win_col = self.data.margin + self.data.max_width + self.data.indent
-        table.insert(padding, self:padding_text(vim.o.columns * 2))
+        table.insert(padding, self:pad(vim.o.columns * 2))
     end
     for row = start_row, end_row do
         self.marks:add('code_background', row, self.data.col, {
@@ -233,9 +233,9 @@ function Render:left_pad(background)
     -- Use lowest priority (0) to include all other marks in padding when code block is at edge
     -- Use medium priority (1000) to include border marks while likely avoiding other plugin
     local priority = self.data.col == 0 and 0 or 1000
-    local fill_text = self:padding_text(self.data.col)
-    local margin_text = self:padding_text(margin)
-    local padding_text = self:padding_text(padding, background and self.code.highlight or nil)
+    local fill_text = self:pad(self.data.col)
+    local margin_text = self:pad(margin)
+    local padding_text = self:pad(padding, background and self.code.highlight or nil)
 
     local start_row, end_row = self.node.start_row, (self.node.end_row - 1)
     for row = start_row, end_row do

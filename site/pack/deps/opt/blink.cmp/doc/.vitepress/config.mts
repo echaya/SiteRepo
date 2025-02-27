@@ -39,6 +39,13 @@ export default defineConfig({
         ],
       },
       {
+        text: 'Modes',
+        items: [
+          { text: 'Cmdline', link: '/modes/cmdline' },
+          { text: 'Terminal', link: '/modes/term' },
+        ],
+      },
+      {
         text: 'Development',
         items: [
           { text: 'Architecture', link: '/development/architecture' },
@@ -49,7 +56,7 @@ export default defineConfig({
     ],
 
     socialLinks: [{ icon: 'github', link: 'https://github.com/saghen/blink.cmp' }],
-    editLink: { pattern: 'https://github.com/saghen/blink.cmp/edit/main/docs/:path' },
+    editLink: { pattern: 'https://github.com/saghen/blink.cmp/edit/main/doc/:path' },
 
     search: { provider: 'local' },
   },

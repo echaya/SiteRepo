@@ -19,8 +19,9 @@ function cmp.setup(opts)
   local config = require('blink.cmp.config')
   config.merge_with(opts)
 
-  require('blink.cmp.fuzzy.download').ensure_downloaded(function(err)
-    if err then vim.notify(err, vim.log.levels.ERROR) end
+  require('blink.cmp.fuzzy.download').ensure_downloaded(function(err, fuzzy_implementation)
+    if err then return vim.notify(err, vim.log.levels.ERROR) end
+    require('blink.cmp.fuzzy').set_implementation(fuzzy_implementation)
 
     -- setup highlights, keymap, completion, commands and signature help
     require('blink.cmp.highlights').setup()
@@ -187,7 +188,16 @@ function cmp.select_next(opts)
 end
 
 --- Gets the currently selected completion item
+--- @return blink.cmp.CompletionItem?
 function cmp.get_selected_item() return require('blink.cmp.completion.list').get_selected_item() end
+
+--- Gets the currently selected completion item index
+--- @return number?
+function cmp.get_selected_item_idx() return require('blink.cmp.completion.list').selected_item_idx end
+
+--- Gets the sorted list of completion items
+--- @return blink.cmp.CompletionItem[]
+function cmp.get_items() return require('blink.cmp.completion.list').items end
 
 --- Show the documentation window
 function cmp.show_documentation()

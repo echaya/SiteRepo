@@ -49,9 +49,12 @@ local M = {}
 ---@field public comment? render.md.UserHtmlComment
 ---@field public tag? table<string, render.md.HtmlTag>
 
+---@alias render.md.latex.Position 'above'|'below'
+
 ---@class (exact) render.md.UserLatex: render.md.UserBaseComponent
 ---@field public converter? string
 ---@field public highlight? string
+---@field public position? render.md.latex.Position
 ---@field public top_pad? integer
 ---@field public bottom_pad? integer
 
@@ -59,6 +62,8 @@ local M = {}
 ---@field public per_level? integer
 ---@field public skip_level? integer
 ---@field public skip_heading? boolean
+---@field public icon? string
+---@field public highlight? string
 
 ---@class (exact) render.md.UserInlineHighlight: render.md.UserBaseComponent
 ---@field public highlight? string
@@ -72,8 +77,17 @@ local M = {}
 ---@field public icon? string
 ---@field public highlight? string
 
+---@class (exact) render.md.LinkContext
+---@field public buf integer
+---@field public row integer
+---@field public start_col integer
+---@field public end_col integer
+---@field public destination string
+---@field public alias? string
+
 ---@class (exact) render.md.UserWikiLink
 ---@field public icon? string
+---@field public body? fun(ctx: render.md.LinkContext): string?
 ---@field public highlight? string
 
 ---@class (exact) render.md.UserFootnote
@@ -146,11 +160,15 @@ local M = {}
 ---| string[][]
 ---| fun(ctx: render.md.BulletContext): string?
 
+---@alias render.md.bullet.Padding
+---| integer
+---| fun(ctx: render.md.BulletContext): integer
+
 ---@class (exact) render.md.UserBullet: render.md.UserBaseComponent
 ---@field public icons? render.md.bullet.Icons
 ---@field public ordered_icons? render.md.bullet.Icons
----@field public left_pad? integer
----@field public right_pad? integer
+---@field public left_pad? render.md.bullet.Padding
+---@field public right_pad? render.md.bullet.Padding
 ---@field public highlight? string
 
 ---@class (exact) render.md.UserDash: render.md.UserBaseComponent
@@ -289,6 +307,7 @@ local M = {}
 ---@field public log_level? render.md.config.LogLevel
 ---@field public log_runtime? boolean
 ---@field public file_types? string[]
+---@field public change_events? string[]
 ---@field public injections? table<string, render.md.UserInjection>
 ---@field public on? render.md.UserCallback
 ---@field public overrides? render.md.UserConfigOverrides
@@ -322,6 +341,8 @@ M.default_config = {
     log_runtime = false,
     -- Filetypes this plugin will run on
     file_types = { 'markdown' },
+    -- Additional events that will trigger this plugin's render loop
+    change_events = {},
     -- Out of the box language injections for known filetypes that allow markdown to be
     -- interpreted in specified locations, see :h treesitter-language-injections
     -- Set enabled to false in order to disable
@@ -366,6 +387,10 @@ M.default_config = {
         converter = 'latex2text',
         -- Highlight for LaTeX blocks
         highlight = 'RenderMarkdownMath',
+        -- Determines where latex formula is rendered relative to block:
+        --  above: above latex block
+        --  below: below latex block
+        position = 'above',
         -- Amount of empty lines above LaTeX blocks
         top_pad = 0,
         -- Amount of empty lines below LaTeX blocks
@@ -738,7 +763,13 @@ M.default_config = {
         -- Applies to the inlined icon as a fallback
         highlight = 'RenderMarkdownLink',
         -- Applies to WikiLink elements
-        wiki = { icon = '󱗖 ', highlight = 'RenderMarkdownWikiLink' },
+        wiki = {
+            icon = '󱗖 ',
+            body = function()
+                return nil
+            end,
+            highlight = 'RenderMarkdownWikiLink',
+        },
         -- Define custom destination patterns so icons can quickly inform you of what a link
         -- contains. Applies to 'inline_link', 'uri_autolink', and wikilink nodes. When multiple
         -- patterns match a link the one with the longer pattern is used.
@@ -790,6 +821,10 @@ M.default_config = {
         skip_level = 1,
         -- Do not indent heading titles, only the body
         skip_heading = false,
+        -- Prefix added when indenting, one per level
+        icon = '▎',
+        -- Applied to icon
+        highlight = 'RenderMarkdownIndent',
     },
     html = {
         -- Turn on / off all HTML rendering

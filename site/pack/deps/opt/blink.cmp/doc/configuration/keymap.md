@@ -30,14 +30,6 @@ keymap = {
     end,
     'select_next'
   },
-
-  -- optionally, separate cmdline and terminal keymaps
-  cmdline = {
-    -- sets <CR> to accept the item and run the command immediately
-    -- use `select_accept_and_enter` to accept the item or the first item if none are selected
-    ['<CR>'] = { 'accept_and_enter', 'fallback' },
-  }
-  -- term = {}
 }
 ```
 
@@ -70,30 +62,15 @@ keymap = {
 - `snippet_forward`: Jumps to the next snippet placeholder
 - `snippet_backward`: Jumps to the previous snippet placeholder
 - `fallback`: Runs the next non-blink keymap, or runs the built-in neovim binding
+- `fallback_to_mappings`: Runs the next non-blink keymap (not built-in behavior)
 
 ## Cmdline and Terminal
 
-You may set a separate keymap for cmdline by defining `cmdline.keymap`, with an identical structure to `keymap`. The same applies for terminal keymaps, under `term.keymap`.
-
-```lua
-cmdline.keymap = {
-  preset = 'enter',
-
-  -- OPTIONAL: sets <CR> to accept the item and run the command immediately
-  -- use `select_accept_and_enter` to accept the item or the first item if none are selected
-  ['<CR>'] = { 'accept_and_enter', 'fallback' },
-
-  ...
-},
-term.keymap = {
-  preset = 'super-tab',
-  ...
-}
-```
+See the respective [cmdline documentation](../modes/cmdline.md) and [terminal documentation](../modes/term.md) for more information.
 
 ## Presets
 
-Set the preset to `none` to disable the presets
+Set the preset to `'none'` to disable the presets
 
 ### `default`
 
@@ -104,8 +81,8 @@ Set the preset to `none` to disable the presets
 
 ['<Up>'] = { 'select_prev', 'fallback' },
 ['<Down>'] = { 'select_next', 'fallback' },
-['<C-p>'] = { 'select_prev', 'fallback' },
-['<C-n>'] = { 'select_next', 'fallback' },
+['<C-p>'] = { 'select_prev', 'fallback_to_mappings' },
+['<C-n>'] = { 'select_next', 'fallback_to_mappings' },
 
 ['<C-b>'] = { 'scroll_documentation_up', 'fallback' },
 ['<C-f>'] = { 'scroll_documentation_down', 'fallback' },
@@ -115,6 +92,10 @@ Set the preset to `none` to disable the presets
 
 ['<C-k>'] = { 'show_signature', 'hide_signature', 'fallback' },
 ```
+
+### `cmdline`
+
+See the [cmdline documentation](../modes/cmdline.md)
 
 ### `super-tab`
 
@@ -136,8 +117,8 @@ You may want to set `completion.trigger.show_in_snippet = false` or use `complet
 
 ['<Up>'] = { 'select_prev', 'fallback' },
 ['<Down>'] = { 'select_next', 'fallback' },
-['<C-p>'] = { 'select_prev', 'fallback' },
-['<C-n>'] = { 'select_next', 'fallback' },
+['<C-p>'] = { 'select_prev', 'fallback_to_mappings' },
+['<C-n>'] = { 'select_next', 'fallback_to_mappings' },
 
 ['<C-b>'] = { 'scroll_documentation_up', 'fallback' },
 ['<C-f>'] = { 'scroll_documentation_down', 'fallback' },
@@ -159,8 +140,8 @@ You may want to set `completion.list.selection.preselect = false`. See more info
 
 ['<Up>'] = { 'select_prev', 'fallback' },
 ['<Down>'] = { 'select_next', 'fallback' },
-['<C-p>'] = { 'select_prev', 'fallback' },
-['<C-n>'] = { 'select_next', 'fallback' },
+['<C-p>'] = { 'select_prev', 'fallback_to_mappings' },
+['<C-n>'] = { 'select_next', 'fallback_to_mappings' },
 
 ['<C-b>'] = { 'scroll_documentation_up', 'fallback' },
 ['<C-f>'] = { 'scroll_documentation_down', 'fallback' },

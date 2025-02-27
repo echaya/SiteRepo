@@ -6096,7 +6096,7 @@ Default config:
   ```lua
   2
   ```
-- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/lua_ls.lua:14](../lua/lspconfig/configs/lua_ls.lua#L14)
+- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/lua_ls.lua:15](../lua/lspconfig/configs/lua_ls.lua#L15)
 - `single_file_support` : `true`
 
 
@@ -9156,7 +9156,7 @@ https://github.com/rust-lang/rust-analyzer
 rust-analyzer (aka rls 2.0), a language server for Rust
 
 
-See [docs](https://github.com/rust-lang/rust-analyzer/blob/release/docs/user/generated_config.adoc) for extra settings. The settings can be used like this:
+See [docs](https://rust-analyzer.github.io/book/configuration.html) for extra settings. The settings can be used like this:
 ```lua
 require'lspconfig'.rust_analyzer.setup{
   settings = {
@@ -9907,6 +9907,17 @@ require'lspconfig'.sourcekit.setup{}
 ```
 
 Default config:
+- `capabilities` :
+  ```lua
+  {
+    textDocument = {
+      diagnostic = {
+        dynamicRegistration = true,
+        relatedDocumentSupport = true
+      }
+    }
+  }
+  ```
 - `cmd` :
   ```lua
   { "sourcekit-lsp" }

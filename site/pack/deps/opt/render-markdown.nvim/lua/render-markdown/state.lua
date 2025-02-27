@@ -12,6 +12,7 @@ local configs = {}
 ---@field enabled boolean
 ---@field log_runtime boolean
 ---@field file_types string[]
+---@field change_events string[]
 ---@field on render.md.Callback
 ---@field custom_handlers table<string, render.md.Handler>
 local M = {}
@@ -43,6 +44,7 @@ function M.setup(default_config, user_config)
     M.enabled = config.enabled
     M.log_runtime = config.log_runtime
     M.file_types = config.file_types
+    M.change_events = config.change_events
     M.on = config.on
     M.custom_handlers = config.custom_handlers
     log.setup(config.log_level)
@@ -206,7 +208,7 @@ function M.validate()
             end)
             :nested('bullet', function(bullet)
                 component_rules(bullet)
-                    :type({ 'left_pad', 'right_pad' }, 'number')
+                    :type({ 'left_pad', 'right_pad' }, { 'number', 'function' })
                     :type('highlight', 'string')
                     :list_or_list_of_list({ 'icons', 'ordered_icons' }, 'string', 'function')
                     :check()
@@ -259,7 +261,7 @@ function M.validate()
                         footnote:type('superscript', 'boolean'):type({ 'prefix', 'suffix' }, 'string'):check()
                     end)
                     :nested('wiki', function(wiki)
-                        wiki:type({ 'icon', 'highlight' }, 'string'):check()
+                        wiki:type({ 'icon', 'highlight' }, 'string'):type('body', 'function'):check()
                     end)
                     :nested('custom', function(patterns)
                         patterns
@@ -283,12 +285,14 @@ function M.validate()
                 component_rules(indent)
                     :type('skip_heading', 'boolean')
                     :type({ 'per_level', 'skip_level' }, 'number')
+                    :type({ 'icon', 'highlight' }, 'string')
                     :check()
             end)
             :nested('latex', function(latex)
                 component_rules(latex)
                     :type({ 'top_pad', 'bottom_pad' }, 'number')
                     :type({ 'converter', 'highlight' }, 'string')
+                    :one_of('position', { 'above', 'below' })
                     :check()
             end)
             :nested('html', function(html)
@@ -320,7 +324,7 @@ function M.validate()
 
     buffer_rules(validator:spec(M.config, false))
         :type('log_runtime', 'boolean')
-        :list('file_types', 'string')
+        :list({ 'file_types', 'change_events' }, 'string')
         :one_of('preset', { 'none', 'lazy', 'obsidian' })
         :one_of('log_level', { 'off', 'debug', 'info', 'error' })
         :nested('injections', function(injections)

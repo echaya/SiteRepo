@@ -200,6 +200,8 @@ require('render-markdown').setup({
     log_runtime = false,
     -- Filetypes this plugin will run on
     file_types = { 'markdown' },
+    -- Additional events that will trigger this plugin's render loop
+    change_events = {},
     -- Out of the box language injections for known filetypes that allow markdown to be
     -- interpreted in specified locations, see :h treesitter-language-injections
     -- Set enabled to false in order to disable
@@ -244,6 +246,10 @@ require('render-markdown').setup({
         converter = 'latex2text',
         -- Highlight for LaTeX blocks
         highlight = 'RenderMarkdownMath',
+        -- Determines where latex formula is rendered relative to block:
+        --  above: above latex block
+        --  below: below latex block
+        position = 'above',
         -- Amount of empty lines above LaTeX blocks
         top_pad = 0,
         -- Amount of empty lines below LaTeX blocks
@@ -616,7 +622,13 @@ require('render-markdown').setup({
         -- Applies to the inlined icon as a fallback
         highlight = 'RenderMarkdownLink',
         -- Applies to WikiLink elements
-        wiki = { icon = '󱗖 ', highlight = 'RenderMarkdownWikiLink' },
+        wiki = {
+            icon = '󱗖 ',
+            body = function()
+                return nil
+            end,
+            highlight = 'RenderMarkdownWikiLink',
+        },
         -- Define custom destination patterns so icons can quickly inform you of what a link
         -- contains. Applies to 'inline_link', 'uri_autolink', and wikilink nodes. When multiple
         -- patterns match a link the one with the longer pattern is used.
@@ -668,6 +680,10 @@ require('render-markdown').setup({
         skip_level = 1,
         -- Do not indent heading titles, only the body
         skip_heading = false,
+        -- Prefix added when indenting, one per level
+        icon = '▎',
+        -- Applied to icon
+        highlight = 'RenderMarkdownIndent',
     },
     html = {
         -- Turn on / off all HTML rendering
@@ -1246,7 +1262,13 @@ require('render-markdown').setup({
         -- Applies to the inlined icon as a fallback
         highlight = 'RenderMarkdownLink',
         -- Applies to WikiLink elements
-        wiki = { icon = '󱗖 ', highlight = 'RenderMarkdownWikiLink' },
+        wiki = {
+            icon = '󱗖 ',
+            body = function()
+                return nil
+            end,
+            highlight = 'RenderMarkdownWikiLink',
+        },
         -- Define custom destination patterns so icons can quickly inform you of what a link
         -- contains. Applies to 'inline_link', 'uri_autolink', and wikilink nodes. When multiple
         -- patterns match a link the one with the longer pattern is used.
@@ -1318,6 +1340,10 @@ require('render-markdown').setup({
         skip_level = 1,
         -- Do not indent heading titles, only the body
         skip_heading = false,
+        -- Prefix added when indenting, one per level
+        icon = '▎',
+        -- Applied to icon
+        highlight = 'RenderMarkdownIndent',
     },
 })
 ```
@@ -1350,6 +1376,7 @@ The table below shows all the highlight groups with their default link
 | RenderMarkdownDash            | LineNr                             | Thematic break line        |
 | RenderMarkdownSign            | SignColumn                         | Sign column background     |
 | RenderMarkdownMath            | @markup.math                       | LaTeX lines                |
+| RenderMarkdownIndent          | Whitespace                         | Indent icon                |
 | RenderMarkdownHtmlComment     | @comment                           | HTML comment inline text   |
 | RenderMarkdownLink            | @markup.link.label.markdown_inline | Image & hyperlink icons    |
 | RenderMarkdownWikiLink        | RenderMarkdownLink                 | WikiLink icon & text       |

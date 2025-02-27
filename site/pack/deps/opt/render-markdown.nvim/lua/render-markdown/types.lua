@@ -28,6 +28,7 @@
 ---@class (exact) render.md.Latex: render.md.BaseComponent
 ---@field public converter string
 ---@field public highlight string
+---@field public position render.md.latex.Position
 ---@field public top_pad integer
 ---@field public bottom_pad integer
 
@@ -35,6 +36,8 @@
 ---@field public per_level integer
 ---@field public skip_level integer
 ---@field public skip_heading boolean
+---@field public icon string
+---@field public highlight string
 
 ---@class (exact) render.md.InlineHighlight: render.md.BaseComponent
 ---@field public highlight string
@@ -50,6 +53,7 @@
 
 ---@class (exact) render.md.WikiLink
 ---@field public icon string
+---@field public body fun(ctx: render.md.LinkContext): string?
 ---@field public highlight string
 
 ---@class (exact) render.md.Footnote
@@ -109,8 +113,8 @@
 ---@class (exact) render.md.Bullet: render.md.BaseComponent
 ---@field public icons render.md.bullet.Icons
 ---@field public ordered_icons render.md.bullet.Icons
----@field public left_pad integer
----@field public right_pad integer
+---@field public left_pad render.md.bullet.Padding
+---@field public right_pad render.md.bullet.Padding
 ---@field public highlight string
 
 ---@class (exact) render.md.Dash: render.md.BaseComponent
@@ -205,6 +209,7 @@
 ---@field public log_level render.md.config.LogLevel
 ---@field public log_runtime boolean
 ---@field public file_types string[]
+---@field public change_events string[]
 ---@field public injections table<string, render.md.Injection>
 ---@field public on render.md.Callback
 ---@field public overrides render.md.ConfigOverrides

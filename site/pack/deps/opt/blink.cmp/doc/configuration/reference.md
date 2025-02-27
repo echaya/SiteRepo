@@ -9,7 +9,7 @@ Do not copy the default configuration! Only include options you want to change i
 enabled = function() return vim.bo.buftype ~= "prompt" and vim.b.completion ~= false end,
 
 -- See the "keymap" page for more information
-keymap = 'default',
+keymap = { preset = 'default' },
 ```
 
 ## Snippets
@@ -90,13 +90,13 @@ completion.list = {
   selection = {
     -- When `true`, will automatically select the first item in the completion list
     preselect = true,
-    -- preselect = function(ctx) return ctx.mode ~= 'cmdline' end,
+    -- preselect = function(ctx) return vim.bo.filetype ~= 'markdown' end,
 
     -- When `true`, inserts the completion item automatically when selecting it
     -- You may want to bind a key to the `cancel` command (default <C-e>) when using this option, 
     -- which will both undo the selection and hide the completion menu
     auto_insert = true,
-    -- auto_insert = function(ctx) return ctx.mode ~= 'cmdline' end
+    -- auto_insert = function(ctx) return vim.bo.filetype ~= 'markdown' end
   },
 
   cycle = {
@@ -204,18 +204,14 @@ completion.menu.draw = {
     kind_icon = {
       ellipsis = false,
       text = function(ctx) return ctx.kind_icon .. ctx.icon_gap end,
-      highlight = function(ctx)
-        return require('blink.cmp.completion.windows.render.tailwind').get_hl(ctx) or 'BlinkCmpKind' .. ctx.kind
-      end,
+      highlight = function(ctx) return ctx.kind_hl end,
     },
 
     kind = {
       ellipsis = false,
       width = { fill = true },
       text = function(ctx) return ctx.kind end,
-      highlight = function(ctx)
-        return require('blink.cmp.completion.windows.render.tailwind').get_hl(ctx) or 'BlinkCmpKind' .. ctx.kind
-      end,
+      highlight = function(ctx) return ctx.kind_hl end,
     },
 
     label = {
@@ -248,6 +244,12 @@ completion.menu.draw = {
     source_name = {
       width = { max = 30 },
       text = function(ctx) return ctx.source_name end,
+      highlight = 'BlinkCmpSource',
+    },
+
+    source_id = {
+      width = { max = 30 },
+      text = function(ctx) return ctx.source_id end,
       highlight = 'BlinkCmpSource',
     },
   },
@@ -299,6 +301,10 @@ completion.ghost_text = {
   show_with_selection = true,
   -- Show the ghost text when no item has been selected, defaulting to the first item
   show_without_selection = false,
+  -- Show the ghost text when the menu is open
+  show_with_menu = true,
+  -- Show the ghost text when the menu is closed
+  show_without_menu = true,
 },
 ```
 
@@ -345,36 +351,59 @@ signature = {
 
 ```lua
 fuzzy = {
+  -- Controls which implementation to use for the fuzzy matcher.
+  --
+  -- 'prefer_rust_with_warning' (Recommended) If available, use the Rust implementation, automatically downloading prebuilt binaries on supported systems. Fallback to the Lua implementation when not available, emitting a warning message.
+  -- 'prefer_rust' If available, use the Rust implementation, automatically downloading prebuilt binaries on supported systems. Fallback to the Lua implementation when not available.
+  -- 'rust' Always use the Rust implementation, automatically downloading prebuilt binaries on supported systems. Error if not available.
+  -- 'lua' Always use the Lua implementation, doesn't download any prebuilt binaries
+  --
+  -- See the prebuilt_binaries section for controlling the download behavior
+  implementation = 'prefer_rust_with_warning',
+
   -- Allows for a number of typos relative to the length of the query
   -- Set this to 0 to match the behavior of fzf
+  -- Note, this does not apply when using the Lua implementation.
   max_typos = function(keyword) return math.floor(#keyword / 4) end,
+
   -- Frecency tracks the most recently/frequently used items and boosts the score of the item
+  -- Note, this does not apply when using the Lua implementation.
   use_frecency = true,
+
   -- Proximity bonus boosts the score of items matching nearby words
+  -- Note, this does not apply when using the Lua implementation.
   use_proximity = true,
+
   -- UNSAFE!! When enabled, disables the lock and fsync when writing to the frecency database. This should only be used on unsupported platforms (i.e. alpine termux)
+  -- Note, this does not apply when using the Lua implementation.
   use_unsafe_no_lock = false,
+
   -- Controls which sorts to use and in which order, falling back to the next sort if the first one returns nil
   -- You may pass a function instead of a string to customize the sorting
   sorts = { 'score', 'sort_text' },
 
   prebuilt_binaries = {
-    -- Whether or not to automatically download a prebuilt binary from github. If this is set to `false`
+    -- Whether or not to automatically download a prebuilt binary from github. If this is set to `false`,
     -- you will need to manually build the fuzzy binary dependencies by running `cargo build --release`
+    -- Disabled by default when `fuzzy.implementation = 'lua'`
     download = true,
+
     -- Ignores mismatched version between the built binary and the current git sha, when building locally
     ignore_version_mismatch = false,
+
     -- When downloading a prebuilt binary, force the downloader to resolve this version. If this is unset
     -- then the downloader will attempt to infer the version from the checked out git tag (if any).
     --
     -- Beware that if the fuzzy matcher changes while tracking main then this may result in blink breaking.
     force_version = nil,
+
     -- When downloading a prebuilt binary, force the downloader to use this system triple. If this is unset
     -- then the downloader will attempt to infer the system triple from `jit.os` and `jit.arch`.
     -- Check the latest release for all available system triples
     --
     -- Beware that if the fuzzy matcher changes while tracking main then this may result in blink breaking.
     force_system_triple = nil,
+
     -- Extra arguments that will be passed to curl like { 'curl', ..extra_curl_args, ..built_in_args }
     extra_curl_args = {}
   },
@@ -421,6 +450,7 @@ sources.providers = {
         items
       )
     end,
+    opts = { tailwind_color_icon = '██' },
 
     --- These properties apply to !!ALL sources!!
     --- NOTE: All of these options may be functions to get dynamic behavior
@@ -566,7 +596,7 @@ You may set configurations which will override the default configuration, specif
 ```lua
 cmdline = {
   enabled = true,
-  keymap = nil, -- Inherits from top level `keymap` config when not set
+  keymap = { preset = 'cmdline' },
   sources = function()
     local type = vim.fn.getcmdtype()
     -- Search forward and backward
@@ -578,14 +608,20 @@ cmdline = {
   completion = {
     trigger = {
       show_on_blocked_trigger_characters = {},
-      show_on_x_blocked_trigger_characters = nil, -- Inherits from top level `completion.trigger.show_on_blocked_trigger_characters` config when not set
+      show_on_x_blocked_trigger_characters = {},
     },
-    menu = {
-      auto_show = nil, -- Inherits from top level `completion.menu.auto_show` config when not set
-      draw = {
-        columns = { { 'label', 'label_description', gap = 1 } },
+    list = {
+      selection = {
+        -- When `true`, will automatically select the first item in the completion list
+        preselect = true,
+        -- When `true`, inserts the completion item automatically when selecting it
+        auto_insert = true,
       },
-    }
+    },
+    -- Whether to automatically show the window when new completion items are available
+    menu = { auto_show = false },
+    -- Displays a preview of the selected item on the current line
+    ghost_text = { enabled = true }
   }
 }
 ```
@@ -606,11 +642,18 @@ term = {
       show_on_blocked_trigger_characters = {},
       show_on_x_blocked_trigger_characters = nil, -- Inherits from top level `completion.trigger.show_on_blocked_trigger_characters` config when not set
     },
-    menu = {
-      auto_show = nil, -- Inherits from top level `completion.menu.auto_show` config when not set
-      draw = {
-        columns = { { 'label', 'label_description', gap = 1 } },
+    -- Inherits from top level config options when not set
+    list = {
+      selection = {
+        -- When `true`, will automatically select the first item in the completion list
+        preselect = nil,
+        -- When `true`, inserts the completion item automatically when selecting it
+        auto_insert = nil,
       },
-    }
+    },
+    -- Whether to automatically show the window when new completion items are available
+    menu = { auto_show = nil },
+    -- Displays a preview of the selected item on the current line
+    ghost_text = { enabled = nil }
   }
 }

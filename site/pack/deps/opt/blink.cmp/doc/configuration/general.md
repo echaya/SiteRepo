@@ -17,6 +17,11 @@ For more common configurations, see the [recipes](../recipes.md).
       and vim.b.completion ~= false
   end,
 
+  -- Disable cmdline
+  cmdline = {
+    enabled = false
+  },
+
   completion = {
     -- 'prefix' will fuzzy match on the text before the cursor
     -- 'full' will fuzzy match on the text before _and_ after the cursor
@@ -29,8 +34,8 @@ For more common configurations, see the [recipes](../recipes.md).
 
     -- Don't select by default, auto insert on selection
     list = { selection = { preselect = false, auto_insert = true } },
-    -- or set either per mode via a function
-    list = { selection = { preselect = function(ctx) return ctx.mode ~= 'cmdline' end } },
+    -- or set via a function
+    list = { selection = { preselect = function(ctx) return vim.bo.filetype ~= 'markdown' end } },
 
     menu = {
       -- Don't automatically show the completion menu
@@ -55,9 +60,12 @@ For more common configurations, see the [recipes](../recipes.md).
   sources = {
     -- Remove 'buffer' if you don't want text completions, by default it's only enabled when LSP returns no items
     default = { 'lsp', 'path', 'snippets', 'buffer' },
-    -- Disable cmdline completions
-    cmdline = {},
   },
+
+  -- Blink.cmp uses a Rust fuzzy matcher by default for frecency, proximity bonsu, typo resistance and
+  -- significantly better performance. A lua implementation has been included as well.
+  -- See the fuzzy documentation for more information
+  fuzzy = { implementation = 'prefer_rust_with_warning' },
 
   -- Use a preset for snippets, check the snippets documentation for more information
   snippets = { preset = 'default' | 'luasnip' | 'mini_snippets' },
