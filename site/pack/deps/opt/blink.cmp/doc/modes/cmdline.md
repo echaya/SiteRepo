@@ -1,6 +1,6 @@
 # Command line (cmdline)
 
-By default, blink.cmp enabled cmdline completions (`cmdline.enabled = true`), matchiing the behavior of the built-in `cmdline` completion:
+By default, blink.cmp enabled cmdline completions (`cmdline.enabled = true`), matching the behavior of the built-in `cmdline` completion:
 
 - Menu will not show automatically (`cmdline.completion.menu.auto_show = false`)
 - Pressing `<Tab>` will show the completion menu and insert the first item
@@ -27,8 +27,12 @@ Set via `cmdline.keymap.preset = 'cmdline'`, which is the default. Set to `'none
   },
   ['<S-Tab>'] = { 'show_and_insert', 'select_prev' },
 
-  ['<C-n>'] = { 'select_next' },
-  ['<C-p>'] = { 'select_prev' },
+  ['<C-space>'] = { 'show', 'fallback' },
+
+  ['<C-n>'] = { 'select_next', 'fallback' },
+  ['<C-p>'] = { 'select_prev', 'fallback' },
+  ['<Right>'] = { 'select_next', 'fallback' },
+  ['<Left>'] = { 'select_prev', 'fallback' },
 
   ['<C-y>'] = { 'select_and_accept' },
   ['<C-e>'] = { 'cancel' },
