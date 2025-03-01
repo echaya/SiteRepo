@@ -84,9 +84,6 @@ M.transforms = {
   end,
 }
 
----@diagnostic disable-next-line: invisible
-M.TS_ASYNC = (vim.treesitter.languagetree or {})._async_parse ~= nil
-
 local hover ---@type snacks.image.Hover?
 local uv = vim.uv or vim.loop
 local dir_cache = {} ---@type table<string, boolean>
@@ -221,38 +218,39 @@ function M.find(buf, cb, opts)
   end
   opts = opts or {}
   local from, to = opts.from, opts.to
-  parser:parse(from and to and { from, to } or true)
-  local ret = {} ---@type snacks.image.match[]
-  parser:for_each_tree(function(tstree, tree)
-    if not tstree then
-      return
-    end
-    local query = vim.treesitter.query.get(tree:lang(), "images")
-    if not query then
-      return
-    end
-    for _, match, meta in query:iter_matches(tstree:root(), buf, from and from - 1 or nil, to) do
-      if not meta[META_IGNORE] then
-        ---@type snacks.image.ctx
-        local ctx = {
-          buf = buf,
-          lang = tostring(meta[META_LANG] or meta["injection.language"] or tree:lang()),
-          meta = meta,
-        }
-        for id, nodes in pairs(match) do
-          nodes = type(nodes) == "userdata" and { nodes } or nodes
-          local name = query.captures[id]
-          local field = name == "image" and "pos" or name:match("^image%.(.*)$")
-          if field then
-            ---@diagnostic disable-next-line: assign-type-mismatch
-            ctx[field] = { node = nodes[1], meta = meta[id] or {} }
-          end
-        end
-        ret[#ret + 1] = M._img(ctx)
+  Snacks.util.parse(parser, from and to and { from, to } or true, function()
+    local ret = {} ---@type snacks.image.match[]
+    parser:for_each_tree(function(tstree, tree)
+      if not tstree then
+        return
       end
-    end
+      local query = vim.treesitter.query.get(tree:lang(), "images")
+      if not query then
+        return
+      end
+      for _, match, meta in query:iter_matches(tstree:root(), buf, from and from - 1 or nil, to) do
+        if not meta[META_IGNORE] then
+          ---@type snacks.image.ctx
+          local ctx = {
+            buf = buf,
+            lang = tostring(meta[META_LANG] or meta["injection.language"] or tree:lang()),
+            meta = meta,
+          }
+          for id, nodes in pairs(match) do
+            nodes = type(nodes) == "userdata" and { nodes } or nodes
+            local name = query.captures[id]
+            local field = name == "image" and "pos" or name:match("^image%.(.*)$")
+            if field then
+              ---@diagnostic disable-next-line: assign-type-mismatch
+              ctx[field] = { node = nodes[1], meta = meta[id] or {} }
+            end
+          end
+          ret[#ret + 1] = M._img(ctx)
+        end
+      end
+    end)
+    cb(ret)
   end)
-  cb(ret)
 end
 
 ---@param ctx snacks.image.ctx

@@ -234,6 +234,7 @@ function M:render_grid(loc)
   end
   local offset = range[2]
   local has_after = lines[#lines]:sub(range[4] + 1):find("%S") ~= nil
+  local has_before = lines[1]:sub(1, range[2]):find("%S") ~= nil
   local conceal = self.opts.conceal and "" or nil
   local extmarks = {} ---@type snacks.image.Extmark[]
 
@@ -308,6 +309,7 @@ function M:render_grid(loc)
     end
     self:_render(extmarks)
   else
+    local is_inline = has_before or has_after
     local icon = Snacks.image.config.icons[self.opts.type or "image"] or Snacks.image.config.icons.image
     -- render below in virtual lines
     extmarks[#extmarks + 1] = {
@@ -316,7 +318,7 @@ function M:render_grid(loc)
       end_row = range[3] - 1,
       end_col = range[4],
       conceal = conceal,
-      virt_text = { { icon, "SnacksImageAnchor" } },
+      virt_text = is_inline and { { icon, "SnacksImageAnchor" } } or nil,
       virt_text_pos = "inline",
       virt_text_hide = false,
       ---@param l string
