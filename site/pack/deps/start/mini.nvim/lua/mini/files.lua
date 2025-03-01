@@ -497,6 +497,7 @@
 ---       -- Tweak keys to your liking
 ---       map_split(buf_id, '<C-s>', 'belowright horizontal')
 ---       map_split(buf_id, '<C-v>', 'belowright vertical')
+---       map_split(buf_id, '<C-t>', 'tab')
 ---     end,
 ---   })
 --- <
@@ -518,11 +519,15 @@
 ---     vim.fn.setreg(vim.v.register, path)
 ---   end
 ---
+---   -- Open path with system default handler (useful for non-text files)
+---   local ui_open = function() vim.ui.open(MiniFiles.get_fs_entry().path) end
+---
 ---   vim.api.nvim_create_autocmd('User', {
 ---     pattern = 'MiniFilesBufferCreate',
 ---     callback = function(args)
 ---       local b = args.data.buf_id
 ---       vim.keymap.set('n', 'g~', set_cwd,   { buffer = b, desc = 'Set cwd' })
+---       vim.keymap.set('n', 'gX', ui_open,   { buffer = b, desc = 'OS open' })
 ---       vim.keymap.set('n', 'gy', yank_path, { buffer = b, desc = 'Yank path' })
 ---     end,
 ---   })
@@ -2423,21 +2428,13 @@ H.window_update = function(win_id, config)
   config.height = config.height ~= nil and math.min(config.height, max_height) or nil
   config.width = config.width ~= nil and math.min(config.width, vim.o.columns) or nil
 
-  -- Ensure proper title on Neovim>=0.9 (as they are not supported earlier)
-  if vim.fn.has('nvim-0.9') == 1 and config.title ~= nil then
-    -- Show only tail if title is too long
-    local title_string, width = config.title, config.width
-    local title_chars = vim.fn.strcharlen(title_string)
-    if width < title_chars then
-      title_string = '…' .. vim.fn.strcharpart(title_string, title_chars - width + 1, width - 1)
-    end
-    config.title = title_string
-    -- Preserve some config values
-    local win_config = vim.api.nvim_win_get_config(win_id)
-    config.border, config.title_pos = win_config.border, win_config.title_pos
-  else
-    config.title = nil
-  end
+  -- Ensure proper title
+  if type(config.title) == 'string' then config.title = H.fit_to_width(config.title, config.width) end
+  if vim.fn.has('nvim-0.9') == 0 then config.title = nil end
+
+  -- Preserve some config values
+  local win_config = vim.api.nvim_win_get_config(win_id)
+  config.border, config.title_pos = win_config.border, win_config.title_pos
 
   -- Update config
   config.relative = 'editor'
@@ -2855,10 +2852,14 @@ end
 
 H.edit = function(path, win_id)
   if type(path) ~= 'string' then return end
+  local b = vim.api.nvim_win_get_buf(win_id or 0)
+  local try_mimic_buf_reuse = (vim.fn.bufname(b) == '' and vim.bo[b].buftype ~= 'quickfix' and not vim.bo[b].modified)
+    and (#vim.fn.win_findbuf(b) == 1 and vim.deep_equal(vim.fn.getbufline(b, 1, '$'), { '' }))
   local buf_id = vim.fn.bufadd(vim.fn.fnamemodify(path, ':.'))
   -- Showing in window also loads. Use `pcall` to not error with swap messages.
   pcall(vim.api.nvim_win_set_buf, win_id or 0, buf_id)
   vim.bo[buf_id].buflisted = true
+  if try_mimic_buf_reuse then pcall(vim.api.nvim_buf_delete, b, { unload = false }) end
   return buf_id
 end
 
@@ -2867,6 +2868,11 @@ H.trigger_event = function(event_name, data) vim.api.nvim_exec_autocmds('User', 
 H.is_valid_buf = function(buf_id) return type(buf_id) == 'number' and vim.api.nvim_buf_is_valid(buf_id) end
 
 H.is_valid_win = function(win_id) return type(win_id) == 'number' and vim.api.nvim_win_is_valid(win_id) end
+
+H.fit_to_width = function(text, width)
+  local t_width = vim.fn.strchars(text)
+  return t_width <= width and text or ('…' .. vim.fn.strcharpart(text, t_width - width + 1, width - 1))
+end
 
 H.get_bufline = function(buf_id, line) return vim.api.nvim_buf_get_lines(buf_id, line - 1, line, false)[1] end
 

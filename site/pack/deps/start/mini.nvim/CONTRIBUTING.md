@@ -139,13 +139,13 @@ Here is a list of all highlight groups defined inside 'mini.nvim' modules. See d
     - `MiniAnimateNormalFloat`
 
 - 'mini.clue':
-    -  `MiniClueBorder`
-    -  `MiniClueDescGroup`
-    -  `MiniClueDescSingle`
-    -  `MiniClueNextKey`
-    -  `MiniClueNextKeyWithPostkeys`
-    -  `MiniClueSeparator`
-    -  `MiniClueTitle`
+    - `MiniClueBorder`
+    - `MiniClueDescGroup`
+    - `MiniClueDescSingle`
+    - `MiniClueNextKey`
+    - `MiniClueNextKeyWithPostkeys`
+    - `MiniClueSeparator`
+    - `MiniClueTitle`
 
 - 'mini.completion':
     - `MiniCompletionActiveParameter`
@@ -223,6 +223,7 @@ Here is a list of all highlight groups defined inside 'mini.nvim' modules. See d
 
 - 'mini.notify':
     - `MiniNotifyBorder`
+    - `MiniNotifyLspProgress`
     - `MiniNotifyNormal`
     - `MiniNotifyTitle`
 
@@ -230,7 +231,6 @@ Here is a list of all highlight groups defined inside 'mini.nvim' modules. See d
     - `MiniOperatorsExchangeFrom`
 
 - 'mini.pick':
-
     - `MiniPickBorder`
     - `MiniPickBorderBusy`
     - `MiniPickBorderText`
@@ -247,7 +247,6 @@ Here is a list of all highlight groups defined inside 'mini.nvim' modules. See d
     - `MiniPickPrompt`
 
 - 'mini.snippets':
-
     - `MiniSnippetsCurrent`
     - `MiniSnippetsCurrentReplace`
     - `MiniSnippetsFinal`

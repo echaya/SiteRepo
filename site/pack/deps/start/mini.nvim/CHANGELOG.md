@@ -1,5 +1,8 @@
 # Version 0.15.0.9000
 
+- Unify behavior of floating windows:
+    - Truncate title/footer from left if it is too wide.
+
 ## mini.ai
 
 - FEATURE: textobject identifier can now be any single character supported by `:h getcharstr()`. This also makes it possible to use characters outside of Latin alphanumeric and punctuation sets as `custom_textobjects` keys. Default textobject is extended to be anything but Latin letters (to fall back to `:h text-objects`).
@@ -41,6 +44,12 @@
     - 'MeanderingProgrammer/render-markdown.nvim'
     - 'OXY2DEV/helpview.nvim'
     - 'OXY2DEV/markview.nvim'
+
+## mini.notify
+
+- FEATURE: add `lsp_progress.level` option to control level of LSP progress notifications.
+- FEATURE: add `MiniNotifyLspProgress` highlight group to be used for LSP progress notifications.
+- FEATURE: add `data` field to notification specification and as a new argument to `MiniNotify.add()`. It can be used to store any data relevant to the notification. For example, notifications from `make_notify()` output set `source` field to `'vim.notify'`, while notifications from LSP progress set `source` to `'lsp_progress'`.
 
 ## mini.statusline
 
