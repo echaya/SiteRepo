@@ -1,8 +1,16 @@
 ---@meta
 
+---@class (exact) render.md.Completion
+---@field public enabled boolean
+
+---@class (exact) render.md.Completions
+---@field public coq render.md.Completion
+---@field public lsp render.md.Completion
+
 ---@class (exact) render.md.Callback
 ---@field public attach fun(ctx: render.md.CallbackContext)
 ---@field public render fun(ctx: render.md.CallbackContext)
+---@field public clear fun(ctx: render.md.CallbackContext)
 
 ---@class (exact) render.md.Injection
 ---@field public enabled boolean
@@ -53,7 +61,7 @@
 
 ---@class (exact) render.md.WikiLink
 ---@field public icon string
----@field public body fun(ctx: render.md.LinkContext): string?
+---@field public body fun(ctx: render.md.LinkContext): render.md.Text|string?
 ---@field public highlight string
 
 ---@class (exact) render.md.Footnote
@@ -111,11 +119,12 @@
 ---@field public custom table<string, render.md.CustomCheckbox>
 
 ---@class (exact) render.md.Bullet: render.md.BaseComponent
----@field public icons render.md.bullet.Icons
----@field public ordered_icons render.md.bullet.Icons
----@field public left_pad render.md.bullet.Padding
----@field public right_pad render.md.bullet.Padding
----@field public highlight string
+---@field public icons render.md.bullet.Text
+---@field public ordered_icons render.md.bullet.Text
+---@field public left_pad render.md.bullet.Int
+---@field public right_pad render.md.bullet.Int
+---@field public highlight render.md.bullet.Text
+---@field public scope_highlight render.md.bullet.Text
 
 ---@class (exact) render.md.Dash: render.md.BaseComponent
 ---@field public icon string
@@ -212,5 +221,6 @@
 ---@field public change_events string[]
 ---@field public injections table<string, render.md.Injection>
 ---@field public on render.md.Callback
+---@field public completions render.md.Completions
 ---@field public overrides render.md.ConfigOverrides
 ---@field public custom_handlers table<string, render.md.Handler>

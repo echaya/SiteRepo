@@ -2,11 +2,7 @@ local Iter = require('render-markdown.lib.iter')
 local Str = require('render-markdown.lib.str')
 local colors = require('render-markdown.colors')
 
----@class render.md.line.Text
----@field [1] string text
----@field [2] string|string[] highlights
-
----@alias render.md.Line render.md.line.Text[]
+---@alias render.md.Line render.md.Text[]
 
 ---@class render.md.Renderer
 ---@field protected marks render.md.Marks
@@ -44,24 +40,25 @@ function Base:sign(text, highlight)
     if highlight ~= nil then
         sign_highlight = colors.combine(highlight, sign_highlight)
     end
-    self.marks:add_start('sign', self.node, {
+    self.marks:add('sign', self.node.start_row, self.node.start_col, {
         sign_text = text,
         sign_hl_group = sign_highlight,
     })
 end
 
 ---@protected
----@param paragraph render.md.Node?
+---@param element boolean|render.md.Element
+---@param node render.md.Node?
 ---@param highlight? string
-function Base:checkbox_scope(paragraph, highlight)
-    if paragraph == nil or highlight == nil then
+function Base:scope(element, node, highlight)
+    if node == nil or highlight == nil then
         return
     end
-    paragraph = paragraph:child('inline')
-    if paragraph == nil then
+    local inline = node:child('inline')
+    if inline == nil then
         return
     end
-    self.marks:add_over('check_scope', paragraph, { hl_group = highlight })
+    self.marks:add_over(element, inline, { hl_group = highlight })
 end
 
 ---@protected
@@ -137,8 +134,8 @@ end
 
 ---@protected
 ---@param width integer
----@param highlight? string
----@return render.md.line.Text
+---@param highlight? string|string[]
+---@return render.md.Text
 function Base:pad(width, highlight)
     return { Str.pad(width), highlight or self.config.padding.highlight }
 end

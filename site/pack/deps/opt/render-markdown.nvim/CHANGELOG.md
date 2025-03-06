@@ -10,28 +10,36 @@
   [6d446de](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/6d446de33937633bc2104f45c943f4fae632b822)
 - `autocommand` events and wiki link `body` customization [#228](https://github.com/MeanderingProgrammer/render-markdown.nvim/discussions/228)
   [#345](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/345) [0df6719](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/0df6719abc3b547bc5b7111a750d8d7e035a7234)
-  [#350](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/350)
+  [#350](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/350) [a53ac54](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/a53ac54cebaad8dff37015d9b4c2d3b8c7d122ae)
 - indent mode icon support [#343](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/343)
   [21623a9](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/21623a9ded5a5f3d1fbd8626a69c174fbeb0543e)
   [33673e6](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/33673e630187669d52ec4f813b84d1d808e4619d)
 - bullet `left_pad` & `right_pad` support functions [#349](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/349)
   [98a3b7d](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/98a3b7d3a5befe495f0ab6ca967068f5f1da4421)
+- bullet `scope_highlight` & `highlight` function support [#354](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/354)
+  [9e3393b](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/9e3393b2a05fb2347cdc57ee399b910934fa9f83)
 - use default `render_modes = true` (all) for LSP docs [#326](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/326)
   [17a7746](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/17a77463f945c4b9e4f371c752efd90e3e1bf604)
 - update troubleshooting doc [f6c9e18](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/f6c9e1841cf644a258eb037dae587e3cf407d696)
 - update `lazy` preset to match `LazyVim` [4a28c13](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/4a28c135bc3548e398ba38178fec3f705cb26fe6)
 - latex position below [#347](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/347)
   [43a971e](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/43a971e7da82e5622797b36450424ebd66cc9046)
+- improve checkhealth [1ef7664](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/1ef766414d754007b265881fa43d1984b5901742)
+- after clear callback [#356](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/356)
+- process conceal_lines metadata for `0.11` [595ac4f](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/595ac4f7e7c0eaba7bf1d8fd6ec0f6ac91c7e33b)
 
 ### Bug Fixes
 
 - update checkhealth to not rely on `nvim-treesitter` [#322](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/322)
   [e05a9f2](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/e05a9f22f31c088ece3fa5928daf546a015b66ee)
+- lsp hover doc for `0.11` [#333](https://github.com/MeanderingProgrammer/render-markdown.nvim/discussions/333)
+  [b57d51d](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/b57d51d760f5e4f520414dbeb6dee3ec1ae07a83)
 
 ### Collaborator Shoutouts
 
 - @dsully
 - @mcDevnagh
+- @filippo-biondi
 
 ## 8.0.0 (2025-02-06)
 
@@ -543,7 +551,7 @@ The fields impacted are:
 - Case insensitive callout matching [#74](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/74)
   [123048b](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/123048b428eb85618780fcef9ea9f4d68b5d2508)
 - Improve lazy.nvim instructions [#80](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/80)
-- Improve LaTeX compatibility [#90](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/90)
+- Improve latex compatibility [#90](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/90)
   [695501b](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/695501bd98b1f2ec052889fc4faef24dedd7091b)
 - Heading block width [#94](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/94)
   [426b135](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/426b13574c8264636e5660e5f5a3b4f5e3d5a937)
@@ -816,7 +824,7 @@ The fields impacted are:
   [fea6f3d](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/fea6f3de62d864633ffe4e1e0fd92d1e746f77ed)
 - Use buffer parser to handle injections [#3](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/3)
   [e64255d](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/e64255d52dcdf05eb37d9e93fbfd300648c4c4dd)
-- Add LaTeX support [#6](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/6)
+- Add latex support [#6](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/6)
   [138a796](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/138a7962fcbe9cddcb47cc40a58ec0f5ab99ddfe)
   [da85a5e](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/da85a5e5885f1a11ab2b7a9059c16f3eede89bfe)
 - Support block quotes [106946a](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/106946ae924706c885bda14a9160398e79880f30)
@@ -829,7 +837,7 @@ The fields impacted are:
 - Add fat tables option [fb00297](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/fb00297774c6f44c0cc3346459ed85168ac93dce)
 - Support list icon based on level [#1](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/1)
   [#11](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/11)
-- Refactor + LaTeX cache [2b98d16](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/2b98d16f938dc9cedaa5f1c0659081035655f781)
+- Refactor + latex cache [2b98d16](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/2b98d16f938dc9cedaa5f1c0659081035655f781)
 - Support horizontal break [af819f3](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/af819f39c63aeb09ff3801dbfd5188cea55e48e7)
 - Support checkboxes [90637a1](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/90637a1120de47a3be57b00b7db4eee0d24834c8)
 

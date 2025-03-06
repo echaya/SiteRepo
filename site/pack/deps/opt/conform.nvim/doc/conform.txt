@@ -251,6 +251,7 @@ FORMATTERS                                                    *conform-formatter
 
 `air` - R formatter and language server.
 `alejandra` - The Uncompromising Nix Code Formatter.
+`ansible-lint` - ansible-lint with --fix.
 `asmfmt` - Go Assembler Formatter
 `ast-grep` - A CLI tool for code structural search, lint and rewriting. Written
            in Rust.
@@ -285,7 +286,7 @@ FORMATTERS                                                    *conform-formatter
 `buf` - A new way of working with Protocol Buffers.
 `buildifier` - buildifier is a tool for formatting bazel BUILD and .bzl files
              with a standard convention.
-`cabal_fmt` - Format cabal files with cabal-fmt
+`cabal_fmt` - Format cabal files with cabal-fmt.
 `caramel_fmt` - Format Caramel code.
 `cbfmt` - A tool to format codeblocks inside markdown and org documents.
 `clang-format` - Tool to format C/C++/… code according to a set of rules and
@@ -463,6 +464,7 @@ FORMATTERS                                                    *conform-formatter
 `ruff_organize_imports` - An extremely fast Python linter, written in Rust.
                         Organize imports.
 `rufo` - Rufo is an opinionated ruby formatter.
+`runic` - Julia code formatter.
 `rustfmt` - A tool for formatting rust code according to style guidelines.
 `rustywind` - A tool for formatting Tailwind CSS classes.
 `scalafmt` - Code formatter for Scala.
