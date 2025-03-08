@@ -32,10 +32,10 @@ let s:emerald      = '#21c7a8'
 let s:lime         = '#85dc85'
 let s:green        = '#a1cd5e'
 " Extra colors
-let s:cyan_blue    = '#296596'
+let s:cyan_blue    = '#316394'
 let s:bay_blue     = '#24567F'
-let s:kashmir_blue = '#4d618e'
-let s:plant_green  = '#2a4e57'
+let s:kashmir      = '#4d618e'
+let s:plant        = '#2a4e57'
 
 function! nightfly#Style() abort
     "-----------------------------------------------------------------------
@@ -236,8 +236,9 @@ function! nightfly#Style() abort
     exec 'highlight CursorLineNr cterm=none guibg=' . s:dark_blue . ' guifg=' . s:blue . ' gui=none'
     exec 'highlight CursorColumn guibg=' . s:dark_blue
     exec 'highlight CursorLine cterm=none guibg=' . s:dark_blue
-    exec 'highlight Folded guibg=' . s:dark_blue . ' guifg='. s:green
-    exec 'highlight FoldColumn guibg=' . s:slate_blue . ' guifg=' . s:green
+    highlight! link CursorLineSign CursorLine
+    exec 'highlight Folded guibg=' . s:dark_blue . ' guifg='. s:lime
+    exec 'highlight FoldColumn guibg=' . s:slate_blue . ' guifg=' . s:lime
     exec 'highlight SignColumn guibg=bg guifg=' . s:green
     exec 'highlight Todo guibg=' . s:deep_blue . ' guifg=' . s:yellow
     exec 'highlight SpecialKey guibg=bg guifg=' . s:blue
@@ -259,10 +260,10 @@ function! nightfly#Style() abort
     exec 'highlight Conceal guibg=NONE guifg=' . s:ash_blue
 
     " vimdiff/nvim -d
-    exec 'highlight DiffAdd guibg=' . s:plant_green
+    exec 'highlight DiffAdd guibg=' . s:plant
     exec 'highlight DiffChange guibg=' . s:slate_blue
     exec 'highlight DiffDelete guibg=' . s:slate_blue . ' guifg=' . s:steel_blue . ' gui=none'
-    exec 'highlight DiffText guibg=' . s:kashmir_blue
+    exec 'highlight DiffText guibg=' . s:kashmir
 
     "-----------------------------------------------------------------------
     " Language styling
@@ -702,6 +703,11 @@ function! nightfly#Style() abort
     highlight! link CocSemTypeTypeParameter NightflyOrchid
     highlight! link CocUnusedHighlight NightflyAshBlue
     exec 'highlight CocInlayHint guibg=' . s:dark_blue . ' guifg=' . s:grey_blue
+    "   Coc virtual text
+    highlight! link CocErrorVirtualText NightflyDiagnosticVirtualTextError
+    highlight! link CocWarningVirtualText NightflyDiagnosticVirtualTextWarn
+    highlight! link CocInfoVirtualText NightflyDiagnosticVirtualTextInfo
+    highlight! link CocHintVirtualText NightflyDiagnosticVirtualTextInfo
 
     " fern.vim plugin
     highlight! link FernBranchSymbol NightflyGreyBlue

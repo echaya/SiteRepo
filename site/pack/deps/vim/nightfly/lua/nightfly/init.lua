@@ -19,6 +19,7 @@ local cello_blue = "#1f4462"
 local regal_blue = "#1d3b53"
 local steel_blue = "#4b6479"
 local grey_blue = "#7c8f8f"
+local graphite_blue = "#768799"
 local cadet_blue = "#a1aab8"
 local ash_blue = "#acb4c2"
 local white_blue = "#d6deeb"
@@ -27,6 +28,7 @@ local yellow = "#e3d18a"
 local peach = "#ffcb8b"
 local tan = "#ecc48d"
 local orange = "#f78c6c"
+local cinnamon = "#ed9389"
 local orchid = "#e39aa6"
 local red = "#fc514e"
 local watermelon = "#ff5874"
@@ -40,10 +42,11 @@ local emerald = "#21c7a8"
 local lime = "#85dc85"
 local green = "#a1cd5e"
 -- Extra colors
-local cyan_blue = "#296596"
-local bay_blue = "#24567F"
-local kashmir_blue = "#4d618e"
-local plant_green = "#2a4e57"
+local cyan_blue = "#316394"
+local bay_blue = "#24567f"
+local kashmir = "#4d618e"
+local plant = "#2a4e57"
+local bermuda = "#6e8da6"
 
 local M = {}
 
@@ -66,6 +69,7 @@ M.palette = {
   peach = peach,
   tan = tan,
   orange = orange,
+  cinnamon = cinnamon,
   orchid = orchid,
   red = red,
   watermelon = watermelon,
@@ -80,8 +84,9 @@ M.palette = {
   green = green,
   cyan_blue = cyan_blue,
   bay_blue = bay_blue,
-  kashmir_blue = kashmir_blue,
-  plant_green = plant_green,
+  kashmir = kashmir,
+  plant = plant,
+  bermuda = bermuda,
 }
 
 M.style = function()
@@ -105,6 +110,7 @@ M.style = function()
   highlight(0, "NightflyPeach", { fg = peach })
   highlight(0, "NightflyTan", { fg = tan })
   highlight(0, "NightflyOrange", { fg = orange })
+  highlight(0, "NightflyCinnamon", { fg = cinnamon })
   highlight(0, "NightflyOrchid", { fg = orchid })
   highlight(0, "NightflyRed", { fg = red })
   highlight(0, "NightflyWatermelon", { fg = watermelon })
@@ -130,7 +136,6 @@ M.style = function()
   -- Generic line helper colors
   highlight(0, "NightflyCurrentLine", { bg = deep_blue })
   highlight(0, "NightflyEmeraldLine", { bg = slate_blue, fg = emerald })
-  highlight(0, "NightflyGreyBlueLine", { bg = dark_blue, fg = grey_blue })
   highlight(0, "NightflyTanLine", { bg = dark_blue, fg = tan })
   highlight(0, "NightflyWatermelonLine", { bg = slate_blue, fg = watermelon })
   highlight(0, "NightflyBlueLineActive", { bg = regal_blue, fg = blue })
@@ -139,6 +144,12 @@ M.style = function()
   highlight(0, "NightflyTurquoiseLineActive", { bg = regal_blue, fg = turquoise })
   highlight(0, "NightflyWhiteLineActive", { bg = regal_blue, fg = white_blue })
   highlight(0, "NightflyYellowLineActive", { bg = regal_blue, fg = yellow })
+  highlight(0, "NightflyGreyBlueRow", { bg = dark_blue, fg = grey_blue })
+  highlight(0, "NightflyRedRow", { bg = dark_blue, fg = red })
+  highlight(0, "NightflyYellowRow", { bg = dark_blue, fg = yellow })
+  highlight(0, "NightflyMalibuRow", { bg = dark_blue, fg = malibu })
+  highlight(0, "NightflyTurquoiseRow", { bg = dark_blue, fg = turquoise })
+  highlight(0, "NightflyEmeraldRow", { bg = dark_blue, fg = emerald })
 
   -------------------------------------------------------------------------
   -- Standard styling
@@ -241,7 +252,7 @@ M.style = function()
   highlight(0, "StatusLineNC", { bg = slate_blue, fg = cadet_blue })
   highlight(0, "Tabline", { bg = slate_blue, fg = cadet_blue })
   highlight(0, "TablineSel", { bg = dark_blue, fg = blue })
-  highlight(0, "TablineSelSymbol", { bg = dark_blue, fg = emerald })
+  highlight(0, "TablineSelSymbol", { link = "NightflyEmeraldRow" })
   highlight(0, "TablineFill", { bg = slate_blue, fg = slate_blue })
   highlight(0, "StatusLineTerm", { bg = slate_blue, fg = white })
   highlight(0, "StatusLineTermNC", { bg = slate_blue, fg = cadet_blue })
@@ -295,8 +306,9 @@ M.style = function()
   highlight(0, "CursorLineNr", { bg = dark_blue, fg = blue })
   highlight(0, "CursorColumn", { bg = dark_blue })
   highlight(0, "CursorLine", { bg = dark_blue })
-  highlight(0, "Folded", { bg = dark_blue, fg = green })
-  highlight(0, "FoldColumn", { bg = slate_blue, fg = green })
+  highlight(0, "CursorLineSign", { link = "CursorLine" })
+  highlight(0, "Folded", { bg = dark_blue, fg = lime })
+  highlight(0, "FoldColumn", { bg = slate_blue, fg = lime })
   highlight(0, "SignColumn", { bg = bg, fg = green })
   highlight(0, "Todo", { bg = deep_blue, fg = yellow })
   highlight(0, "SpecialKey", { bg = bg, fg = blue })
@@ -310,6 +322,7 @@ M.style = function()
   highlight(0, "QuickFixLine", { bg = deep_blue })
   highlight(0, "Delimiter", { link = "NightflyWhite" })
   highlight(0, "qfFileName", { link = "NightflyEmerald" })
+  highlight(0, "qfLineNr", { link = "NightflySteelBlue" })
 
   -- Color column (after line 80)
   highlight(0, "ColorColumn", { bg = black_blue })
@@ -318,10 +331,10 @@ M.style = function()
   highlight(0, "Conceal", { bg = none, fg = ash_blue })
 
   -- nvim -d
-  highlight(0, "DiffAdd", { bg = plant_green })
+  highlight(0, "DiffAdd", { bg = plant })
   highlight(0, "DiffChange", { bg = slate_blue })
   highlight(0, "DiffDelete", { bg = slate_blue, fg = steel_blue })
-  highlight(0, "DiffText", { bg = kashmir_blue })
+  highlight(0, "DiffText", { bg = kashmir })
 
   -------------------------------------------------------------------------
   -- Neovim standard styling
@@ -535,26 +548,17 @@ M.style = function()
   highlight(0, "@lsp.type.boolean", { link = "@boolean" })
   highlight(0, "@lsp.type.builtinConstant", { link = "@constant.builtin" })
   highlight(0, "@lsp.type.builtinType", { link = "@type.builtin" })
-  highlight(0, "@lsp.type.class", { link = "@type" })
-  highlight(0, "@lsp.type.enum", { link = "@type" })
-  highlight(0, "@lsp.type.enumMember", { link = "@constant" })
   highlight(0, "@lsp.type.escapeSequence", { link = "@string.escape" })
   highlight(0, "@lsp.type.formatSpecifier", { link = "@punctuation.special" })
   highlight(0, "@lsp.type.generic", { link = "@variable" })
-  highlight(0, "@lsp.type.interface", { link = "@type" })
-  highlight(0, "@lsp.type.keyword", { link = "@keyword" })
   highlight(0, "@lsp.type.lifetime", { link = "@storageclass" })
   highlight(0, "@lsp.type.macro", {}) -- Use fallback Tree-sitter style for this Semantic Token
   highlight(0, "@lsp.type.magicFunction", { link = "@function" })
   highlight(0, "@lsp.type.namespace", { link = "@namespace" })
-  highlight(0, "@lsp.type.number", { link = "@number" })
   highlight(0, "@lsp.type.operator", {}) -- Use fallback Tree-sitter style for this Semantic Token
   highlight(0, "@lsp.type.parameter", { link = "@parameter" })
-  highlight(0, "@lsp.type.property", { link = "@property" })
   highlight(0, "@lsp.type.selfKeyword", { link = "@variable.builtin" })
   highlight(0, "@lsp.type.selfParameter", { link = "@variable.builtin" })
-  highlight(0, "@lsp.type.string", { link = "@string" })
-  highlight(0, "@lsp.type.struct", { link = "@type" })
   highlight(0, "@lsp.type.typeAlias", { link = "@type.definition" })
   if g.nightflyUndercurls then
     highlight(0, "@lsp.type.unresolvedReference", { undercurl = true, sp = red })
@@ -602,11 +606,11 @@ M.style = function()
     highlight(0, "DiagnosticUnderlineOk", { underline = true, sp = emerald })
   end
   if g.nightflyVirtualTextColor then
-    highlight(0, "DiagnosticVirtualTextError", { bg = dark_blue, fg = red })
-    highlight(0, "DiagnosticVirtualTextWarn", { bg = dark_blue, fg = yellow })
-    highlight(0, "DiagnosticVirtualTextInfo", { bg = dark_blue, fg = malibu })
-    highlight(0, "DiagnosticVirtualTextHint", { bg = dark_blue, fg = turquoise })
-    highlight(0, "DiagnosticVirtualTextOk", { bg = dark_blue, fg = emerald })
+    highlight(0, "DiagnosticVirtualTextError", { link = "NightflyRedRow" })
+    highlight(0, "DiagnosticVirtualTextWarn", { link = "NightflyYellowRow" })
+    highlight(0, "DiagnosticVirtualTextInfo", { link = "NightflyMalibuRow" })
+    highlight(0, "DiagnosticVirtualTextHint", { link = "NightflyTurquoiseRow" })
+    highlight(0, "DiagnosticVirtualTextOk", { link = "NightflyEmeraldRow" })
   else
     highlight(0, "DiagnosticVirtualTextError", { link = "NightflySteelBlue" })
     highlight(0, "DiagnosticVirtualTextWarn", { link = "NightflySteelBlue" })
@@ -629,7 +633,7 @@ M.style = function()
   highlight(0, "LspCodeLens", { link = "NightflySteelBlue" })
   highlight(0, "LspCodeLensSeparator", { link = "NightflySteelBlue" })
   highlight(0, "LspInfoBorder", { link = "FloatBorder" })
-  highlight(0, "LspInlayHint", { bg = dark_blue, fg = grey_blue })
+  highlight(0, "LspInlayHint", { link = "NightflyGreyBlueRow" })
   highlight(0, "LspReferenceText", { link = "NightflyVisual" })
   highlight(0, "LspReferenceRead", { link = "NightflyVisual" })
   highlight(0, "LspReferenceWrite", { link = "NightflyVisual" })
@@ -732,14 +736,14 @@ M.style = function()
   highlight(0, "BufferCurrentINFO", { link = "NightflyBlueLineActive" })
   highlight(0, "BufferCurrentHINT", { link = "NightflyTurquoiseLineActive" })
   highlight(0, "BufferTabpages", { bg = slate_blue, fg = blue })
-  highlight(0, "BufferVisible", { link = "NightflyGreyBlueLine" })
-  highlight(0, "BufferVisibleIndex", { link = "NightflyGreyBlueLine" })
+  highlight(0, "BufferVisible", { link = "NightflyGreyBlueRow" })
+  highlight(0, "BufferVisibleIndex", { link = "NightflyGreyBlueRow" })
   highlight(0, "BufferVisibleMod", { link = "NightflyTanLine" })
-  highlight(0, "BufferVisibleSign", { link = "NightflyGreyBlueLine" })
+  highlight(0, "BufferVisibleSign", { link = "NightflyGreyBlueRow" })
   highlight(0, "BufferVisibleERROR", { link = "GitSignsDeleteCul" })
-  highlight(0, "BufferVisibleWARN", { bg = dark_blue, fg = yellow })
-  highlight(0, "BufferVisibleINFO", { bg = dark_blue, fg = blue })
-  highlight(0, "BufferVisibleHINT", { bg = dark_blue, fg = turquoise })
+  highlight(0, "BufferVisibleWARN", { link = "NightflyYellowRow" })
+  highlight(0, "BufferVisibleINFO", { link = "NightflyMalibuRow" })
+  highlight(0, "BufferVisibleHINT", { link = "NightflyTurquoiseRow" })
   highlight(0, "BufferInactive", { bg = slate_blue, fg = grey_blue })
   highlight(0, "BufferInactiveMod", { bg = slate_blue, fg = tan })
   highlight(0, "BufferInactiveSign", { bg = slate_blue, fg = cadet_blue })
@@ -788,7 +792,7 @@ M.style = function()
   highlight(0, "BlinkCmpLabelMatch", { link = "CmpItemAbbrMatch" })
   highlight(0, "BlinkCmpMenu", { link = "NormalFloat" })
   highlight(0, "BlinkCmpMenuBorder", { link = "FloatBorder" })
-  highlight(0, "BlinkCmpMenuSelection", { link = "PmenuSel" })
+  highlight(0, "BlinkCmpMenuSelection", { link = "NightflyVisual" })
 
   -- Bufferline plugin
   highlight(0, "BufferLineTabSelected", { fg = blue })
@@ -824,11 +828,11 @@ M.style = function()
   highlight(0, "GitSignsAdd", { link = "NightflyEmerald" })
   highlight(0, "GitSignsAddCul", { link = "TablineSelSymbol" })
   highlight(0, "GitSignsChange", { link = "NightflyMalibu" })
-  highlight(0, "GitSignsChangeCul", { bg = dark_blue, fg = malibu })
+  highlight(0, "GitSignsChangeCul", { link = "NightflyMalibuRow" })
   highlight(0, "GitSignsChangedelete", { link = "NightflyOrange" })
   highlight(0, "GitSignsChangedeleteCul", { bg = dark_blue, fg = orange })
   highlight(0, "GitSignsDelete", { link = "NightflyRed" })
-  highlight(0, "GitSignsDeleteCul", { bg = dark_blue, fg = red })
+  highlight(0, "GitSignsDeleteCul", { link = "NightflyRedRow" })
   highlight(0, "GitSignsTopdelete", { link = "NightflyRed" })
   highlight(0, "GitSignsTopdeleteCul", { link = "GitSignsDeleteCul" })
   highlight(0, "GitSignsUntracked", { link = "NightflySteelBlue" })
@@ -857,7 +861,7 @@ M.style = function()
 
   -- Indent Blankline plugin
   highlight(0, "IblIndent", { fg = deep_blue, nocombine = true })
-  highlight(0, "IblScope", { fg = violet, nocombine = true })
+  highlight(0, "IblScope", { fg = bermuda, nocombine = true })
   highlight(0, "IblWhitespace", { fg = deep_blue, nocombine = true })
 
   -- lazy.nvim plugin
@@ -1023,7 +1027,7 @@ M.style = function()
   highlight(0, "MiniTablineModifiedCurrent", { link = "NightflyTanLineActive" })
   highlight(0, "MiniTablineModifiedVisible", { link = "NightflyTanLine" })
   highlight(0, "MiniTablineTabpagesection", { link = "NightflyBlueMode" })
-  highlight(0, "MiniTablineVisible", { link = "NightflyGreyBlueLine" })
+  highlight(0, "MiniTablineVisible", { link = "NightflyGreyBlueRow" })
   highlight(0, "MiniTestEmphasis", { link = "NightflyUnderline" })
   highlight(0, "MiniTestFail", { link = "NightflyRed" })
   highlight(0, "MiniTestPass", { link = "NightflyGreen" })
@@ -1077,8 +1081,8 @@ M.style = function()
   highlight(0, "NoiceFormatTitle", { link = "NightflyWatermelon" })
 
   -- nvim-cmp plugin
-  highlight(0, "CmpItemAbbrMatch", { link = "NightflyTan" })
-  highlight(0, "CmpItemAbbrMatchFuzzy", { link = "NightflyOrange" })
+  highlight(0, "CmpItemAbbrMatch", { link = "NightflyCinnamon" })
+  highlight(0, "CmpItemAbbrMatchFuzzy", { link = "CmpItemAbbrMatch" })
   highlight(0, "CmpItemKind", { link = "NightflyWhite" })
   highlight(0, "CmpItemKindClass", { link = "NightflyEmerald" })
   highlight(0, "CmpItemKindColor", { link = "NightflyTurquoise" })
@@ -1242,6 +1246,9 @@ M.style = function()
   highlight(0, "SnacksDashboardHeader", { link = "NightflyBlue" })
   highlight(0, "SnacksDashboardIcon", { link = "NightflyMalibu" })
   highlight(0, "SnacksDashboardSpecial", { link = "NightflyViolet" })
+  --   indent
+  highlight(0, "SnacksIndent", { link = "IblIndent" })
+  highlight(0, "SnacksIndentScope", { link = "IblScope" })
   --   notifier
   highlight(0, "SnacksNotifierInfo", { link = "DiagnosticInfo" })
   highlight(0, "SnacksNotifierWarn", { link = "DiagnosticWarn" })
@@ -1263,6 +1270,32 @@ M.style = function()
   highlight(0, "SnacksBorderTitleDebug", { link = "FloatBorder" })
   highlight(0, "SnacksBorderTitleError", { link = "FloatBorder" })
   highlight(0, "SnacksBorderTitleTrace", { link = "FloatBorder" })
+  --   picker
+  highlight(0, "SnacksPicker", { link = "Normal" })
+  highlight(0, "SnacksPickerAuEvent", { link = "NightflyBlue" })
+  highlight(0, "SnacksPickerCol", { link = "NightflySteelBlue" })
+  highlight(0, "SnacksPickerCursorLine", { link = "Normal" })
+  highlight(0, "SnacksPickerDir", { fg = graphite_blue })
+  highlight(0, "SnacksPickerGitBranch", { link = "NightflyBlue" })
+  highlight(0, "SnacksPickerGitBreaking", { link = "NightflyWatermelon" })
+  highlight(0, "SnacksPickerGitDate", { link = "NightflyBlue" })
+  highlight(0, "SnacksPickerGitStatusAdded", { link = "diffAdded" })
+  highlight(0, "SnacksPickerGitStatusDeleted", { link = "diffAdded" })
+  highlight(0, "SnacksPickerGitStatusModified", { link = "NightflyRed" })
+  highlight(0, "SnacksPickerGitType", { link = "NightflyViolet" })
+  highlight(0, "SnacksPickerInputBorder", { link = "NightflyBlue" })
+  highlight(0, "SnacksPickerKeymapLhs", { link = "NightflyBlue" })
+  highlight(0, "SnacksPickerKeymapsLhs", { link = "NightflyBlue" })
+  highlight(0, "SnacksPickerListCursorLine", { link = "NightflyVisual" })
+  highlight(0, "SnacksPickerManPage", { link = "NightflyEmerald" })
+  highlight(0, "SnacksPickerMatch", { link = "NightflyOrange" })
+  highlight(0, "SnacksPickerPrompt", { link = "NightflyBlue" })
+  highlight(0, "SnacksPickerRow", { link = "NightflyLavender" })
+  highlight(0, "SnacksPickerSelected", { link = "NightflyWatermelon" })
+  highlight(0, "SnacksPickerTitle", { link = "NightflySteelBlue" })
+  highlight(0, "SnacksPickerTree", { link = "NightflyCelloBlue" })
+  highlight(0, "SnacksPickerUndoAdded", { link = "diffAdded" })
+  highlight(0, "SnacksPickerUndoRemoved", { link = "diffRemoved" })
 
   -- Telescope plugin
   highlight(0, "TelescopeBorder", { link = "FloatBorder" })
@@ -1302,6 +1335,11 @@ M.style = function()
   highlight(0, "CocSemTypeStruct", { link = "NightflyEmerald" })
   highlight(0, "CocSemTypeTypeParameter", { link = "NightflyOrchid" })
   highlight(0, "CocUnusedHighlight", { link = "NightflyAshBlue" })
+  --   Coc virtual text
+  highlight(0, "CocErrorVirtualText", { link = "DiagnosticVirtualTextError" })
+  highlight(0, "CocWarningVirtualText", { link = "DiagnosticVirtualTextWarn" })
+  highlight(0, "CocInfoVirtualText", { link = "DiagnosticVirtualTextInfo" })
+  highlight(0, "CocHintVirtualText", { link = "DiagnosticVirtualTextHint" })
 
   -- fern.vim plugin
   highlight(0, "FernBranchSymbol", { link = "NightflyGreyBlue" })
@@ -1363,7 +1401,7 @@ M.style = function()
   else
     highlight(0, "MatchWord", { link = "NightflyOrange" })
   end
-  highlight(0, "snipLeadingSpaces", { bg = bg, fg = white })
+  highlight(0, "snipLeadingSpaces", { link = "Normal" })
   highlight(0, "MatchWordCur", { bg = bg })
   highlight(0, "fishInnerVariable", { link = "NightflyTurquoise" })
   highlight(0, "fishParameter", { link = "NightflyTurquoise" })
@@ -1414,6 +1452,7 @@ M.custom_colors = function(colors)
   peach = colors.peach and colors.peach or M.palette.peach
   tan = colors.tan and colors.tan or M.palette.tan
   orange = colors.orange and colors.orange or M.palette.orange
+  cinnamon = colors.cinnamon and colors.cinnamon or M.palette.cinnamon
   orchid = colors.orchid and colors.orchid or M.palette.orchid
   red = colors.red and colors.red or M.palette.red
   watermelon = colors.watermelon and colors.watermelon or M.palette.watermelon
@@ -1428,8 +1467,9 @@ M.custom_colors = function(colors)
   lime = colors.lime and colors.lime or M.palette.lime
   cyan_blue = colors.cyan_blue and colors.cyan_blue or M.palette.cyan_blue
   bay_blue = colors.bay_blue and colors.bay_blue or M.palette.bay_blue
-  kashmir_blue = colors.kashmir_blue and colors.kashmir_blue or M.palette.kashmir_blue
-  plant_green = colors.plant_green and colors.plant_green or M.palette.plant_green
+  kashmir = colors.kashmir and colors.kashmir or M.palette.kashmir
+  plant = colors.plant and colors.plant or M.palette.plant
+  bermuda = colors.bermuda and colors.bermuda or M.palette.bermuda
 end
 
 return M

@@ -31,6 +31,9 @@
 
 ## mini.completion
 
+- BREAKING FEATURE: add snippet support. By default uses 'mini.snippets' to manage snippet session (if enabled, **highly recommended), falls back to `vim.snippet` on Neovim>=0.10. See "Snippets" section in `:h MiniCompletion` for more details.<br>
+  This is a breaking change mostly because items with `Snippet` kind are no longer filtered out by default.
+- FEATURE: add scrolling in info and signature window. By default can be done with `<C-f>` / `<C-b>` when target window is shown. Can be configured via `mappings.scroll_down` and `mappings.scroll_up` config options.
 - FEATURE: respect `isIncomplete` in LSP completion response and immediately force new completion request on the next key press.
 - FEATURE: both info and signature help windows now use tree-sitter highlighting:
     - Info window uses "markdown" parser (works best on Neovim>=0.10 as its parser is built-in). Special markdown characters are concealed (i.e. hidden) which might result into seemingly unnecessary whitespace as dimensions are computed not accounting for that.
@@ -38,6 +41,7 @@
 - BREAKING FEATURE: rework how LSP completion items are converted to Neovim's completion items:
     - Show `detail` highlighted as buffer's language at the start of info window, but only if `detail` provides information not already present in `documentation`. It was previously used as extra text in the popup menu (via `menu` field), but this doesn't quite follow LSP specification: `detail` and `documentation` fields can be delayed up until `completionItem/resolve` request which implies they should be treated similarly.
     - Show `labelDetails` as a part of the popup menu via `menu` completion item field.
+- BREAKING: prefer to not use functions as default config values. In particular, for `lsp_completion.process_items` (use `nil` with explicit fallback) and `fallback_action` (use `'<C-n>'`). This should not have any user facing effects and marked as breaking only because a structure of a default config has changed to be more aligned with other modules.
 
 ## mini.doc
 
