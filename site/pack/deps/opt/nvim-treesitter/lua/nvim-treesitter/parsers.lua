@@ -191,6 +191,14 @@ list.bitbake = {
   maintainers = { "@amaanq" },
 }
 
+list.blade = {
+  install_info = {
+    url = "https://github.com/EmranMR/tree-sitter-blade",
+    files = { "src/parser.c" },
+  },
+  maintainers = { "@calebdw" },
+}
+
 list.blueprint = {
   install_info = {
     url = "https://gitlab.com/gabmus/tree-sitter-blueprint.git",
@@ -2323,6 +2331,14 @@ list.tcl = {
     files = { "src/parser.c", "src/scanner.c" },
   },
   maintainers = { "@lewis6991" },
+}
+
+list.tera = {
+  install_info = {
+    url = "https://github.com/uncenter/tree-sitter-tera",
+    files = { "src/parser.c", "src/scanner.c" },
+  },
+  maintainers = { "@uncenter" },
 }
 
 list.terraform = {
