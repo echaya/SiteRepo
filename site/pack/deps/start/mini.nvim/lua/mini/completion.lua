@@ -127,13 +127,20 @@
 ---
 --- # Comparisons ~
 ---
---- - 'nvim-cmp':
----     - More complex design which allows multiple sources each in form of
----       separate plugin. `MiniCompletion` has two built in: LSP and fallback.
----     - Supports snippet expansion.
----     - Doesn't have customizable delays for basic actions.
----     - Doesn't allow fallback action.
----     - Doesn't provide signature help.
+--- - 'hrsh7th/nvim-cmp':
+---     - Implements own popup menu to show completion candidates, while this
+---       module reuses |ins-completion-menu|.
+---     - Has more complex design which allows multiple sources, each in a form of
+---       a separate plugin. This module has two built-in: LSP and fallback.
+---     - Requires separate plugin for automated signature help.
+---     - Implements own "ghost text" feature, while this module does not.
+---
+--- - 'Saghen/blink.cmp':
+---     - Mostly similar to 'nvim-cmp' comparison: provides more features at the
+---       cost of more code and config complexity, while this module is designed
+---       to provide only a handful of "enough" features while relying on Neovim's
+---       built-in capabilities as much as possible.
+---     - Both provide automated signature help out of the box.
 ---
 --- # Helpful mappings ~
 ---
@@ -426,7 +433,7 @@ MiniCompletion.completefunc_lsp = function(findstart, base)
     local process_items, is_incomplete = H.get_config().lsp_completion.process_items, false
     process_items = process_items or MiniCompletion.default_process_items
     local words = H.process_lsp_response(H.completion.lsp.result, function(response, client_id)
-      is_incomplete = is_incomplete or response.isIncomplete
+      is_incomplete = is_incomplete or (response.isIncomplete == true)
       -- Response can be `CompletionList` with 'items' field plus their
       -- defaults or `CompletionItem[]`
       local items = H.table_get(response, { 'items' }) or response
@@ -436,7 +443,8 @@ MiniCompletion.completefunc_lsp = function(findstart, base)
       return H.lsp_completion_response_items_to_complete_items(items, client_id)
     end)
 
-    H.completion.lsp.status = is_incomplete and 'done-isincomplete' or 'done'
+    H.completion.lsp.status = 'done'
+    H.completion.lsp.is_incomplete = is_incomplete
 
     -- Maybe trigger fallback action
     if vim.tbl_isempty(words) and H.completion.fallback then return H.trigger_fallback() end
@@ -450,31 +458,49 @@ end
 --- Default processing of LSP items
 ---
 --- Steps:
---- - Filter out items not starting with `base`.
---- - Sort by LSP specification.
+--- - Filter and sort items according to supplied method.
 --- - If |MiniIcons| is enabled, add <kind_hlgroup> based on the "lsp" category.
 ---
+--- Example of forcing fuzzy matching: >lua
+---
+---   local opts = { filtersort = 'fuzzy' }
+---   local process_items = function(items, base)
+---     return MiniCompletion.default_process_items(items, base, opts)
+---   end
+---   require('mini.completion').setup({
+---     lsp_completion = { process_items = process_items },
+---   })
+--- <
 ---@param items table Array of items from LSP response.
 ---@param base string Base for which completion is done. See |complete-functions|.
+---@param opts table|nil Options. Possible fields:
+---   - <filtersort> `(string|function)` - method of filtering and sorting items.
+---     If string, should be one of the following:
+---       - `'prefix'` - filter out items not starting with `base`, sort according
+---         to LSP specification. Use `filterText` and `sortText` respectively with
+---         fallback to `label`.
+---       - `'fuzzy'` - filter and sort with |matchfuzzy()| using `filterText`.
+---       - `'none'` - no filter and no sort.
+---     If callable, should take `items` and `base` arguments and return items array.
+---     Default: `'fuzzy'` if 'completeopt' contains "fuzzy", `'prefix'` otherwise.
 ---
 ---@return table Array of processed items from LSP response.
-MiniCompletion.default_process_items = function(items, base)
-  local res = vim.tbl_filter(
-    function(item) return vim.startswith(item.filterText or H.get_completion_word(item), base) end,
-    items
-  )
+MiniCompletion.default_process_items = function(items, base, opts)
+  opts = opts or {}
 
-  res = vim.deepcopy(res)
-  table.sort(res, function(a, b) return (a.sortText or a.label) < (b.sortText or b.label) end)
+  -- NOTE: custom filter+sort is important with frequent `isIncomplete`
+  local fs = opts.filtersort or (vim.o.completeopt:find('fuzzy') ~= nil and 'fuzzy' or 'prefix')
+  if type(fs) == 'string' then fs = H.filtersort_methods[fs] end
+  if not vim.is_callable(fs) then H.error('`filtersort` should be callable or one of "prefix", "fuzzy", "none"') end
+  local res = fs(items, base)
 
   -- Possibly add "kind" highlighting
-  if _G.MiniIcons ~= nil then
-    local add_kind_hlgroup = H.make_add_kind_hlgroup()
-    for _, item in ipairs(res) do
-      add_kind_hlgroup(item)
-    end
-  end
+  if _G.MiniIcons == nil then return res end
 
+  local add_kind_hlgroup = H.make_add_kind_hlgroup()
+  for _, item in ipairs(res) do
+    add_kind_hlgroup(item)
+  end
   return res
 end
 
@@ -537,7 +563,8 @@ H.keys = {
 -- Field `lsp` is a table describing state of all used LSP requests. It has the
 -- following structure:
 -- - id: identifier (consecutive numbers).
--- - status: one of 'sent', 'received', 'done', 'done-isincomplete', 'canceled'
+-- - status: one of 'sent', 'received', 'done', 'canceled'
+-- - is_incomplete: whether request was incomplete and require recomputing
 -- - result: result of request.
 -- - cancel_fun: function which cancels current request.
 
@@ -548,7 +575,7 @@ H.completion = {
   source = nil,
   text_changed_id = 0,
   timer = vim.loop.new_timer(),
-  lsp = { id = 0, status = nil, result = nil, cancel_fun = nil },
+  lsp = { id = 0, status = nil, is_incomplete = false, result = nil, cancel_fun = nil },
   start_pos = {},
 }
 
@@ -686,13 +713,15 @@ H.auto_completion = function()
 
   H.completion.timer:stop()
 
-  local is_incomplete = H.completion.lsp.status == 'done-isincomplete'
+  local is_incomplete = H.completion.lsp.is_incomplete
   local force = H.is_lsp_trigger(vim.v.char, 'completion') or is_incomplete
   if force then
-    -- If character is LSP trigger, force fresh LSP completion later
-    -- Check LSP trigger before checking for pumvisible because it should be
-    -- forced even if there are visible candidates
-    H.stop_completion(false)
+    -- Force fresh LSP completion if needed. Check before checking pumvisible
+    -- because it should be forced even if there are visible candidates.
+    -- Keep positive `is_incomplete` to allow fast typing and not "forget" that
+    -- list was incomplete after the second fast key press. This will force LSP
+    -- completion until `isIncomplete=false` response or general `stop()`.
+    H.stop_completion(false, is_incomplete)
   elseif H.pumvisible() then
     -- Do nothing if popup is visible. `H.pumvisible()` might be `true` even if
     -- there is no popup. It is common when manually typing candidate followed
@@ -723,9 +752,11 @@ H.auto_completion = function()
   if H.completion.source == 'lsp' then return H.trigger_fallback() end
 
   -- Debounce delay improves experience (can type fast without many popups)
-  -- Request immediately if improving incomplete suggestions (less flickering)
-  if is_incomplete then return H.trigger_twostep() end
-  H.completion.timer:start(H.get_config().delay.completion, 0, vim.schedule_wrap(H.trigger_twostep))
+  -- Request right away if improving incomplete suggestions (less flickering),
+  -- but still with `vim.schedule` because line is still not up to date during
+  -- `InsertCharPre` event.
+  local delay = is_incomplete and 0 or H.get_config().delay.completion
+  H.completion.timer:start(delay, 0, vim.schedule_wrap(H.trigger_twostep))
 end
 
 H.auto_info = function()
@@ -865,11 +896,11 @@ end
 H.default_fallback_action = function() vim.api.nvim_feedkeys(H.keys.ctrl_n, 'n', false) end
 
 -- Stop actions ---------------------------------------------------------------
-H.stop_completion = function(keep_source)
+H.stop_completion = function(keep_source, keep_lsp_is_incomplete)
   H.completion.timer:stop()
   H.cancel_lsp({ H.completion })
   H.completion.fallback, H.completion.force = true, false
-  if H.completion.lsp.status == 'done-isincomplete' then H.completion.lsp.status = 'done' end
+  if not keep_lsp_is_incomplete then H.completion.lsp.is_incomplete = false end
   if not keep_source then H.completion.source = nil end
 end
 
@@ -954,6 +985,24 @@ end
 
 H.is_lsp_current = function(cache, id) return cache.lsp.id == id and cache.lsp.status == 'sent' end
 
+H.filtersort_methods = {
+  prefix = function(items, base)
+    local res = vim.tbl_filter(function(x) return vim.startswith(H.lsp_get_filterword(x), base) end, items)
+    res = vim.deepcopy(res)
+    table.sort(res, H.lsp_item_compare)
+    return res
+  end,
+  fuzzy = function(items, base)
+    if base == '' then return vim.deepcopy(items) end
+    return vim.fn.matchfuzzy(items, base, { text_cb = H.lsp_get_filterword })
+  end,
+  none = function(items, _) return vim.deepcopy(items) end,
+}
+
+H.lsp_get_filterword = function(x) return x.filterText or x.label end
+
+H.lsp_item_compare = function(a, b) return (a.sortText or a.label) < (b.sortText or b.label) end
+
 -- Completion -----------------------------------------------------------------
 H.make_completion_request = function()
   local current_id = H.completion.lsp.id + 1
@@ -983,6 +1032,7 @@ H.apply_item_defaults = function(items, defaults)
   if type(defaults) ~= 'table' then return items end
 
   local edit_range, has_edit_range = defaults.editRange, type(defaults.editRange) == 'table'
+  local edit_range_range = (edit_range or {}).start ~= nil and edit_range or nil
   for _, item in ipairs(items) do
     item.commitCharacters = item.commitCharacters or defaults.commitCharacters
     item.data = item.data or defaults.data
@@ -993,8 +1043,7 @@ H.apply_item_defaults = function(items, defaults)
       -- Infer new text from `item.textEditText` designed for default edit case
       item.textEdit.newText = item.textEdit.newText or item.textEditText or item.label
       -- Default `editRange` is range (start+end) or insert+replace ranges
-      item.textEdit.start = item.textEdit.start or edit_range.start
-      item.textEdit['end'] = item.textEdit['end'] or edit_range['end']
+      item.textEdit.range = item.textEdit.range or edit_range_range
       item.textEdit.insert = item.textEdit.insert or edit_range.insert
       item.textEdit.replace = item.textEdit.replace or edit_range.replace
     end
