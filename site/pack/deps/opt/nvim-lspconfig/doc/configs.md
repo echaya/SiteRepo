@@ -188,6 +188,7 @@ Nvim by running `:help lspconfig-all`.
 - [motoko_lsp](#motoko_lsp)
 - [move_analyzer](#move_analyzer)
 - [msbuild_project_tools_server](#msbuild_project_tools_server)
+- [muon](#muon)
 - [mutt_ls](#mutt_ls)
 - [nelua_lsp](#nelua_lsp)
 - [neocmake](#neocmake)
@@ -239,7 +240,6 @@ Nvim by running `:help lspconfig-all`.
 - [pylyzer](#pylyzer)
 - [pyre](#pyre)
 - [pyright](#pyright)
-- [qml_lsp](#qml_lsp)
 - [qmlls](#qmlls)
 - [quick_lint_js](#quick_lint_js)
 - [r_language_server](#r_language_server)
@@ -6724,6 +6724,27 @@ Default config:
 - `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/msbuild_project_tools_server.lua:5](../lua/lspconfig/configs/msbuild_project_tools_server.lua#L5)
 
 
+## muon
+
+https://muon.build
+
+Snippet to enable the language server:
+```lua
+require'lspconfig'.muon.setup{}
+```
+
+Default config:
+- `cmd` :
+  ```lua
+  { "muon", "analyze", "lsp" }
+  ```
+- `filetypes` :
+  ```lua
+  { "meson" }
+  ```
+- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/muon.lua:4](../lua/lspconfig/configs/muon.lua#L4)
+
+
 ## mutt_ls
 
 https://github.com/neomutt/mutt-language-server
@@ -8369,34 +8390,13 @@ Default config:
 - `single_file_support` : `true`
 
 
-## qml_lsp
-
-https://invent.kde.org/sdk/qml-lsp
-
-LSP implementation for QML (autocompletion, live linting, etc. in editors)
-
-Snippet to enable the language server:
-```lua
-require'lspconfig'.qml_lsp.setup{}
-```
-
-Default config:
-- `cmd` :
-  ```lua
-  { "qml-lsp" }
-  ```
-- `filetypes` :
-  ```lua
-  { "qmljs" }
-  ```
-- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/qml_lsp.lua:4](../lua/lspconfig/configs/qml_lsp.lua#L4)
-
-
 ## qmlls
 
-https://github.com/qt/qtdeclarative
+https://doc.qt.io/qt-6/qtqml-tooling-qmlls.html
 
-LSP implementation for QML (autocompletion, live linting, etc. in editors),
+> QML Language Server is a tool shipped with Qt that helps you write code in your favorite (LSP-supporting) editor.
+
+Source in the [QtDeclarative repository](https://code.qt.io/cgit/qt/qtdeclarative.git/)
 
 Snippet to enable the language server:
 ```lua
