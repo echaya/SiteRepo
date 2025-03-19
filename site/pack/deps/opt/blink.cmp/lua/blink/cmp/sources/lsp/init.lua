@@ -20,6 +20,8 @@ function lsp.new(opts)
     opts
   )
 
+  require('blink.cmp.sources.lsp.commands').register()
+
   return setmetatable({ opts = opts }, { __index = lsp })
 end
 
@@ -43,8 +45,11 @@ end
 
 function lsp:get_completions(context, callback)
   local completion_lib = require('blink.cmp.sources.lsp.completion')
+  -- HACK: filter out htmx-lsp because it never responds
   local clients = vim.tbl_filter(
-    function(client) return client.server_capabilities and client.server_capabilities.completionProvider end,
+    function(client)
+      return client.server_capabilities and client.server_capabilities.completionProvider and client.name ~= 'htmx'
+    end,
     vim.lsp.get_clients({ bufnr = 0, method = 'textDocument/completion' })
   )
 
@@ -172,14 +177,16 @@ end
 
 --- Execute ---
 
-function lsp:execute(source, item, callback)
+function lsp:execute(ctx, item, callback, default_implementation)
+  default_implementation()
+
   local client = vim.lsp.get_client_by_id(item.client_id)
   if client and item.command then
     if vim.fn.has('nvim-0.11') == 1 then
-      client:exec_cmd(item.command, { bufnr = source.bufnr }, function() callback() end)
+      client:exec_cmd(item.command, { bufnr = ctx.bufnr }, function() callback() end)
     else
       -- TODO: remove this once 0.11 is the minimum version
-      client:_exec_cmd(item.command, { bufnr = source.bufnr }, function() callback() end)
+      client:_exec_cmd(item.command, { bufnr = ctx.bufnr }, function() callback() end)
     end
   else
     callback()

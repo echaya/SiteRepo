@@ -89,8 +89,6 @@ local function on_cursor_moved(event, is_ignored)
     return
   end
 
-  local is_on_trigger_for_show = trigger.is_trigger_character(char_under_cursor)
-
   -- TODO: doesn't handle `a` where the cursor moves immediately after
   -- Reproducible with `example.|a` and pressing `a`, should not show the menu
   local insert_enter_on_trigger_character = config.show_on_trigger_character
@@ -103,11 +101,7 @@ local function on_cursor_moved(event, is_ignored)
     trigger.show({ trigger_kind = 'keyword' })
 
   -- check if we've entered insert mode on a trigger character
-  -- or if we've moved onto a trigger character while open
-  elseif
-    insert_enter_on_trigger_character
-    or (is_on_trigger_for_show and trigger.context ~= nil and trigger.context.trigger.kind ~= 'prefetch')
-  then
+  elseif insert_enter_on_trigger_character then
     trigger.context = nil
     trigger.show({ trigger_kind = 'trigger_character', trigger_character = char_under_cursor })
 
@@ -249,11 +243,18 @@ function trigger.show(opts)
   -- if we're manually triggering, set it as the initial trigger kind
   if opts.trigger_kind == 'manual' then initial_trigger_kind = 'manual' end
 
+  local initial_trigger_character = trigger.context and trigger.context.trigger.initial_character
+    or opts.trigger_character
+  -- reset the initial character if the context iid has changed
+  if trigger.context ~= nil and trigger.context.id ~= trigger.current_context_id then
+    initial_trigger_character = nil
+  end
+
   trigger.context = context.new({
     id = trigger.current_context_id,
     providers = providers,
     initial_trigger_kind = initial_trigger_kind,
-    initial_trigger_character = trigger.context and trigger.context.trigger.initial_character or opts.trigger_character,
+    initial_trigger_character = initial_trigger_character,
     trigger_kind = opts.trigger_kind,
     trigger_character = opts.trigger_character,
     initial_selected_item_idx = opts.initial_selected_item_idx,
@@ -265,6 +266,7 @@ end
 
 function trigger.hide()
   if not trigger.context then return end
+
   trigger.context = nil
   trigger.hide_emitter:emit()
 end

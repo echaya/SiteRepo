@@ -1,6 +1,7 @@
 --- @class blink.cmp.LuasnipSourceOptions
 --- @field use_show_condition? boolean Whether to use show_condition for filtering snippets
 --- @field show_autosnippets? boolean Whether to show autosnippets in the completion list
+--- @field prefer_doc_trig? boolean When expanding `regTrig` snippets, prefer `docTrig` over `trig` placeholder
 
 --- @class blink.cmp.LuasnipSource : blink.cmp.Source
 --- @field config blink.cmp.LuasnipSourceOptions
@@ -15,13 +16,24 @@ local source = {}
 local defaults_config = {
   use_show_condition = true,
   show_autosnippets = true,
+  prefer_doc_trig = false,
 }
+
+---@param snippet table
+---@param event string
+---@param callback fun(table, table)
+local function add_luasnip_callback(snippet, event, callback)
+  local events = require('luasnip.util.events')
+  snippet.callbacks[-1] = snippet.callbacks[-1] or {}
+  snippet.callbacks[-1][events[event]] = callback
+end
 
 function source.new(opts)
   local config = vim.tbl_deep_extend('keep', opts, defaults_config)
   require('blink.cmp.config.utils').validate('sources.providers.luasnip', {
     use_show_condition = { config.use_show_condition, 'boolean' },
     show_autosnippets = { config.show_autosnippets, 'boolean' },
+    prefer_doc_trig = { config.prefer_doc_trig, 'boolean' },
   }, config)
 
   local self = setmetatable({}, { __index = source })
@@ -69,6 +81,9 @@ function source:get_completions(ctx, callback)
     local snippets = require('luasnip').get_snippets(ft, { type = 'snippets' })
     if self.config.show_autosnippets then
       local autosnippets = require('luasnip').get_snippets(ft, { type = 'autosnippets' })
+      for _, s in ipairs(autosnippets) do
+        add_luasnip_callback(s, 'enter', require('blink.cmp').hide)
+      end
       snippets = require('blink.cmp.lib.utils').shallow_copy(snippets)
       vim.list_extend(snippets, autosnippets)
     end
@@ -89,8 +104,8 @@ function source:get_completions(ctx, callback)
       --- @type lsp.CompletionItem
       local item = {
         kind = require('blink.cmp.types').CompletionItemKind.Snippet,
-        label = snip.trigger,
-        insertText = snip.trigger,
+        label = snip.regTrig and snip.name or snip.trigger,
+        insertText = self.config.prefer_doc_trig and snip.docTrig or snip.trigger,
         insertTextFormat = vim.lsp.protocol.InsertTextFormat.PlainText,
         sortText = sort_text,
         data = { snip_id = snip.id, show_condition = snip.show_condition },
@@ -137,31 +152,50 @@ function source:resolve(item, callback)
   callback(resolved_item)
 end
 
-function source:execute(_, item)
+function source:execute(ctx, item)
   local luasnip = require('luasnip')
   local snip = luasnip.get_id_snippet(item.data.snip_id)
 
   -- if trigger is a pattern, expand "pattern" instead of actual snippet
-  if snip.regTrig then snip = snip:get_pattern_expand_helper() end
+  if snip.regTrig then
+    local docTrig = self.config.prefer_doc_trig and snip.docTrig
+    snip = snip:get_pattern_expand_helper()
+
+    if docTrig then
+      add_luasnip_callback(snip, 'pre_expand', function(snip, _)
+        if #snip.insert_nodes == 0 then
+          snip.insert_nodes[0].static_text = { docTrig }
+        else
+          local matches = { string.match(docTrig, snip.trigger) }
+          for i, match in ipairs(matches) do
+            local idx = i ~= #matches and i or 0
+            snip.insert_nodes[idx].static_text = { match }
+          end
+        end
+      end)
+    end
+  end
 
   -- get (0, 0) indexed cursor position
-  -- the completion has been accepted by this point, so ctx.cursor is out of date
-  local cursor = vim.api.nvim_win_get_cursor(0)
+  local cursor = vim.deepcopy(ctx.cursor)
   cursor[1] = cursor[1] - 1
 
-  local expand_params = snip:matches(require('luasnip.util.util').get_current_line_to_cursor())
-
+  local range = require('blink.cmp.lib.text_edits').get_from_item(item).range
   local clear_region = {
-    from = { cursor[1], cursor[2] - #item.insertText },
-    to = cursor,
+    from = { range.start.line, range.start.character },
+    to = { range['end'].line, range['end'].character },
   }
-  if expand_params ~= nil and expand_params.clear_region ~= nil then
-    clear_region = expand_params.clear_region
-  elseif expand_params ~= nil and expand_params.trigger ~= nil then
-    clear_region = {
-      from = { cursor[1], cursor[2] - #expand_params.trigger },
-      to = cursor,
-    }
+
+  local expand_params = snip:matches(require('luasnip.util.util').get_current_line_to_cursor())
+  if expand_params ~= nil then
+    if expand_params.clear_region ~= nil then
+      clear_region = expand_params.clear_region
+    elseif expand_params.trigger ~= nil then
+      clear_region = {
+        from = { cursor[1], cursor[2] - #expand_params.trigger },
+        to = cursor,
+      }
+    end
   end
 
   luasnip.snip_expand(snip, { expand_params = expand_params, clear_region = clear_region })

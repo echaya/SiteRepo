@@ -20,9 +20,12 @@ function utils.redraw_if_needed()
 end
 
 --- Gets the buffer to use for ghost text
---- @return integer
+--- @return integer?
 function utils.get_buf()
-  if vim.api.nvim_get_mode().mode == 'c' then return require('noice.ui.cmdline').position.buf end
+  if vim.api.nvim_get_mode().mode == 'c' then
+    if not utils.is_noice() then return end
+    return require('noice.ui.cmdline').position.buf
+  end
   return vim.api.nvim_get_current_buf()
 end
 
@@ -30,6 +33,7 @@ end
 --- @return integer
 function utils.get_offset()
   if vim.api.nvim_get_mode().mode == 'c' then
+    if not utils.is_noice() then return 0 end
     return require('noice.ui.cmdline').position.cursor - (vim.fn.getcmdpos() - 1)
   end
   return 0

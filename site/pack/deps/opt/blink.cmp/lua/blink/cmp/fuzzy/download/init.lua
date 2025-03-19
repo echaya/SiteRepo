@@ -22,8 +22,8 @@ function download.ensure_downloaded(callback)
       }
     end)
     :map(function(version)
-      -- no version file found, user manually placed the .so file
-      if version.current.missing then return end
+      -- no version file found, and found the shared rust library, user manually placed the .so file
+      if version.current.missing and pcall(require, 'blink.cmp.fuzzy.rust') then return end
 
       local target_git_tag = download_config.force_version or version.git.tag
 
@@ -44,7 +44,7 @@ function download.ensure_downloaded(callback)
         )
 
         -- downloading enabled but not on a git tag, error
-        if download_config.download then
+        if download_config.download and target_git_tag == nil then
           if target_git_tag == nil then
             error(
               "Found an outdated version of the fuzzy matching library, but can't download from github due to not being on a git tag."
@@ -67,9 +67,10 @@ function download.ensure_downloaded(callback)
 
       -- downloading disabled but not built locally
       if not download_config.download then
+        -- Fallback, just check if the shared rust library exists
         vim.schedule(
           function()
-            vim.notify('[blink.cmp]: No fuzzy matching library found', vim.log.levels.WARN, { title = 'blink.cmp' })
+            vim.notify('[blink.cmp]: No fuzzy matching library found', vim.log.levels.ERROR, { title = 'blink.cmp' })
           end
         )
 
@@ -84,7 +85,7 @@ function download.ensure_downloaded(callback)
       if target_git_tag == nil then
         vim.schedule(
           function()
-            vim.notify('[blink.cmp]: No fuzzy matching library found', vim.log.levels.WARN, { title = 'blink.cmp' })
+            vim.notify('[blink.cmp]: No fuzzy matching library found', vim.log.levels.ERROR, { title = 'blink.cmp' })
           end
         )
 

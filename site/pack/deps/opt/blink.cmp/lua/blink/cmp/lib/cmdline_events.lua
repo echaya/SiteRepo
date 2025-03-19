@@ -65,37 +65,46 @@ function cmdline_events:listen(opts)
       end,
     })
 
-  -- TODO: switch to CursorMovedC when nvim 0.11 is released
+  -- TODO: remove when nvim 0.11 is the minimum version
   -- HACK: check every 16ms (60 times/second) to see if the cursor moved
   -- for neovim < 0.11
   else
     local previous_cmdline = ''
-    vim.api.nvim_create_autocmd('CmdlineEnter', {
-      callback = function() previous_cmdline = '' end,
-    })
+    local previous_cursor
 
     local timer = vim.uv.new_timer()
-    local previous_cursor
-    local callback
-    callback = vim.schedule_wrap(function()
-      timer:start(1, 0, callback)
+    local callback = vim.schedule_wrap(function()
       if vim.api.nvim_get_mode().mode ~= 'c' then return end
 
-      local cmdline_equal = vim.fn.getcmdline() == previous_cmdline
-      local cursor_equal = vim.fn.getcmdpos() == previous_cursor
+      local current_cmdline = vim.fn.getcmdline()
+      local current_cursor = vim.fn.getcmdpos()
 
-      previous_cmdline = vim.fn.getcmdline()
-      previous_cursor = vim.fn.getcmdpos()
+      -- Detect changes in command line or cursor position
+      local cmdline_changed = current_cmdline ~= previous_cmdline
+      local cursor_changed = current_cursor ~= previous_cursor
 
-      if cursor_equal or (not cmdline_equal and not did_backspace) then return end
-      did_backspace = false
+      previous_cmdline = current_cmdline
+      previous_cursor = current_cursor
 
-      local is_ignored = self.ignore_next_cursor_moved
-      self.ignore_next_cursor_moved = false
+      -- Fire on_cursor_moved if either text or cursor changed
+      if cursor_changed or (cmdline_changed and not did_backspace) then
+        did_backspace = false
 
-      opts.on_cursor_moved('CursorMoved', is_ignored)
+        local is_ignored = self.ignore_next_cursor_moved
+        self.ignore_next_cursor_moved = false
+
+        opts.on_cursor_moved('CursorMoved', is_ignored)
+      end
     end)
-    timer:start(16, 0, callback)
+    vim.api.nvim_create_autocmd('CmdlineEnter', {
+      callback = function()
+        previous_cmdline = ''
+        timer:start(16, 16, callback)
+      end,
+    })
+    vim.api.nvim_create_autocmd('CmdlineLeave', {
+      callback = function() timer:stop() end,
+    })
   end
 
   vim.api.nvim_create_autocmd('CmdlineLeave', {

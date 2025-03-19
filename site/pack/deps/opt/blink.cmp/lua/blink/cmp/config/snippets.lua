@@ -3,7 +3,7 @@
 --- @field expand fun(snippet: string) Function to use when expanding LSP provided snippets
 --- @field active fun(filter?: { direction?: number }): boolean Function to use when checking if a snippet is active
 --- @field jump fun(direction: number) Function to use when jumping between tab stops in a snippet, where direction can be negative or positive
---- @field score_offset number Offset to the score of all snipppet items
+--- @field score_offset number Offset to the score of all snippet items
 
 --- @param handlers table<'default' | 'luasnip' | 'mini_snippets', fun(...): any>
 local function by_preset(handlers)
@@ -34,8 +34,10 @@ local snippets = {
     active = by_preset({
       default = function(filter) return vim.snippet.active(filter) end,
       luasnip = function(filter)
-        if filter and filter.direction then return require('luasnip').jumpable(filter.direction) end
-        return require('luasnip').in_snippet()
+        local ls = require('luasnip')
+        if ls.expand_or_jumpable() then return true end
+        if filter and filter.direction then return ls.jumpable(filter.direction) end
+        return ls.in_snippet()
       end,
       mini_snippets = function()
         if not _G.MiniSnippets then error('mini.snippets has not been setup') end
@@ -44,7 +46,11 @@ local snippets = {
     }),
     jump = by_preset({
       default = function(direction) vim.snippet.jump(direction) end,
-      luasnip = function(direction) require('luasnip').jump(direction) end,
+      luasnip = function(direction)
+        local ls = require('luasnip')
+        if ls.expandable() then return ls.expand_or_jump() end
+        return ls.jumpable(direction) and ls.jump(direction)
+      end,
       mini_snippets = function(direction)
         if not _G.MiniSnippets then error('mini.snippets has not been setup') end
         MiniSnippets.session.jump(direction == -1 and 'prev' or 'next')

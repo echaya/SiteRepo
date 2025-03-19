@@ -34,6 +34,9 @@ end
 
 ------- Public API -------
 
+--- Checks if the completion list is active
+function cmp.is_active() return require('blink.cmp.completion.list').context ~= nil end
+
 --- Checks if the completion menu or ghost text is visible
 --- @return boolean
 function cmp.is_visible() return cmp.is_menu_visible() or cmp.is_ghost_text_visible() end
@@ -187,6 +190,22 @@ function cmp.select_next(opts)
   return true
 end
 
+--- Inserts the next item (`auto_insert`), cycling to the top of the list if at the bottom, if `completion.list.cycle.from_bottom == true`.
+--- This will trigger completions if none are available, unlike `select_next` which would fallback to the next keymap in this case.
+function cmp.insert_next()
+  if not cmp.is_active() then return cmp.show_and_insert() end
+  vim.schedule(function() require('blink.cmp.completion.list').select_next({ auto_insert = true }) end)
+  return true
+end
+
+--- Inserts the previous item (`auto_insert`), cycling to the bottom of the list if at the top, if `completion.list.cycle.from_top == true`.
+--- This will trigger completions if none are available, unlike `select_prev` which would fallback to the next keymap in this case.
+function cmp.insert_prev()
+  if not cmp.is_active() then return cmp.show_and_insert() end
+  vim.schedule(function() require('blink.cmp.completion.list').select_prev({ auto_insert = true }) end)
+  return true
+end
+
 --- Gets the currently selected completion item
 --- @return blink.cmp.CompletionItem?
 function cmp.get_selected_item() return require('blink.cmp.completion.list').get_selected_item() end
@@ -300,30 +319,31 @@ function cmp.get_lsp_capabilities(override, include_nvim_defaults)
 end
 
 --- Add a new source provider at runtime
+--- @deprecated Use `cmp.add_source_provider` instead
 --- @param source_id string
 --- @param source_config blink.cmp.SourceProviderConfig
 function cmp.add_provider(source_id, source_config)
+  vim.deprecate('cmp.add_provider', 'cmp.add_source_provider', 'v1.0.0', 'blink-cmp')
+  return cmp.add_source_provider(source_id, source_config)
+end
+
+--- Add a new source provider at runtime
+--- @param source_id string
+--- @param source_config blink.cmp.SourceProviderConfig
+function cmp.add_source_provider(source_id, source_config)
   local config = require('blink.cmp.config')
+
   assert(config.sources.providers[source_id] == nil, 'Provider with id ' .. source_id .. ' already exists')
   require('blink.cmp.config.sources').validate_provider(source_id, source_config)
+
   config.sources.providers[source_id] = source_config
 end
 
---- Adds a source to the list of enable sources for a given filetype
+--- Adds a source provider to the list of enable sources for a given filetype
 --- @param filetype string
---- @param source string
-function cmp.add_filetype_source(filetype, source)
-  local config = require('blink.cmp.config')
-
-  assert(
-    type(config.sources.per_filetype[filetype]) ~= 'function',
-    'Sources for filetype "' .. filetype .. '" has been set to a function, so we cannot add a source to it'
-  )
-  if config.sources.per_filetype[filetype] == nil then config.sources.per_filetype[filetype] = {} end
-
-  local sources = config.sources.per_filetype[filetype]
-  --- @cast sources string[]
-  table.insert(sources, source)
+--- @param source_id string
+function cmp.add_filetype_source(filetype, source_id)
+  require('blink.cmp.sources.lib').add_filetype_provider_id(filetype, source_id)
 end
 
 return cmp

@@ -15,7 +15,7 @@
 --- @field should_show_items fun(self: blink.cmp.SourceProvider, context: blink.cmp.Context, items: blink.cmp.CompletionItem[]): boolean
 --- @field transform_items fun(self: blink.cmp.SourceProvider, context: blink.cmp.Context, items: blink.cmp.CompletionItem[]): blink.cmp.CompletionItem[]
 --- @field resolve fun(self: blink.cmp.SourceProvider, context: blink.cmp.Context, item: blink.cmp.CompletionItem): blink.cmp.Task
---- @field execute fun(self: blink.cmp.SourceProvider, context: blink.cmp.Context, item: blink.cmp.CompletionItem, callback: fun()): blink.cmp.Task
+--- @field execute fun(self: blink.cmp.SourceProvider, context: blink.cmp.Context, item: blink.cmp.CompletionItem, default_implementation: fun(context?: blink.cmp.Context, item?: blink.cmp.CompletionItem)): blink.cmp.Task
 --- @field get_signature_help_trigger_characters fun(self: blink.cmp.SourceProvider): { trigger_characters: string[], retrigger_characters: string[] }
 --- @field get_signature_help fun(self: blink.cmp.SourceProvider, context: blink.cmp.SignatureHelpContext): blink.cmp.Task
 --- @field reload (fun(self: blink.cmp.SourceProvider): nil) | nil
@@ -27,8 +27,10 @@ local source = {}
 local async = require('blink.cmp.lib.async')
 
 function source.new(id, config)
-  assert(type(config.name) == 'string', 'Each source in config.sources.providers must have a "name" of type string')
   assert(type(config.module) == 'string', 'Each source in config.sources.providers must have a "module" of type string')
+
+  -- Default "name" to capitalized id
+  if config.name == nil then config.name = id:sub(1, 1):upper() .. id:sub(2) end
 
   local self = setmetatable({}, { __index = source })
   self.id = id
@@ -154,11 +156,15 @@ end
 
 --- Execute ---
 
-function source:execute(context, item)
+function source:execute(context, item, default_implementation)
   if self.module.execute == nil then
-    return async.task.new(function(resolve) resolve() end)
+    default_implementation()
+    return async.task.empty()
   end
-  return async.task.new(function(resolve) return self.module:execute(context, item, resolve) end)
+
+  return async.task.new(
+    function(resolve) return self.module:execute(context, item, resolve, default_implementation) end
+  )
 end
 
 --- Signature help ---

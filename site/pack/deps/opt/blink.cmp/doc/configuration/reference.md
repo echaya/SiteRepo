@@ -5,8 +5,8 @@ Do not copy the default configuration! Only include options you want to change i
 :::
 
 ```lua
--- Enables keymaps, completions and signature help when true
-enabled = function() return vim.bo.buftype ~= "prompt" and vim.b.completion ~= false end,
+-- Enables keymaps, completions and signature help when true (doesn't apply to cmdline or term)
+enabled = function() return true end,
 
 -- See the "keymap" page for more information
 keymap = { preset = 'default' },
@@ -269,7 +269,7 @@ completion.documentation = {
   update_delay_ms = 50,
   -- Whether to use treesitter highlighting, disable if you run into performance issues
   treesitter_highlighting = true,
-  -- Draws the item in the documentation window, by default using an internal treessitter based implementation
+  -- Draws the item in the documentation window, by default using an internal treesitter based implementation
   draw = function(opts) opts.default_implementation() end,
   window = {
     min_width = 10,
@@ -380,7 +380,18 @@ fuzzy = {
 
   -- Controls which sorts to use and in which order, falling back to the next sort if the first one returns nil
   -- You may pass a function instead of a string to customize the sorting
-  sorts = { 'score', 'sort_text' },
+  sorts = {
+    -- (optionally) always prioritize exact matches
+    -- 'exact',
+
+    -- pass a function for custom behavior
+    -- function(item_a, item_b)
+    --   return item_a.score > item_b.score
+    -- end,
+
+    'score',
+    'sort_text',
+  },
 
   prebuilt_binaries = {
     -- Whether or not to automatically download a prebuilt binary from github. If this is set to `false`,
@@ -455,6 +466,7 @@ sources.providers = {
     --- These properties apply to !!ALL sources!!
     --- NOTE: All of these options may be functions to get dynamic behavior
     --- See the type definitions for more information
+    name = nil, -- Defaults to the id ("lsp" in this case) capitalized when not set
     enabled = true, -- Whether or not to enable the provider
     async = false, -- Whether we should wait for the provider to return before showing the completions
     timeout_ms = 2000, -- How long to wait for the provider to return before showing completions and treating it as asynchronous
@@ -463,14 +475,13 @@ sources.providers = {
     max_items = nil, -- Maximum number of items to display in the menu
     min_keyword_length = 0, -- Minimum number of characters in the keyword to trigger the provider
     -- If this provider returns 0 items, it will fallback to these providers.
-    -- If multiple providers falback to the same provider, all of the providers must return 0 items for it to fallback
+    -- If multiple providers fallback to the same provider, all of the providers must return 0 items for it to fallback
     fallbacks = {},
     score_offset = 0, -- Boost/penalize the score of the items
     override = nil, -- Override the source's functions
   },
 
   path = {
-    name = 'Path',
     module = 'blink.cmp.sources.path',
     score_offset = 3,
     fallbacks = { 'buffer' },
@@ -483,7 +494,6 @@ sources.providers = {
   },
 
   snippets = {
-    name = 'Snippets',
     module = 'blink.cmp.sources.snippets',
 
     -- For `snippets.preset == 'default'`
@@ -516,7 +526,6 @@ sources.providers = {
   },
 
   buffer = {
-    name = 'Buffer',
     module = 'blink.cmp.sources.buffer',
     opts = {
       -- default to all visible buffers
@@ -530,11 +539,16 @@ sources.providers = {
     }
   },
 
+  cmdline = {
+    module = 'blink.cmp.sources.cmdline',
+  },
+
   omni = {
-    name = 'Omni',
-    module = 'blink.cmp.sources.omni',
+    module = 'blink.cmp.sources.complete_func',
+    enabled = function() return vim.bo.omnifunc ~= 'v:lua.vim.lsp.omnifunc' end,
+    ---@type blink.cmp.CompleteFuncOpts
     opts = {
-      disable_omnifuncs = { 'v:lua.vim.lsp.omnifunc' },
+        complete_func = function() return vim.bo.omnifunc end,
     },
   },
 }
@@ -596,6 +610,7 @@ You may set configurations which will override the default configuration, specif
 ```lua
 cmdline = {
   enabled = true,
+  -- use 'inherit' to inherit mappings from top level `keymap` config
   keymap = { preset = 'cmdline' },
   sources = function()
     local type = vim.fn.getcmdtype()
@@ -635,7 +650,7 @@ Terminal completions are nightly only! Known bugs in v0.10
 ```lua
 term = {
   enabled = false,
-  keymap = nil, -- Inherits from top level `keymap` config when not set
+  keymap = { preset = 'inherit' }, -- Inherits from top level `keymap` config when not set
   sources = {},
   completion = {
     trigger = {

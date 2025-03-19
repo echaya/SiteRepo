@@ -22,10 +22,7 @@ sources = {
 
   per_filetype = { sql = { 'dadbod' } }
   providers = {
-    dadbod = {
-      name = "Dadbod",
-      module = "vim_dadbod_completion.blink",
-    },
+    dadbod = { module = "vim_dadbod_completion.blink" },
   }
 }
 ```
@@ -50,7 +47,7 @@ sources.providers.lsp = {
   max_items = nil, -- Maximum number of items to display in the menu
   min_keyword_length = 0, -- Minimum number of characters in the keyword to trigger the provider
   -- If this provider returns 0 items, it will fallback to these providers.
-  -- If multiple providers falback to the same provider, all of the providers must return 0 items for it to fallback
+  -- If multiple providers fallback to the same provider, all of the providers must return 0 items for it to fallback
   fallbacks = {},
   score_offset = 0, -- Boost/penalize the score of the items
   override = nil, -- Override the source's functions
@@ -92,3 +89,5 @@ The command `:BlinkCmp status` can be used to view which sources providers are e
 - [blink-cmp-env](https://github.com/bydlw98/blink-cmp-env)
 - [blink-cmp-avante](https://github.com/Kaiser-Yang/blink-cmp-avante)
 - [blink-cmp-conventional-commits](https://github.com/disrupted/blink-cmp-conventional-commits)
+- [cmp-pandoc-references](https://github.com/jmbuhr/cmp-pandoc-references)
+- [blink-cmp-im](https://github.com/yehuohan/blink-cmp-im): Input Method source

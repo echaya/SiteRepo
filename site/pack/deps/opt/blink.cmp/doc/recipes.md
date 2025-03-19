@@ -7,11 +7,7 @@
 ### Disable per filetype
 
 ```lua
-enabled = function()
-  return not vim.tbl_contains({ "lua", "markdown" }, vim.bo.filetype)
-    and vim.bo.buftype ~= "prompt"
-    and vim.b.completion ~= false
-end,
+enabled = function() return not vim.tbl_contains({ "lua", "markdown" }, vim.bo.filetype) end,
 ```
 
 ### Disable completion in *only* shell command mode
@@ -28,6 +24,45 @@ sources = {
       end
     }
   }
+}
+```
+
+### Emacs behavior
+
+Full discussion: https://github.com/Saghen/blink.cmp/issues/1367
+
+Tab: If completion hasn't been triggered yet, insert the first suggestion; if it has, cycle to the next suggestion.
+
+Shift-Tab: Navigate to the previous suggestion or cancel completion if currently on the first one.
+
+```lua
+-- helper function to check if there's a word before the cursor.
+local has_words_before = function()
+  local line, col = unpack(vim.api.nvim_win_get_cursor(0))
+  if col == 0 then
+    return false
+  end
+  local text = vim.api.nvim_buf_get_lines(0, line - 1, line, true)[1]
+  return text:sub(col, col):match("%s") == nil
+end
+
+-- in your blink configuration
+keymap = {
+  preset = 'none',
+
+  ['<Tab>'] = {
+    function(cmp)
+      if has_words_before() then
+        return cmp.insert_next()
+      end
+    end,
+    'fallback',
+  },
+  ['<S-Tab>'] = { 'insert_prev' },
+},
+completion = {
+  menu = { enabled = false },
+  list = { selection = { preselect = false }, cycle = { from_top = false } },
 }
 ```
 
@@ -99,7 +134,7 @@ vim.api.nvim_create_autocmd('User', {
 This may not be working as expected at the moment. Please see [#836](https://github.com/Saghen/blink.cmp/issues/836)
 :::
 
-Note that you may want to add the override to other sources as well, since if the LSP doesnt return any items, we won't show the menu if it was triggered by any of these three characters.
+Note that you may want to add the override to other sources as well, since if the LSP doesn't return any items, we won't show the menu if it was triggered by any of these three characters.
 
 ```lua
 -- by default, blink.cmp will block newline, tab and space trigger characters, disable that behavior
@@ -113,6 +148,24 @@ sources.providers.lsp.override.get_trigger_characters = function(self)
 end
 ```
 
+
+## Fuzzy (sorting/filtering)
+
+### Always prioritize exact matches
+
+By default, the fuzzy matcher will give a bonus score of 4 to exact matches. If you want to ensure that exact matches are always prioritized, you may set
+
+```lua
+fuzzy = {
+  sorts = {
+    'exact',
+    -- defaults
+    'score',
+    'sort_text',
+  },
+}
+```
+
 ### Deprioritize specific LSP
 
 You may use a custom sort function to deprioritize LSPs such as Emmet Language Server (`emmet_ls`)
@@ -121,7 +174,9 @@ You may use a custom sort function to deprioritize LSPs such as Emmet Language S
 fuzzy = {
   sorts = {
     function(a, b)
-      if a.client_name == nil or b.client_name == nil then return end
+      if (a.client_name == nil or b.client_name == nil) or (a.client_name == b.client_name) then
+        return
+      end
       return b.client_name == 'emmet_ls'
     end,
     -- default sorts
@@ -211,7 +266,7 @@ completion = {
 
 ### Buffer completion from all open buffers
 
-The default behavior is to only show completions from **visible** "normal" buffers (i.e. it woudldn't include neo-tree). This will instead show completions from all buffers, even if they're not visible on screen. Note that the performance impact of this has not been tested. 
+The default behavior is to only show completions from **visible** "normal" buffers (i.e. it wouldn't include neo-tree). This will instead show completions from all buffers, even if they're not visible on screen. Note that the performance impact of this has not been tested.
 
 ```lua
 sources = {
@@ -237,10 +292,10 @@ sources = {
 ```lua
 sources.default = function(ctx)
   local success, node = pcall(vim.treesitter.get_node)
-  if vim.bo.filetype == 'lua' then
-    return { 'lsp', 'path' }
-  elseif success and node and vim.tbl_contains({ 'comment', 'line_comment', 'block_comment' }, node:type()) then
+  if success and node and vim.tbl_contains({ 'comment', 'line_comment', 'block_comment' }, node:type()) then
     return { 'buffer' }
+  elseif vim.bo.filetype == 'lua' then
+    return { 'lsp', 'path' }
   else
     return { 'lsp', 'path', 'snippets', 'buffer' }
   end
@@ -254,6 +309,18 @@ Trigger characters are defined by the sources. For example, for Lua, the trigger
 ```lua
 sources.providers.snippets.should_show_items = function(ctx)
   return ctx.trigger.initial_kind ~= 'trigger_character'
+end
+```
+
+### Set source kind icon and name
+
+```lua
+sources.providers.copilot.transform_items = function(ctx, items)
+  for _, item in ipairs(items) do
+    item.kind_icon = ''
+    item.kind_name = 'Copilot'
+  end
+  return items
 end
 ```
 
