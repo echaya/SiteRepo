@@ -10,6 +10,7 @@ Lightweight yet powerful formatter plugin for Neovim
 - [Setup](#setup)
 - [Formatters](#formatters)
 - [Customizing formatters](#customizing-formatters)
+  - [Magic strings](#magic-strings)
 - [Recipes](#recipes)
 - [Debugging](#debugging)
 - [Advanced topics](#advanced-topics)
@@ -22,6 +23,7 @@ Lightweight yet powerful formatter plugin for Neovim
   - [list_formatters_to_run(bufnr)](#list_formatters_to_runbufnr)
   - [list_all_formatters()](#list_all_formatters)
   - [get_formatter_info(formatter, bufnr)](#get_formatter_infoformatter-bufnr)
+- [FAQ](#faq)
 - [Acknowledgements](#acknowledgements)
 
 <!-- /TOC -->
@@ -460,6 +462,15 @@ require("conform").formatters.shfmt = {
 }
 ```
 
+### Magic strings
+
+The following magic strings are available in `args` and `range_args`. They will be dynamically replaced at runtime with the relevant value.
+
+- `$FILENAME` - absolute path to the file
+- `$DIRNAME` - absolute path to the directory that contains the file
+- `$RELATIVE_FILEPATH` - relative path to the file
+- `$EXTENSION` - the file extension, e.g. `.py`
+
 ## Recipes
 
 <!-- RECIPES -->
@@ -730,6 +741,17 @@ Get information about a formatter (including availability)
 | formatter | `string`       | The name of the formatter |
 | bufnr     | `nil\|integer` |                           |
 <!-- /API -->
+
+## FAQ
+
+**Q:** Instead of passing `lsp_format = "..."`, could you just define a `lsp` formatter? \
+**A:** No. [#61](https://github.com/stevearc/conform.nvim/issues/61)
+
+**Q:** Is it possible to define a custom formatter that runs a lua function? \
+**A:** Yes, but with some very strict constraints. [#653](https://github.com/stevearc/conform.nvim/issues/653)
+
+**Q:** Can I run a command like `:EslintFixAll` or a LSP code action as a formatter? \
+**A:** No. [#502](https://github.com/stevearc/conform.nvim/issues/502), [#466](https://github.com/stevearc/conform.nvim/issues/466), [#222](https://github.com/stevearc/conform.nvim/issues/222)
 
 ## Acknowledgements
 
