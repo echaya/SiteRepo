@@ -936,6 +936,11 @@ end
 ---   (falls back to builtin methods otherwise). This allows for a more
 ---   advanced features (like multiple buffer languages, custom directives, etc.).
 ---   See `opts.use_nvim_treesitter` for how to disable this.
+--- - Be sure that query files don't contain unknown |treesitter-directives|
+---   (like `#make-range!`, for example). Otherwise textobject for such capture
+---   might not be found as |vim.treesitter| won't treat them as captures. Verify
+---   with `:=vim.treesitter.query.get('lang', 'textobjects')` and see if the
+---   target capture is recognized as one.
 --- - It uses buffer's |filetype| to determine query language.
 --- - On large files it is slower than pattern-based textobjects. Still very
 ---   fast though (one search should be magnitude of milliseconds or tens of
@@ -995,6 +1000,7 @@ MiniAi.select_textobject = function(ai_type, id, opts)
   if H.is_disabled() then return end
 
   opts = opts or {}
+  local operator_pending = opts.operator_pending
 
   -- Exit to Normal before getting textobject id. This way invalid id doesn't
   -- result into staying in current mode (which seems to be more convenient).
@@ -1021,6 +1027,9 @@ MiniAi.select_textobject = function(ai_type, id, opts)
   -- Allow going past end of line in order to collapse multiline regions
   local cache_virtualedit, cache_whichwrap = vim.o.virtualedit, vim.o.whichwrap
 
+  -- Cache window horizontal view data to possibly counter unwanted side scroll
+  local leftcol = vim.fn.winsaveview().leftcol
+
   pcall(function()
     -- Do nothing in Operator-pending mode for empty region (except `c`, `d`,
     -- or selected "replace" operators). These are hand picked because they
@@ -1043,18 +1052,21 @@ MiniAi.select_textobject = function(ai_type, id, opts)
     -- `vim.schedule()` option restore, but it feels too much for a niche case.
     vim.o.virtualedit = 'onemore'
 
-    -- Open enough folds to show left and right edges
-    set_cursor(tobj.to)
-    vim.cmd('normal! zv')
+    -- Select region:
+    -- - Go from start to end stay at range end in Visual mode (as done in
+    --   built-in visual selection).
+    -- - Open just enough folds to have both ends visible.
+    -- - Respect exclusive selection (including when selecting end of line)
     set_cursor(tobj.from)
     vim.cmd('normal! zv')
-
-    -- Start selection
     vim.cmd('normal! ' .. vis_mode)
     set_cursor(tobj.to)
-
-    -- Respect exclusive selection (including when selecting end of line)
     if vim.o.selection == 'exclusive' then vim.cmd('set whichwrap=l | normal! l') end
+    vim.cmd('normal! zv')
+
+    -- Restore horizontal view which was possibly affected by moving cursor
+    -- NOTE: It seems to not affect cursor if it is outside of restored view
+    vim.fn.winrestview({ leftcol = leftcol })
 
     if is_empty_opending then
       -- Add single space (without triggering events) and visually select it.

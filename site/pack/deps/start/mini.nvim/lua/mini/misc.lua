@@ -210,10 +210,8 @@ MiniMisc.setup_auto_root = function(names, fallback)
     vim.fn.chdir(root)
   end
   local augroup = vim.api.nvim_create_augroup('MiniMiscAutoRoot', {})
-  vim.api.nvim_create_autocmd(
-    'BufEnter',
-    { group = augroup, callback = set_root, desc = 'Find root and change current directory' }
-  )
+  local opts = { group = augroup, nested = true, callback = set_root, desc = 'Find root and change current directory' }
+  vim.api.nvim_create_autocmd('BufEnter', opts)
 end
 
 --- Find root directory
@@ -594,7 +592,12 @@ MiniMisc.zoom = function(buf_id, config)
   local compute_config = function()
     -- Use precise dimensions for no Command line interactions (better scroll)
     local max_width, max_height = vim.o.columns, vim.o.lines - vim.o.cmdheight
-    local default_config = { relative = 'editor', row = 0, col = 0, width = max_width, height = max_height }
+    --stylua: ignore
+    local default_config = {
+      relative = 'editor', row = 0, col = 0,
+      width = max_width, height = max_height,
+      title = ' Zoom ', border = 'none',
+    }
     local res = vim.tbl_deep_extend('force', default_config, config or {})
 
     -- Adjust dimensions to fit border
