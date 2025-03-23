@@ -1,11 +1,14 @@
 -- TODO: The scrollbar and redrawing logic should be done by wrapping the functions that would
 -- trigger a redraw or update the window
 
+local utils = require('blink.cmp.lib.window.utils')
+
 --- @class blink.cmp.WindowOptions
 --- @field min_width? number
 --- @field max_width? number
 --- @field max_height? number
 --- @field cursorline? boolean
+--- @field default_border? blink.cmp.WindowBorder
 --- @field border? blink.cmp.WindowBorder
 --- @field wrap? boolean
 --- @field winblend? number
@@ -19,9 +22,10 @@
 --- @field buf? number
 --- @field config blink.cmp.WindowOptions
 --- @field scrollbar? blink.cmp.Scrollbar
+--- @field cursor_line blink.cmp.CursorLine
 --- @field redraw_queued boolean
 ---
---- @field new fun(config: blink.cmp.WindowOptions): blink.cmp.Window
+--- @field new fun(name: string, config: blink.cmp.WindowOptions): blink.cmp.Window
 --- @field get_buf fun(self: blink.cmp.Window): number
 --- @field get_win fun(self: blink.cmp.Window): number
 --- @field is_open fun(self: blink.cmp.Window): boolean
@@ -48,8 +52,7 @@
 --- @diagnostic disable-next-line: missing-fields
 local win = {}
 
---- @param config blink.cmp.WindowOptions
-function win.new(config)
+function win.new(name, config)
   local self = setmetatable({}, { __index = win })
 
   self.id = nil
@@ -59,7 +62,7 @@ function win.new(config)
     max_width = config.max_width,
     max_height = config.max_height or 10,
     cursorline = config.cursorline or false,
-    border = config.border or 'none',
+    border = utils.pick_border(config.border, config.default_border),
     wrap = config.wrap or false,
     winblend = config.winblend or 0,
     winhighlight = config.winhighlight or 'Normal:NormalFloat,FloatBorder:NormalFloat',
@@ -68,6 +71,8 @@ function win.new(config)
     filetype = config.filetype,
   }
   self.redraw_queued = false
+
+  self.cursor_line = require('blink.cmp.lib.window.cursor_line').new(name)
 
   if self.config.scrollbar then
     -- Enable the gutter if there's no border, or the border is a space
@@ -122,10 +127,11 @@ function win:open()
   vim.api.nvim_set_option_value('conceallevel', 2, { win = self.id })
   vim.api.nvim_set_option_value('concealcursor', 'n', { win = self.id })
   vim.api.nvim_set_option_value('cursorlineopt', 'line', { win = self.id })
-  vim.api.nvim_set_option_value('cursorline', self.config.cursorline, { win = self.id })
+  vim.api.nvim_set_option_value('cursorline', false, { win = self.id })
   vim.api.nvim_set_option_value('scrolloff', self.config.scrolloff, { win = self.id })
   vim.api.nvim_set_option_value('filetype', self.config.filetype, { buf = self.buf })
 
+  self.cursor_line:update(self.id)
   if self.scrollbar then self.scrollbar:update(self.id) end
   self:redraw_if_needed()
 end

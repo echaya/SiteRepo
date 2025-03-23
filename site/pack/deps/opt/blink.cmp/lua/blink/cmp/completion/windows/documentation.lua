@@ -20,10 +20,11 @@ local menu = require('blink.cmp.completion.windows.menu')
 --- @type blink.cmp.CompletionDocumentationWindow
 --- @diagnostic disable-next-line: missing-fields
 local docs = {
-  win = require('blink.cmp.lib.window').new({
+  win = require('blink.cmp.lib.window').new('documentation', {
     min_width = win_config.min_width,
     max_width = win_config.max_width,
     max_height = win_config.max_height,
+    default_border = 'padded',
     border = win_config.border,
     winblend = win_config.winblend,
     winhighlight = win_config.winhighlight,

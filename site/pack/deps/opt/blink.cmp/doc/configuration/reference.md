@@ -6,6 +6,9 @@ Do not copy the default configuration! Only include options you want to change i
 
 ```lua
 -- Enables keymaps, completions and signature help when true (doesn't apply to cmdline or term)
+-- If the function returns 'force', the default conditions for disabling the plugin will be ignored
+-- Default conditions: (vim.bo.buftype ~= 'prompt' and vim.b.completion ~= false)
+-- Note that the default conditions are ignored when `vim.b.completion` is explicitly set to `true`
 enabled = function() return true end,
 
 -- See the "keymap" page for more information
@@ -151,7 +154,7 @@ completion.menu = {
   enabled = true,
   min_width = 15,
   max_height = 10,
-  border = 'none',
+  border = nil, -- Defaults to `vim.o.winborder` on nvim 0.11+
   winblend = 0,
   winhighlight = 'Normal:BlinkCmpMenu,FloatBorder:BlinkCmpMenuBorder,CursorLine:BlinkCmpMenuSelection,Search:None',
   -- Keep the cursor X lines away from the top/bottom of the window
@@ -275,7 +278,7 @@ completion.documentation = {
     min_width = 10,
     max_width = 80,
     max_height = 20,
-    border = 'padded',
+    border = nil, -- Defaults to `vim.o.winborder` on nvim 0.11+ or 'padded' when not defined/<=0.10
     winblend = 0,
     winhighlight = 'Normal:BlinkCmpDoc,FloatBorder:BlinkCmpDocBorder,EndOfBuffer:BlinkCmpDoc',
     -- Note that the gutter will be disabled when border ~= 'none'
@@ -332,7 +335,7 @@ signature = {
     min_width = 1,
     max_width = 100,
     max_height = 10,
-    border = 'padded',
+    border = nil, -- Defaults to `vim.o.winborder` on nvim 0.11+ or 'padded' when not defined/<=0.10
     winblend = 0,
     winhighlight = 'Normal:BlinkCmpSignatureHelp,FloatBorder:BlinkCmpSignatureHelpBorder',
     scrollbar = false, -- Note that the gutter will be disabled when border ~= 'none'
