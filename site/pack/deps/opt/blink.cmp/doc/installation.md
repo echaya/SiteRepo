@@ -54,6 +54,9 @@ Note: By default, Blink will attempt to use the rust implementation of the fuzzy
       nerd_font_variant = 'mono'
     },
 
+    -- (Default) Only show the documentation popup when manually triggered
+    completion = { documentation = { auto_show = false } },
+
     -- Default list of enabled providers defined so that you can extend it
     -- elsewhere in your config, without redefining it, due to `opts_extend`
     sources = {
@@ -71,12 +74,12 @@ Note: By default, Blink will attempt to use the rust implementation of the fuzzy
 }
 ```
 
+### LSP Capabilities
+
 ::: warning
-On Neovim 0.11+ and Blink.cmp 0.10+ with `vim.lsp.config`, you may skip this step.
+On Neovim 0.11+ with `vim.lsp.config`, you may skip this step.
 This is still required when using `nvim-lspconfig` until [this issue is completed](https://github.com/neovim/nvim-lspconfig/issues/3494)
 :::
-
-### LSP Capabilities
 
 LSP servers and clients communicate which features they support through "capabilities". By default, Neovim supports a subset of the LSP specification. With blink.cmp, Neovim has _more_ capabilities which are communicated to the LSP servers.
 
@@ -137,7 +140,7 @@ local capabilities = vim.lsp.protocol.make_client_capabilities()
 
 capabilities = vim.tbl_deep_extend('force', capabilities, require('blink.cmp').get_lsp_capabilities({}, false))
 
-capabilities = vim.tbl_deep_extend('force', {
+capabilities = vim.tbl_deep_extend('force', capabilities, {
   textDocument = {
     foldingRange = {
       dynamicRegistration = false,

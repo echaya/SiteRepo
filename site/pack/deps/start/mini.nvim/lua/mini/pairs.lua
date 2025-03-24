@@ -178,8 +178,10 @@ MiniPairs.config = {
 ---   - <action> - one of "open" (for |MiniPairs.open|),
 ---     "close" (for |MiniPairs.close|), or "closeopen" (for |MiniPairs.closeopen|).
 ---   - <pair> - two character string to be used as argument for action function.
+---     Can contain multibyte characters.
 ---   - <neigh_pattern> - optional 'two character' neighborhood pattern to be
----     used as argument for action function.
+---     used as argument for action function. Note: neighborhood might contain
+---     multiple characters.
 ---     Default: `'..'` (no restriction from neighborhood).
 ---   - <register> - optional table with information about whether this pair will
 ---     be recognized by <BS> (in |MiniPairs.bs|) and/or <CR> (in |MiniPairs.cr|).
@@ -281,7 +283,7 @@ end
 ---
 ---@return string Keys performing "open" action.
 MiniPairs.open = function(pair, neigh_pattern)
-  if H.is_disabled() or not H.neigh_match(neigh_pattern) then return pair:sub(1, 1) end
+  if H.is_disabled() or not H.neigh_match(neigh_pattern) then return H.get_open_char(pair) end
 
   -- Temporarily redraw lazily for no cursor flicker due to `<Left>`.
   -- This can happen in a big file with tree-sitter highlighting enabled.
@@ -289,7 +291,7 @@ MiniPairs.open = function(pair, neigh_pattern)
   vim.o.lazyredraw = true
   H.restore_lazyredraw(cache_lazyredraw)
 
-  return ('%s%s'):format(pair, H.get_arrow_key('left'))
+  return pair .. H.get_arrow_key('left')
 end
 
 --- Process "close" symbols
@@ -307,14 +309,9 @@ end
 ---
 ---@return string Keys performing "close" action.
 MiniPairs.close = function(pair, neigh_pattern)
-  if H.is_disabled() or not H.neigh_match(neigh_pattern) then return pair:sub(2, 2) end
-
-  local close = pair:sub(2, 2)
-  if H.get_cursor_neigh(1, 1) == close then
-    return H.get_arrow_key('right')
-  else
-    return close
-  end
+  local close = H.get_close_char(pair)
+  local move_right = not H.is_disabled() and H.neigh_match(neigh_pattern) and H.get_neigh('right') == close
+  return move_right and H.get_arrow_key('right') or close
 end
 
 --- Process "closeopen" symbols
@@ -331,11 +328,8 @@ end
 ---
 ---@return string Keys performing "closeopen" action.
 MiniPairs.closeopen = function(pair, neigh_pattern)
-  if H.is_disabled() or H.get_cursor_neigh(1, 1) ~= pair:sub(2, 2) then
-    return MiniPairs.open(pair, neigh_pattern)
-  else
-    return H.get_arrow_key('right')
-  end
+  local move_right = not H.is_disabled() and H.get_neigh('right') == H.get_close_char(pair)
+  return move_right and H.get_arrow_key('right') or MiniPairs.open(pair, neigh_pattern)
 end
 
 --- Process |<BS>|
@@ -363,14 +357,9 @@ end
 ---
 ---@return string Keys performing "backspace" action.
 MiniPairs.bs = function(key)
-  local res = key or H.keys.bs
-
-  local neigh = H.get_cursor_neigh(0, 1)
-  if not H.is_disabled() and H.is_pair_registered(neigh, vim.fn.mode(), 0, 'bs') then
-    res = ('%s%s'):format(res, H.keys.del)
-  end
-
-  return res
+  local res, neigh = key or H.keys.bs, H.get_neigh('whole')
+  local do_extra = not H.is_disabled() and H.is_pair_registered(neigh, vim.fn.mode(), 'bs')
+  return do_extra and (res .. H.keys.del) or res
 end
 
 --- Process |i_<CR>|
@@ -392,24 +381,22 @@ end
 MiniPairs.cr = function(key)
   local res = key or H.keys.cr
 
-  local neigh = H.get_cursor_neigh(0, 1)
-  if not H.is_disabled() and H.is_pair_registered(neigh, vim.fn.mode(), 0, 'cr') then
-    -- Temporarily ignore mode change to not trigger some common expensive
-    -- autocommands (like diagnostic check, etc.)
-    local cache_eventignore = vim.o.eventignore
-    vim.o.eventignore = 'InsertLeave,InsertLeavePre,InsertEnter,TextChanged,ModeChanged'
-    H.restore_eventignore(cache_eventignore)
+  local neigh = H.get_neigh('whole')
+  if H.is_disabled() or not H.is_pair_registered(neigh, vim.fn.mode(), 'cr') then return res end
 
-    -- Temporarily redraw lazily for no cursor flicker due to `<C-o>O`.
-    -- This can happen in a big file with tree-sitter highlighting enabled.
-    local cache_lazyredraw = vim.o.lazyredraw
-    vim.o.lazyredraw = true
-    H.restore_lazyredraw(cache_lazyredraw)
+  -- Temporarily ignore mode change to not trigger some common expensive
+  -- autocommands (like diagnostic check, etc.)
+  local cache_eventignore = vim.o.eventignore
+  vim.o.eventignore = 'InsertLeave,InsertLeavePre,InsertEnter,TextChanged,ModeChanged'
+  H.restore_eventignore(cache_eventignore)
 
-    res = ('%s%s'):format(res, H.keys.above)
-  end
+  -- Temporarily redraw lazily for no cursor flicker due to `<C-o>O`.
+  -- This can happen in a big file with tree-sitter highlighting enabled.
+  local cache_lazyredraw = vim.o.lazyredraw
+  vim.o.lazyredraw = true
+  H.restore_lazyredraw(cache_lazyredraw)
 
-  return res
+  return res .. H.keys.above
 end
 
 -- Helper data ================================================================
@@ -431,14 +418,18 @@ H.registered_pairs = {
 -- stylua: ignore start
 local function escape(s) return vim.api.nvim_replace_termcodes(s, true, true, true) end
 H.keys = {
-  above     = escape('<C-o>O'),
-  bs        = escape('<bs>'),
-  cr        = escape('<cr>'),
-  del       = escape('<del>'),
-  keep_undo = escape('<C-g>U'),
-  -- NOTE: use `get_arrow_key()` instead of `H.keys.left` or `H.keys.right`
-  left      = escape('<left>'),
-  right     = escape('<right>')
+  above      = escape('<C-o>O'),
+  bs         = escape('<BS>'),
+  cr         = escape('<CR>'),
+  del        = escape('<Del>'),
+  keep_undo  = escape('<C-g>U'),
+  -- Using left/right keys in insert mode breaks undo sequence and, more
+  -- importantly, dot-repeat. To avoid this, use 'i_CTRL-G_U' mapping.
+  -- Use `H.get_arrow_key()` for keys instead of direct from this table.
+  left       = escape('<Left>'),
+  right      = escape('<Right>'),
+  left_undo  = escape('<C-g>U<Left>'),
+  right_undo = escape('<C-g>U<Right>'),
 }
 -- stylua: ignore end
 
@@ -519,16 +510,14 @@ H.register_pair = function(pair_info, mode, buffer)
   local mode_pairs = H.registered_pairs[mode]
 
   -- Process new buffer
-  mode_pairs[buffer] = mode_pairs[buffer] or { bs = {}, cr = {} }
+  local buf_pairs = mode_pairs[buffer] or { bs = {}, cr = {} }
+  mode_pairs[buffer] = buf_pairs
 
-  -- Register pair if it is not already registered
+  -- Register pair in a buffer or 'all'. NOTE: ensure to add entry only if
+  -- `register[key]` is `true` for a faster check in `is_pair_registered`.
   local register, pair = pair_info.register, pair_info.pair
-  if register.bs and not vim.tbl_contains(mode_pairs[buffer].bs, pair) then
-    table.insert(mode_pairs[buffer].bs, pair)
-  end
-  if register.cr and not vim.tbl_contains(mode_pairs[buffer].cr, pair) then
-    table.insert(mode_pairs[buffer].cr, pair)
-  end
+  buf_pairs.bs[pair] = register.bs == true and true or nil
+  buf_pairs.cr[pair] = register.cr == true and true or nil
 end
 
 H.unregister_pair = function(pair, mode, buffer)
@@ -536,24 +525,19 @@ H.unregister_pair = function(pair, mode, buffer)
   if not (mode_pairs and mode_pairs[buffer]) then return end
 
   local buf_pairs = mode_pairs[buffer]
-  for _, key in ipairs({ 'bs', 'cr' }) do
-    for i, p in ipairs(buf_pairs[key]) do
-      if p == pair then table.remove(buf_pairs[key], i) end
-    end
-  end
+  buf_pairs.bs[pair], buf_pairs.cr[pair] = nil, nil
 end
 
-H.is_pair_registered = function(pair, mode, buffer, key)
+H.is_pair_registered = function(pair, mode, key)
   local mode_pairs = H.registered_pairs[mode]
   if not mode_pairs then return false end
 
-  if vim.tbl_contains(mode_pairs['all'][key], pair) then return true end
+  if mode_pairs['all'][key][pair] then return true end
 
-  buffer = buffer == 0 and vim.api.nvim_get_current_buf() or buffer
-  local buf_pairs = mode_pairs[buffer]
+  local buf_pairs = mode_pairs[vim.api.nvim_get_current_buf()]
   if not buf_pairs then return false end
 
-  return vim.tbl_contains(buf_pairs[key], pair)
+  return buf_pairs[key][pair] == true
 end
 
 H.ensure_cr_bs = function(mode)
@@ -580,33 +564,29 @@ H.ensure_cr_bs = function(mode)
 end
 
 -- Work with pair_info --------------------------------------------------------
-H.validate_pair_info = function(pair_info, prefix)
+H.validate_pair_info = function(x, prefix)
   prefix = prefix or 'pair_info'
-  H.check_type(prefix, pair_info, 'table')
-  pair_info = vim.tbl_deep_extend('force', H.default_pair_info, pair_info)
+  H.check_type(prefix, x, 'table')
+  x = vim.tbl_deep_extend('force', H.default_pair_info, x)
 
-  H.check_type(prefix .. '.action', pair_info.action, 'string')
-  H.check_type(prefix .. '.pair', pair_info.pair, 'string')
-  H.check_type(prefix .. '.neigh_pattern', pair_info.neigh_pattern, 'string')
-  H.check_type(prefix .. '.register', pair_info.register, 'table')
+  H.check_type(prefix .. '.action', x.action, 'string')
+  H.check_type(prefix .. '.pair', x.pair, 'string')
+  H.check_type(prefix .. '.neigh_pattern', x.neigh_pattern, 'string')
+  H.check_type(prefix .. '.register', x.register, 'table')
 
-  H.check_type(prefix .. '.register.bs', pair_info.register.bs, 'boolean')
-  H.check_type(prefix .. '.register.cr', pair_info.register.cr, 'boolean')
+  H.check_type(prefix .. '.register.bs', x.register.bs, 'boolean')
+  H.check_type(prefix .. '.register.cr', x.register.cr, 'boolean')
 
-  return pair_info
+  return x
 end
 
-H.pair_info_to_map_rhs = function(pair_info)
-  return ('v:lua.MiniPairs.%s(%s, %s)'):format(
-    pair_info.action,
-    vim.inspect(pair_info.pair),
-    vim.inspect(pair_info.neigh_pattern)
-  )
+H.pair_info_to_map_rhs = function(x)
+  return string.format('v:lua.MiniPairs.%s(%s, %s)', x.action, vim.inspect(x.pair), vim.inspect(x.neigh_pattern))
 end
 
-H.infer_mapping_description = function(pair_info)
-  local action_name = pair_info.action:sub(1, 1):upper() .. pair_info.action:sub(2)
-  return ('%s action for %s pair'):format(action_name, vim.inspect(pair_info.pair))
+H.infer_mapping_description = function(x)
+  local action_name = x.action:sub(1, 1):upper() .. x.action:sub(2)
+  return string.format('%s action for %s pair', action_name, vim.inspect(x.pair))
 end
 
 -- Utilities ------------------------------------------------------------------
@@ -617,34 +597,26 @@ H.check_type = function(name, val, ref, allow_nil)
   H.error(string.format('`%s` should be %s, not %s', name, ref, type(val)))
 end
 
-H.get_cursor_neigh = function(start, finish)
-  local line, col
-  if vim.fn.mode() == 'c' then
-    line = vim.fn.getcmdline()
-    col = vim.fn.getcmdpos()
-    -- Adjust start and finish because output of `getcmdpos()` starts counting
-    -- columns from 1
-    start = start - 1
-    finish = finish - 1
-  else
-    line = vim.api.nvim_get_current_line()
-    col = vim.api.nvim_win_get_cursor(0)[2]
-  end
+H.get_neigh = function(neigh_type)
+  local is_command_mode = vim.fn.mode() == 'c'
+  -- Get line and add '\r' and '\n' to always return 2 characters
+  local line = is_command_mode and vim.fn.getcmdline() or vim.api.nvim_get_current_line()
+  line = '\r' .. line .. '\n'
+  -- Get start character index accounting for added '\r' at the start
+  local start = is_command_mode and vim.fn.charidx(line, vim.fn.getcmdpos()) or vim.fn.charcol('.')
+  start = start - 1
 
-  -- Add '\r' and '\n' to always return 2 characters
-  return string.sub(('%s%s%s'):format('\r', line, '\n'), col + 1 + start, col + 1 + finish)
+  return vim.fn.strcharpart(line, start + (neigh_type == 'right' and 1 or 0), neigh_type == 'whole' and 2 or 1)
 end
 
-H.neigh_match = function(pattern) return (pattern == nil) or (H.get_cursor_neigh(0, 1):find(pattern) ~= nil) end
+H.neigh_match = function(pattern) return H.get_neigh('whole'):find(pattern or '') ~= nil end
+
+H.get_open_char = function(x) return vim.fn.strcharpart(x, 0, 1) end
+H.get_close_char = function(x) return vim.fn.strcharpart(x, 1, 1) end
 
 H.get_arrow_key = function(key)
-  if vim.fn.mode() == 'i' then
-    -- Using left/right keys in insert mode breaks undo sequence and, more
-    -- importantly, dot-repeat. To avoid this, use 'i_CTRL-G_U' mapping.
-    return H.keys.keep_undo .. H.keys[key]
-  else
-    return H.keys[key]
-  end
+  return vim.fn.mode() == 'i' and (key == 'right' and H.keys.right_undo or H.keys.left_undo)
+    or (key == 'right' and H.keys.right or H.keys.left)
 end
 
 H.map = function(mode, lhs, rhs, opts)

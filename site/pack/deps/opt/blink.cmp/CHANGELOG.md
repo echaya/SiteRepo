@@ -1,3 +1,21 @@
+## [0.14.2](https://github.com/Saghen/blink.cmp/compare/v0.14.1...v0.14.2) (2025-03-24)
+
+### Features
+
+* completions in dap-repl by default, document `enabled` behavior ([51d3ad4](https://github.com/Saghen/blink.cmp/commit/51d3ad4ae11b8b981da89759f5a5ee6578971cb2)), closes [#1492](https://github.com/Saghen/blink.cmp/issues/1492)
+* **keymap:** allow to override `inherit` preset with user keymaps ([#1483](https://github.com/Saghen/blink.cmp/issues/1483)) ([2477442](https://github.com/Saghen/blink.cmp/commit/247744293512c852f6932982126a0bf118f4a2ad)), closes [#1479](https://github.com/Saghen/blink.cmp/issues/1479)
+
+### Bug Fixes
+
+* add bracket exception for `except` statements in python ([2a5a6da](https://github.com/Saghen/blink.cmp/commit/2a5a6da63f0236e7c3d89449cec2dea6d0391325)), closes [#1188](https://github.com/Saghen/blink.cmp/issues/1188)
+* **cmdline:** separetely caculate start_pos for `:=xx` ([#1488](https://github.com/Saghen/blink.cmp/issues/1488)) ([873512b](https://github.com/Saghen/blink.cmp/commit/873512b79cda43a35a9f68ca8d7d541e2b9b69d6))
+* **fuzzy:** truncate length of `filter_text` to 512 ([#1475](https://github.com/Saghen/blink.cmp/issues/1475)) ([cb15a0f](https://github.com/Saghen/blink.cmp/commit/cb15a0fe998e53c5b2a1041467b6342450a4a5a0))
+* use only first line for preview ([e843b91](https://github.com/Saghen/blink.cmp/commit/e843b9100baa435c989c9ba6540e91091b7cbfe6)), closes [#1477](https://github.com/Saghen/blink.cmp/issues/1477)
+
+### Performance Improvements
+
+* lookup rather than iteration one by one ([#1490](https://github.com/Saghen/blink.cmp/issues/1490)) ([61636a2](https://github.com/Saghen/blink.cmp/commit/61636a2630acd4a0b5711f684509cb8b3e78941c))
+
 ## [0.14.1](https://github.com/Saghen/blink.cmp/compare/v0.14.0...v0.14.1) (2025-03-20)
 
 ### Features
@@ -12,7 +30,7 @@
 * `padded` border type passed to `nvim_open_win` ([13ce441](https://github.com/Saghen/blink.cmp/commit/13ce441233e48d186eb10abb7c830700304cf361))
 * cursor line hl name from existing cursor line hl ([f86f162](https://github.com/Saghen/blink.cmp/commit/f86f1628b4d295384a017cc89e4f46aaf2298e36))
 * **download:** handle first-time loading issue of rust lua module ([#1472](https://github.com/Saghen/blink.cmp/issues/1472)) ([40a9786](https://github.com/Saghen/blink.cmp/commit/40a97868b94fb88946b0fe018ec68392ff3a3ef5)), closes [#38a234e9](https://github.com/Saghen/blink.cmp/issues/38a234e9) [#1471](https://github.com/Saghen/blink.cmp/issues/1471)
-* **luasnip:** use `cusor` to locate `clear_region.to` ([#1459](https://github.com/Saghen/blink.cmp/issues/1459)) ([0a56a23](https://github.com/Saghen/blink.cmp/commit/0a56a2337dad26c78183ef2a83df5fcbcf59fd00))
+* **luasnip:** use `cursor` to locate `clear_region.to` ([#1459](https://github.com/Saghen/blink.cmp/issues/1459)) ([0a56a23](https://github.com/Saghen/blink.cmp/commit/0a56a2337dad26c78183ef2a83df5fcbcf59fd00))
 * pcall getting vim.o.winborder ([c1407e0](https://github.com/Saghen/blink.cmp/commit/c1407e04c6c51ce9e35d3ba37e59e6634014d6de))
 * **scrollbar:** explicitly set border to 'none' ([#1461](https://github.com/Saghen/blink.cmp/issues/1461)) ([1825d4d](https://github.com/Saghen/blink.cmp/commit/1825d4dbdfa6d78fcc445e1268047757800b853f))
 * semantic token auto brackets running when disabled, and vice versa ([5b1d349](https://github.com/Saghen/blink.cmp/commit/5b1d3498b13c9321c4ed862a217889a22fc3e565)), closes [#1465](https://github.com/Saghen/blink.cmp/issues/1465)

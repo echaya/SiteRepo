@@ -49,7 +49,7 @@ function cmdline:get_completions(context, callback)
     .empty()
     :map(function()
       -- Special case for help where we read all the tags ourselves
-      if vim.tbl_contains(constants.help_commands, cmd) and arg_number > 1 then
+      if constants.help_commands[cmd] and arg_number > 1 then
         return require('blink.cmp.sources.cmdline.help').get_completions(current_arg_prefix)
       end
 
@@ -92,7 +92,7 @@ function cmdline:get_completions(context, callback)
       end
 
       -- Special case for files, escape special characters
-      if vim.tbl_contains(constants.file_commands, cmd) then
+      if constants.file_commands[cmd] then
         completions = vim.tbl_map(function(completion) return vim.fn.fnameescape(completion) end, completions)
       end
 
@@ -127,7 +127,7 @@ function cmdline:get_completions(context, callback)
         or completion_type == 'file_in_path'
         or completion_type == 'buffer'
       local is_first_arg = arg_number == 1
-      local is_lua_expr = completion_type == 'lua' and context.line:sub(1, 1) == '='
+      local is_lua_expr = completion_type == 'lua' and cmd == '='
 
       local items = {}
       for _, completion in ipairs(completions) do
@@ -149,12 +149,15 @@ function cmdline:get_completions(context, callback)
         local start_pos = #text_before_argument
 
         -- exclude range on the first argument
-        if is_first_arg then
+        if is_first_arg and not is_lua_expr then
           local prefix = longest_match(current_arg, {
             "^%s*'<%s*,%s*'>%s*", -- Visual range, e.g., '<,>'
             '^%s*%d+%s*,%s*%d+%s*', -- Numeric range, e.g., 3,5
             '^%s*[%p]+%s*', -- One or more punctuation characters
           })
+          start_pos = start_pos + #prefix
+        elseif is_first_arg and is_lua_expr then
+          local prefix = current_arg:match('^=%s*')
           start_pos = start_pos + #prefix
         end
 
