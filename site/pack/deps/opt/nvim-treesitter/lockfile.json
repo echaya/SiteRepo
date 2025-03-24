@@ -59,6 +59,9 @@
   "c_sharp": {
     "revision": "b5eb5742f6a7e9438bee22ce8026d6b927be2cd7"
   },
+  "caddy": {
+    "revision": "2686186edb61be47960431c93a204fb249681360"
+  },
   "cairo": {
     "revision": "6238f609bea233040fe927858156dee5515a0745"
   },
@@ -330,7 +333,7 @@
     "revision": "02fa3b79b3ff9a296066da6277adfc3f26cbc9e0"
   },
   "hlsl": {
-    "revision": "b309425a7ab4456605cfe78774b80f7e275ca87d"
+    "revision": "bab9111922d53d43668fabb61869bec51bbcb915"
   },
   "hlsplaylist": {
     "revision": "3bfda9271e3adb08d35f47a2102fe957009e1c55"
@@ -379,6 +382,9 @@
   },
   "java": {
     "revision": "a7db5227ec40fcfe94489559d8c9bc7c8181e25a"
+  },
+  "javadoc": {
+    "revision": "db9589e9c61cff7d7fcc207744c711b10b60a7a3"
   },
   "javascript": {
     "revision": "6fbef40512dcd9f0a61ce03a4c9ae7597b36ab5c"
@@ -591,10 +597,10 @@
     "revision": "73f39a6d5401cfdcd143951e499336cf5ab2ffaa"
   },
   "problog": {
-    "revision": "986a50d27e1bbf4fabce7e650c26e1e0da5535fc"
+    "revision": "d8d415f6a1cf80ca138524bcc395810b176d40fa"
   },
   "prolog": {
-    "revision": "986a50d27e1bbf4fabce7e650c26e1e0da5535fc"
+    "revision": "d8d415f6a1cf80ca138524bcc395810b176d40fa"
   },
   "promql": {
     "revision": "77625d78eebc3ffc44d114a07b2f348dff3061b0"
@@ -783,7 +789,7 @@
     "revision": "395006713db3bbb90d267ebdfcbf1881b399b05c"
   },
   "swift": {
-    "revision": "6b1ebb86c97fca00835e7fce4a95c5069172145e"
+    "revision": "aca5a52aa3cab858944d3c02701ccf5b2d8fd0f9"
   },
   "sxhkdrc": {
     "revision": "440d5f913d9465c9c776a1bd92334d32febcf065"
