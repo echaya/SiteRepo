@@ -19,3 +19,5 @@ todo.md
 .github
 
 
+site/pack/deps/opt/blink.cmp/target/release/libblink_cmp_fuzzy.dll.sha256
+site/pack/deps/opt/blink.cmp/target/release/version
