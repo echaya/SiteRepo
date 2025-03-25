@@ -32,7 +32,7 @@ Plugin to improve viewing Markdown files in Neovim
   - Code inline: background
   - Horizontal breaks: icon, color, width
   - List bullets: icon, color, padding [^1]
-  - Checkboxes: icon, color, user defined states [^1]
+  - Checkboxes: icon, color, user defined states
   - Block quotes: icon, color, line breaks [^1]
   - Callouts: icon, color, user defined values, Github & Obsidian defaults
   - Tables: border, color, alignment indicator, auto align cells [^1]
@@ -388,7 +388,9 @@ require('render-markdown').setup({
         -- Amount of padding to add around the language.
         -- If a float < 1 is provided it is treated as a percentage of available window space.
         language_pad = 0,
-        -- Whether to include the language name next to the icon.
+        -- Whether to include the language icon above code blocks.
+        language_icon = true,
+        -- Whether to include the language name above code blocks.
         language_name = true,
         -- A list of language names for which background highlighting will be disabled.
         -- Likely because that language has background highlights itself.
@@ -424,6 +426,8 @@ require('render-markdown').setup({
         highlight = 'RenderMarkdownCode',
         -- Highlight for language, overrides icon provider value.
         highlight_language = nil,
+        -- Highlight for language, used if icon provider does not have a value.
+        highlight_fallback = 'RenderMarkdownCodeFallback',
         -- Padding to add to the left & right of inline code.
         inline_pad = 0,
         -- Highlight for inline code.
@@ -494,10 +498,8 @@ require('render-markdown').setup({
         enabled = true,
         -- Additional modes to render checkboxes.
         render_modes = false,
-        -- Determines how icons fill the available space.
-        -- | inline  | underlying text is concealed resulting in a left aligned icon |
-        -- | overlay | result is left padded with spaces to hide any additional text |
-        position = 'inline',
+        -- Padding to add to the right of checkboxes.
+        right_pad = 1,
         unchecked = {
             -- Replaces '[ ]' of 'task_list_marker_unchecked'.
             icon = '󰄱 ',
@@ -935,7 +937,9 @@ require('render-markdown').setup({
         -- Amount of padding to add around the language.
         -- If a float < 1 is provided it is treated as a percentage of available window space.
         language_pad = 0,
-        -- Whether to include the language name next to the icon.
+        -- Whether to include the language icon above code blocks.
+        language_icon = true,
+        -- Whether to include the language name above code blocks.
         language_name = true,
         -- A list of language names for which background highlighting will be disabled.
         -- Likely because that language has background highlights itself.
@@ -971,6 +975,8 @@ require('render-markdown').setup({
         highlight = 'RenderMarkdownCode',
         -- Highlight for language, overrides icon provider value.
         highlight_language = nil,
+        -- Highlight for language, used if icon provider does not have a value.
+        highlight_fallback = 'RenderMarkdownCodeFallback',
         -- Padding to add to the left & right of inline code.
         inline_pad = 0,
         -- Highlight for inline code.
@@ -1086,10 +1092,8 @@ require('render-markdown').setup({
         enabled = true,
         -- Additional modes to render checkboxes.
         render_modes = false,
-        -- Determines how icons fill the available space.
-        -- | inline  | underlying text is concealed resulting in a left aligned icon |
-        -- | overlay | result is left padded with spaces to hide any additional text |
-        position = 'inline',
+        -- Padding to add to the right of checkboxes.
+        right_pad = 1,
         unchecked = {
             -- Replaces '[ ]' of 'task_list_marker_unchecked'.
             icon = '󰄱 ',
@@ -1407,6 +1411,7 @@ The table below shows all the highlight groups with their default link
 | RenderMarkdownH5Bg            | DiffDelete                         | H5 background line         |
 | RenderMarkdownH6Bg            | DiffDelete                         | H6 background line         |
 | RenderMarkdownCode            | ColorColumn                        | Code block background      |
+| RenderMarkdownCodeFallback    | Normal                             | Fallback for code language |
 | RenderMarkdownCodeInline      | RenderMarkdownCode                 | Inline code background     |
 | RenderMarkdownInlineHighlight | RenderMarkdownCodeInline           | Inline highlights contents |
 | RenderMarkdownBullet          | Normal                             | List item bullet points    |
