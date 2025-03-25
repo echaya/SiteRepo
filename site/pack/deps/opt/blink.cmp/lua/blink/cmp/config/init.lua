@@ -130,8 +130,11 @@ function M.enabled()
   -- Buffer explicitly set completion to true, always enable
   if user_enabled and vim.b.completion == true then return true end
 
+  -- Buffer explicitly set completion to false, always disable
+  if vim.b.completion == false then return false end
+
   -- Exceptions
-  if vim.bo.filetype == 'dap-repl' then return true end
+  if user_enabled and vim.bo.filetype == 'dap-repl' then return true end
 
   return user_enabled and vim.bo.buftype ~= 'prompt' and vim.b.completion ~= false
 end

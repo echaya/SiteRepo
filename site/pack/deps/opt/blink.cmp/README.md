@@ -1,20 +1,17 @@
-> [!WARNING]
-> This plugin is _beta_ quality. Expect breaking changes and many bugs
-
 # Blink Completion (blink.cmp)
 
 **blink.cmp** is a completion plugin with support for LSPs and external sources that updates on every keystroke with minimal overhead (0.5-4ms async). It uses an [optional](https://cmp.saghen.dev/configuration/fuzzy.html#rust-vs-lua-implementation) custom [fuzzy matcher](https://github.com/saghen/frizbee) to easily handle 20k+ items. It provides extensibility via pluggable sources (LSP, snippets, etc), component based rendering and scripting for the configuration.
 
-<https://github.com/user-attachments/assets/9849e57a-3c2c-49a8-959c-dbb7fef78c80>
+<https://github.com/user-attachments/assets/bd1e25dd-48b0-4d33-90f4-1468d822f2be>
 
 ## Features
 
 - Works out of the box with no additional configuration
 - Updates on every keystroke (0.5-4ms async, single core)
 - [Typo resistant fuzzy](https://github.com/saghen/frizbee) with frecency and proximity bonus
-- Extensive LSP support ([tracker](/development/lsp-tracker.md))
-- [Snippet support](/configuration/snippets.html): native `vim.snippet` (including `friendly-snippets`), `LuaSnip` and `mini.snippets`
-- External sources support ([community sources](/configuration/sources.html#community-sources) and [compatibility layer for `nvim-cmp` sources](https://github.com/saghen/blink.compat))
+- Extensive LSP support ([tracker](https://cmp.saghen.dev/development/lsp-tracker))
+- [Snippet support](https://cmp.saghen.dev/configuration/snippets.html): native `vim.snippet` (including `friendly-snippets`), `LuaSnip` and `mini.snippets`
+- External sources support ([community sources](https://cmp.saghen.dev/configuration/sources.html#community-sources) and [compatibility layer for `nvim-cmp` sources](https://github.com/saghen/blink.compat))
 - [Auto-bracket support](https://cmp.saghen.dev/configuration/completion.html#auto-brackets) based on semantic tokens
 - [Signature help](https://cmp.saghen.dev/configuration/signature.html) (experimental, opt-in)
 - [Command line completion](https://cmp.saghen.dev/modes/cmdline.html)
