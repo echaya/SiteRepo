@@ -1,7 +1,7 @@
 local Context = require('render-markdown.core.context')
-local List = require('render-markdown.lib.list')
+local Marks = require('render-markdown.lib.marks')
 local state = require('render-markdown.state')
-local treesitter = require('render-markdown.core.treesitter')
+local ts = require('render-markdown.integ.ts')
 
 ---@class render.md.handler.buf.Markdown
 ---@field private config render.md.buffer.Config
@@ -18,8 +18,8 @@ function Handler.new(buf)
     local self = setmetatable({}, Handler)
     self.config = state.get(buf)
     self.context = Context.get(buf)
-    self.marks = List.new_marks(buf, false)
-    self.query = treesitter.parse(
+    self.marks = Marks.new(buf, false)
+    self.query = ts.parse(
         'markdown',
         [[
             (section) @section

@@ -1,5 +1,5 @@
 local Base = require('render-markdown.render.base')
-local treesitter = require('render-markdown.core.treesitter')
+local ts = require('render-markdown.integ.ts')
 
 ---@class render.md.data.Quote
 ---@field query vim.treesitter.Query
@@ -22,7 +22,7 @@ function Render:setup()
     local callout = self.context:get_callout(self.node.start_row)
 
     self.data = {
-        query = treesitter.parse(
+        query = ts.parse(
             'markdown',
             [[
                 [
@@ -49,7 +49,7 @@ end
 ---@private
 ---@param node render.md.Node
 function Render:quote_marker(node)
-    self.marks:add_over('quote', node, {
+    self.marks:over('quote', node, {
         virt_text = { { node.text:gsub('>', self.data.icon), self.data.highlight } },
         virt_text_pos = 'overlay',
         virt_text_repeat_linebreak = self.data.repeat_linebreak,
