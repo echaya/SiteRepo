@@ -15,22 +15,22 @@ let s:cadet_blue   = '#a1aab8'
 let s:ash_blue     = '#acb4c2'
 let s:white_blue   = '#d6deeb'
 " Core theme colors
-let s:yellow       = '#e3d18a'
-let s:peach        = '#ffcb8b'
-let s:tan          = '#ecc48d'
-let s:orange       = '#f78c6c'
-let s:orchid       = '#e39aa6'
 let s:red          = '#fc514e'
 let s:watermelon   = '#ff5874'
-let s:purple       = '#ae81ff'
-let s:violet       = '#c792ea'
-let s:lavender     = "#b0b2f4"
-let s:blue         = '#82aaff'
-let s:malibu       = '#87bcff'
-let s:turquoise    = '#7fdbca'
-let s:emerald      = '#21c7a8'
+let s:orange       = '#f78c6c'
+let s:peach        = '#ffcb8b'
+let s:tan          = '#ecc48d'
+let s:yellow       = '#e3d18a'
+let s:orchid       = '#e39aa6'
 let s:lime         = '#85dc85'
 let s:green        = '#a1cd5e'
+let s:emerald      = '#21c7a8'
+let s:turquoise    = '#7fdbca'
+let s:malibu       = '#87bcff'
+let s:blue         = '#82aaff'
+let s:lavender     = "#b0b2f4"
+let s:violet       = '#c792ea'
+let s:purple       = '#ae81ff'
 " Extra colors
 let s:cyan_blue    = '#316394'
 let s:bay_blue     = '#24567F'
@@ -83,9 +83,17 @@ function! nightfly#Style() abort
     exec 'highlight NightflyDiagnosticUnderlineError gui=underline guisp=' . s:red
     exec 'highlight NightflyDiagnosticUnderlineWarn gui=underline guisp=' . s:yellow
     exec 'highlight NightflyDiagnosticUnderlineInfo gui=underline guisp=' . s:malibu
-    exec 'highlight NightflyDiagnosticVirtualTextError guibg=' . s:dark_blue . ' guifg=' . s:red
-    exec 'highlight NightflyDiagnosticVirtualTextWarn guibg=' . s:dark_blue . ' guifg=' . s:yellow
-    exec 'highlight NightflyDiagnosticVirtualTextInfo guibg=' . s:dark_blue . ' guifg=' . s:malibu
+    if g:nightflyVirtualTextColor
+        exec 'highlight NightflyDiagnosticVirtualTextError guibg=' . s:dark_blue . ' guifg=' . s:red
+        exec 'highlight NightflyDiagnosticVirtualTextWarn guibg=' . s:dark_blue . ' guifg=' . s:yellow
+        exec 'highlight NightflyDiagnosticVirtualTextInfo guibg=' . s:dark_blue . ' guifg=' . s:malibu
+        exec 'highlight NightflyDiagnosticVirtualTextHint guibg=' . s:dark_blue . ' guifg=' . s:turquoise
+    else
+        highlight! link NightflyDiagnosticVirtualTextError NightflySteelBlue
+        highlight! link NightflyDiagnosticVirtualTextWarn NightflySteelBlue
+        highlight! link NightflyDiagnosticVirtualTextInfo NightflySteelBlue
+        highlight! link NightflyDiagnosticVirtualTextHint NightflySteelBlue
+    endif
 
     "-----------------------------------------------------------------------
     " Standard styling
@@ -681,15 +689,9 @@ function! nightfly#Style() abort
     highlight! link ALEErrorSign NightflyRed
     highlight! link ALEWarningSign NightflyYellow
     highlight! link ALEInfoSign NightflyMalibu
-    if g:nightflyVirtualTextColor
-        highlight! link ALEVirtualTextError NightflyDiagnosticVirtualTextError
-        highlight! link ALEVirtualTextWarning NightflyDiagnosticVirtualTextWarn
-        highlight! link ALEVirtualTextInfo NightflyDiagnosticVirtualTextInfo
-    else
-        highlight! link ALEVirtualTextError NightflySteelBlue
-        highlight! link ALEVirtualTextWarning NightflySteelBlue
-        highlight! link ALEVirtualTextInfo NightflySteelBlue
-    endif
+    highlight! link ALEVirtualTextError NightflyDiagnosticVirtualTextError
+    highlight! link ALEVirtualTextWarning NightflyDiagnosticVirtualTextWarn
+    highlight! link ALEVirtualTextInfo NightflyDiagnosticVirtualTextInfo
 
     " Coc
     highlight! link CocSemTypeBuiltin NightflyWatermelon
@@ -707,7 +709,7 @@ function! nightfly#Style() abort
     highlight! link CocErrorVirtualText NightflyDiagnosticVirtualTextError
     highlight! link CocWarningVirtualText NightflyDiagnosticVirtualTextWarn
     highlight! link CocInfoVirtualText NightflyDiagnosticVirtualTextInfo
-    highlight! link CocHintVirtualText NightflyDiagnosticVirtualTextInfo
+    highlight! link CocHintVirtualText NightflyDiagnosticVirtualTextHint
 
     " fern.vim plugin
     highlight! link FernBranchSymbol NightflyGreyBlue
