@@ -52,6 +52,13 @@
     - Add `filtersort` option to control how items are filtered and/or sorted. Its default value has new (breaking) value: do fuzzy matching if 'completeopt' option contains "fuzzy" entry; same as before otherwise.
     - Use `filterText` and `label` item fields during matching (instead of `textEdit.newText`, `insertText`, and `label` as before). This is more aligned with LSP specification.
 
+## mini.diff
+
+- FEATURE: overlay virtual lines now scroll horizontally along with buffer lines. Requires Neovim>=0.11 and disabled 'wrap' option.
+- FEATURE: highlighting of buffer parts of change hunks can now be customized with these new highlight groups:
+    - `MiniDiffOverChangeBuf` - changed buffer text. Previously used `MiniDiffOverChange` (for changed reference text); links to it by default.
+    - `MiniDiffOverContextBuf` - context of a change shown in buffer overlay. Previously not highlighted, default highlight group is not created.
+
 ## mini.doc
 
 - FEATURE: improve detection and formatting for types in `@param`, `@return`, and similar.

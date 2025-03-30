@@ -60,13 +60,15 @@
 ---
 --- # Highlight groups ~
 ---
---- * `MiniDiffSignAdd`     - "add" hunk lines visualization.
---- * `MiniDiffSignChange`  - "change" hunk lines visualization.
---- * `MiniDiffSignDelete`  - "delete" hunk lines visualization.
---- * `MiniDiffOverAdd`     - added text shown in overlay.
---- * `MiniDiffOverChange`  - changed text shown in overlay.
---- * `MiniDiffOverContext` - context of changed text shown in overlay.
---- * `MiniDiffOverDelete`  - deleted text shown in overlay.
+--- * `MiniDiffSignAdd`        - "add" hunk lines visualization.
+--- * `MiniDiffSignChange`     - "change" hunk lines visualization.
+--- * `MiniDiffSignDelete`     - "delete" hunk lines visualization.
+--- * `MiniDiffOverAdd`        - added buffer text shown in overlay.
+--- * `MiniDiffOverChange`     - changed reference text shown in overlay.
+--- * `MiniDiffOverChangeBuf`  - changed buffer text shown in overlay.
+--- * `MiniDiffOverContext`    - context of a change shown in reference overlay.
+--- * `MiniDiffOverContextBuf` - context of a change shown in buffer overlay.
+--- * `MiniDiffOverDelete`     - deleted reference text shown in overlay.
 ---
 --- To change any highlight group, modify it directly with |:highlight|.
 ---
@@ -149,18 +151,20 @@
 ---
 --- - Added buffer lines are highlighted with `MiniDiffOverAdd` highlight group.
 ---
---- - Deleted reference lines are shown as virtual text and highlighted with
+--- - Deleted reference lines are shown as virtual lines and highlighted with
 ---   `MiniDiffOverDelete` highlight group.
 ---
---- - Changed reference lines are shown as virtual text and highlighted with
----   `MiniDiffOverChange` highlight group.
+--- - "Change" hunks with equal number of buffer/reference lines show "word diff".
+---   This is usually the case when `options.linematch` is enabled (as by default).
+---   Reference line is shown next to its buffer counterpart. Changed parts are
+---   highlighted with `MiniDiffOverChange` and `MiniDiffOverChangeBuf` in reference
+---   and buffer lines. The rest of lines have `MiniDiffOverContext`
+---   and `MiniDiffOverContextBuf` highlighting.
 ---
----   "Change" hunks with equal number of buffer and reference lines have special
----   treatment and show "word diff". Reference line is shown next to its buffer
----   counterpart and only changed parts of both lines are highlighted with
----   `MiniDiffOverChange`. The rest of reference line has `MiniDiffOverContext`
----   highlighting.
----   This usually is the case when `config.options.linematch` is enabled.
+---   Change with unequal number of buffer/reference lines is shown with reference
+---   part as virtual lines highlighted with `MiniDiffOverChange` group.
+---   Corresponding buffer lines are treated as context for the change and are
+---   highlighted with `MiniDiffOverContextBuf` group.
 ---
 --- Notes:
 --- - Word diff has non-zero context width. This means if changed characters
@@ -290,8 +294,9 @@ end
 ---
 --- `view.priority` is a number with priority used for visualization and
 --- overlay |extmarks|.
---- Default: 199 which is one less than `user` in |vim.highlight.priorities| to have
---- higher priority than automated extmarks but not as in user enabled ones.
+--- Default: 199 which is one less than `user` in |vim.hl.priorities| (on Neovim<0.11
+--- see |vim.highlight.priorities|) to have higher priority than automated
+--- extmarks but not as in user enabled ones.
 ---
 ---                                                  *MiniDiff-source-specification*
 --- # Source ~
@@ -891,8 +896,11 @@ H.style_extmark_data = {
 -- Suffix for overlay virtual lines to be highlighted as full line
 H.overlay_suffix = string.rep(' ', vim.o.columns)
 
--- Flag of whether Neovim version supports invalidating extmarks
-H.extmark_supports_invalidate = vim.fn.has('nvim-0.10') == 1
+-- Flag for whether to invalidate extmarks
+H.extmark_invalidate = vim.fn.has('nvim-0.10') == 1 and true or nil
+
+-- Flag for whether to handle virtual lines overflow
+H.extmark_virt_lines_overflow = vim.fn.has('nvim-0.11') == 1 and 'scroll' or nil
 
 -- Permanent `vim.diff()` options
 H.vimdiff_opts = { result_type = 'indices', ctxlen = 0, interhunkctxlen = 0 }
@@ -994,13 +1002,15 @@ H.create_default_hl = function()
   end
 
   local has_core_diff_hl = vim.fn.has('nvim-0.10') == 1
-  hi('MiniDiffSignAdd',     { link = has_core_diff_hl and 'Added' or 'diffAdded' })
-  hi('MiniDiffSignChange',  { link = has_core_diff_hl and 'Changed' or 'diffChanged' })
-  hi('MiniDiffSignDelete',  { link = has_core_diff_hl and 'Removed' or 'diffRemoved'  })
-  hi('MiniDiffOverAdd',     { link = 'DiffAdd' })
-  hi('MiniDiffOverChange',  { link = 'DiffText' })
-  hi('MiniDiffOverContext', { link = 'DiffChange' })
-  hi('MiniDiffOverDelete',  { link = 'DiffDelete'  })
+  hi('MiniDiffSignAdd',        { link = has_core_diff_hl and 'Added' or 'diffAdded' })
+  hi('MiniDiffSignChange',     { link = has_core_diff_hl and 'Changed' or 'diffChanged' })
+  hi('MiniDiffSignDelete',     { link = has_core_diff_hl and 'Removed' or 'diffRemoved'  })
+  hi('MiniDiffOverAdd',        { link = 'DiffAdd' })
+  hi('MiniDiffOverChange',     { link = 'DiffText' })
+  hi('MiniDiffOverChangeBuf',  { link = 'MiniDiffOverChange'})
+  hi('MiniDiffOverContext',    { link = 'DiffChange' })
+  hi('MiniDiffOverContextBuf', {})
+  hi('MiniDiffOverDelete',     { link = 'DiffDelete'  })
 end
 
 H.is_disabled = function(buf_id)
@@ -1134,13 +1144,11 @@ H.convert_view_to_extmark_opts = function(view)
 
   local signs = view.style == 'sign' and view.signs or {}
   local field, hl_group_prefix = extmark_data.field, extmark_data.hl_group_prefix
-  local invalidate
-  if H.extmark_supports_invalidate then invalidate = true end
   --stylua: ignore
   return {
-    add =    { [field] = hl_group_prefix .. 'Add',    sign_text = signs.add,    priority = view.priority, invalidate = invalidate },
-    change = { [field] = hl_group_prefix .. 'Change', sign_text = signs.change, priority = view.priority, invalidate = invalidate },
-    delete = { [field] = hl_group_prefix .. 'Delete', sign_text = signs.delete, priority = view.priority, invalidate = invalidate },
+    add =    { [field] = hl_group_prefix .. 'Add',    sign_text = signs.add,    priority = view.priority, invalidate = H.extmark_invalidate },
+    change = { [field] = hl_group_prefix .. 'Change', sign_text = signs.change, priority = view.priority, invalidate = H.extmark_invalidate },
+    delete = { [field] = hl_group_prefix .. 'Delete', sign_text = signs.delete, priority = view.priority, invalidate = H.extmark_invalidate },
   }
 end
 
@@ -1335,10 +1343,12 @@ H.append_overlay_change = function(overlay_lines, hunk, ref_lines, buf_lines, pr
   -- If not one-to-one change, show reference lines above first real one
   local changed_lines = {}
   for i = hunk.ref_start, hunk.ref_start + hunk.ref_count - 1 do
-    local l = { { ref_lines[i], 'MiniDiffOverChange' }, { H.overlay_suffix, 'MiniDiffOverChange' } }
+    local l = { { ref_lines[i] .. H.overlay_suffix, 'MiniDiffOverChange' } }
     table.insert(changed_lines, l)
   end
-  H.append_overlay(overlay_lines, hunk.buf_start, { type = 'change', lines = changed_lines, priority = priority })
+  local to = hunk.buf_start + hunk.buf_count - 1
+  local data = { type = 'change', to = to, lines = changed_lines, show_above = true, priority = priority }
+  H.append_overlay(overlay_lines, hunk.buf_start, data)
 end
 
 H.append_overlay_delete = function(overlay_lines, hunk, ref_lines, priority)
@@ -1352,36 +1362,28 @@ H.append_overlay_delete = function(overlay_lines, hunk, ref_lines, priority)
 end
 
 H.draw_overlay_line = function(buf_id, ns_id, row, data)
-  -- "Add" hunk: highlight whole buffer range
-  if data.type == 'add' then
-    local opts =
-      { end_row = data.to, end_col = 0, hl_group = 'MiniDiffOverAdd', hl_eol = true, priority = data.priority }
-    return H.set_extmark(buf_id, ns_id, row, 0, opts)
-  end
-
-  -- "Change" hunk: show changed lines above first hunk line
-  if data.type == 'change' then
-    -- NOTE: virtual lines above line 1 need manual scroll (with `<C-y>`)
-    -- See https://github.com/neovim/neovim/issues/16166
-    local opts = { virt_lines = data.lines, virt_lines_above = true, priority = data.priority }
-    return H.set_extmark(buf_id, ns_id, row, 0, opts)
-  end
-
   -- "Change worddif" hunk: compute word diff and show it above and over text
   if data.type == 'change_worddiff' then return H.draw_overlay_line_worddiff(buf_id, ns_id, row, data) end
 
-  -- "Delete" hunk: show deleted lines below buffer line (if possible)
-  if data.type == 'delete' then
-    local opts = { virt_lines = data.lines, virt_lines_above = data.show_above, priority = data.priority }
-    return H.set_extmark(buf_id, ns_id, row, 0, opts)
+  local opts = { priority = data.priority }
+
+  -- "Add"/"Change" hunks highlight whole lines in affected buffer range
+  if data.type ~= 'delete' then
+    opts.end_row, opts.end_col, opts.hl_eol = data.to, 0, true
+    opts.hl_group = data.type == 'add' and 'MiniDiffOverAdd' or 'MiniDiffOverContextBuf'
   end
+
+  -- "Change"/"Delete" hunks show affected reference range as virtual lines
+  opts.virt_lines, opts.virt_lines_above, opts.virt_lines_overflow =
+    data.lines, data.show_above, H.extmark_virt_lines_overflow
+  H.set_extmark(buf_id, ns_id, row, 0, opts)
 end
 
 H.draw_overlay_line_worddiff = function(buf_id, ns_id, row, data)
-  local ref_line, buf_line = data.ref_line, data.buf_line
+  local ref_line, buf_line, priority = data.ref_line, data.buf_line, data.priority
   local ref_parts, buf_parts = H.compute_worddiff_changed_parts(ref_line, buf_line)
 
-  -- Show changed parts in reference line as virtual line above
+  -- Show changes in reference as two-colored virtual line above
   local virt_line, index = {}, 1
   for i = 1, #ref_parts do
     local part = ref_parts[i]
@@ -1392,15 +1394,23 @@ H.draw_overlay_line_worddiff = function(buf_id, ns_id, row, data)
   if index <= ref_line:len() then table.insert(virt_line, { ref_line:sub(index), 'MiniDiffOverContext' }) end
   table.insert(virt_line, { H.overlay_suffix, 'MiniDiffOverContext' })
 
-  local ref_opts = { virt_lines = { virt_line }, virt_lines_above = true, priority = data.priority }
+  --stylua: ignore
+  local ref_opts = {
+    virt_lines = { virt_line }, virt_lines_above = true, virt_lines_overflow = H.extmark_virt_lines_overflow,
+    priority = priority,
+  }
   H.set_extmark(buf_id, ns_id, row, 0, ref_opts)
 
-  -- Show changed parts in current line with separate extmarks
+  -- Show changes in buffer line as one whole-line highlighting with separate
+  -- highlighting for changed regions on top (as priority of context is lower)
   for i = 1, #buf_parts do
     local part = buf_parts[i]
-    local buf_opts = { end_row = row, end_col = part[2], hl_group = 'MiniDiffOverChange', priority = data.priority }
+    local buf_opts = { end_row = row, end_col = part[2], hl_group = 'MiniDiffOverChangeBuf', priority = priority }
     H.set_extmark(buf_id, ns_id, row, part[1] - 1, buf_opts)
   end
+  local context_opts =
+    { end_row = row + 1, end_col = 0, hl_group = 'MiniDiffOverContextBuf', hl_eol = true, priority = priority - 1 }
+  H.set_extmark(buf_id, ns_id, row, 0, context_opts)
 end
 
 H.compute_worddiff_changed_parts = function(ref_line, buf_line)
