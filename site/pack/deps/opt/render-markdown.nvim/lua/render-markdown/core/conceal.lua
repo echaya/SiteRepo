@@ -1,3 +1,4 @@
+local Compat = require('render-markdown.lib.compat')
 local Env = require('render-markdown.lib.env')
 local Str = require('render-markdown.lib.str')
 
@@ -21,14 +22,12 @@ local Conceal = {}
 Conceal.__index = Conceal
 
 ---@param context render.md.Context
----@param buf integer
----@param win integer
 ---@return render.md.Conceal
-function Conceal.new(context, buf, win)
+function Conceal.new(context)
     local self = setmetatable({}, Conceal)
     self.context = context
-    self.buf = buf
-    self.level = Env.win.get(win, 'conceallevel')
+    self.buf = context.buf
+    self.level = Env.win.get(context.win, 'conceallevel')
     self.computed = false
     self.lines = {}
     return self
@@ -91,7 +90,7 @@ end
 ---@return boolean
 function Conceal:hidden(node)
     -- conceal lines metadata require neovim >= 0.11.0 to function
-    return Env.has_11 and self:line(node).hidden
+    return Compat.has_11 and self:line(node).hidden
 end
 
 ---@param node render.md.Node

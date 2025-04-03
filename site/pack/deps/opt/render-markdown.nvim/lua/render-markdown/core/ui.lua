@@ -1,4 +1,5 @@
 local Buffer = require('render-markdown.core.buffer')
+local Compat = require('render-markdown.lib.compat')
 local Context = require('render-markdown.core.context')
 local Env = require('render-markdown.lib.env')
 local Extmark = require('render-markdown.core.extmark')
@@ -132,7 +133,8 @@ function M.run_update(buf, win, change)
     end
 
     if next_state == 'rendered' then
-        if not buffer:has_marks() or parse then
+        local initial = not buffer:has_marks()
+        if initial or parse then
             M.clear(buf, buffer)
             buffer:set_marks(M.parse_buffer({
                 buf = buf,
@@ -143,6 +145,9 @@ function M.run_update(buf, win, change)
         end
         local hidden = config:hidden(mode, row)
         local extmarks = buffer:get_marks()
+        if initial then
+            Compat.lsp_window_height(win, extmarks)
+        end
         for _, extmark in ipairs(extmarks) do
             if extmark:get().conceal and extmark:inside(hidden) then
                 extmark:hide(M.ns, buf)
@@ -226,7 +231,7 @@ function M.parse_tree(ctx, language)
     local marks = {}
     local user = state.custom_handlers[language]
     if user ~= nil then
-        log.buf('debug', 'running handler', ctx.buf, 'user')
+        log.buf('debug', 'handler', ctx.buf, 'user')
         vim.list_extend(marks, user.parse(ctx))
         if not user.extends then
             return marks
@@ -234,7 +239,7 @@ function M.parse_tree(ctx, language)
     end
     local builtin = builtin_handlers[language]
     if builtin ~= nil then
-        log.buf('debug', 'running handler', ctx.buf, 'builtin')
+        log.buf('debug', 'handler', ctx.buf, 'builtin')
         vim.list_extend(marks, builtin.parse(ctx))
     end
     return marks
