@@ -1,4 +1,4 @@
-*blink-cmp.txt*           For NVIM v0.10.0          Last change: 2025 March 25
+*blink-cmp.txt*           For NVIM v0.10.0          Last change: 2025 April 03
 
 ==============================================================================
 Table of Contents                                *blink-cmp-table-of-contents*
@@ -53,26 +53,25 @@ FEATURES                                     *blink-cmp-introduction-features*
 - Works out of the box with no additional configuration
 - Updates on every keystroke (0.5-4ms async, single core)
 - Typo resistant fuzzy <https://github.com/saghen/frizbee> with frecency and proximity bonus
-- Extensive LSP support (tracker </development/lsp-tracker.md>)
-- Snippet support </configuration/snippets.html>: native `vim.snippet` (including `friendly-snippets`), `LuaSnip` and `mini.snippets`
-- External sources support (community sources </configuration/sources.html#community-sources> and compatibility layer for `nvim-cmp` sources <https://github.com/saghen/blink.compat>)
-- Auto-bracket support <https://cmp.saghen.dev/configuration/completion.html#auto-brackets> based on semantic tokens
-- Signature help <https://cmp.saghen.dev/configuration/signature.html> (experimental, opt-in)
-- Command line completion <https://cmp.saghen.dev/modes/cmdline.html>
-- Terminal completion <https://cmp.saghen.dev/modes/term> (Nightly only! No source for shell completions exists yet, contributions welcome!)
+- Extensive LSP support (tracker </development/lsp-tracker>)
+- Snippet support </configuration/snippets>: native `vim.snippet` (including `friendly-snippets`), `LuaSnip` and `mini.snippets`
+- External sources support (community sources </configuration/sources#community-sources> and compatibility layer for `nvim-cmp` sources <https://github.com/saghen/blink.compat>)
+- Auto-bracket support </configuration/completion#auto-brackets> based on semantic tokens
+- Signature help </configuration/signature> (experimental, opt-in)
+- Command line completion </modes/cmdline>
+- Terminal completion </modes/term> (Nightly only! No source for shell completions exists yet, contributions welcome!)
 
 
 COMPARED TO BUILT-IN COMPLETION*blink-cmp-introduction-compared-to-built-in-completion*
 
 - Typo resistant fuzzy matching
-    - Smarter scoring <https://github.com/saghen/frizbee?tab=readme-ov-file#algorithm>
+    - Smarter scoring <https://github.com/saghen/frizbee#algorithm>
     - Proximity + frecency score bonuses
 - Prefetching to minimize LSP latency
-- Support for external non-LSP sources <https://cmp.saghen.dev/configuration/sources.html#community-sources> (snippets, path, buffer, git, ripgrep, …)
-- Documentation popup <https://cmp.saghen.dev/configuration/completion.html#documentation>
-- Ghost text <https://cmp.saghen.dev/configuration/completion.html#ghost-text>
-- Signature help <https://cmp.saghen.dev/configuration/signature.html>
-- Auto-bracket support <https://cmp.saghen.dev/configuration/completion.html#auto-brackets> based on semantic tokens
+- Support for external non-LSP sources </configuration/sources.html#community-sources> (snippets, path, buffer, git, ripgrep, …)
+- Ghost text </configuration/completion.html#ghost-text>
+- Signature help </configuration/signature.html>
+- Auto-bracket support </configuration/completion.html#auto-brackets> based on semantic tokens
 
 
 COMPARED TO NVIM-CMP             *blink-cmp-introduction-compared-to-nvim-cmp*
@@ -137,7 +136,7 @@ LAZY.NVIM                                   *blink-cmp-installation-lazy.nvim*
       dependencies = { 'rafamadriz/friendly-snippets' },
     
       -- use a release tag to download pre-built binaries
-      version = '*',
+      version = '1.*',
       -- AND/OR build from source, requires nightly: https://rust-lang.github.io/rustup/concepts/channels.html#working-with-nightly-rust
       -- build = 'cargo build --release',
       -- If you use nix, you can build from source using latest nightly rust with:
@@ -468,6 +467,8 @@ triggered by any of these three characters.
 
 FUZZY (SORTING/FILTERING)        *blink-cmp-recipes-fuzzy-(sorting/filtering)*
 
+See the full docs <./configuration/fuzzy.md>
+
 
 ALWAYS PRIORITIZE EXACT MATCHES ~
 
@@ -507,7 +508,53 @@ Server (`emmet_ls`)
 <
 
 
+EXCLUDE KEYWORDS/CONSTANTS FROM AUTOCOMPLETE ~
+
+Removes language keywords/constants (if, else, while, etc.) provided by the
+language server from completion results. Useful if you prefer to use builtin or
+custom snippets for such constructs.
+
+>lua
+    sources = {
+      providers = {
+        lsp = {
+          name = 'LSP',
+          module = 'blink.cmp.sources.lsp',
+          transform_items = function(_, items)
+            return vim.tbl_filter(function(item)
+              return item.kind ~= require('blink.cmp.types').CompletionItemKind.Keyword
+            end, items)
+          end,
+        },
+      },
+    }
+<
+
+
 COMPLETION MENU DRAWING            *blink-cmp-recipes-completion-menu-drawing*
+
+See the full docs <./configuration/completion.md#menu-draw>
+
+
+KIND ICON BACKGROUND ~
+
+You’ll need to configure your highlights (`BlinkCmpKind` or
+`BlinkCmpKind<kind>`) to your desired background and foreground colors.
+
+>lua
+    completion = {
+      menu = {
+        draw = {
+          padding = { 0, 1 }, -- padding only on right side
+          components = {
+            kind_icon = {
+              text = function(ctx) return ' ' .. ctx.kind_icon .. ctx.icon_gap .. ' ' end
+            }
+          }
+        }
+      }
+    }
+<
 
 
 MINI.ICONS ~
@@ -593,6 +640,8 @@ Original discussion <https://github.com/Saghen/blink.cmp/discussions/1146>
 
 
 SOURCES                                            *blink-cmp-recipes-sources*
+
+See the full docs <./configuration/sources.md>
 
 
 BUFFER COMPLETION FROM ALL OPEN BUFFERS ~
@@ -1112,6 +1161,8 @@ manually showing it with the `show` keymap command.
 
 MENU DRAW 
 
+Check out the recipes! <../recipes.md#completion-menu-drawing>
+
 blink.cmp uses a grid-based layout to render the completion menu. The
 components, defined in `draw.components[string]`, define `text` and `highlight`
 functions which are called for each completion item. The `highlight` function
@@ -1280,7 +1331,40 @@ You may also build with nix via `nix run .#build-plugin`.
 CONFIGURATION ~
 
 See the fuzzy section of the reference configuration <./reference.md#fuzzy>.
-For recipes, see the recipes section <../recipes.md#fuzzy>.
+For recipes, see the recipes section <../recipes.md#fuzzy-sorting-filtering>.
+
+
+SORTING
+
+The sorting can be customized by providing a custom function to sort the
+entries, based on sorting in Lua
+<https://www.lua.org/manual/5.1/manual.html#pdf-table.sort>, or by using one of
+the built-in sorts:
+
+- `exact`: Sorts by exact match, case-sensitive
+- `score`: Sorts by the fuzzy matching score
+- `sort_text`: Sorts by the `sortText` field
+    - Generally, this field provides better sorting than `label` as the source/LSP may prioritize items relevant to the current context
+    - If you’re writing your own source, use this field to control sort order, instead of requiring users to add a sort function
+- `label`: Sorts by the `label` field, deprioritizing entries with a leading `_`
+- `kind`: Sorts by the numeric `kind` field, check the order via `:lua vim.print(vim.lsp.protocol.CompletionItemKind)`
+
+>lua
+    fuzzy = {
+      sorts = {
+        -- example custom sorting function, ensuring `_` entries are always last (untested, YMMV)
+        function(a, b)
+            if a.label:sub(1, 1) == "_" ~= a.label:sub(1, 1) == "_" then
+                -- return true to sort `a` after `b`, and vice versa
+                return not a.label:sub(1, 1) == "_"
+            end
+            -- nothing returned, fallback to the next sort
+        end,
+        -- default sorts
+        'score',
+        'sort_text',
+    }
+<
 
 
 KEYMAP                                               *blink-cmp-config-keymap*
@@ -1524,7 +1608,7 @@ Here’s an example, using the linux/mac path for the neovim configuration:
         "body": [
           "local ${1:foo} = ${2:bar}",
           "return ${3:baz}"
-        ],
+        ]
       }
     }
 <
@@ -1535,7 +1619,7 @@ LUASNIP ~
 >lua
     {
       'saghen/blink.cmp',
-      version = '*',
+      version = '1.*',
       -- !Important! Make sure you're using the latest release of LuaSnip
       -- `main` does not work at the moment
       dependencies = { 'L3MON4D3/LuaSnip', version = 'v2.*' },
@@ -1666,7 +1750,7 @@ to the source directly, and will vary by source.
       --- NOTE: All of these options may be functions to get dynamic behavior
       --- See the type definitions for more information
       enabled = true, -- Whether or not to enable the provider
-      async = false, -- Whether we should wait for the provider to return before showing the completions
+      async = false, -- Whether we should show the completions before this provider returns, without waiting for it
       timeout_ms = 2000, -- How long to wait for the provider to return before showing completions and treating it as asynchronous
       transform_items = nil, -- Function to transform the items before they're returned
       should_show_items = true, -- Whether or not to show the items
@@ -1713,6 +1797,7 @@ COMMUNITY SOURCES ~
 - blink-cmp-ripgrep <https://github.com/niuiic/blink-cmp-rg.nvim>
 - blink-cmp-ctags <https://github.com/netmute/blink-cmp-ctags>
 - blink-copilot <https://github.com/fang2hou/blink-copilot>
+- blink-cmp-supermaven <https://github.com/Huijiro/blink-cmp-supermaven>
 - blink-cmp-copilot <https://github.com/giuxtaposition/blink-cmp-copilot>
 - minuet-ai.nvim <https://github.com/milanglacier/minuet-ai.nvim>
 - blink-emoji.nvim <https://github.com/moyiz/blink-emoji.nvim>
@@ -1720,12 +1805,14 @@ COMMUNITY SOURCES ~
 - blink-cmp-dictionary <https://github.com/Kaiser-Yang/blink-cmp-dictionary>
 - blink-cmp-git <https://github.com/Kaiser-Yang/blink-cmp-git>
 - blink-cmp-spell <https://github.com/ribru17/blink-cmp-spell.git>
+- blink-cmp-tmux <https://github.com/mgalliou/blink-cmp-tmux>
 - css-vars.nvim <https://github.com/jdrupal-dev/css-vars.nvim>
 - blink-cmp-env <https://github.com/bydlw98/blink-cmp-env>
 - blink-cmp-avante <https://github.com/Kaiser-Yang/blink-cmp-avante>
 - blink-cmp-conventional-commits <https://github.com/disrupted/blink-cmp-conventional-commits>
 - cmp-pandoc-references <https://github.com/jmbuhr/cmp-pandoc-references>
 - blink-cmp-im <https://github.com/yehuohan/blink-cmp-im>: Input Method source
+- ecolog.nvim <https://github.com/philosofonusus/ecolog.nvim>
 
 
 REFERENCE                                         *blink-cmp-config-reference*
@@ -1945,7 +2032,8 @@ COMPLETION MENU DRAW
         kind_icon = {
           ellipsis = false,
           text = function(ctx) return ctx.kind_icon .. ctx.icon_gap end,
-          highlight = function(ctx) return ctx.kind_hl end,
+          -- Set the highlight priority to 20000 to beat the cursorline's default priority of 10000
+          highlight = function(ctx) return { { group = ctx.kind_hl, priority = 20000 } } end,
         },
     
         kind = {
@@ -2161,7 +2249,15 @@ FUZZY ~
         force_system_triple = nil,
     
         -- Extra arguments that will be passed to curl like { 'curl', ..extra_curl_args, ..built_in_args }
-        extra_curl_args = {}
+        extra_curl_args = {},
+    
+        proxy = {
+            -- When downloading a prebuilt binary, use the HTTPS_PROXY environment variable
+            from_env = true,
+    
+            -- When downloading a prebuilt binary, use this proxy URL. This will ignore the HTTPS_PROXY environment variable
+            url = nil,
+        },
       },
     }
 <
@@ -2201,6 +2297,8 @@ PROVIDERS
       lsp = {
         name = 'LSP',
         module = 'blink.cmp.sources.lsp',
+        -- You may enable the buffer source, when LSP is available, by setting this to `{}`
+        -- You may want to set the score_offset of the buffer source to a lower value, such as -5 in this case
         fallbacks = { 'buffer' },
         -- Filter text items from the LSP provider, since we have the buffer provider for that
         transform_items = function(_, items)
@@ -2216,7 +2314,7 @@ PROVIDERS
         --- See the type definitions for more information
         name = nil, -- Defaults to the id ("lsp" in this case) capitalized when not set
         enabled = true, -- Whether or not to enable the provider
-        async = false, -- Whether we should wait for the provider to return before showing the completions
+        async = false, -- Whether we should show the completions before this provider returns, without waiting for it
         timeout_ms = 2000, -- How long to wait for the provider to return before showing completions and treating it as asynchronous
         transform_items = nil, -- Function to transform the items before they're returned
         should_show_items = true, -- Whether or not to show the items
@@ -2291,6 +2389,12 @@ PROVIDERS
     
       cmdline = {
         module = 'blink.cmp.sources.cmdline',
+        -- Disable shell commands on windows, since they cause neovim to hang
+        enabled = function()
+          return vim.fn.has('win32') == 0
+            or vim.fn.getcmdtype() ~= ':'
+            or not vim.fn.getcmdline():match("^[%%0-9,'<>%-]*!")
+        end,
       },
     
       omni = {

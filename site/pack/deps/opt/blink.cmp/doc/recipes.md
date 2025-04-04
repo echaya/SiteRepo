@@ -152,6 +152,8 @@ end
 
 ## Fuzzy (sorting/filtering)
 
+[See the full docs](./configuration/fuzzy.md)
+
 ### Always prioritize exact matches
 
 By default, the fuzzy matcher will give a bonus score of 4 to exact matches. If you want to ensure that exact matches are always prioritized, you may set:
@@ -186,7 +188,48 @@ fuzzy = {
 }
 ```
 
+### Exclude keywords/constants from autocomplete
+
+Removes language keywords/constants (if, else, while, etc.) provided by the language server from completion results. Useful if you prefer to use builtin or custom snippets for such constructs.
+
+```lua
+sources = {
+  providers = {
+    lsp = {
+      name = 'LSP',
+      module = 'blink.cmp.sources.lsp',
+      transform_items = function(_, items)
+        return vim.tbl_filter(function(item)
+          return item.kind ~= require('blink.cmp.types').CompletionItemKind.Keyword
+        end, items)
+      end,
+    },
+  },
+}
+```
+
 ## Completion menu drawing
+
+[See the full docs](./configuration/completion.md#menu-draw)
+
+### Kind icon background
+
+You'll need to configure your highlights (`BlinkCmpKind` or `BlinkCmpKind<kind>`) to your desired background and foreground colors.
+
+```lua
+completion = {
+  menu = {
+    draw = {
+      padding = { 0, 1 }, -- padding only on right side
+      components = {
+        kind_icon = {
+          text = function(ctx) return ' ' .. ctx.kind_icon .. ctx.icon_gap .. ' ' end
+        }
+      }
+    }
+  }
+}
+```
 
 ### `mini.icons`
 
@@ -269,6 +312,8 @@ completion = {
 ```
 
 ## Sources
+
+[See the full docs](./configuration/sources.md)
 
 ### Buffer completion from all open buffers
 

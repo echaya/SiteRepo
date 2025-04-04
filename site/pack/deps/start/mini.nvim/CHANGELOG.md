@@ -45,6 +45,7 @@
     - Signature help uses same parser as in current filetype.
 - FEATURE: update signature help without delay if it is already shown. This helps to keep signature help up to date after cursor jumps in Insert mode (like during snippet session).
 - FEATURE: add support for item defaults in `CompletionList` response.
+- FEATURE: add `get_lsp_capabilities()` that returns data about which part of LSP specification is supported in 'mini.completion'.
 - BREAKING FEATURE: rework how LSP completion items are converted to Neovim's completion items:
     - Show `detail` highlighted as buffer's language at the start of info window, but only if `detail` provides information not already present in `documentation`. It was previously used as extra text in the popup menu (via `menu` field), but this doesn't quite follow LSP specification: `detail` and `documentation` fields can be delayed up until `completionItem/resolve` request which implies they should be treated similarly.
     - Show `labelDetails` as a part of the popup menu via `menu` completion item field.
@@ -57,6 +58,7 @@
 
 ## mini.diff
 
+- FEATURE: `config.source` can now be array of sources, which will be attempted to attach in order. Important for source's `attach` to either return `false` or call `MiniDiff.fail_attach()` (even not immediately) to signal that source has failed to attach to a particular buffer.
 - FEATURE: overlay virtual lines now scroll horizontally along with buffer lines. Requires Neovim>=0.11 and disabled 'wrap' option.
 - FEATURE: highlighting of buffer parts of change hunks can now be customized with these new highlight groups:
     - `MiniDiffOverChangeBuf` - changed buffer text. Previously used `MiniDiffOverChange` (for changed reference text); links to it by default.

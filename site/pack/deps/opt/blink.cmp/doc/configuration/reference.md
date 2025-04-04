@@ -210,7 +210,8 @@ completion.menu.draw = {
     kind_icon = {
       ellipsis = false,
       text = function(ctx) return ctx.kind_icon .. ctx.icon_gap end,
-      highlight = function(ctx) return ctx.kind_hl end,
+      -- Set the highlight priority to 20000 to beat the cursorline's default priority of 10000
+      highlight = function(ctx) return { { group = ctx.kind_hl, priority = 20000 } } end,
     },
 
     kind = {
@@ -422,7 +423,15 @@ fuzzy = {
     force_system_triple = nil,
 
     -- Extra arguments that will be passed to curl like { 'curl', ..extra_curl_args, ..built_in_args }
-    extra_curl_args = {}
+    extra_curl_args = {},
+
+    proxy = {
+        -- When downloading a prebuilt binary, use the HTTPS_PROXY environment variable
+        from_env = true,
+
+        -- When downloading a prebuilt binary, use this proxy URL. This will ignore the HTTPS_PROXY environment variable
+        url = nil,
+    },
   },
 }
 ```
@@ -459,6 +468,8 @@ sources.providers = {
   lsp = {
     name = 'LSP',
     module = 'blink.cmp.sources.lsp',
+    -- You may enable the buffer source, when LSP is available, by setting this to `{}`
+    -- You may want to set the score_offset of the buffer source to a lower value, such as -5 in this case
     fallbacks = { 'buffer' },
     -- Filter text items from the LSP provider, since we have the buffer provider for that
     transform_items = function(_, items)
@@ -474,7 +485,7 @@ sources.providers = {
     --- See the type definitions for more information
     name = nil, -- Defaults to the id ("lsp" in this case) capitalized when not set
     enabled = true, -- Whether or not to enable the provider
-    async = false, -- Whether we should wait for the provider to return before showing the completions
+    async = false, -- Whether we should show the completions before this provider returns, without waiting for it
     timeout_ms = 2000, -- How long to wait for the provider to return before showing completions and treating it as asynchronous
     transform_items = nil, -- Function to transform the items before they're returned
     should_show_items = true, -- Whether or not to show the items
@@ -549,6 +560,12 @@ sources.providers = {
 
   cmdline = {
     module = 'blink.cmp.sources.cmdline',
+    -- Disable shell commands on windows, since they cause neovim to hang
+    enabled = function()
+      return vim.fn.has('win32') == 0
+        or vim.fn.getcmdtype() ~= ':'
+        or not vim.fn.getcmdline():match("^[%%0-9,'<>%-]*!")
+    end,
   },
 
   omni = {
