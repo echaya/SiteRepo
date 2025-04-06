@@ -35,6 +35,7 @@ Nvim by running `:help lspconfig-all`.
 - [bitbake_language_server](#bitbake_language_server)
 - [bitbake_ls](#bitbake_ls)
 - [blueprint_ls](#blueprint_ls)
+- [bqls](#bqls)
 - [bqnlsp](#bqnlsp)
 - [bright_script](#bright_script)
 - [bsl_ls](#bsl_ls)
@@ -155,6 +156,7 @@ Nvim by running `:help lspconfig-all`.
 - [jsonls](#jsonls)
 - [jsonnet_ls](#jsonnet_ls)
 - [julials](#julials)
+- [just](#just)
 - [kcl](#kcl)
 - [koka](#koka)
 - [kotlin_language_server](#kotlin_language_server)
@@ -256,6 +258,7 @@ Nvim by running `:help lspconfig-all`.
 - [robotframework_ls](#robotframework_ls)
 - [roc_ls](#roc_ls)
 - [rome](#rome)
+- [rpmspec](#rpmspec)
 - [rubocop](#rubocop)
 - [ruby_lsp](#ruby_lsp)
 - [ruff](#ruff)
@@ -1583,6 +1586,39 @@ Default config:
   { "blueprint" }
   ```
 - `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/blueprint_ls.lua:2](../lua/lspconfig/configs/blueprint_ls.lua#L2)
+- `single_file_support` : `true`
+
+---
+
+## bqls
+
+https://github.com/kitagry/bqls
+
+The `bqls` BigQuery language server can be installed by running:
+
+```sh
+$ go install github.com/kitagry/bqls@latest
+```
+
+Snippet to enable the language server:
+```lua
+require'lspconfig'.bqls.setup{}
+```
+
+Default config:
+- `cmd` :
+  ```lua
+  { "bqls" }
+  ```
+- `filetypes` :
+  ```lua
+  { "sql" }
+  ```
+- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/bqls.lua:2](../lua/lspconfig/configs/bqls.lua#L2)
+- `settings` :
+  ```lua
+  {}
+  ```
 - `single_file_support` : `true`
 
 ---
@@ -3790,8 +3826,8 @@ Default config:
     ["eslint/probeFailed"] = <function 4>
   }
   ```
-- `on_new_config` source (use "gF" to visit): [../lua/lspconfig/configs/eslint.lua:73](../lua/lspconfig/configs/eslint.lua#L73)
-- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/eslint.lua:73](../lua/lspconfig/configs/eslint.lua#L73)
+- `on_new_config` source (use "gF" to visit): [../lua/lspconfig/configs/eslint.lua:51](../lua/lspconfig/configs/eslint.lua#L51)
+- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/eslint.lua:51](../lua/lspconfig/configs/eslint.lua#L51)
 - `settings` :
   ```lua
   {
@@ -5784,6 +5820,31 @@ Default config:
   { "julia" }
   ```
 - `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/julials.lua:97](../lua/lspconfig/configs/julials.lua#L97)
+- `single_file_support` : `true`
+
+---
+
+## just
+
+https://github.com/terror/just-lsp
+
+`just-lsp` is an LSP for just built on top of the tree-sitter-just parser.
+
+Snippet to enable the language server:
+```lua
+require'lspconfig'.just.setup{}
+```
+
+Default config:
+- `cmd` :
+  ```lua
+  { "just-lsp" }
+  ```
+- `filetypes` :
+  ```lua
+  { "just" }
+  ```
+- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/just.lua:2](../lua/lspconfig/configs/just.lua#L2)
 - `single_file_support` : `true`
 
 ---
@@ -9233,6 +9294,35 @@ Default config:
 
 ---
 
+## rpmspec
+
+https://github.com/dcermak/rpm-spec-language-server
+
+Language server protocol (LSP) support for RPM Spec files.
+
+Snippet to enable the language server:
+```lua
+require'lspconfig'.rpmspec.setup{}
+```
+
+Default config:
+- `cmd` :
+  ```lua
+  { "python3", "-mrpm_lsp_server", "--stdio" }
+  ```
+- `filetypes` :
+  ```lua
+  { "spec" }
+  ```
+- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/rpmspec.lua:2](../lua/lspconfig/configs/rpmspec.lua#L2)
+- `settings` :
+  ```lua
+  {}
+  ```
+- `single_file_support` : `true`
+
+---
+
 ## rubocop
 
 https://github.com/rubocop/rubocop
@@ -10701,6 +10791,9 @@ Snippet to enable the language server:
 require'lspconfig'.svelte.setup{}
 ```
 
+Commands:
+- MigrateToSvelte5: Migrate Component to Svelte 5 Syntax
+
 Default config:
 - `cmd` :
   ```lua
@@ -10710,7 +10803,7 @@ Default config:
   ```lua
   { "svelte" }
   ```
-- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/svelte.lua:4](../lua/lspconfig/configs/svelte.lua#L4)
+- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/svelte.lua:17](../lua/lspconfig/configs/svelte.lua#L17)
 
 ---
 
