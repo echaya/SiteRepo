@@ -1,18 +1,18 @@
 local Env = require('render-markdown.lib.env')
 local Range = require('render-markdown.core.range')
 
----@class render.md.component.Config
----@field callout table<string, render.md.CustomCallout>
----@field checkbox table<string, render.md.CustomCheckbox>
+---@class render.md.Components
+---@field callout table<string, render.md.callout.Config>
+---@field checkbox table<string, render.md.checkbox.custom.Config>
 
----@class render.md.buffer.Config: render.md.BufferConfig
+---@class render.md.BufferConfig: render.md.buffer.Config
 ---@field private modes render.md.Modes
----@field private component render.md.component.Config
+---@field private components render.md.Components
 local Config = {}
 Config.__index = Config
 
----@param config render.md.BufferConfig
----@return render.md.buffer.Config
+---@param config render.md.buffer.Config
+---@return render.md.BufferConfig
 function Config.new(config)
     -- Super set of render modes across top level and individual components
     local modes = config.render_modes
@@ -22,14 +22,43 @@ function Config.new(config)
         end
     end
 
-    ---@type render.md.component.Config
-    local component = {
+    ---@type render.md.Components
+    local components = {
         callout = Config.normalize(config.callout),
         checkbox = Config.normalize(config.checkbox.custom),
     }
 
-    local instance = vim.tbl_deep_extend('force', { modes = modes, component = component }, config)
+    local instance = vim.tbl_deep_extend(
+        'force',
+        { modes = modes, components = components },
+        config
+    )
     return setmetatable(instance, Config)
+end
+
+---@param spec render.md.debug.ValidatorSpec
+function Config.validate(spec)
+    require('render-markdown.config.base').validate(spec)
+    spec:type('max_file_size', 'number')
+    spec:type('debounce', 'number')
+    spec:config('anti_conceal')
+    spec:config('bullet')
+    spec:config('callout')
+    spec:config('checkbox')
+    spec:config('code')
+    spec:config('dash')
+    spec:config('heading')
+    spec:config('html')
+    spec:config('indent')
+    spec:config('inline_highlight')
+    spec:config('latex')
+    spec:config('link')
+    spec:config('padding')
+    spec:config('paragraph')
+    spec:config('pipe_table')
+    spec:config('quote')
+    spec:config('sign')
+    spec:config('win_options')
 end
 
 ---@private
@@ -56,7 +85,7 @@ function Config.fold_modes(current, new)
 end
 
 ---@private
----@generic T: render.md.CustomCallout|render.md.CustomCheckbox
+---@generic T: render.md.callout.Config|render.md.checkbox.custom.Config
 ---@param components table<string, T>
 ---@return table<string, T>
 function Config.normalize(components)
@@ -74,15 +103,15 @@ function Config:render(mode)
 end
 
 ---@param node render.md.Node
----@return render.md.CustomCallout?
+---@return render.md.callout.Config?
 function Config:get_callout(node)
-    return self.component.callout[node.text:lower()]
+    return self.components.callout[node.text:lower()]
 end
 
 ---@param node render.md.Node
----@return render.md.CustomCheckbox?
+---@return render.md.checkbox.custom.Config?
 function Config:get_checkbox(node)
-    return self.component.checkbox[node.text:lower()]
+    return self.components.checkbox[node.text:lower()]
 end
 
 ---@param mode string
@@ -98,7 +127,10 @@ function Config:hidden(mode, row)
         local start = vim.fn.getpos('v')[2] - 1
         return Range.new(math.min(row, start), math.max(row, start))
     else
-        return Range.new(row - self.anti_conceal.above, row + self.anti_conceal.below)
+        return Range.new(
+            row - self.anti_conceal.above,
+            row + self.anti_conceal.below
+        )
     end
 end
 

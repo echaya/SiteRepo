@@ -1,14 +1,14 @@
 local Base = require('render-markdown.render.base')
 local ts = require('render-markdown.integ.ts')
 
----@class render.md.data.Quote
+---@class render.md.quote.Data
 ---@field query vim.treesitter.Query
 ---@field icon string
 ---@field highlight string
 ---@field repeat_linebreak? boolean
 
 ---@class render.md.render.Quote: render.md.Renderer
----@field private data render.md.data.Quote
+---@field private data render.md.quote.Data
 local Render = setmetatable({}, Base)
 Render.__index = Render
 
@@ -41,7 +41,10 @@ end
 
 function Render:render()
     self.context:query(self.node:get(), self.data.query, function(capture, node)
-        assert(capture == 'quote_marker', 'Unhandled quote capture: ' .. capture)
+        assert(
+            capture == 'quote_marker',
+            'Unhandled quote capture: ' .. capture
+        )
         self:quote_marker(node)
     end)
 end
@@ -50,7 +53,9 @@ end
 ---@param node render.md.Node
 function Render:quote_marker(node)
     self.marks:over('quote', node, {
-        virt_text = { { node.text:gsub('>', self.data.icon), self.data.highlight } },
+        virt_text = {
+            { node.text:gsub('>', self.data.icon), self.data.highlight },
+        },
         virt_text_pos = 'overlay',
         virt_text_repeat_linebreak = self.data.repeat_linebreak,
     })

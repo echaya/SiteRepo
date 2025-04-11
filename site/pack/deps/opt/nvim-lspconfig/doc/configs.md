@@ -6279,7 +6279,7 @@ require'lspconfig'.lua_ls.setup {
   on_init = function(client)
     if client.workspace_folders then
       local path = client.workspace_folders[1].name
-      if path ~= vim.fn.stdpath('config') and (vim.loop.fs_stat(path..'/.luarc.json') or vim.loop.fs_stat(path..'/.luarc.jsonc')) then
+      if path ~= vim.fn.stdpath('config') and (vim.uv.fs_stat(path..'/.luarc.json') or vim.uv.fs_stat(path..'/.luarc.jsonc')) then
         return
       end
     end
@@ -7691,17 +7691,29 @@ Default config:
 
 [Language server](https://github.com/vscode-abl/vscode-abl) for Progress OpenEdge ABL.
 
-For manual installation, download abl-lsp.jar from the [VSCode
-extension](https://github.com/vscode-abl/vscode-abl/releases/latest).
+For manual installation, download abl-lsda.jar from the [VSCode extension](https://github.com/vscode-abl/vscode-abl/releases/latest).
 
 Configuration
 
 ```lua
-require('lspconfig').['openedge_ls'].setup {
-  oe_jar_path = '/path/to/abl-lsp.jar',
-  dlc = '12.2:/path/to/dlc-12.2', -- Version number and OpenEdge root directory (colon separator)
+require('lspconfig').openedge_ls.setup {
+  oe_jar_path = '/path/to/abl-lsda.jar',
   debug = false, -- Set to true for debug logging
-  trace = false -- Set to true for trace logging (REALLY verbose)
+  trace = false, -- Set to true for trace logging (REALLY verbose)
+  init_options = {
+    abl = {
+      configuration = {
+        runtimes = {
+          { name = '12.8', path = '/opt/progress/dlc' }
+        },
+        maxThreads = 1
+      },
+      completion = {
+        upperCase = false
+      },
+      buildMode = 1 -- Build all
+    }
+  }
 }
 ```
 
@@ -10704,9 +10716,9 @@ Default config:
   ```
 - `filetypes` :
   ```lua
-  { "css", "less", "scss", "sugarss", "vue", "wxss" }
+  { "astro", "css", "html", "less", "scss", "sugarss", "vue", "wxss" }
   ```
-- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/stylelint_lsp.lua:17](../lua/lspconfig/configs/stylelint_lsp.lua#L17)
+- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/stylelint_lsp.lua:19](../lua/lspconfig/configs/stylelint_lsp.lua#L19)
 - `settings` :
   ```lua
   {}
@@ -11504,6 +11516,13 @@ Default config:
 https://github.com/Myriad-Dreamin/tinymist
 An integrated language service for Typst [taɪpst]. You can also call it "微霭" [wēi ǎi] in Chinese.
 
+Currently some of Tinymist's workspace commands are supported, namely:
+`LspTinymistExportSvg`, `LspTinymistExportPng`, `LspTinymistExportPdf
+`LspTinymistExportMarkdown`, `LspTinymistExportText`, `LspTinymistExportQuery`,
+`LspTinymistExportAnsiHighlight`, `LspTinymistGetServerInfo`,
+`LspTinymistGetDocumentTrace`, `LspTinymistGetWorkspaceLabels`, and
+`LspTinymistGetDocumentMetrics`.
+
 Snippet to enable the language server:
 ```lua
 require'lspconfig'.tinymist.setup{}
@@ -11518,7 +11537,8 @@ Default config:
   ```lua
   { "typst" }
   ```
-- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/tinymist.lua:2](../lua/lspconfig/configs/tinymist.lua#L2)
+- `on_attach` source (use "gF" to visit): [../lua/lspconfig/configs/tinymist.lua:46](../lua/lspconfig/configs/tinymist.lua#L46)
+- `root_dir` source (use "gF" to visit): [../lua/lspconfig/configs/tinymist.lua:46](../lua/lspconfig/configs/tinymist.lua#L46)
 - `single_file_support` : `true`
 
 ---

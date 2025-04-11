@@ -3,13 +3,11 @@ local Converter = require('render-markdown.lib.converter')
 local Str = require('render-markdown.lib.str')
 
 ---@class render.md.render.Shortcut: render.md.Renderer
----@field private link render.md.Link
 local Render = setmetatable({}, Base)
 Render.__index = Render
 
 ---@return boolean
 function Render:setup()
-    self.link = self.config.link
     return true
 end
 
@@ -27,7 +25,10 @@ function Render:render()
     end
 
     local line = self.node:line('first', 0)
-    if line ~= nil and line:find('[' .. self.node.text .. ']', 1, true) ~= nil then
+    if
+        line ~= nil
+        and line:find('[' .. self.node.text .. ']', 1, true) ~= nil
+    then
         self:wiki_link()
         return
     end
@@ -40,7 +41,7 @@ function Render:render()
 end
 
 ---@private
----@param callout render.md.CustomCallout
+---@param callout render.md.callout.Config
 function Render:callout(callout)
     if self.context:skip(self.config.quote) then
         return
@@ -56,14 +57,17 @@ function Render:callout(callout)
 end
 
 ---@private
----@param callout render.md.CustomCallout
+---@param callout render.md.callout.Config
 ---@return string, boolean
 function Render:callout_title(callout)
     ---Support for overriding title: https://help.obsidian.md/Editing+and+formatting/Callouts#Change+the+title
     local content = self.node:parent('inline')
     if content ~= nil then
         local line = Str.split(content.text, '\n')[1]
-        if #line > #callout.raw and vim.startswith(line:lower(), callout.raw:lower()) then
+        if
+            #line > #callout.raw
+            and vim.startswith(line:lower(), callout.raw:lower())
+        then
             local icon = Str.split(callout.rendered, ' ')[1]
             local title = vim.trim(line:sub(#callout.raw + 1))
             return icon .. ' ' .. title, true
@@ -73,7 +77,7 @@ function Render:callout_title(callout)
 end
 
 ---@private
----@param checkbox render.md.CustomCheckbox
+---@param checkbox render.md.checkbox.custom.Config
 function Render:checkbox(checkbox)
     local config = self.config.checkbox
     if self.context:skip(config) or self.node:after() ~= ' ' then
@@ -87,12 +91,13 @@ end
 
 ---@private
 function Render:wiki_link()
-    if self.context:skip(self.link) then
+    local link = self.config.link
+    if self.context:skip(link) then
         return
     end
 
     local sections = Str.split(self.node.text:sub(2, -2), '|')
-    ---@type render.md.LinkContext
+    ---@type render.md.link.Context
     local ctx = {
         buf = self.context.buf,
         row = self.node.start_row,
@@ -106,8 +111,9 @@ function Render:wiki_link()
     self:hide(ctx.start_col, 1)
     self:hide(ctx.end_col - 1, 1)
 
-    local wiki = self.link.wiki
-    local icon, highlight = self:from_destination(wiki.icon, wiki.highlight, ctx.destination)
+    local wiki = link.wiki
+    local icon, highlight =
+        self:dest(wiki.icon, wiki.highlight, ctx.destination)
     local body = wiki.body(ctx)
     if body == nil then
         -- Add icon
@@ -148,20 +154,22 @@ end
 ---@private
 ---@param text string
 function Render:footnote(text)
-    if self.context:skip(self.link) then
+    local link = self.config.link
+    if self.context:skip(link) then
         return
     end
-    local footnote = self.link.footnote
+    local footnote = link.footnote
     if not footnote.enabled then
         return
     end
     local body = footnote.prefix .. text .. footnote.suffix
-    local value = not footnote.superscript and body or Converter.superscript(body)
+    local value = not footnote.superscript and body
+        or Converter.superscript(body)
     if value == nil then
         return
     end
     self.marks:over('link', self.node, {
-        virt_text = { { value, self.link.highlight } },
+        virt_text = { { value, link.highlight } },
         virt_text_pos = 'inline',
         conceal = '',
     })

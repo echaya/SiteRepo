@@ -7,6 +7,14 @@ local Iter = require('render-markdown.lib.iter')
 local log = require('render-markdown.core.log')
 local state = require('render-markdown.state')
 
+---@class (exact) render.md.Handler
+---@field extends? boolean
+---@field parse fun(ctx: render.md.handler.Context): render.md.Mark[]
+
+---@class (exact) render.md.handler.Context
+---@field buf integer
+---@field root TSNode
+
 ---@type table<string, render.md.Handler>
 local builtin_handlers = {
     html = require('render-markdown.handler.html'),
@@ -48,10 +56,11 @@ end
 ---@param win integer
 ---@return integer, render.md.Mark[]
 function M.get_row_marks(buf, win)
-    local config, buffer = state.get(buf), Cache.get(buf)
-    local mode, row = Env.mode.get(), Env.row.get(buf, win)
-    local hidden = config:hidden(mode, row)
-    assert(row ~= nil and hidden ~= nil, 'Row & range must be known to get marks')
+    local config = state.get(buf)
+    local buffer = Cache.get(buf)
+    local mode = Env.mode.get()
+    local row = assert(Env.row.get(buf, win), 'Row must be known')
+    local hidden = assert(config:hidden(mode, row), 'Range must be known')
 
     local marks = {}
     for _, extmark in ipairs(buffer:get_marks()) do
@@ -76,7 +85,13 @@ end
 ---@param event string
 ---@param change boolean
 function M.update(buf, win, event, change)
-    log.buf('info', 'update', buf, string.format('event %s', event), string.format('change %s', change))
+    log.buf(
+        'info',
+        'update',
+        buf,
+        string.format('event %s', event),
+        string.format('change %s', change)
+    )
     if not Env.valid(buf, win) then
         return
     end
@@ -121,8 +136,10 @@ function M.run_update(buf, win, change)
     end
 
     local parse = M.parse(buf, win, change)
-    local config, buffer = state.get(buf), Cache.get(buf)
-    local mode, row = Env.mode.get(), Env.row.get(buf, win)
+    local config = state.get(buf)
+    local buffer = Cache.get(buf)
+    local mode = Env.mode.get()
+    local row = Env.row.get(buf, win)
     local next_state = M.next_state(config, win, mode)
 
     log.buf('info', 'state', buf, next_state)
@@ -163,7 +180,7 @@ function M.run_update(buf, win, change)
 end
 
 ---@private
----@param config render.md.buffer.Config
+---@param config render.md.BufferConfig
 ---@param win integer
 ---@param mode string
 ---@return 'default'|'rendered'
@@ -201,17 +218,20 @@ function M.parse_buffer(props)
     -- Make sure injections are processed
     Context.get(buf):parse(parser)
     -- Parse markdown after all other nodes to take advantage of state
-    local marks, markdown_roots = {}, {}
+    local marks = {}
+    local markdown_contexts = {}
     parser:for_each_tree(function(tree, language_tree)
         local language = language_tree:lang()
+        ---@type render.md.handler.Context
+        local ctx = { buf = buf, root = tree:root() }
         if language == 'markdown' then
-            markdown_roots[#markdown_roots + 1] = tree:root()
+            markdown_contexts[#markdown_contexts + 1] = ctx
         else
-            vim.list_extend(marks, M.parse_tree({ buf = buf, root = tree:root() }, language))
+            vim.list_extend(marks, M.parse_tree(ctx, language))
         end
     end)
-    for _, root in ipairs(markdown_roots) do
-        vim.list_extend(marks, M.parse_tree({ buf = buf, root = root }, 'markdown'))
+    for _, ctx in ipairs(markdown_contexts) do
+        vim.list_extend(marks, M.parse_tree(ctx, 'markdown'))
     end
     return Iter.list.map(marks, Extmark.new)
 end
@@ -219,7 +239,7 @@ end
 ---Run user & builtin handlers when available. User handler is always executed,
 ---builtin handler is skipped if user handler does not specify extends.
 ---@private
----@param ctx render.md.HandlerContext
+---@param ctx render.md.handler.Context
 ---@param language string
 ---@return render.md.Mark[]
 function M.parse_tree(ctx, language)
