@@ -28,6 +28,7 @@ Nvim by running `:help lspconfig-all`.
 - [bazelrc_lsp](#bazelrc_lsp)
 - [beancount](#beancount)
 - [bicep](#bicep)
+- [biome](#biome)
 - [bitbake_language_server](#bitbake_language_server)
 - [blueprint_ls](#blueprint_ls)
 - [bqls](#bqls)
@@ -189,6 +190,7 @@ Nvim by running `:help lspconfig-all`.
 - [ocamlls](#ocamlls)
 - [ocamllsp](#ocamllsp)
 - [ols](#ols)
+- [omnisharp](#omnisharp)
 - [opencl_ls](#opencl_ls)
 - [openscad_ls](#openscad_ls)
 - [openscad_lsp](#openscad_lsp)
@@ -267,6 +269,7 @@ Nvim by running `:help lspconfig-all`.
 - [spyglassmc_language_server](#spyglassmc_language_server)
 - [sqlls](#sqlls)
 - [sqls](#sqls)
+- [sqruff](#sqruff)
 - [standardrb](#standardrb)
 - [starlark_rust](#starlark_rust)
 - [starpls](#starpls)
@@ -1369,6 +1372,35 @@ Default config:
   ```lua
   { ".git" }
   ```
+
+---
+
+## biome
+
+https://biomejs.dev
+
+Toolchain of the web. [Successor of Rome](https://biomejs.dev/blog/annoucing-biome).
+
+```sh
+npm install [-g] @biomejs/biome
+```
+
+Snippet to enable the language server:
+```lua
+require'lspconfig'.biome.setup{}
+```
+
+Default config:
+- `cmd` :
+  ```lua
+  { "biome", "lsp-proxy" }
+  ```
+- `filetypes` :
+  ```lua
+  { "astro", "css", "graphql", "javascript", "javascriptreact", "json", "jsonc", "svelte", "typescript", "typescript.tsx", "typescriptreact", "vue" }
+  ```
+- `root_dir` source (use "gF" to open): [../lsp/biome.lua:12](../lsp/biome.lua#L12)
+- `workspace_required` : `true`
 
 ---
 
@@ -3945,6 +3977,7 @@ Default config:
   ```lua
   { ".github/workflows", ".forgejo/workflows", ".gitea/workflows" }
   ```
+- `workspace_required` : `true`
 
 ---
 
@@ -7034,6 +7067,67 @@ Default config:
 
 ---
 
+## omnisharp
+
+https://github.com/omnisharp/omnisharp-roslyn
+OmniSharp server based on Roslyn workspaces
+
+`omnisharp-roslyn` can be installed by downloading and extracting a release from [here](https://github.com/OmniSharp/omnisharp-roslyn/releases).
+OmniSharp can also be built from source by following the instructions [here](https://github.com/omnisharp/omnisharp-roslyn#downloading-omnisharp).
+
+OmniSharp requires the [dotnet-sdk](https://dotnet.microsoft.com/download) to be installed.
+
+**By default, omnisharp-roslyn doesn't have a `cmd` set.** This is because nvim-lspconfig does not make assumptions about your path. You must add the following to your init.vim or init.lua to set `cmd` to the absolute path ($HOME and ~ are not expanded) of the unzipped run script or binary.
+
+For `go_to_definition` to work fully, extended `textDocument/definition` handler is needed, for example see [omnisharp-extended-lsp.nvim](https://github.com/Hoffs/omnisharp-extended-lsp.nvim)
+
+Snippet to enable the language server:
+```lua
+require'lspconfig'.omnisharp.setup{}
+```
+
+Default config:
+- `capabilities` :
+  ```lua
+  {
+    workspace = {
+      workspaceFolders = false
+    }
+  }
+  ```
+- `cmd` :
+  ```lua
+  { "OmniSharp", "-z", "--hostPID", "1860", "DotNet:enablePackageRestore=false", "--encoding", "utf-8", "--languageserver" }
+  ```
+- `filetypes` :
+  ```lua
+  { "cs", "vb" }
+  ```
+- `init_options` :
+  ```lua
+  {}
+  ```
+- `root_markers` :
+  ```lua
+  { ".sln", ".csproj", "omnisharp.json", "function.json" }
+  ```
+- `settings` :
+  ```lua
+  {
+    FormattingOptions = {
+      EnableEditorConfigSupport = true
+    },
+    MsBuild = {},
+    RenameOptions = {},
+    RoslynExtensionsOptions = {},
+    Sdk = {
+      IncludePrereleases = true
+    }
+  }
+  ```
+
+---
+
 ## opencl_ls
 
 https://github.com/Galarius/opencl-language-server
@@ -9776,6 +9870,33 @@ Default config:
 - `settings` :
   ```lua
   {}
+  ```
+
+---
+
+## sqruff
+
+https://github.com/quarylabs/sqruff
+
+`sqruff` can be installed by following the instructions [here](https://github.com/quarylabs/sqruff?tab=readme-ov-file#installation)
+
+Snippet to enable the language server:
+```lua
+require'lspconfig'.sqruff.setup{}
+```
+
+Default config:
+- `cmd` :
+  ```lua
+  { "sqruff", "lsp" }
+  ```
+- `filetypes` :
+  ```lua
+  { "sql" }
+  ```
+- `root_markers` :
+  ```lua
+  { ".sqruff", ".git" }
   ```
 
 ---
