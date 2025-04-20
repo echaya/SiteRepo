@@ -87,6 +87,7 @@ There are following change types:
 
 - Update behavior and capabilities of `default_process_items()`:
     - Add `filtersort` option to control how items are filtered and/or sorted. Its new default value has changed behavior: do fuzzy matching if 'completeopt' option contains "fuzzy" entry; same as before otherwise.
+    - Add `kind_priority` option to allow arranging items by completion item kind (like "Variable", "Snippet", "Text", etc.) after applying `filtersort`. This allows finer filter and/or sort based on kind, like "put Variable on top, Snippet on bottom, remove Text".
     - Use `filterText` and `label` item fields during matching (instead of `textEdit.newText`, `insertText`, and `label` as before). This is more aligned with LSP specification.
 
 ### Refine
@@ -96,6 +97,8 @@ There are following change types:
     - `window.info.border` and `window.signature.border` (use non-empty 'winborder' and `'single'` as fallback).
 
 - Change default value of `MiniCompletionActiveParameter` highlight group to link to `LspSignatureActiveParameter` (instead of forcing underline).
+
+- Call `lsp_completion.process_items` with an array of items from all buffer servers at once (and not for each server separately). This can be used for more elaborate filter/sort strategies.
 
 ### Expand
 
@@ -114,6 +117,8 @@ There are following change types:
 - Add support for item defaults in `CompletionList` response.
 
 - Add `get_lsp_capabilities()` that returns data about which part of LSP specification is supported in 'mini.completion'.
+
+- Input items for `lsp_completion.process_items` now have `client_id` field with the identifier of the server that item came from. Use `vim.lsp.get_client_by_id()` to get an actual data about the server.
 
 ## mini.diff
 

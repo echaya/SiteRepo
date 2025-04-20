@@ -322,9 +322,9 @@ MiniCompletion.config = {
     auto_setup = true,
 
     -- A function which takes LSP 'textDocument/completion' response items
-    -- and word to complete. Output should be a table of the same nature as
-    -- input items. Common use case is custom filter/sort.
-    -- Default: `default_process_items`
+    -- (each with `client_id` field for item's server) and word to complete.
+    -- Output should be a table of the same nature as input. Common use case
+    -- is custom filter/sort. Default: `default_process_items`
     process_items = nil,
 
     -- A function which takes a snippet as string and inserts it at cursor.
@@ -455,33 +455,35 @@ MiniCompletion.completefunc_lsp = function(findstart, base)
       return H.completion.start_pos[2]
     end
 
-    local process_items, is_incomplete = H.get_config().lsp_completion.process_items, false
-    process_items = process_items or MiniCompletion.default_process_items
-    local words = H.process_lsp_response(H.completion.lsp.result, function(response, client_id)
+    local is_incomplete = false
+    local all_items = H.process_lsp_response(H.completion.lsp.result, function(response, client_id)
       is_incomplete = is_incomplete or (response.isIncomplete == true)
       -- Response can be `CompletionList` with 'items' field plus their
       -- defaults or `CompletionItem[]`
       local items = H.table_get(response, { 'items' }) or response
       if type(items) ~= 'table' then return {} end
+
       items = H.apply_item_defaults(items, response.itemDefaults)
-      items = process_items(items, base)
-      return H.lsp_completion_response_items_to_complete_items(items, client_id)
+      for _, item in ipairs(items) do
+        item.client_id = client_id
+      end
+      return items
     end)
-    -- Add item id to use in `H.completion.lsp.resolve` caching. Do this after
-    -- processing all servers to have unique ids in case of several servers.
-    for i, w in ipairs(words) do
-      w.user_data.nvim.lsp.item_id = i
-    end
+
+    -- Process items
+    local process_items = H.get_config().lsp_completion.process_items or MiniCompletion.default_process_items
+    all_items = process_items(all_items, base)
+    local candidates = H.lsp_completion_response_items_to_complete_items(all_items)
 
     H.completion.lsp.status = 'done'
     H.completion.lsp.is_incomplete = is_incomplete
 
     -- Maybe trigger fallback action
-    if vim.tbl_isempty(words) and H.completion.fallback then return H.trigger_fallback() end
+    if vim.tbl_isempty(candidates) and H.completion.fallback then return H.trigger_fallback() end
 
     -- Track from which source is current popup
     H.completion.source = 'lsp'
-    return words
+    return candidates
   end
 end
 
@@ -489,11 +491,14 @@ end
 ---
 --- Steps:
 --- - Filter and sort items according to supplied method.
+--- - Arrange items further by completion item kind according to their priority.
 --- - If |MiniIcons| is enabled, add <kind_hlgroup> based on the "lsp" category.
 ---
---- Example of forcing fuzzy matching: >lua
+--- Example of forcing fuzzy matching, filtering out `Text` items, and putting
+--- `Snippet` items last: >lua
 ---
----   local opts = { filtersort = 'fuzzy' }
+---   local kind_priority = { Text = -1, Snippet = 99 }
+---   local opts = { filtersort = 'fuzzy', kind_priority = kind_priority }
 ---   local process_items = function(items, base)
 ---     return MiniCompletion.default_process_items(items, base, opts)
 ---   end
@@ -513,16 +518,28 @@ end
 ---       - `'none'` - no filter and no sort.
 ---     If callable, should take `items` and `base` arguments and return items array.
 ---     Default: `'fuzzy'` if 'completeopt' contains "fuzzy", `'prefix'` otherwise.
+---   - <kind_priority> `(table)` - map of completion item kinds (like `Variable`,
+---     `Snippet`; see string keys of `vim.lsp.protocol.CompletionItemKind`) to
+---     their numerical priority. It will be used after applying <filtersort> to
+---     arrange by completion item kind: items with negative priority kinds will
+---     be filtered out, the rest are sorted by decreasing priority (preserving
+---     order in case of same priority).
+---     Priorities can be any number, only matters how they compare to each other.
+---     Value 100 is used for missing kinds (i.e. not all can be supplied).
+---     Default: `{}` (all equal priority).
 ---
 ---@return table Array of processed items from LSP response.
 MiniCompletion.default_process_items = function(items, base, opts)
   opts = opts or {}
 
-  -- NOTE: custom filter+sort is important with frequent `isIncomplete`
+  -- Filter+sort (important with frequent `isIncomplete`)
   local fs = opts.filtersort or (vim.o.completeopt:find('fuzzy') ~= nil and 'fuzzy' or 'prefix')
   if type(fs) == 'string' then fs = H.filtersort_methods[fs] end
   if not vim.is_callable(fs) then H.error('`filtersort` should be callable or one of "prefix", "fuzzy", "none"') end
   local res = fs(items, base)
+
+  -- Arrange by kind
+  if opts.kind_priority ~= nil then res = H.lsp_arrange_by_kind(res, opts.kind_priority) end
 
   -- Possibly add "kind" highlighting
   if _G.MiniIcons == nil then return res end
@@ -898,7 +915,7 @@ H.auto_info = function()
 
   -- Show info content without delay for visited and resolved LSP item.
   -- Otherwise delay to not spam LSP requests on up/down navigation.
-  local item_id = H.table_get(completed_item, { 'user_data', 'nvim', 'lsp', 'item_id' })
+  local item_id = H.table_get(completed_item, { 'user_data', 'lsp', 'item_id' })
   local is_resolved = H.completion.lsp.resolved[item_id] ~= nil
   local delay = is_resolved and 0 or H.get_config().delay.info
 
@@ -931,7 +948,7 @@ H.on_completedonepre = function()
   if H.completion.lsp.status == 'received' then return end
 
   -- Do extra actions for LSP completion items
-  local lsp_data = H.table_get(vim.v.completed_item, { 'user_data', 'nvim', 'lsp' })
+  local lsp_data = H.table_get(vim.v.completed_item, { 'user_data', 'lsp' })
   if lsp_data ~= nil then H.make_lsp_extra_actions(lsp_data) end
 
   -- Stop processes
@@ -1134,6 +1151,22 @@ H.filtersort_methods = {
   none = function(items, _) return vim.deepcopy(items) end,
 }
 
+H.lsp_arrange_by_kind = function(items, kind_priority)
+  if type(kind_priority) ~= 'table' then H.error('`kind_priority` should be table') end
+
+  H.ensure_kind_map()
+
+  local res_raw = {}
+  for i, item in ipairs(items) do
+    local priority = kind_priority[H.kind_map[item.kind]] or 100
+    if priority >= 0 then table.insert(res_raw, { priority, i, item }) end
+  end
+
+  local compare = function(a, b) return a[1] > b[1] or (a[1] == b[1] and a[2] < b[2]) end
+  table.sort(res_raw, compare)
+  return vim.tbl_map(function(x) return x[3] end, res_raw)
+end
+
 H.lsp_get_filterword = function(x) return x.filterText or x.label end
 
 H.lsp_item_compare = function(a, b) return (a.sortText or a.label) < (b.sortText or b.label) end
@@ -1189,13 +1222,13 @@ end
 
 -- Source:
 -- https://microsoft.github.io/language-server-protocol/specifications/specification-3-14/#textDocument_completion
-H.lsp_completion_response_items_to_complete_items = function(items, client_id)
+H.lsp_completion_response_items_to_complete_items = function(items)
   if vim.tbl_count(items) == 0 then return {} end
 
   local res, item_kinds = {}, vim.lsp.protocol.CompletionItemKind
   local snippet_kind = vim.lsp.protocol.CompletionItemKind.Snippet
   local snippet_inserttextformat = vim.lsp.protocol.InsertTextFormat.Snippet
-  for _, item in pairs(items) do
+  for i, item in pairs(items) do
     local word = H.get_completion_word(item)
 
     local is_snippet_kind = item.kind == snippet_kind
@@ -1211,7 +1244,7 @@ H.lsp_completion_response_items_to_complete_items = function(items, client_id)
     local label_detail = (details.detail or '') .. (details.description or '')
     label_detail = snippet_clue .. ((snippet_clue ~= '' and label_detail ~= '') and ' ' or '') .. label_detail
 
-    local lsp_data = { completion_item = item, client_id = client_id }
+    local lsp_data = { item = item, item_id = i }
     lsp_data.needs_snippet_insert = needs_snippet_insert
     table.insert(res, {
       -- Show less for snippet items (usually less confusion), but preserve
@@ -1226,7 +1259,7 @@ H.lsp_completion_response_items_to_complete_items = function(items, client_id)
       icase = 1,
       dup = 1,
       empty = 1,
-      user_data = { nvim = { lsp = lsp_data } },
+      user_data = { lsp = lsp_data },
     })
   end
   return res
@@ -1235,19 +1268,23 @@ end
 H.make_add_kind_hlgroup = function()
   -- Account for possible effect of `MiniIcons.tweak_lsp_kind()` which modifies
   -- only array part of `CompletionItemKind` but not "map" part
-  if H.kind_map == nil then
-    -- Cache kind map so as to not recompute it each time (as it will be called
-    -- in performance sensitive context). Assumes `tweak_lsp_kind()` is called
-    -- right after `require('mini.icons').setup()`.
-    H.kind_map = {}
-    for k, v in pairs(vim.lsp.protocol.CompletionItemKind) do
-      if type(k) == 'string' and type(v) == 'number' then H.kind_map[v] = k end
-    end
-  end
+  H.ensure_kind_map()
 
   return function(item)
     local _, hl, is_default = _G.MiniIcons.get('lsp', H.kind_map[item.kind] or 'Unknown')
     item.kind_hlgroup = not is_default and hl or nil
+  end
+end
+
+H.ensure_kind_map = function()
+  if H.kind_map ~= nil then return end
+
+  -- Cache kind map so as to not recompute it each time (as it will be called
+  -- in performance sensitive context). Assumes `tweak_lsp_kind()` is called
+  -- right after `require('mini.icons').setup()`.
+  H.kind_map = {}
+  for k, v in pairs(vim.lsp.protocol.CompletionItemKind) do
+    if type(k) == 'string' and type(v) == 'number' then H.kind_map[v] = k end
   end
 end
 
@@ -1257,7 +1294,7 @@ end
 
 H.make_lsp_extra_actions = function(lsp_data)
   -- Prefer resolved item over the one from 'textDocument/completion'
-  local item = H.completion.lsp.resolved[lsp_data.item_id] or lsp_data.completion_item
+  local item = H.completion.lsp.resolved[lsp_data.item_id] or lsp_data.item
 
   if item.additionalTextEdits == nil and not lsp_data.needs_snippet_insert then return end
   local snippet = lsp_data.needs_snippet_insert and H.get_completion_word(item) or nil
@@ -1288,7 +1325,7 @@ H.make_lsp_extra_actions = function(lsp_data)
     end
 
     -- Try to apply additional text edits
-    H.apply_additional_text_edits(item.additionalTextEdits, lsp_data.client_id)
+    H.apply_additional_text_edits(item)
 
     -- Expand snippet: remove inserted word and instead insert snippet
     if snippet == nil then return end
@@ -1299,10 +1336,9 @@ H.make_lsp_extra_actions = function(lsp_data)
   end)
 end
 
-H.apply_additional_text_edits = function(edits, client_id)
+H.apply_additional_text_edits = function(item)
   -- Code originally inspired by https://github.com/neovim/neovim/issues/12310
-  if edits == nil then return end
-  client_id = client_id or 0
+  if item.additionalTextEdits == nil then return end
 
   -- Prepare extmarks to track relevant positions after text edits
   local start_pos = H.completion.start_pos
@@ -1314,8 +1350,8 @@ H.apply_additional_text_edits = function(edits, client_id)
   local cursor_extmark_id = vim.api.nvim_buf_set_extmark(0, H.ns_id, cur_pos[1] - 1, cur_pos[2], cursor_extmark_opts)
 
   -- Do text edits
-  local offset_encoding = vim.lsp.get_client_by_id(client_id).offset_encoding
-  vim.lsp.util.apply_text_edits(edits, vim.api.nvim_get_current_buf(), offset_encoding)
+  local offset_encoding = item.client_id == nil and 'utf-16' or vim.lsp.get_client_by_id(item.client_id).offset_encoding
+  vim.lsp.util.apply_text_edits(item.additionalTextEdits, vim.api.nvim_get_current_buf(), offset_encoding)
 
   -- Restore relevant positions
   local start_data = vim.api.nvim_buf_get_extmark_by_id(0, H.ns_id, start_extmark_id, {})
@@ -1371,10 +1407,10 @@ end
 H.info_window_lines = function(info_id)
   local completed_item = H.info.event.completed_item
   local info = completed_item.info or ''
-  local lsp_data = H.table_get(completed_item, { 'user_data', 'nvim', 'lsp' })
+  local lsp_data = H.table_get(completed_item, { 'user_data', 'lsp' })
 
-  -- If popup is not from LSP, try using 'info' field of completion item
-  if lsp_data == nil then return vim.split(info, '\n') end
+  -- If popup is not from a known LSP server, use 'info' field of complete-item
+  if lsp_data == nil or lsp_data.item.client_id == nil then return vim.split(info, '\n') end
 
   -- Prefer reusing (without new LSP request) already resolved completion item
   local item_id, resolved_cache = lsp_data.item_id, H.completion.lsp.resolved
@@ -1382,17 +1418,17 @@ H.info_window_lines = function(info_id)
 
   -- Try to get documentation from LSP's latest resolved info
   if H.info.lsp.status == 'received' then
-    local lines = H.process_lsp_response(H.info.lsp.result, function(x) return H.normalize_item_doc(x, info) end)
+    local lines = H.normalize_item_doc(H.info.lsp.result, info)
     H.info.lsp.status = 'done'
     return lines
   end
 
-  -- If server doesn't support resolving completion item, reuse first response
-  local client = vim.lsp.get_client_by_id(lsp_data.client_id) or {}
+  -- If server doesn't support resolve or not known, reuse first response
+  local client = vim.lsp.get_client_by_id(lsp_data.item.client_id) or {}
   local can_resolve = H.table_get(client.server_capabilities, { 'completionProvider', 'resolveProvider' })
-  if not can_resolve then
-    resolved_cache[item_id] = lsp_data.completion_item
-    return H.normalize_item_doc(lsp_data.completion_item, info)
+  if not can_resolve or client.id == nil then
+    resolved_cache[item_id] = lsp_data.item
+    return H.normalize_item_doc(lsp_data.item, info)
   end
 
   -- Finally, request to resolve current completion to add more documentation
@@ -1401,7 +1437,7 @@ H.info_window_lines = function(info_id)
   H.info.lsp.id = current_id
   H.info.lsp.status = 'sent'
 
-  local cancel_fun = vim.lsp.buf_request_all(bufnr, 'completionItem/resolve', lsp_data.completion_item, function(result)
+  local cancel_fun = H.client_request(client, 'completionItem/resolve', lsp_data.item, function(err, result, _)
     -- Don't do anything if there is other LSP request in action
     if not H.is_lsp_current(H.info, current_id) then return end
 
@@ -1410,13 +1446,16 @@ H.info_window_lines = function(info_id)
     -- Don't do anything if completion item was changed
     if H.info.id ~= info_id then return end
 
+    -- Still use original item if there was error during resolve
+    if err ~= nil then result = result or lsp_data.item end
+
     H.info.lsp.result = result
     -- - Cache resolved item to not have to send same request on revisit.
     --   Do this outside of `H.info.event.completed_item` because it will not
     --   have persistent effect as it will come fresh from Vimscript `v:event`.
-    resolved_cache[item_id] = result[lsp_data.client_id].result
+    resolved_cache[item_id] = result
     H.show_info_window()
-  end)
+  end, bufnr)
 
   H.info.lsp.cancel_fun = cancel_fun
   return false
@@ -1844,8 +1883,8 @@ H.map = function(mode, lhs, rhs, opts)
   vim.keymap.set(mode, lhs, rhs, opts)
 end
 
-H.normalize_item_doc = function(completion_item, fallback_info)
-  local detail, doc = completion_item.detail, completion_item.documentation
+H.normalize_item_doc = function(lsp_item, fallback_info)
+  local detail, doc = lsp_item.detail, lsp_item.documentation
   -- Fall back to explicit info only of there is no data in completion item
   -- Assume that explicit info is a code that needs highlighting
   detail = (detail == nil and doc == nil) and fallback_info or detail
@@ -1919,6 +1958,18 @@ if vim.fn.has('nvim-0.11') == 1 then
       res.context = context
       return res
     end
+  end
+end
+
+-- TODO: Remove after compatibility with Neovim=0.10 is dropped
+H.client_request = function(client, method, params, handler, bufnr)
+  local ok, request_id = client:request(method, params, handler, bufnr)
+  return ok and function() pcall(client.cancel_request, client, request_id) end or function() end
+end
+if vim.fn.has('nvim-0.11') == 0 then
+  H.client_request = function(client, method, params, handler, bufnr)
+    local ok, request_id = client.request(method, params, handler, bufnr)
+    return ok and function() pcall(client.cancel_request, request_id) end or function() end
   end
 end
 
