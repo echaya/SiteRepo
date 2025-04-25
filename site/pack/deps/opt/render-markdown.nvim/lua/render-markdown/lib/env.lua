@@ -44,18 +44,6 @@ function M.file_size_mb(file)
     return stats.size / (1024 * 1024)
 end
 
----@param callback fun()
----@return fun()
-function M.runtime(callback)
-    return function()
-        local start_time = Compat.uv.hrtime()
-        callback()
-        local end_time = Compat.uv.hrtime()
-        local elapsed = (end_time - start_time) / 1e+6
-        vim.print(string.format('Runtime (ms): %.1f', elapsed))
-    end
-end
-
 ---@param buf integer
 ---@param win integer
 ---@return boolean
@@ -64,6 +52,26 @@ function M.valid(buf, win)
         return false
     end
     return buf == M.win.buf(win)
+end
+
+---@param buf integer
+---@param win integer
+---@param offset integer
+---@return integer, integer
+function M.range(buf, win, offset)
+    local top = math.max(M.win.view(win).topline - 1 - offset, 0)
+
+    local bottom = top
+    local lines = vim.api.nvim_buf_line_count(buf)
+    local size = vim.api.nvim_win_get_height(win) + (2 * offset)
+    while bottom < lines and size > 0 do
+        bottom = bottom + 1
+        if M.row.visible(win, bottom) then
+            size = size - 1
+        end
+    end
+
+    return top, bottom
 end
 
 ---@class render.md.env.Row

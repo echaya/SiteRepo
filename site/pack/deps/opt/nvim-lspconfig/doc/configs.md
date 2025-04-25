@@ -92,6 +92,7 @@ Nvim by running `:help lspconfig-all`.
 - [erg_language_server](#erg_language_server)
 - [erlangls](#erlangls)
 - [esbonio](#esbonio)
+- [eslint](#eslint)
 - [facility_language_server](#facility_language_server)
 - [fennel_language_server](#fennel_language_server)
 - [fennel_ls](#fennel_ls)
@@ -163,6 +164,7 @@ Nvim by running `:help lspconfig-all`.
 - [markdown_oxide](#markdown_oxide)
 - [marko-js](#marko-js)
 - [marksman](#marksman)
+- [mdx_analyzer](#mdx_analyzer)
 - [mesonlsp](#mesonlsp)
 - [metals](#metals)
 - [millet](#millet)
@@ -209,6 +211,7 @@ Nvim by running `:help lspconfig-all`.
 - [pico8_ls](#pico8_ls)
 - [pkgbuild_language_server](#pkgbuild_language_server)
 - [please](#please)
+- [pli](#pli)
 - [poryscript_pls](#poryscript_pls)
 - [postgres_lsp](#postgres_lsp)
 - [prismals](#prismals)
@@ -289,6 +292,7 @@ Nvim by running `:help lspconfig-all`.
 - [syntax_tree](#syntax_tree)
 - [systemd_ls](#systemd_ls)
 - [tabby_ml](#tabby_ml)
+- [tailwindcss](#tailwindcss)
 - [taplo](#taplo)
 - [tblgen_lsp_server](#tblgen_lsp_server)
 - [teal_ls](#teal_ls)
@@ -377,7 +381,7 @@ Default config:
   ```lua
   { "ada" }
   ```
-- `root_dir` source (use "gF" to open): [../lsp/ada_ls.lua:22](../lsp/ada_ls.lua#L22)
+- `root_dir` source (use "gF" to open): [../lsp/ada_ls.lua:23](../lsp/ada_ls.lua#L23)
 
 ---
 
@@ -401,7 +405,7 @@ Default config:
   ```lua
   { "agda" }
   ```
-- `root_dir` source (use "gF" to open): [../lsp/agda_ls.lua:8](../lsp/agda_ls.lua#L8)
+- `root_dir` source (use "gF" to open): [../lsp/agda_ls.lua:9](../lsp/agda_ls.lua#L9)
 
 ---
 
@@ -770,7 +774,7 @@ Default config:
   ```lua
   { "arduino" }
   ```
-- `root_dir` source (use "gF" to open): [../lsp/arduino_language_server.lua:72](../lsp/arduino_language_server.lua#L72)
+- `root_dir` source (use "gF" to open): [../lsp/arduino_language_server.lua:73](../lsp/arduino_language_server.lua#L73)
 
 ---
 
@@ -876,19 +880,22 @@ Default config:
 
 https://github.com/ariga/atlas
 
-Language server for Atlas config and scheme files.
+Language server for Atlas config and schema files.
 
 You may also need to configure the filetype for *.hcl files:
 
-`autocmd BufNewFile,BufRead atlas.hcl set filetype=atlas-config`
-`autocmd BufNewFile,BufRead *.my.hcl set filetype=atlas-schema-mysql`
-`autocmd BufNewFile,BufRead *.pg.hcl set filetype=atlas-schema-postgresql`
-`autocmd BufNewFile,BufRead *.lt.hcl set filetype=atlas-schema-sqlite`
-`autocmd BufNewFile,BufRead *.ch.hcl set filetype=atlas-schema-clickhouse`
-`autocmd BufNewFile,BufRead *.ms.hcl set filetype=atlas-schema-mssql`
-`autocmd BufNewFile,BufRead *.rs.hcl set filetype=atlas-schema-redshift`
-`autocmd BufNewFile,BufRead *.test.hcl set filetype=atlas-test`
-`autocmd BufNewFile,BufRead *.plan.hcl set filetype=atlas-plan`
+```vim
+autocmd BufNewFile,BufRead atlas.hcl set filetype=atlas-config
+autocmd BufNewFile,BufRead *.my.hcl set filetype=atlas-schema-mysql
+autocmd BufNewFile,BufRead *.pg.hcl set filetype=atlas-schema-postgresql
+autocmd BufNewFile,BufRead *.lt.hcl set filetype=atlas-schema-sqlite
+autocmd BufNewFile,BufRead *.ch.hcl set filetype=atlas-schema-clickhouse
+autocmd BufNewFile,BufRead *.ms.hcl set filetype=atlas-schema-mssql
+autocmd BufNewFile,BufRead *.rs.hcl set filetype=atlas-schema-redshift
+autocmd BufNewFile,BufRead *.test.hcl set filetype=atlas-test
+autocmd BufNewFile,BufRead *.plan.hcl set filetype=atlas-plan
+autocmd BufNewFile,BufRead *.rule.hcl set filetype=atlas-rule
+```
 
 or
 
@@ -906,6 +913,7 @@ vim.filetype.add({
     ['.*/*.rs.hcl'] = 'atlas-schema-redshift',
     ['.*/*.test.hcl'] = 'atlas-test',
     ['.*/*.plan.hcl'] = 'atlas-plan',
+    ['.*/*.rule.hcl'] = 'atlas-rule',
   },
 })
 ```
@@ -922,6 +930,7 @@ vim.treesitter.language.register('hcl', 'atlas-schema-mssql')
 vim.treesitter.language.register('hcl', 'atlas-schema-redshift')
 vim.treesitter.language.register('hcl', 'atlas-test')
 vim.treesitter.language.register('hcl', 'atlas-plan')
+vim.treesitter.language.register('hcl', 'atlas-rule')
 ```
 
 Snippet to enable the language server:
@@ -950,6 +959,8 @@ Default config:
 https://github.com/thqby/vscode-autohotkey2-lsp
 
 AutoHotkey v2.0 LSP implementation
+
+NOTE: AutoHotkey is Windows-only.
 
 Snippet to enable the language server:
 ```lua
@@ -1035,7 +1046,7 @@ Default config:
   ```lua
   { "config", "automake", "make" }
   ```
-- `root_dir` source (use "gF" to open): [../lsp/autotools_ls.lua:15](../lsp/autotools_ls.lua#L15)
+- `root_dir` source (use "gF" to open): [../lsp/autotools_ls.lua:16](../lsp/autotools_ls.lua#L16)
 
 ---
 
@@ -1235,7 +1246,7 @@ Default config:
   ```lua
   { "python" }
   ```
-- `on_attach` source (use "gF" to open): [../lsp/basedpyright.lua:37](../lsp/basedpyright.lua#L37)
+- `on_attach` source (use "gF" to open): [../lsp/basedpyright.lua:22](../lsp/basedpyright.lua#L22)
 - `root_markers` :
   ```lua
   { "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", "Pipfile", "pyrightconfig.json", ".git" }
@@ -1699,7 +1710,11 @@ Default config:
 
 ## buf_ls
 
+https://github.com/bufbuild/buf
 
+buf beta lsp included in the cli itself
+
+buf beta lsp is a Protobuf language server compatible with Buf modules and workspaces
 
 Snippet to enable the language server:
 ```lua
@@ -1954,7 +1969,7 @@ Default config:
   ```lua
   { "c", "cpp", "objc", "objcpp", "cuda", "proto" }
   ```
-- `on_attach` source (use "gF" to open): [../lsp/clangd.lua:63](../lsp/clangd.lua#L63)
+- `on_attach` source (use "gF" to open): [../lsp/clangd.lua:60](../lsp/clangd.lua#L60)
 - `root_markers` :
   ```lua
   { ".clangd", ".clang-tidy", ".clang-format", "compile_commands.json", "compile_flags.txt", "configure.ac", ".git" }
@@ -2216,7 +2231,7 @@ Default config:
     AutomaticWorkspaceInit = true
   }
   ```
-- `root_dir` source (use "gF" to open): [../lsp/csharp_ls.lua:12](../lsp/csharp_ls.lua#L12)
+- `root_dir` source (use "gF" to open): [../lsp/csharp_ls.lua:13](../lsp/csharp_ls.lua#L13)
 
 ---
 
@@ -2499,7 +2514,7 @@ Default config:
 
 ## daedalus_ls
 
-
+DaedalusLanguageServer
 
 Snippet to enable the language server:
 ```lua
@@ -2731,7 +2746,7 @@ Default config:
     ["textDocument/typeDefinition"] = <function 1>
   }
   ```
-- `on_attach` source (use "gF" to open): [../lsp/denols.lua:79](../lsp/denols.lua#L79)
+- `on_attach` source (use "gF" to open): [../lsp/denols.lua:66](../lsp/denols.lua#L66)
 - `root_markers` :
   ```lua
   { "deno.json", "deno.jsonc", ".git" }
@@ -3089,7 +3104,7 @@ Default config:
     show_symbols_only_follow_by_hanzi = false
   }
   ```
-- `on_attach` source (use "gF" to open): [../lsp/ds_pinyin_lsp.lua:49](../lsp/ds_pinyin_lsp.lua#L49)
+- `on_attach` source (use "gF" to open): [../lsp/ds_pinyin_lsp.lua:45](../lsp/ds_pinyin_lsp.lua#L45)
 - `root_markers` :
   ```lua
   { ".git" }
@@ -3570,6 +3585,100 @@ Default config:
 
 ---
 
+## eslint
+
+https://github.com/hrsh7th/vscode-langservers-extracted
+
+`vscode-eslint-language-server` is a linting engine for JavaScript / Typescript.
+It can be installed via `npm`:
+
+```sh
+npm i -g vscode-langservers-extracted
+```
+
+`vscode-eslint-language-server` provides an `EslintFixAll` command that can be used to format a document on save:
+```lua
+vim.lsp.config('eslint', {
+  --- ...
+  on_attach = function(client, bufnr)
+    vim.api.nvim_create_autocmd("BufWritePre", {
+      buffer = bufnr,
+      command = "EslintFixAll",
+    })
+  end,
+})
+```
+
+See [vscode-eslint](https://github.com/microsoft/vscode-eslint/blob/55871979d7af184bf09af491b6ea35ebd56822cf/server/src/eslintServer.ts#L216-L229) for configuration options.
+
+Messages handled in lspconfig: `eslint/openDoc`, `eslint/confirmESLintExecution`, `eslint/probeFailed`, `eslint/noLibrary`
+
+Additional messages you can handle: `eslint/noConfig`
+
+Snippet to enable the language server:
+```lua
+require'lspconfig'.eslint.setup{}
+```
+
+Default config:
+- `before_init` source (use "gF" to open): [../lsp/eslint.lua:34](../lsp/eslint.lua#L34)
+- `cmd` :
+  ```lua
+  { "vscode-eslint-language-server", "--stdio" }
+  ```
+- `filetypes` :
+  ```lua
+  { "javascript", "javascriptreact", "javascript.jsx", "typescript", "typescriptreact", "typescript.tsx", "vue", "svelte", "astro" }
+  ```
+- `handlers` :
+  ```lua
+  {
+    ["eslint/confirmESLintExecution"] = <function 1>,
+    ["eslint/noLibrary"] = <function 2>,
+    ["eslint/openDoc"] = <function 3>,
+    ["eslint/probeFailed"] = <function 4>
+  }
+  ```
+- `on_attach` source (use "gF" to open): [../lsp/eslint.lua:34](../lsp/eslint.lua#L34)
+- `root_dir` source (use "gF" to open): [../lsp/eslint.lua:34](../lsp/eslint.lua#L34)
+- `settings` :
+  ```lua
+  {
+    codeAction = {
+      disableRuleComment = {
+        enable = true,
+        location = "separateLine"
+      },
+      showDocumentation = {
+        enable = true
+      }
+    },
+    codeActionOnSave = {
+      enable = false,
+      mode = "all"
+    },
+    experimental = {
+      useFlatConfig = false
+    },
+    format = true,
+    nodePath = "",
+    onIgnoredFiles = "off",
+    problems = {
+      shortenToSingleLine = false
+    },
+    quiet = false,
+    rulesCustomizations = {},
+    run = "onType",
+    useESLintClass = false,
+    validate = "on",
+    workingDirectory = {
+      mode = "location"
+    }
+  }
+  ```
+
+---
+
 ## facility_language_server
 
 https://github.com/FacilityApi/FacilityLanguageServer
@@ -3657,7 +3766,7 @@ Default config:
   ```lua
   { "fennel" }
   ```
-- `root_dir` source (use "gF" to open): [../lsp/fennel_ls.lua:12](../lsp/fennel_ls.lua#L12)
+- `root_dir` source (use "gF" to open): [../lsp/fennel_ls.lua:10](../lsp/fennel_ls.lua#L10)
 - `settings` :
   ```lua
   {}
@@ -3790,7 +3899,7 @@ Default config:
   ```lua
   { "foam", "OpenFOAM" }
   ```
-- `root_dir` source (use "gF" to open): [../lsp/foam_ls.lua:11](../lsp/foam_ls.lua#L11)
+- `root_dir` source (use "gF" to open): [../lsp/foam_ls.lua:10](../lsp/foam_ls.lua#L10)
 
 ---
 
@@ -4012,7 +4121,7 @@ require'lspconfig'.gdscript.setup{}
 ```
 
 Default config:
-- `cmd` source (use "gF" to open): [../lsp/gdscript.lua:9](../lsp/gdscript.lua#L9)
+- `cmd` source (use "gF" to open): [../lsp/gdscript.lua:10](../lsp/gdscript.lua#L10)
 - `filetypes` :
   ```lua
   { "gd", "gdscript", "gdscript3" }
@@ -4863,7 +4972,7 @@ Default config:
   ```lua
   { "haskell", "lhaskell" }
   ```
-- `root_dir` source (use "gF" to open): [../lsp/hls.lua:16](../lsp/hls.lua#L16)
+- `root_dir` source (use "gF" to open): [../lsp/hls.lua:17](../lsp/hls.lua#L17)
 - `settings` :
   ```lua
   {
@@ -6197,6 +6306,44 @@ Default config:
 
 ---
 
+## mdx_analyzer
+
+https://github.com/mdx-js/mdx-analyzer
+
+`mdx-analyzer`, a language server for MDX
+
+Snippet to enable the language server:
+```lua
+require'lspconfig'.mdx_analyzer.setup{}
+```
+
+Default config:
+- `before_init` source (use "gF" to open): [../lsp/mdx_analyzer.lua:11](../lsp/mdx_analyzer.lua#L11)
+- `cmd` :
+  ```lua
+  { "mdx-language-server", "--stdio" }
+  ```
+- `filetypes` :
+  ```lua
+  { "mdx" }
+  ```
+- `init_options` :
+  ```lua
+  {
+    typescript = {}
+  }
+  ```
+- `root_markers` :
+  ```lua
+  { "package.json" }
+  ```
+- `settings` :
+  ```lua
+  {}
+  ```
+
+---
+
 ## mesonlsp
 
 https://github.com/JCWasmx86/mesonlsp
@@ -7235,7 +7382,7 @@ Default config:
   ```
 - `cmd` :
   ```lua
-  { "OmniSharp", "-z", "--hostPID", "1942", "DotNet:enablePackageRestore=false", "--encoding", "utf-8", "--languageserver" }
+  { "OmniSharp", "-z", "--hostPID", "12345", "DotNet:enablePackageRestore=false", "--encoding", "utf-8", "--languageserver" }
   ```
 - `filetypes` :
   ```lua
@@ -7750,6 +7897,33 @@ Default config:
 
 ---
 
+## pli
+
+`pli_language_server` is a language server for the PL/I language used on IBM SystemZ mainframes.
+
+To learn how to configure the PL/I language server, see the [PL/I Language Support documentation](https://github.com/zowe/zowe-pli-language-support).
+
+Snippet to enable the language server:
+```lua
+require'lspconfig'.pli.setup{}
+```
+
+Default config:
+- `cmd` :
+  ```lua
+  { "pli_language_server" }
+  ```
+- `filetypes` :
+  ```lua
+  { "pli" }
+  ```
+- `root_markers` :
+  ```lua
+  { ".pliplugin" }
+  ```
+
+---
+
 ## poryscript_pls
 
 https://github.com/huderlem/poryscript-pls
@@ -8196,7 +8370,7 @@ Default config:
   ```lua
   { "python" }
   ```
-- `on_attach` source (use "gF" to open): [../lsp/pyright.lua:37](../lsp/pyright.lua#L37)
+- `on_attach` source (use "gF" to open): [../lsp/pyright.lua:22](../lsp/pyright.lua#L22)
 - `root_markers` :
   ```lua
   { "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", "Pipfile", "pyrightconfig.json", ".git" }
@@ -8795,6 +8969,12 @@ https://github.com/dcermak/rpm-spec-language-server
 
 Language server protocol (LSP) support for RPM Spec files.
 
+`rpm-spec-language-server` can be installed by running,
+
+```sh
+pip install rpm-spec-language-server
+```
+
 Snippet to enable the language server:
 ```lua
 require'lspconfig'.rpmspec.setup{}
@@ -8803,7 +8983,7 @@ require'lspconfig'.rpmspec.setup{}
 Default config:
 - `cmd` :
   ```lua
-  { "python3", "-mrpm_lsp_server", "--stdio" }
+  { "rpm_lsp_server", "--stdio" }
   ```
 - `filetypes` :
   ```lua
@@ -9044,7 +9224,7 @@ require'lspconfig'.rust_analyzer.setup{}
 ```
 
 Default config:
-- `before_init` source (use "gF" to open): [../lsp/rust_analyzer.lua:57](../lsp/rust_analyzer.lua#L57)
+- `before_init` source (use "gF" to open): [../lsp/rust_analyzer.lua:56](../lsp/rust_analyzer.lua#L56)
 - `capabilities` :
   ```lua
   {
@@ -9061,8 +9241,8 @@ Default config:
   ```lua
   { "rust" }
   ```
-- `on_attach` source (use "gF" to open): [../lsp/rust_analyzer.lua:57](../lsp/rust_analyzer.lua#L57)
-- `root_dir` source (use "gF" to open): [../lsp/rust_analyzer.lua:57](../lsp/rust_analyzer.lua#L57)
+- `on_attach` source (use "gF" to open): [../lsp/rust_analyzer.lua:56](../lsp/rust_analyzer.lua#L56)
+- `root_dir` source (use "gF" to open): [../lsp/rust_analyzer.lua:56](../lsp/rust_analyzer.lua#L56)
 
 ---
 
@@ -9603,7 +9783,7 @@ Default config:
   ```lua
   { "solidity" }
   ```
-- `root_dir` source (use "gF" to open): [../lsp/solc.lua:8](../lsp/solc.lua#L8)
+- `root_dir` source (use "gF" to open): [../lsp/solc.lua:9](../lsp/solc.lua#L9)
 
 ---
 
@@ -9984,7 +10164,7 @@ vim.lsp.config('sqls', {
   ...
 })
 ```
-Sqls can be installed via `go get github.com/sqls-server/sqls`. Instructions for compiling Sqls from the source can be found at [sqls-server/sqls](https://github.com/sqls-server/sqls).
+Sqls can be installed via `go install github.com/sqls-server/sqls@latest`. Instructions for compiling Sqls from the source can be found at [sqls-server/sqls](https://github.com/sqls-server/sqls).
 
 Snippet to enable the language server:
 ```lua
@@ -10354,7 +10534,7 @@ Default config:
   ```lua
   { "svelte" }
   ```
-- `on_attach` source (use "gF" to open): [../lsp/svelte.lua:25](../lsp/svelte.lua#L25)
+- `on_attach` source (use "gF" to open): [../lsp/svelte.lua:12](../lsp/svelte.lua#L12)
 - `root_markers` :
   ```lua
   { "package.json", ".git" }
@@ -10561,6 +10741,58 @@ Default config:
   ```lua
   { ".git" }
   ```
+
+---
+
+## tailwindcss
+
+https://github.com/tailwindlabs/tailwindcss-intellisense
+
+Tailwind CSS Language Server can be installed via npm:
+
+npm install -g @tailwindcss/language-server
+
+Snippet to enable the language server:
+```lua
+require'lspconfig'.tailwindcss.setup{}
+```
+
+Default config:
+- `before_init` source (use "gF" to open): [../lsp/tailwindcss.lua:9](../lsp/tailwindcss.lua#L9)
+- `cmd` :
+  ```lua
+  { "tailwindcss-language-server", "--stdio" }
+  ```
+- `filetypes` :
+  ```lua
+  { "aspnetcorerazor", "astro", "astro-markdown", "blade", "clojure", "django-html", "htmldjango", "edge", "eelixir", "elixir", "ejs", "erb", "eruby", "gohtml", "gohtmltmpl", "haml", "handlebars", "hbs", "html", "htmlangular", "html-eex", "heex", "jade", "leaf", "liquid", "markdown", "mdx", "mustache", "njk", "nunjucks", "php", "razor", "slim", "twig", "css", "less", "postcss", "sass", "scss", "stylus", "sugarss", "javascript", "javascriptreact", "reason", "rescript", "typescript", "typescriptreact", "vue", "svelte", "templ" }
+  ```
+- `root_dir` source (use "gF" to open): [../lsp/tailwindcss.lua:9](../lsp/tailwindcss.lua#L9)
+- `settings` :
+  ```lua
+  {
+    tailwindCSS = {
+      classAttributes = { "class", "className", "class:list", "classList", "ngClass" },
+      includeLanguages = {
+        eelixir = "html-eex",
+        eruby = "erb",
+        htmlangular = "html",
+        templ = "html"
+      },
+      lint = {
+        cssConflict = "warning",
+        invalidApply = "error",
+        invalidConfigPath = "error",
+        invalidScreen = "error",
+        invalidTailwindDirective = "error",
+        invalidVariant = "error",
+        recommendedVariantOrder = "warning"
+      },
+      validate = true
+    }
+  }
+  ```
+- `workspace_required` : `true`
 
 ---
 
@@ -11062,7 +11294,7 @@ Default config:
   ```lua
   { "typst" }
   ```
-- `on_attach` source (use "gF" to open): [../lsp/tinymist.lua:57](../lsp/tinymist.lua#L57)
+- `on_attach` source (use "gF" to open): [../lsp/tinymist.lua:52](../lsp/tinymist.lua#L52)
 - `root_markers` :
   ```lua
   { ".git" }
@@ -11618,6 +11850,7 @@ Default config:
   ```lua
   { "unocss.config.js", "unocss.config.ts", "uno.config.js", "uno.config.ts" }
   ```
+- `workspace_required` : `true`
 
 ---
 
@@ -11743,7 +11976,7 @@ Default config:
   ```lua
   { "vala", "genie" }
   ```
-- `root_dir` source (use "gF" to open): [../lsp/vala_ls.lua:28](../lsp/vala_ls.lua#L28)
+- `root_dir` source (use "gF" to open): [../lsp/vala_ls.lua:26](../lsp/vala_ls.lua#L26)
 
 ---
 

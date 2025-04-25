@@ -138,7 +138,6 @@ function Conceal:compute()
     if parser == nil then
         return
     end
-    self.context:parse(parser)
     parser:for_each_tree(function(tree, language_tree)
         self:compute_tree(language_tree:lang(), tree:root())
     end)
@@ -148,7 +147,7 @@ end
 ---@param language string
 ---@param root TSNode
 function Conceal:compute_tree(language, root)
-    if not self.context:overlaps_node(root) then
+    if not self.context:overlaps(root) then
         return
     end
     if not vim.tbl_contains({ 'markdown', 'markdown_inline' }, language) then
@@ -159,8 +158,8 @@ function Conceal:compute_tree(language, root)
         return
     end
     self.context:for_each(function(range)
-        local start, stop = range.top, range.bottom
-        for id, node, data in query:iter_captures(root, self.buf, start, stop) do
+        local top, bottom = range.top, range.bottom
+        for id, node, data in query:iter_captures(root, self.buf, top, bottom) do
             if data.conceal_lines ~= nil then
                 local node_range = self:node_range(id, node, data)
                 local row = unpack(node_range)

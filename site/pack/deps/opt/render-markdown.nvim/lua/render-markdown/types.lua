@@ -2,7 +2,7 @@
 
 ---@class (exact) render.md.UserConfig: render.md.buffer.UserConfig
 ---@field preset? render.md.config.Preset
----@field log_level? render.md.config.LogLevel
+---@field log_level? render.md.log.Level
 ---@field log_runtime? boolean
 ---@field file_types? string[]
 ---@field ignore? fun(buf: integer): boolean
@@ -119,7 +119,7 @@
 
 ---@class (exact) render.md.dash.UserConfig: render.md.base.UserConfig
 ---@field icon? string
----@field width? 'full'|number
+---@field width? render.md.dash.Width
 ---@field left_margin? number
 ---@field highlight? string
 
@@ -204,6 +204,8 @@
 ---@class (exact) render.md.link.custom.UserConfig
 ---@field pattern? string
 ---@field icon? string
+---@field kind? render.md.link.custom.Kind
+---@field priority? integer
 ---@field highlight? string
 
 ---@class (exact) render.md.callback.UserConfig
@@ -245,9 +247,9 @@
 ---@field filler? string
 
 ---@class (exact) render.md.quote.UserConfig: render.md.base.UserConfig
----@field icon? string
+---@field icon? string|string[]
 ---@field repeat_linebreak? boolean
----@field highlight? string
+---@field highlight? string|string[]
 
 ---@class (exact) render.md.sign.UserConfig
 ---@field enabled? boolean

@@ -205,6 +205,10 @@
 ---
 --- ## Implementation details ~
 ---
+--- - Processing key typing is done via a dedicated key query process for more
+---   control over their side effects. As a result, regular mappings don't work
+---   here and picker's window needs to be current as long as it is shown.
+---   Changing window focus leads to automatic picker stop (after small delay).
 --- - Any picker is non-blocking but waits to return the chosen item. Example:
 ---   `file = MiniPick.builtin.files()` allows other actions to be executed when
 ---   picker is shown while still assigning `file` with value of the chosen item.
@@ -2296,6 +2300,7 @@ H.picker_track_lost_focus = function(picker)
     local is_cur_win = vim.api.nvim_get_current_win() == picker.windows.main
     local is_proper_focus = is_cur_win and (H.cache.is_in_getcharstr or vim.fn.mode() ~= 'n')
     if is_proper_focus then return end
+    if H.cache.is_in_getcharstr then return vim.api.nvim_feedkeys('\3', 't', true) end
     H.picker_stop(picker, true)
   end)
   H.timers.focus:start(1000, 1000, track)

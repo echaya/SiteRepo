@@ -23,7 +23,7 @@ local builtin_handlers = {
     markdown_inline = require('render-markdown.handler.markdown_inline'),
 }
 
----@class render.md.cache.Ui
+---@class render.md.ui.Cache
 ---@field states table<integer, render.md.Buffer>
 local Cache = {
     states = {},
@@ -53,14 +53,13 @@ function M.invalidate_cache()
 end
 
 ---@param buf integer
----@param win integer
----@return integer, render.md.Mark[]
-function M.get_row_marks(buf, win)
+---@param row integer
+---@return render.md.Mark[]
+function M.row_marks(buf, row)
     local config = state.get(buf)
     local buffer = Cache.get(buf)
     local mode = Env.mode.get()
-    local row = assert(Env.row.get(buf, win), 'Row must be known')
-    local hidden = assert(config:hidden(mode, row), 'Range must be known')
+    local hidden = assert(config:hidden(mode, row), 'range must be known')
 
     local marks = {}
     for _, extmark in ipairs(buffer:get_marks()) do
@@ -68,7 +67,7 @@ function M.get_row_marks(buf, win)
             marks[#marks + 1] = extmark:get()
         end
     end
-    return row, marks
+    return marks
 end
 
 ---@private
@@ -85,45 +84,22 @@ end
 ---@param event string
 ---@param change boolean
 function M.update(buf, win, event, change)
-    log.buf(
-        'info',
-        'update',
-        buf,
-        string.format('event %s', event),
-        string.format('change %s', change)
-    )
+    log.buf('info', 'update', buf, event, string.format('change %s', change))
     if not Env.valid(buf, win) then
         return
     end
 
     local parse = M.parse(buf, win, change)
-    local config, buffer = state.get(buf), Cache.get(buf)
+    local config = state.get(buf)
+    local buffer = Cache.get(buf)
     if buffer:is_empty() then
         return
     end
 
-    local update = function()
+    local update = log.runtime('update', function()
         M.run_update(buf, win, change)
-    end
-    if parse and state.log_runtime then
-        update = Env.runtime(update)
-    end
-
-    if parse and config.debounce > 0 then
-        buffer:debounce(config.debounce, update)
-    else
-        vim.schedule(update)
-    end
-end
-
----@private
----@param buf integer
----@param win integer
----@param change boolean
----@return boolean
-function M.parse(buf, win, change)
-    -- Need to parse when things change or we have not parsed the visible range yet
-    return change or not Context.contains_range(buf, win)
+    end)
+    buffer:run(parse, config.debounce, update)
 end
 
 ---@private
@@ -150,20 +126,20 @@ function M.run_update(buf, win, change)
     end
 
     if next_state == 'rendered' then
-        local initial = not buffer:has_marks()
+        local initial = buffer:initial()
         if initial or parse then
             M.clear(buf, buffer)
             buffer:set_marks(M.parse_buffer({
                 buf = buf,
                 win = win,
+                config = config,
                 mode = mode,
-                top_level_mode = Env.mode.is(mode, config.render_modes),
             }))
         end
         local hidden = config:hidden(mode, row)
         local extmarks = buffer:get_marks()
         if initial then
-            Compat.lsp_window_height(win, extmarks)
+            Compat.fix_lsp_window(buf, win, extmarks)
             state.on.initial({ buf = buf, win = win })
         end
         for _, extmark in ipairs(extmarks) do
@@ -181,27 +157,27 @@ function M.run_update(buf, win, change)
 end
 
 ---@private
----@param config render.md.BufferConfig
+---@param buf integer
+---@param win integer
+---@param change boolean
+---@return boolean
+function M.parse(buf, win, change)
+    -- need to parse when things change or we have not parsed the visible range yet
+    return change or not Context.contains(buf, win)
+end
+
+---@private
+---@param config render.md.main.Config
 ---@param win integer
 ---@param mode string
 ---@return 'default'|'rendered'
 function M.next_state(config, win, mode)
-    if not state.enabled then
-        return 'default'
-    end
-    if not config.enabled then
-        return 'default'
-    end
-    if not config:render(mode) then
-        return 'default'
-    end
-    if Env.win.get(win, 'diff') then
-        return 'default'
-    end
-    if Env.win.view(win).leftcol ~= 0 then
-        return 'default'
-    end
-    return 'rendered'
+    local render = state.enabled
+        and config.enabled
+        and config:render(mode)
+        and not Env.win.get(win, 'diff')
+        and Env.win.view(win).leftcol == 0
+    return render and 'rendered' or 'default'
 end
 
 ---@private
@@ -245,7 +221,7 @@ end
 ---@return render.md.Mark[]
 function M.parse_tree(ctx, language)
     log.buf('debug', 'language', ctx.buf, language)
-    if not Context.get(ctx.buf):overlaps_node(ctx.root) then
+    if not Context.get(ctx.buf):overlaps(ctx.root) then
         return {}
     end
 

@@ -3,7 +3,7 @@ local M = {}
 
 ---@class (exact) render.md.Config: render.md.buffer.Config
 ---@field preset render.md.config.Preset
----@field log_level render.md.config.LogLevel
+---@field log_level render.md.log.Level
 ---@field log_runtime boolean
 ---@field file_types string[]
 ---@field ignore fun(buf: integer): boolean
@@ -14,10 +14,6 @@ local M = {}
 ---@field completions render.md.completions.Config
 ---@field overrides render.md.overrides.Config
 ---@field custom_handlers table<string, render.md.Handler>
-
----@alias render.md.config.Preset 'none'|'lazy'|'obsidian'
-
----@alias render.md.config.LogLevel 'off'|'debug'|'info'|'error'
 
 ---@class (exact) render.md.buffer.Config: render.md.base.Config
 ---@field max_file_size number
@@ -43,6 +39,7 @@ local M = {}
 ---@field win_options table<string, render.md.window.Config>
 
 ---@private
+---@type boolean
 M.initialized = false
 
 ---@type render.md.Config
@@ -590,8 +587,12 @@ M.default = {
         -- contains. Applies to 'inline_link', 'uri_autolink', and wikilink nodes. When multiple
         -- patterns match a link the one with the longer pattern is used.
         -- The key is for healthcheck and to allow users to change its values, value type below.
-        -- | pattern   | matched against the destination text, @see :h lua-patterns      |
+        -- | pattern   | matched against the destination text                            |
         -- | icon      | gets inlined before the link text                               |
+        -- | kind      | optional determines how pattern is checked                      |
+        -- |           | pattern | @see :h lua-patterns, is the default if not set       |
+        -- |           | suffix  | @see :h vim.endswith()                                |
+        -- | priority  | optional used when multiple match, uses pattern length if empty |
         -- | highlight | optional highlight for 'icon', uses fallback highlight if empty |
         custom = {
             web = { pattern = '^http', icon = '󰖟 ' },
@@ -713,9 +714,29 @@ function M.setup(opts)
         return
     end
     M.initialized = true
+    local config = M.resolve_config(opts or {})
+    require('render-markdown.state').setup(config)
+end
 
-    require('render-markdown.state').setup(M.default, opts or {})
-    require('render-markdown.core.ui').invalidate_cache()
+---@private
+---@param user render.md.UserConfig
+---@return render.md.Config
+function M.resolve_config(user)
+    local preset = require('render-markdown.presets').get(user)
+    local config = vim.tbl_deep_extend('force', M.default, preset, user)
+    -- override settings that require neovim >= 0.10.0 and have compatible alternatives
+    local has_10 = require('render-markdown.lib.compat').has_10
+    if not has_10 then
+        config.code.position = 'right'
+    end
+    -- use lazy.nvim file type configuration if available and no user value is specified
+    if user.file_types == nil then
+        local lazy_file_types = require('render-markdown.lib.env').lazy('ft')
+        if #lazy_file_types > 0 then
+            config.file_types = lazy_file_types
+        end
+    end
+    return config
 end
 
 return setmetatable(M, {
