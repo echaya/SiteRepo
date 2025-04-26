@@ -15,7 +15,7 @@ local log = require('render-markdown.core.log')
 ---@field width integer
 ---@field alignment render.md.table.Alignment
 
----@enum (key) render.md.table.Alignment
+---@enum render.md.table.Alignment
 local Alignment = {
     left = 'left',
     right = 'right',
@@ -376,10 +376,8 @@ function Render:full()
     ---@param node render.md.Node
     ---@return integer
     local function get_spaces(node)
-        return math.max(
-            Str.spaces('start', node:line('first', 0) or ''),
-            node.start_col
-        )
+        local _, line = node:line('first', 0)
+        return math.max(Str.spaces('start', line or ''), node.start_col)
     end
 
     local first_node = first.node
