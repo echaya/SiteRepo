@@ -2,8 +2,8 @@ local Iter = require('render-markdown.lib.iter')
 
 ---@enum render.md.debug.spec.Kind
 local Kind = {
+    data = 'data',
     type = 'type',
-    value = 'value',
 }
 
 ---@class render.md.debug.Spec
@@ -15,7 +15,7 @@ local Kind = {
 ---@field private validator render.md.debug.Validator
 ---@field private data? table<string, any>
 ---@field private nilable boolean
----@field private path string
+---@field private path string[]
 ---@field private specs table<string, render.md.debug.Spec>
 local Spec = {}
 Spec.__index = Spec
@@ -23,7 +23,7 @@ Spec.__index = Spec
 ---@param validator render.md.debug.Validator
 ---@param data? table<string, any>
 ---@param nilable boolean
----@param path? string
+---@param path? string[]
 ---@param key any
 ---@return render.md.debug.ValidatorSpec
 function Spec.new(validator, data, nilable, path, key)
@@ -31,22 +31,14 @@ function Spec.new(validator, data, nilable, path, key)
     self.validator = validator
     self.data = data
     self.nilable = nilable
-    self.path = path or ''
+    self.path = vim.list_extend({}, path or {})
     if self.data ~= nil and key ~= nil then
-        local keys = type(key) == 'table' and key or { key }
-        self.data = vim.tbl_get(self.data, unpack(keys))
+        self.data = self.data[key]
         self.data = type(self.data) == 'table' and self.data or nil
-        local suffix = table.concat(Iter.list.map(keys, tostring), '.')
-        self.path = self.path .. '.' .. suffix
+        self.path[#self.path + 1] = tostring(key)
     end
     self.specs = {}
     return self
-end
-
----@param key string
-function Spec:config(key)
-    local config = require('render-markdown.config.' .. key)
-    self:nested(key, config.validate)
 end
 
 ---@param f fun(spec: render.md.debug.ValidatorSpec)
@@ -85,7 +77,7 @@ end
 function Spec:one_of(keys, values, ts)
     local options = Iter.list.map(values, vim.inspect)
     local types, message = self:handle_types(options, ts)
-    self:add(keys, Kind.value, message, function(value)
+    self:add(keys, Kind.data, message, function(value)
         local valid_value = vim.tbl_contains(values, value)
         local valid_type = vim.tbl_contains(types, type(value))
         return valid_value or valid_type
@@ -103,7 +95,7 @@ function Spec:list(keys, t, ts)
         elseif type(value) == 'table' then
             for i, item in ipairs(value) do
                 if type(item) ~= t then
-                    return false, string.format('[%d] is %s', i, type(item))
+                    return false, ('[%d] is %s'):format(i, type(item))
                 end
             end
             return true
@@ -126,8 +118,7 @@ function Spec:nested_list(keys, t, ts)
                 if type(item) == 'table' then
                     for j, nested in ipairs(item) do
                         if type(nested) ~= t then
-                            local info = string.format(
-                                '[%d][%d] is %s',
+                            local info = ('[%d][%d] is %s'):format(
                                 i,
                                 j,
                                 type(nested)
@@ -136,7 +127,7 @@ function Spec:nested_list(keys, t, ts)
                         end
                     end
                 elseif type(item) ~= t then
-                    return false, string.format('[%d] is %s', i, type(item))
+                    return false, ('[%d] is %s'):format(i, type(item))
                 end
             end
             return true
@@ -161,7 +152,7 @@ function Spec:one_or_list_of(keys, values, ts)
         elseif type(value) == 'table' then
             for i, item in ipairs(value) do
                 if not vim.tbl_contains(values, item) then
-                    return false, string.format('[%d] is %s', i, item)
+                    return false, ('[%d] is %s'):format(i, item)
                 end
             end
             return true
@@ -216,7 +207,6 @@ function Spec:check()
 end
 
 ---@class render.md.debug.Validator
----@field private prefix string
 ---@field private errors string[]
 local Validator = {}
 Validator.__index = Validator
@@ -224,41 +214,43 @@ Validator.__index = Validator
 ---@return render.md.debug.Validator
 function Validator.new()
     local self = setmetatable({}, Validator)
-    self.prefix = 'render-markdown'
     self.errors = {}
     return self
 end
 
 Validator.spec = Spec.new
 
----@param path string
+---@param path string[]
 ---@param data table<string, any>
 ---@param specs table<string, render.md.debug.Spec>
 function Validator:check(path, data, specs)
-    path = self.prefix .. path
     for key, spec in pairs(specs) do
+        local root = vim.list_extend({}, path)
+        root[#root + 1] = tostring(key)
         local value = data[key]
         local ok, info = spec.validation(value)
         if not ok then
-            local message = string.format('%s.%s', path, key)
-            message = message .. string.format(' - expected: %s', spec.message)
-            message = message .. ', but got: '
-            if spec.kind == Kind.type then
-                message = message .. type(value)
-            elseif spec.kind == Kind.value then
-                message = message .. vim.inspect(value)
+            local actual = nil
+            if spec.kind == Kind.data then
+                actual = vim.inspect(value)
+            elseif spec.kind == Kind.type then
+                actual = type(value)
             else
                 error('invalid kind: ' .. spec.kind)
             end
+            local body = ('expected: %s, got: %s'):format(spec.message, actual)
+            local message = ('%s - %s'):format(table.concat(root, '.'), body)
             if info ~= nil then
-                message = message .. string.format(', info: %s', info)
+                message = message .. (', info: %s'):format(info)
             end
             self.errors[#self.errors + 1] = message
         end
     end
     for key in pairs(data) do
+        local root = vim.list_extend({}, path)
+        root[#root + 1] = tostring(key)
         if specs[key] == nil then
-            local message = string.format('%s.%s - invalid key', path, key)
+            local message = ('%s - invalid key'):format(table.concat(root, '.'))
             self.errors[#self.errors + 1] = message
         end
     end

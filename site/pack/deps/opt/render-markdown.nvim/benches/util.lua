@@ -1,8 +1,5 @@
 ---@module 'luassert'
 
-local Eq = assert.are.same
-local True = assert.True
-
 ---@class render.md.bench.Util
 local M = {}
 
@@ -19,7 +16,7 @@ end
 ---@return number
 function M.move_down(n)
     return M.time(function()
-        M.feed(string.format('%dj', n))
+        M.feed(('%dj'):format(n))
         -- Unsure why, but the CursorMoved event needs to be triggered manually
         vim.api.nvim_exec_autocmds('CursorMoved', {})
     end)
@@ -53,14 +50,14 @@ end
 ---@param actual number
 ---@param max number
 function M.less_than(actual, max)
-    True(actual < max, string.format('expected %f < %f', actual, max))
+    assert.is_true(actual < max, ('expected %f < %f'):format(actual, max))
 end
 
 ---@param expected integer
 function M.num_marks(expected)
     local ui = require('render-markdown.core.ui')
     local marks = vim.api.nvim_buf_get_extmarks(0, ui.ns, 0, -1, {})
-    Eq(expected, #marks)
+    assert.same(expected, #marks)
 end
 
 return M

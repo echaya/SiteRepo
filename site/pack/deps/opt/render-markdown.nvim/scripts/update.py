@@ -1,5 +1,7 @@
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
+from textwrap import indent
 
 import tree_sitter_lua
 import tree_sitter_markdown
@@ -84,9 +86,19 @@ def update_types(init: Path) -> None:
 
 def update_readme(init: Path) -> None:
     readme = Path("README.md")
-    old_config = get_code_block(readme, "log_level", 1)
-    new_config = wrap_setup(get_default(init))
-    text = readme.read_text().replace(old_config, new_config)
+    old = get_code_block(readme, "log_level", 1)
+    new = wrap_setup(get_default(init))
+    while True:
+        match = re.search(r"require\('(.*?)'\)\.default", new)
+        if match is None:
+            break
+        statement = new[match.start() : match.end()]
+        path = match.group(1).replace(".", "/")
+        file = Path("lua").joinpath(path).with_suffix(".lua")
+        config = indent(get_default(file), "    ").strip()
+        new = new.replace(statement, config)
+
+    text = readme.read_text().replace(old, new)
 
     parameters: list[str] = [
         "heading",
@@ -104,7 +116,7 @@ def update_readme(init: Path) -> None:
     ]
     for parameter in parameters:
         old_param = get_code_block(readme, f"\n    {parameter} = {{", 2)
-        new_param = wrap_setup(get_config_for(new_config, parameter))
+        new_param = wrap_setup(get_config_for(new, parameter))
         text = text.replace(old_param, new_param)
 
     readme.write_text(text)
@@ -183,9 +195,9 @@ def get_default(file: Path) -> str:
                 (#eq? @name "default")))
         (expression_list value: (table_constructor)) @value)
     """
-    default_configs = ts_query(file, query, "value")
-    assert len(default_configs) == 1
-    return default_configs[0]
+    defaults = ts_query(file, query, "value")
+    assert len(defaults) == 1
+    return defaults[0]
 
 
 def get_code_block(file: Path, content: str, n: int) -> str:
