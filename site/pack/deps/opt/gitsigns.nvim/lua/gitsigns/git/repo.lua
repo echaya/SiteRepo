@@ -119,11 +119,12 @@ local repo_cache = setmetatable({}, { __mode = 'v' })
 --- @param dir string
 --- @param gitdir? string
 --- @param toplevel? string
---- @return Gitsigns.Repo?
+--- @return Gitsigns.Repo? repo
+--- @return string? err
 function M.get(dir, gitdir, toplevel)
-  local info = M.get_info(dir, gitdir, toplevel)
+  local info, err = M.get_info(dir, gitdir, toplevel)
   if not info then
-    return
+    return nil, err
   end
 
   gitdir = info.gitdir
@@ -163,7 +164,7 @@ local function process_abbrev_head(gitdir, head_str, cwd)
     cwd = cwd,
   })[1] or ''
 
-  if log.debug_mode and short_sha ~= '' then
+  if short_sha ~= '' and log.debug_mode() then
     short_sha = 'HEAD'
   end
 
@@ -174,18 +175,54 @@ local function process_abbrev_head(gitdir, head_str, cwd)
   return short_sha
 end
 
+--- @param dir? string
+--- @param gitdir? string
+--- @param worktree? string
+--- @return string? cwd
+--- @return string? err
+local function get_cmd_cwd(dir, gitdir, worktree)
+  if gitdir and worktree then
+    -- Do not need cwd
+    return
+  end
+
+  if not dir then
+    if gitdir then
+      return util.dirname(gitdir)
+    end
+    return nil, 'No directory provided and no gitdir or worktree'
+  end
+
+  if not uv.fs_stat(dir) then
+    local cwd = assert(vim.fn.getcwd(0, 0))
+    log.dprintf("'%s' does not exist, not setting cwd, defaulting to cwd '%s'", dir, cwd)
+    return cwd
+  end
+
+  return dir
+end
+
 --- @async
---- @param cwd string
+--- @param dir? string
 --- @param gitdir? string
 --- @param worktree? string
 --- @return Gitsigns.RepoInfo? info, string? err
-function M.get_info(cwd, gitdir, worktree)
+function M.get_info(dir, gitdir, worktree)
   -- Does git rev-parse have --absolute-git-dir, added in 2.13:
   --    https://public-inbox.org/git/20170203024829.8071-16-szeder.dev@gmail.com/
   local has_abs_gd = check_version(2, 13)
 
   -- Wait for internal scheduler to settle before running command (#215)
   async.schedule()
+
+  -- Explicitly fallback to env vars for better debug
+  gitdir = gitdir or vim.env.GIT_DIR
+  worktree = worktree or vim.env.GIT_WORK_TREE
+
+  local cwd, err = get_cmd_cwd(dir, gitdir, worktree)
+  if err then
+    return nil, err
+  end
 
   -- gitdir and worktree must be provided together from `man git`:
   -- > Specifying the location of the ".git" directory using this option (or GIT_DIR environment
@@ -209,7 +246,7 @@ function M.get_info(cwd, gitdir, worktree)
     'HEAD',
   }, {
     ignore_error = true,
-    cwd = worktree or cwd,
+    cwd = cwd,
   })
 
   -- If the repo has no commits yet, rev-parse will fail. Ignore this error.
@@ -240,7 +277,7 @@ function M.get_info(cwd, gitdir, worktree)
   return {
     toplevel = toplevel_r,
     gitdir = gitdir_r,
-    abbrev_head = process_abbrev_head(gitdir_r, stdout[3], cwd),
+    abbrev_head = process_abbrev_head(gitdir_r, stdout[3], toplevel_r),
     detached = toplevel_r and gitdir_r ~= toplevel_r .. '/.git',
   }
 end
@@ -269,7 +306,21 @@ function M:ls_tree(path, revision)
     return nil, stderr or tostring(code)
   end
 
-  local info, relpath = unpack(vim.split(results[1], '\t'))
+  local res = results[1]
+
+  if not res then
+    -- Not found, see if it was renamed
+    log.dprintf('%s not found in %s looking for renames', path, revision)
+    local old_path = self:rename_status(revision, true)[path]
+    if old_path then
+      log.dprintf('found rename %s -> %s', old_path, path)
+      return self:ls_tree(old_path, revision)
+    end
+
+    return nil, ('%s not found in %s'):format(path, revision)
+  end
+
+  local info, relpath = unpack(vim.split(res, '\t'))
   local mode_bits, object_type, object_name = unpack(vim.split(info, '%s+'))
   --- @cast object_type 'blob'|'tree'|'commit'
 
@@ -416,14 +467,17 @@ function M:hash_object(path, lines)
 end
 
 --- @async
+--- @param revision? string
+--- @param invert? boolean
 --- @return table<string,string>
-function M:rename_status()
+function M:rename_status(revision, invert)
   local out = self:command({
     'diff',
     '--name-status',
     '--find-renames',
     '--find-copies',
     '--cached',
+    revision,
   })
   local ret = {} --- @type table<string,string>
   for _, l in ipairs(out) do
@@ -432,7 +486,11 @@ function M:rename_status()
       --- @cast parts [string, string, string]
       local stat, orig_file, new_file = parts[1], parts[2], parts[3]
       if vim.startswith(stat, 'R') then
-        ret[orig_file] = new_file
+        if invert then
+          ret[new_file] = orig_file
+        else
+          ret[orig_file] = new_file
+        end
       end
     end
   end

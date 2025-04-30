@@ -3712,6 +3712,7 @@ Default config:
     }
   }
   ```
+- `workspace_required` : `true`
 
 ---
 
@@ -11320,7 +11321,7 @@ Default config:
 - `on_attach`: [../lsp/texlab.lua:164](../lsp/texlab.lua#L164)
 - `root_markers` :
   ```lua
-  { ".git", ".latexmkrc", ".texlabroot", "texlabroot", "Tectonic.toml" }
+  { ".git", ".latexmkrc", "latexmkrc", ".texlabroot", "texlabroot", "Tectonic.toml" }
   ```
 - `settings` :
   ```lua
