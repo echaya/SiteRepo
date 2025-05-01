@@ -5,6 +5,8 @@ let s:white        = '#c3ccdc'
 let s:black_blue   = '#081e2f'
 let s:dark_blue    = '#092236'
 let s:deep_blue    = '#0e293f'
+let s:storm_blue   = "#1a2b3f"
+let s:stone_blue   = '#252c3f'
 let s:slate_blue   = '#2c3043'
 let s:pickle_blue  = '#38507a'
 let s:cello_blue   = '#1f4462'
@@ -45,7 +47,6 @@ function! nightfly#Style() abort
     exec 'highlight NightflyVisual guibg=' . s:regal_blue
     exec 'highlight NightflyWhite guifg=' . s:white
     exec 'highlight NightflyDeepBlue guifg=' . s:deep_blue
-    exec 'highlight NightflySlateBlue guifg=' . s:slate_blue
     exec 'highlight NightflyPickleBlue guifg=' . s:pickle_blue
     exec 'highlight NightflyCelloBlue guifg=' . s:cello_blue
     exec 'highlight NightflyRegalBlue guifg=' . s:regal_blue
@@ -186,20 +187,31 @@ function! nightfly#Style() abort
     highlight! link Structure NightflyBlue
 
     " Statusline, splits and tab lines
-    exec 'highlight StatusLine cterm=none guibg=' . s:slate_blue . ' guifg=' . s:white . ' gui=none'
-    exec 'highlight StatusLineNC cterm=none guibg=' . s:slate_blue . ' guifg=' . s:cadet_blue . ' gui=none'
+    if g:nightflyTransparent
+        exec 'highlight StatusLine cterm=none guibg=' . s:black_blue . ' guifg=' . s:white . ' gui=none'
+        exec 'highlight StatusLineNC cterm=none guibg=' . s:black_blue . ' guifg=' . s:cadet_blue . ' gui=none'
+        exec 'highlight StatusLineTerm cterm=none guibg=' . s:black_blue . ' guifg=' . s:white . ' gui=none'
+        exec 'highlight StatusLineTermNC cterm=none guibg=' . s:black_blue . ' guifg=' . s:cadet_blue . ' gui=none'
+    else
+        exec 'highlight StatusLine cterm=none guibg=' . s:stone_blue . ' guifg=' . s:white . ' gui=none'
+        exec 'highlight StatusLineNC cterm=none guibg=' . s:stone_blue . ' guifg=' . s:cadet_blue . ' gui=none'
+        exec 'highlight StatusLineTerm cterm=none guibg=' . s:stone_blue . ' guifg=' . s:white . ' gui=none'
+        exec 'highlight StatusLineTermNC cterm=none guibg=' . s:stone_blue . ' guifg=' . s:cadet_blue . ' gui=none'
+    endif
     exec 'highlight Tabline cterm=none guibg=' . s:slate_blue . ' guifg=' . s:cadet_blue . ' gui=none'
-    exec 'highlight TablineSel cterm=none guibg=' . s:dark_blue . ' guifg=' . s:blue . ' gui=none'
-    exec 'highlight TablineSelSymbol cterm=none guibg=' . s:dark_blue . ' guifg=' . s:emerald . ' gui=none'
-    exec 'highlight TablineFill cterm=none guibg=' . s:slate_blue . ' guifg=' . s:slate_blue . ' gui=none'
-    exec 'highlight StatusLineTerm cterm=none guibg=' . s:slate_blue . ' guifg=' . s:white . ' gui=none'
-    exec 'highlight StatusLineTermNC cterm=none guibg=' . s:slate_blue . ' guifg=' . s:cadet_blue . ' gui=none'
+    exec 'highlight TablineSel cterm=none guibg=' . s:black_blue . ' guifg=' . s:blue . ' gui=none'
+    exec 'highlight TablineSelSymbol cterm=none guibg=' . s:black_blue . ' guifg=' . s:emerald . ' gui=none'
+    if g:nightflyTransparent
+        exec 'highlight TablineFill cterm=none guifg=' . s:slate_blue . ' gui=none'
+    else
+        exec 'highlight TablineFill cterm=none guibg=' . s:storm_blue . ' guifg=' . s:slate_blue . ' gui=none'
+    endif
     if g:nightflyWinSeparator == 0
         exec 'highlight VertSplit cterm=none guibg=' . s:black . ' guifg=' . s:black . ' gui=none'
     elseif g:nightflyWinSeparator == 1
-        exec 'highlight VertSplit cterm=none guibg=' . s:slate_blue . ' guifg=' . s:slate_blue . ' gui=none'
+        exec 'highlight VertSplit cterm=none guibg=' . s:stone_blue . ' guifg=' . s:stone_blue . ' gui=none'
     else
-        exec 'highlight VertSplit guibg=NONE guifg=' . s:slate_blue . ' gui=none'
+        exec 'highlight VertSplit guibg=NONE guifg=' . s:stone_blue . ' gui=none'
     end
 
     " Visual selection
