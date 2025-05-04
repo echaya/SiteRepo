@@ -133,6 +133,7 @@ completion.accept = {
     -- Default brackets to use for unknown languages
     default_brackets = { '(', ')' },
     -- Overrides the default blocked filetypes
+    -- See: https://github.com/Saghen/blink.cmp/blob/main/lua/blink/cmp/completion/brackets/config.lua#L5-L9
     override_brackets_for_filetypes = {},
     -- Synchronously use the kind of the item to determine if brackets should be added
     kind_resolution = {
@@ -194,6 +195,8 @@ completion.menu.draw = {
   padding = 1,
   -- Gap between columns
   gap = 1,
+  -- Priority of the cursorline highlight, setting this to 0 will render it below other highlights
+  cursorline_priority = 10000,
   -- Use treesitter to highlight the label text for the given list of sources
   treesitter = {},
   -- treesitter = { 'lsp' }
@@ -447,7 +450,8 @@ sources = {
   
   -- You may also define providers per filetype
   per_filetype = {
-    -- lua = { 'lsp', 'path' },
+    -- optionally inherit from the `default` sources
+    -- lua = { inherit_defaults = true, 'lsp', 'path' },
   },
 
   -- Function to use when transforming the items before they're returned for all providers
@@ -507,6 +511,8 @@ sources.providers = {
       label_trailing_slash = true,
       get_cwd = function(context) return vim.fn.expand(('#%d:p:h'):format(context.bufnr)) end,
       show_hidden_files_by_default = false,
+      -- Treat `/path` as starting from the current working directory (cwd) instead of the root of your filesystem
+      ignore_root_slash = false,
     }
   },
 
@@ -555,6 +561,8 @@ sources.providers = {
           :filter(function(buf) return vim.bo[buf].buftype ~= 'nofile' end)
           :totable()
       end,
+      -- buffers when searching with `/` or `?`
+      get_search_bufnrs = function() return { vim.api.nvim_get_current_buf() } end,
     }
   },
 
@@ -669,7 +677,7 @@ cmdline = {
 ### Terminal
 
 ::: warning
-Terminal completions are nightly only! Known bugs in v0.10
+Terminal completions are 0.11+ only! Known bugs in v0.10
 :::
 
 ```lua

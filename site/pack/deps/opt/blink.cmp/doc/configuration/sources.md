@@ -20,9 +20,14 @@ sources = {
   -- so you don't need to define them in `sources.providers`
   default = { 'lsp', 'buffer', 'snippets', 'path' },
 
-  per_filetype = { sql = { 'dadbod' } }
+  per_filetype = {
+    sql = { 'dadbod' }
+    -- optionally inherit from the `default` sources
+    lua = { inherit_defaults = true, 'lazydev' }
+  },
   providers = {
     dadbod = { module = "vim_dadbod_completion.blink" },
+    lazydev = { ... }
   }
 }
 ```
@@ -54,10 +59,23 @@ sources.providers.lsp = {
 }
 ```
 
+### Show Buffer completions with LSP
+
+By default, the buffer source will only show when the LSP source returns no items. You may always show the buffer source via:
+
+```lua
+sources = {
+  providers = {
+    -- defaults to `{ 'buffer' }`
+    lsp = { fallbacks = {} }
+  }
+}
+```
+
 ## Terminal and Cmdline Sources
 
 ::: info
-Terminal completions are nightly only! Known bugs in v0.10. Cmdline completions are supported on all versions
+Terminal completions are 0.11+ only! Known bugs in v0.10. Cmdline completions are supported on all versions
 :::
 
 You may use `cmdline` and `term` sources via the `cmdline.sources` and `term.sources` tables. You may see the defaults in the [reference](./reference.md#mode-specific). There's no source for shell completions at the moment, [contributions welcome](https://github.com/Saghen/blink.cmp/issues/1149)!
@@ -71,6 +89,8 @@ Blink can use `nvim-cmp` sources through a compatibility layer developed by [ste
 The command `:BlinkCmp status` can be used to view which sources providers are enabled or not enabled.
 
 ## Community sources
+
+See [blink.compat](https://github.com/Saghen/blink.compat) for using `nvim-cmp` sources
 
 - [lazydev](https://github.com/folke/lazydev.nvim)
 - [vim-dadbod-completion](https://github.com/kristijanhusak/vim-dadbod-completion)
@@ -94,3 +114,5 @@ The command `:BlinkCmp status` can be used to view which sources providers are e
 - [cmp-pandoc-references](https://github.com/jmbuhr/cmp-pandoc-references)
 - [blink-cmp-im](https://github.com/yehuohan/blink-cmp-im): Input Method source
 - [ecolog.nvim](https://github.com/philosofonusus/ecolog.nvim)
+- [gitmoji.nvim](https://github.com/Dynge/gitmoji.nvim/): Completion for [gitmojis](https://gitmoji.dev/)
+- [blink-cmp-agda-symbols](https://github.com/4e554c4c/blink-cmp-agda-symbols): Completion for [Agda](https://wiki.portal.chalmers.se/agda/pmwiki.php)

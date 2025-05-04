@@ -6,10 +6,27 @@ Feel free to open a PR with any of your own recipes!
 
 ## General
 
-### Disable per filetype
+### Disable per filetype/buffer
+
+You may change the `enabled` function to return `false` for any case you'd like to disable completion.
 
 ```lua
 enabled = function() return not vim.tbl_contains({ "lua", "markdown" }, vim.bo.filetype) end,
+```
+
+or set `vim.b.completion = false` on the buffer
+
+```lua
+-- via an autocmd
+vim.api.nvim_create_autocmd('BufEnter', {
+  pattern = '*.lua',
+  callback = function()
+    vim.b.completion = false
+  end,
+})
+
+-- or via ftplugin/some-filetype.lua
+vim.b.completion = false
 ```
 
 ### Disable completion in *only* shell command mode
@@ -39,7 +56,7 @@ local has_words_before = function()
   if col == 0 then
     return false
   end
-  local line = vim.api.nvim_get_current_line():sub()
+  local line = vim.api.nvim_get_current_line()
   return line:sub(col, col):match("%s") == nil
 end
 
@@ -275,7 +292,6 @@ completion = {
       components = {
         kind_icon = {
           text = function(ctx)
-            local lspkind = require("lspkind")
             local icon = ctx.kind_icon
             if vim.tbl_contains({ "Path" }, ctx.source_name) then
                 local dev_icon, _ = require("nvim-web-devicons").get_icon(ctx.label)

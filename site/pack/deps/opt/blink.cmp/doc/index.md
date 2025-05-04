@@ -1,6 +1,6 @@
 # Introduction
 
-**blink.cmp** is a completion plugin with support for LSPs and external sources that updates on every keystroke with minimal overhead (0.5-4ms async). It uses an [optional](/configuration/fuzzy.html#rust-vs-lua-implementation) custom [fuzzy matcher](https://github.com/saghen/frizbee) to easily handle 20k+ items. It provides extensibility via pluggable sources (LSP, snippets, etc), component based rendering and scripting for the configuration.
+**blink.cmp** is a completion plugin with support for LSPs, cmdline, signature help and snippets. It uses an [optional](https://cmp.saghen.dev/configuration/fuzzy.html#rust-vs-lua-implementation) custom [fuzzy matcher](https://github.com/saghen/frizbee) for typo resistance. It provides extensibility via pluggable sources (LSP, buffer, snippets, etc), component based rendering and scripting for the configuration.
 
 <video controls autoplay muted src="https://github.com/user-attachments/assets/bd1e25dd-48b0-4d33-90f4-1468d822f2be"></video>
 
@@ -15,7 +15,7 @@
 - [Auto-bracket support](/configuration/completion#auto-brackets) based on semantic tokens
 - [Signature help](/configuration/signature) (experimental, opt-in)
 - [Command line completion](/modes/cmdline)
-- [Terminal completion](/modes/term) (Nightly only! No source for shell completions exists yet, contributions welcome!)
+- [Terminal completion](/modes/term) (0.11+ only! No source for shell completions exists yet, contributions welcome!)
 
 ## Compared to built-in completion
 
@@ -25,7 +25,7 @@
 - Prefetching to minimize LSP latency
 - Support for [external non-LSP sources](/configuration/sources.html#community-sources) (snippets, path, buffer, git, ripgrep, ...)
 - [Ghost text](/configuration/completion.html#ghost-text)
-- [Signature help](/configuration/signature.html)
+- [Automatic signature help](/configuration/signature.html)
 - [Auto-bracket support](/configuration/completion.html#auto-brackets) based on semantic tokens
 
 ## Compared to nvim-cmp
@@ -57,3 +57,4 @@
 - [@mikavilpas](https://github.com/mikavilpas) + [@xzbdmw](https://github.com/xzbdmw) Dot-repeat (`.`)
 - [@soifou](https://github.com/soifou)
 - [@FerretDetective](https://github.com/FerretDetective) `complete_func` source
+- [@krovuxdev](https://github.com/krovuxdev) Community moderation and help

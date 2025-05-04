@@ -20,7 +20,7 @@ function cmp.setup(opts)
   config.merge_with(opts)
 
   require('blink.cmp.fuzzy.download').ensure_downloaded(function(err, fuzzy_implementation)
-    if err then return vim.notify(err, vim.log.levels.ERROR) end
+    if err then error(err) end
     require('blink.cmp.fuzzy').set_implementation(fuzzy_implementation)
 
     -- setup highlights, keymap, completion, commands and signature help
@@ -177,7 +177,8 @@ end
 --- Select the previous completion item
 --- @param opts? blink.cmp.CompletionListSelectOpts
 function cmp.select_prev(opts)
-  if not cmp.is_menu_visible() then return end
+  local on_ghost_text = opts and opts.on_ghost_text
+  if not cmp.is_menu_visible() and (not on_ghost_text or not cmp.is_ghost_text_visible()) then return end
   vim.schedule(function() require('blink.cmp.completion.list').select_prev(opts) end)
   return true
 end
@@ -185,7 +186,8 @@ end
 --- Select the next completion item
 --- @param opts? blink.cmp.CompletionListSelectOpts
 function cmp.select_next(opts)
-  if not cmp.is_menu_visible() then return end
+  local on_ghost_text = opts and opts.on_ghost_text
+  if not cmp.is_menu_visible() and (not on_ghost_text or not cmp.is_ghost_text_visible()) then return end
   vim.schedule(function() require('blink.cmp.completion.list').select_next(opts) end)
   return true
 end

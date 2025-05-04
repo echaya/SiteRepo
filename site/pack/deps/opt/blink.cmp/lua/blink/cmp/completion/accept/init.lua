@@ -1,4 +1,3 @@
-local async = require('blink.cmp.lib.async')
 local config = require('blink.cmp.config').completion.accept
 local text_edits_lib = require('blink.cmp.lib.text_edits')
 local brackets_lib = require('blink.cmp.completion.brackets')
@@ -34,6 +33,9 @@ local function apply_item(ctx, item)
     local parsed_snippet = require('blink.cmp.sources.snippets.utils').safe_parse(item.textEdit.newText)
     if
       parsed_snippet ~= nil
+      -- snippets automatically handle indentation on newlines, while our implementation does not,
+      -- so ignore for muli-line snippets
+      and #vim.split(tostring(parsed_snippet), '\n') == 1
       and #parsed_snippet.data.children == 1
       and parsed_snippet.data.children[1].type == vim.lsp._snippet_grammar.NodeType.Text
     then
@@ -66,7 +68,7 @@ local function apply_item(ctx, item)
 
     text_edits_lib.apply(item.textEdit, all_text_edits)
 
-    if ctx.get_mode() ~= 'term' then ctx.set_cursor(new_cursor) end
+    ctx.set_cursor(new_cursor)
     text_edits_lib.move_cursor_in_dot_repeat(offset)
   end
 

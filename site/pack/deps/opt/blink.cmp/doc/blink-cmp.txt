@@ -1,4 +1,4 @@
-*blink-cmp.txt*           For NVIM v0.10.0          Last change: 2025 April 03
+*blink-cmp.txt*            For NVIM v0.10.0           Last change: 2025 May 02
 
 ==============================================================================
 Table of Contents                                *blink-cmp-table-of-contents*
@@ -40,12 +40,12 @@ Table of Contents                                *blink-cmp-table-of-contents*
 ==============================================================================
 1. Introduction                                       *blink-cmp-introduction*
 
-**blink.cmp** is a completion plugin with support for LSPs and external sources
-that updates on every keystroke with minimal overhead (0.5-4ms async). It uses
-an optional </configuration/fuzzy.html#rust-vs-lua-implementation> custom fuzzy
-matcher <https://github.com/saghen/frizbee> to easily handle 20k+ items. It
-provides extensibility via pluggable sources (LSP, snippets, etc), component
-based rendering and scripting for the configuration.
+**blink.cmp** is a completion plugin with support for LSPs, cmdline, signature
+help and snippets. It uses an optional
+<https://cmp.saghen.dev/configuration/fuzzy.html#rust-vs-lua-implementation>
+custom fuzzy matcher <https://github.com/saghen/frizbee> for typo resistance.
+It provides extensibility via pluggable sources (LSP, buffer, snippets, etc),
+component based rendering and scripting for the configuration.
 
 
 FEATURES                                     *blink-cmp-introduction-features*
@@ -59,7 +59,7 @@ FEATURES                                     *blink-cmp-introduction-features*
 - Auto-bracket support </configuration/completion#auto-brackets> based on semantic tokens
 - Signature help </configuration/signature> (experimental, opt-in)
 - Command line completion </modes/cmdline>
-- Terminal completion </modes/term> (Nightly only! No source for shell completions exists yet, contributions welcome!)
+- Terminal completion </modes/term> (0.11+ only! No source for shell completions exists yet, contributions welcome!)
 
 
 COMPARED TO BUILT-IN COMPLETION*blink-cmp-introduction-compared-to-built-in-completion*
@@ -70,7 +70,7 @@ COMPARED TO BUILT-IN COMPLETION*blink-cmp-introduction-compared-to-built-in-comp
 - Prefetching to minimize LSP latency
 - Support for external non-LSP sources </configuration/sources.html#community-sources> (snippets, path, buffer, git, ripgrep, …)
 - Ghost text </configuration/completion.html#ghost-text>
-- Signature help </configuration/signature.html>
+- Automatic signature help </configuration/signature.html>
 - Auto-bracket support </configuration/completion.html#auto-brackets> based on semantic tokens
 
 
@@ -105,6 +105,7 @@ CONTRIBUTORS ~
 - @mikavilpas <https://github.com/mikavilpas> + @xzbdmw <https://github.com/xzbdmw> Dot-repeat (`.`)
 - @soifou <https://github.com/soifou>
 - @FerretDetective <https://github.com/FerretDetective> `complete_func` source
+- @krovuxdev <https://github.com/krovuxdev> Community moderation and help
 
 
 ==============================================================================
@@ -311,10 +312,28 @@ Feel free to open a PR with any of your own recipes!
 GENERAL                                            *blink-cmp-recipes-general*
 
 
-DISABLE PER FILETYPE ~
+DISABLE PER FILETYPE/BUFFER ~
+
+You may change the `enabled` function to return `false` for any case you’d
+like to disable completion.
 
 >lua
     enabled = function() return not vim.tbl_contains({ "lua", "markdown" }, vim.bo.filetype) end,
+<
+
+or set `vim.b.completion = false` on the buffer
+
+>lua
+    -- via an autocmd
+    vim.api.nvim_create_autocmd('BufEnter', {
+      pattern = '*.lua',
+      callback = function()
+        vim.b.completion = false
+      end,
+    })
+    
+    -- or via ftplugin/some-filetype.lua
+    vim.b.completion = false
 <
 
 
@@ -349,7 +368,7 @@ Full discussion: https://github.com/Saghen/blink.cmp/issues/1367
       if col == 0 then
         return false
       end
-      local line = vim.api.nvim_get_current_line():sub()
+      local line = vim.api.nvim_get_current_line()
       return line:sub(col, col):match("%s") == nil
     end
     
@@ -602,7 +621,6 @@ Original discussion <https://github.com/Saghen/blink.cmp/discussions/1146>
           components = {
             kind_icon = {
               text = function(ctx)
-                local lspkind = require("lspkind")
                 local icon = ctx.kind_icon
                 if vim.tbl_contains({ "Path" }, ctx.source_name) then
                     local dev_icon, _ = require("nvim-web-devicons").get_icon(ctx.label)
@@ -1198,6 +1216,26 @@ AVAILABLE COMPONENTS
 - `source_id`: Shows the id of the source that provided the item, from the `sources.providers[id]` (e.g. `lsp`)
 
 
+CURSORLINE
+
+The cursorline background will be rendered with a priority of `10000` to ensure
+that highlights with backgrounds (such as those from the default theme) will be
+overridden by the cursorline. If you’d like to use a background in your
+highlight, set the priority to `10001` or higher.
+
+>lua
+    completion.menu.draw.components.label.kind_icon.highlight = function(ctx)
+      return { { group = ctx.kind_hl, priority = 20000 } }
+    end
+<
+
+Or you may set the cursorline highlight priority to `0`
+
+>lua
+    completion.menu.draw.cursorline_priority = 0
+<
+
+
 TREESITTER
 
 You may use treesitter to highlight the label text for the given list of
@@ -1291,8 +1329,8 @@ INSTALLATION ~
 PREBUILT BINARIES (DEFAULT ON A RELEASE TAG)
 
 By default, Blink will download a prebuilt binary from the latest release, when
-you’re on a release tag (via `version = '*'` on `lazy.nvim` for example). If
-you’re not on a release tag, you may force a specific version via
+you’re on a release tag (via `version = '1.*'` on `lazy.nvim` for example).
+If you’re not on a release tag, you may force a specific version via
 `fuzzy.prebuilt_binaries.force_version`. See the latest release
 <https://github.com/saghen/blink.cmp/releases/latest> for supported systems.
 See `prebuilt_binaries` section of the reference configuration
@@ -1347,7 +1385,8 @@ the built-in sorts:
     - Generally, this field provides better sorting than `label` as the source/LSP may prioritize items relevant to the current context
     - If you’re writing your own source, use this field to control sort order, instead of requiring users to add a sort function
 - `label`: Sorts by the `label` field, deprioritizing entries with a leading `_`
-- `kind`: Sorts by the numeric `kind` field, check the order via `:lua vim.print(vim.lsp.protocol.CompletionItemKind)`
+- `kind`: Sorts by the numeric `kind` field
+    - Check the order via `:lua vim.print(vim.lsp.protocol.CompletionItemKind)`
 
 >lua
     fuzzy = {
@@ -1429,8 +1468,10 @@ COMMANDS ~
     - Useful in `cmdline` mode to accept the current item and run the command
 - `select_prev`: Selects the previous item, cycling to the bottom of the list if at the top, if `completion.list.cycle.from_top == true`
     - Optionally control the `auto_insert` property of `completion.list.selection`: `function(cmp) cmp.select_prev({ auto_insert = false }) end`
+    - Optionally, run when ghost text is visible, instead of only when the menu is visible: `function(cmp) cmp.select_prev({ on_ghost_text = true })`
 - `select_next`: Selects the next item, cycling to the top of the list if at the bottom, if `completion.list.cycle.from_bottom == true`
     - Optionally control the `auto_insert` property of `completion.list.selection`: `function(cmp) cmp.select_next({ auto_insert = false }) end`
+    - Optionally, run when ghost text is visible, instead of only when the menu is visible: `function(cmp) cmp.select_next({ on_ghost_text = true })`
 - `insert_prev`: Inserts the previous item (`auto_insert`), cycling to the bottom of the list if at the top, if `completion.list.cycle.from_top == true`. This will trigger completions if none are available, unlike `select_prev` which would fallback to the next keymap in this case.
 - `insert_next`: Inserts the next item (`auto_insert`), cycling to the top of the list if at the bottom, if `completion.list.cycle.from_bottom == true`. This will trigger completions if none are available, unlike `select_next` which would fallback to the next keymap in this case.
 - `show_documentation`: Shows the documentation for the currently selected item
@@ -1583,8 +1624,8 @@ functionality. If you’re coming from snipmate snippets, nadiamoe
 discussion
 <https://github.com/Saghen/blink.cmp/discussions/654#discussioncomment-12083447>)
 
-Chris Grieser <https://github.com/chrisgrieser> has made a great introduction
-to writing custom snippets in the nvim-scissors repo
+There’s a great introduction to writing custom snippets in the nvim-scissors
+repo
 <https://github.com/chrisgrieser/nvim-scissors?tab=readme-ov-file#cookbook--faq>.
 Here’s an example, using the linux/mac path for the neovim configuration:
 
@@ -1595,6 +1636,8 @@ Here’s an example, using the linux/mac path for the neovim configuration:
       "contributes": {
         "snippets": [
           { "language": "lua", "path": "./lua.json" }
+          { "language": ["typescriptreact", "javascriptreact"], "path": "./react.json" }
+          { "language": "all", "path": "./all.json" }
         ]
       }
     }
@@ -1620,8 +1663,7 @@ LUASNIP ~
     {
       'saghen/blink.cmp',
       version = '1.*',
-      -- !Important! Make sure you're using the latest release of LuaSnip
-      -- `main` does not work at the moment
+      -- `main` is untested, please open a PR if you've confirmed it works as expected
       dependencies = { 'L3MON4D3/LuaSnip', version = 'v2.*' },
       opts = {
         snippets = { preset = 'luasnip' },
@@ -1631,12 +1673,11 @@ LUASNIP ~
         },
       }
     }
-<
-
-
-MINI.SNIPPETS ~
-
->lua
+    
+    
+    ## `mini.snippets`
+    
+    ```lua
     {
       'saghen/blink.cmp',
       dependencies = 'echasnovski/mini.snippets',
@@ -1728,9 +1769,14 @@ options.
       -- so you don't need to define them in `sources.providers`
       default = { 'lsp', 'buffer', 'snippets', 'path' },
     
-      per_filetype = { sql = { 'dadbod' } }
+      per_filetype = {
+        sql = { 'dadbod' }
+        -- optionally inherit from the `default` sources
+        lua = { inherit_defaults = true, 'lazydev' }
+      },
       providers = {
         dadbod = { module = "vim_dadbod_completion.blink" },
+        lazydev = { ... }
       }
     }
 <
@@ -1765,6 +1811,21 @@ to the source directly, and will vary by source.
 <
 
 
+SHOW BUFFER COMPLETIONS WITH LSP
+
+By default, the buffer source will only show when the LSP source returns no
+items. You may always show the buffer source via:
+
+>lua
+    sources = {
+      providers = {
+        -- defaults to `{ 'buffer' }`
+        lsp = { fallbacks = {} }
+      }
+    }
+<
+
+
 TERMINAL AND CMDLINE SOURCES ~
 
 
@@ -1791,6 +1852,9 @@ enabled or not enabled.
 
 COMMUNITY SOURCES ~
 
+See blink.compat <https://github.com/Saghen/blink.compat> for using `nvim-cmp`
+sources
+
 - lazydev <https://github.com/folke/lazydev.nvim>
 - vim-dadbod-completion <https://github.com/kristijanhusak/vim-dadbod-completion>
 - blink-ripgrep <https://github.com/mikavilpas/blink-ripgrep.nvim>
@@ -1813,6 +1877,8 @@ COMMUNITY SOURCES ~
 - cmp-pandoc-references <https://github.com/jmbuhr/cmp-pandoc-references>
 - blink-cmp-im <https://github.com/yehuohan/blink-cmp-im>: Input Method source
 - ecolog.nvim <https://github.com/philosofonusus/ecolog.nvim>
+- gitmoji.nvim <https://github.com/Dynge/gitmoji.nvim/>: Completion for gitmojis <https://gitmoji.dev/>
+- blink-cmp-agda-symbols <https://github.com/4e554c4c/blink-cmp-agda-symbols>: Completion for Agda <https://wiki.portal.chalmers.se/agda/pmwiki.php>
 
 
 REFERENCE                                         *blink-cmp-config-reference*
@@ -1953,6 +2019,7 @@ COMPLETION ACCEPT
         -- Default brackets to use for unknown languages
         default_brackets = { '(', ')' },
         -- Overrides the default blocked filetypes
+        -- See: https://github.com/Saghen/blink.cmp/blob/main/lua/blink/cmp/completion/brackets/config.lua#L5-L9
         override_brackets_for_filetypes = {},
         -- Synchronously use the kind of the item to determine if brackets should be added
         kind_resolution = {
@@ -2016,6 +2083,8 @@ COMPLETION MENU DRAW
       padding = 1,
       -- Gap between columns
       gap = 1,
+      -- Priority of the cursorline highlight, setting this to 0 will render it below other highlights
+      cursorline_priority = 10000,
       -- Use treesitter to highlight the label text for the given list of sources
       treesitter = {},
       -- treesitter = { 'lsp' }
@@ -2275,7 +2344,8 @@ See the |blink-cmp-mode-specific-configurations| for setting sources for
       
       -- You may also define providers per filetype
       per_filetype = {
-        -- lua = { 'lsp', 'path' },
+        -- optionally inherit from the `default` sources
+        -- lua = { inherit_defaults = true, 'lsp', 'path' },
       },
     
       -- Function to use when transforming the items before they're returned for all providers
@@ -2336,6 +2406,8 @@ PROVIDERS
           label_trailing_slash = true,
           get_cwd = function(context) return vim.fn.expand(('#%d:p:h'):format(context.bufnr)) end,
           show_hidden_files_by_default = false,
+          -- Treat `/path` as starting from the current working directory (cwd) instead of the root of your filesystem
+          ignore_root_slash = false,
         }
       },
     
@@ -2384,6 +2456,8 @@ PROVIDERS
               :filter(function(buf) return vim.bo[buf].buftype ~= 'nofile' end)
               :totable()
           end,
+          -- buffers when searching with `/` or `?`
+          get_search_bufnrs = function() return { vim.api.nvim_get_current_buf() } end,
         }
       },
     
@@ -2524,7 +2598,8 @@ enabled = nil } } }
 
 COMMAND LINE (CMDLINE)                *blink-cmp-modes-command-line-(cmdline)*
 
-By default, blink.cmp enabled cmdline completions (`cmdline.enabled = true`),
+
+By default, cmdline completions are enabled (`cmdline.enabled = true`),
 matching the behavior of the built-in `cmdline` completion:
 
 - Menu will not show automatically (`cmdline.completion.menu.auto_show = false`)
@@ -2552,13 +2627,7 @@ for more information on defining your own.
       -- instead of using the neovim defaults
       -- preset = 'inherit',
     
-      ['<Tab>'] = {
-        function(cmp)
-          if cmp.is_ghost_text_visible() and not cmp.is_menu_visible() then return cmp.accept() end
-        end,
-        'show_and_insert',
-        'select_next',
-      },
+      ['<Tab>'] = { 'show_and_insert', 'select_next' },
       ['<S-Tab>'] = { 'show_and_insert', 'select_prev' },
     
       ['<C-space>'] = { 'show', 'fallback' },
@@ -2578,8 +2647,7 @@ GHOST TEXT ~
 
 When noice.nvim <https://github.com/folke/noice.nvim> is detected, ghost text
 will be shown, likely similar to your terminal shell completions. Pressing
-`<Tab>` while ghost text is visible will accept the completion. When not
-visible, `<Tab>` will open the menu and insert the first item as per usual.
+`<Tab>` will open the menu and insert the first item as per usual.
 
 
 
@@ -2955,6 +3023,7 @@ when pointing to a directory):
 13. *@xzbdmw*: 
 14. *@soifou*: 
 15. *@FerretDetective*: 
+16. *@krovuxdev*: 
 
 Generated by panvimdoc <https://github.com/kdheepak/panvimdoc>
 

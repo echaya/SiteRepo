@@ -7,20 +7,23 @@
 ---     local node = vim.treesitter.get_node()
 ---     if vim.bo.filetype == 'lua' then
 ---       return { 'lsp', 'path' }
----     elseif node and vim.tbl_contains({ 'comment', 'line_comment', 'block_comment' }), node:type())
+---     elseif node and vim.tbl_contains({ 'comment', 'line_comment', 'block_comment' }, node:type()) then
 ---       return { 'buffer' }
 ---     else
 ---       return { 'lsp', 'path', 'snippets', 'buffer' }
 ---     end
 ---   end
 --- ```
---- @field default string[] | fun(): string[]
---- @field per_filetype table<string, string[] | fun(): string[]>
+--- @field default blink.cmp.SourceList
+--- @field per_filetype table<string, blink.cmp.SourceListPerFiletype>
 ---
 --- @field transform_items fun(ctx: blink.cmp.Context, items: blink.cmp.CompletionItem[]): blink.cmp.CompletionItem[] Function to transform the items before they're returned
 --- @field min_keyword_length number | fun(ctx: blink.cmp.Context): number Minimum number of characters in the keyword to trigger
 ---
 --- @field providers table<string, blink.cmp.SourceProviderConfig>
+
+--- @alias blink.cmp.SourceList string[] | fun(): string[]
+--- @alias blink.cmp.SourceListPerFiletype { inherit_defaults?: boolean, [number]: string } | fun(): ({ inherit_defaults?: boolean, [number]: string })
 
 --- @class blink.cmp.SourceProviderConfig
 --- @field module string

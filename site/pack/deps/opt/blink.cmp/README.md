@@ -1,6 +1,31 @@
-# Blink Completion (blink.cmp)
+<p align="center">
+  <h2 align="center">Blink Completion (blink.cmp)</h2>
+</p>
 
-**blink.cmp** is a completion plugin with support for LSPs and external sources that updates on every keystroke with minimal overhead (0.5-4ms async). It uses an [optional](https://cmp.saghen.dev/configuration/fuzzy.html#rust-vs-lua-implementation) custom [fuzzy matcher](https://github.com/saghen/frizbee) to easily handle 20k+ items. It provides extensibility via pluggable sources (LSP, snippets, etc), component based rendering and scripting for the configuration.
+<p align="center">
+	Performant, batteries-included completion plugin for Neovim
+</p>
+
+<p align="center" style="text-decoration: none; border: none;">
+	<a href="https://github.com/saghen/blink.cmp/stargazers" style="text-decoration: none">
+		<img alt="Stars" src="https://img.shields.io/github/stars/saghen/blink.cmp?style=for-the-badge&logo=starship&color=C9CBFF&logoColor=D9E0EE&labelColor=302D41"></a>
+	<a href="https://github.com/saghen/blink.cmp/issues" style="text-decoration: none">
+		<img alt="Issues" src="https://img.shields.io/github/issues/saghen/blink.cmp?style=for-the-badge&logo=bilibili&color=F5E0DC&logoColor=D9E0EE&labelColor=302D41"></a>
+	<a href="https://github.com/saghen/blink.cmp/contributors" style="text-decoration: none">
+		<img alt="Contributors" src="https://img.shields.io/github/contributors/saghen/blink.cmp?color=%23DDB6F2&label=CONTRIBUTORS&logo=git&style=for-the-badge&logoColor=D9E0EE&labelColor=302D41"/></a>
+</p>
+
+<p align="center">
+  <a href="https://cmp.saghen.dev">Documentation</a>
+  ·
+  <a href="https://cmp.saghen.dev/installation">Installation</a>
+  ·
+  <a href="https://cmp.saghen.dev/recipes">Recipes</a>
+  ·
+  <a href="https://cmp.saghen.dev/configuration/general">Configuration</a>
+</p>
+
+**blink.cmp** is a completion plugin with support for LSPs, cmdline, signature help, and snippets. It uses an [optional](https://cmp.saghen.dev/configuration/fuzzy.html#rust-vs-lua-implementation) custom [fuzzy matcher](https://github.com/saghen/frizbee) for typo resistance. It provides extensibility via pluggable sources (LSP, buffer, snippets, etc), component based rendering and dynamic configuration.
 
 <https://github.com/user-attachments/assets/bd1e25dd-48b0-4d33-90f4-1468d822f2be>
 
@@ -15,7 +40,7 @@
 - [Auto-bracket support](https://cmp.saghen.dev/configuration/completion.html#auto-brackets) based on semantic tokens
 - [Signature help](https://cmp.saghen.dev/configuration/signature.html) (experimental, opt-in)
 - [Command line completion](https://cmp.saghen.dev/modes/cmdline.html)
-- [Terminal completion](https://cmp.saghen.dev/modes/term) (Nightly only! No source for shell completions exists yet, contributions welcome!)
+- [Terminal completion](https://cmp.saghen.dev/modes/term) (0.11+ only! No source for shell completions exists yet, contributions welcome!)
 - [Comparison with built-in completion](https://cmp.saghen.dev/#compared-to-built-in-completion)
 - [Comparison with nvim-cmp](https://cmp.saghen.dev/#compared-to-nvim-cmp)
 
@@ -41,3 +66,4 @@ Head over to the [documentation website](https://cmp.saghen.dev/installation) fo
 - [@wurli](https://github.com/wurli) Terminal completions
 - [@mikavilpas](https://github.com/mikavilpas) + [@xzbdmw](https://github.com/xzbdmw) Dot-repeat (`.`)
 - [@FerretDetective](https://github.com/FerretDetective) `complete_func` source
+- [@krovuxdev](https://github.com/krovuxdev) Community moderation and help
