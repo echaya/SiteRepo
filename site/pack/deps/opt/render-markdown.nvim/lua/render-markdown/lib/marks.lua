@@ -19,19 +19,21 @@ local log = require('render-markdown.core.log')
 
 ---@class (exact) render.md.mark.Text
 ---@field [1] string text
----@field [2] string|string[] highlights
+---@field [2] render.md.mark.Hl highlight
+
+---@alias render.md.mark.Hl string|string[]
 
 ---@alias render.md.mark.Element boolean|render.md.Element
 
 ---@class render.md.Marks
----@field private context render.md.Context
+---@field private context render.md.request.Context
 ---@field private ignore render.md.conceal.Ignore
 ---@field private update boolean
 ---@field private marks render.md.Mark[]
 local Marks = {}
 Marks.__index = Marks
 
----@param context render.md.Context
+---@param context render.md.request.Context
 ---@param update boolean
 ---@return render.md.Marks
 function Marks.new(context, update)

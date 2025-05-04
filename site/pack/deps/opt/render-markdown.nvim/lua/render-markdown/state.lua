@@ -1,5 +1,6 @@
-local Config = require('render-markdown.config')
+local Config = require('render-markdown.lib.config')
 
+---Used by LazyVim: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/plugins/extras/lang/markdown.lua
 ---@class render.md.State
 ---@field private config render.md.Config
 ---@field enabled boolean
@@ -16,27 +17,29 @@ function M.setup(config)
     M.config = config
     M.enabled = config.enabled
     M.file_types = config.file_types
-    require('render-markdown.manager').setup({
-        ignore = config.ignore,
-        change_events = config.change_events,
-        on = config.on,
-        completions = config.completions,
+    require('render-markdown.core.handlers').setup({
+        custom = config.custom_handlers,
     })
     require('render-markdown.core.log').setup({
         level = config.log_level,
         runtime = config.log_runtime,
     })
-    require('render-markdown.core.ui').setup({
+    require('render-markdown.core.manager').setup({
+        ignore = config.ignore,
+        change_events = config.change_events,
         on = config.on,
-        custom_handlers = config.custom_handlers,
-    })
-    require('render-markdown.integ.source').setup({
         completions = config.completions,
     })
-    require('render-markdown.integ.ts').setup({
+    require('render-markdown.core.ts').setup({
         file_types = config.file_types,
         injections = config.injections,
         patterns = config.patterns,
+    })
+    require('render-markdown.core.ui').setup({
+        on = config.on,
+    })
+    require('render-markdown.integ.source').setup({
+        completions = config.completions,
     })
     -- reset cache
     M.cache = {}
@@ -89,7 +92,7 @@ function M.validate()
     spec:nested('on', require('render-markdown.config.on').validate)
     spec:nested('completions', require('render-markdown.config.completions').validate)
     spec:nested('overrides', require('render-markdown.config.overrides').validate)
-    spec:nested('custom_handlers', require('render-markdown.config.custom_handlers').validate)
+    spec:nested('custom_handlers', require('render-markdown.config.handlers').validate)
     spec:check()
     return validator:get_errors()
 end

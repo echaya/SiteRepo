@@ -1,31 +1,15 @@
-local Buffer = require('render-markdown.core.buffer')
+local Buffer = require('render-markdown.lib.buffer')
 local Compat = require('render-markdown.lib.compat')
-local Context = require('render-markdown.core.context')
+local Context = require('render-markdown.request.context')
 local Env = require('render-markdown.lib.env')
-local Extmark = require('render-markdown.core.extmark')
+local Extmark = require('render-markdown.lib.extmark')
 local Iter = require('render-markdown.lib.iter')
+local handlers = require('render-markdown.core.handlers')
 local log = require('render-markdown.core.log')
 local state = require('render-markdown.state')
 
----@class (exact) render.md.Handler
----@field extends? boolean
----@field parse fun(ctx: render.md.handler.Context): render.md.Mark[]
-
----@class (exact) render.md.handler.Context
----@field buf integer
----@field root TSNode
-
----@type table<string, render.md.Handler>
-local builtin_handlers = {
-    html = require('render-markdown.handler.html'),
-    latex = require('render-markdown.handler.latex'),
-    markdown = require('render-markdown.handler.markdown'),
-    markdown_inline = require('render-markdown.handler.markdown_inline'),
-}
-
 ---@class render.md.ui.Config
----@field on render.md.callback.Config
----@field custom_handlers table<string, render.md.Handler>
+---@field on render.md.on.Config
 
 ---@class render.md.Ui
 ---@field private config render.md.ui.Config
@@ -59,7 +43,7 @@ function M.get(buf)
     return result
 end
 
----Used directly by fzf-lua: https://github.com/ibhagwan/fzf-lua/blob/main/lua/fzf-lua/previewer/builtin.lua
+---Used by fzf-lua: https://github.com/ibhagwan/fzf-lua/blob/main/lua/fzf-lua/previewer/builtin.lua
 ---@param buf integer
 ---@param win integer
 ---@param event string
@@ -116,19 +100,15 @@ function M.run_update(buf, win, change)
         local initial = buffer:initial()
         if initial or parse then
             M.clear_buffer(buf, buffer)
-            buffer:set_marks(M.parse_buffer({
-                buf = buf,
-                win = win,
-                config = config,
-                mode = mode,
-            }))
+            local extmarks = M.parse_buffer(buf, win, config, mode)
+            buffer:set_marks(extmarks)
+            if initial then
+                Compat.fix_lsp_window(buf, win, extmarks)
+                M.config.on.initial({ buf = buf, win = win })
+            end
         end
         local range = config:hidden(mode, row)
         local extmarks = buffer:get_marks()
-        if initial then
-            Compat.fix_lsp_window(buf, win, extmarks)
-            M.config.on.initial({ buf = buf, win = win })
-        end
         for _, extmark in ipairs(extmarks) do
             if extmark:get().conceal and extmark:overlaps(range) then
                 extmark:hide(M.ns, buf)
@@ -162,66 +142,23 @@ function M.clear_buffer(buf, buffer)
 end
 
 ---@private
----@param props render.md.context.Props
+---@param buf integer
+---@param win integer
+---@param config render.md.main.Config
+---@param mode string
 ---@return render.md.Extmark[]
-function M.parse_buffer(props)
-    local buf = props.buf
+function M.parse_buffer(buf, win, config, mode)
     local has_parser, parser = pcall(vim.treesitter.get_parser, buf)
     if not has_parser or not parser then
         log.buf('error', 'fail', buf, 'no treesitter parser found')
         return {}
     end
     -- reset buffer context
-    local context = Context.reset(props)
+    local context = Context.start(buf, win, config, mode)
     -- make sure injections are processed
-    context:parse(parser)
-    -- parse markdown after other nodes to get accurate state
-    local marks = {} ---@type render.md.Mark[]
-    local markdown = {} ---@type render.md.handler.Context[]
-    parser:for_each_tree(function(tree, language_tree)
-        local language = language_tree:lang()
-        ---@type render.md.handler.Context
-        local ctx = { buf = buf, root = tree:root() }
-        if language == 'markdown' then
-            markdown[#markdown + 1] = ctx
-        else
-            vim.list_extend(marks, M.parse_tree(context, ctx, language))
-        end
-    end)
-    for _, ctx in ipairs(markdown) do
-        vim.list_extend(marks, M.parse_tree(context, ctx, 'markdown'))
-    end
+    context.view:parse(parser)
+    local marks = handlers.run(context, parser)
     return Iter.list.map(marks, Extmark.new)
-end
-
----Run user & builtin handlers when available. User handler is always executed,
----builtin handler is skipped if user handler does not specify extends.
----@private
----@param context render.md.Context
----@param ctx render.md.handler.Context
----@param language string
----@return render.md.Mark[]
-function M.parse_tree(context, ctx, language)
-    log.buf('debug', 'language', ctx.buf, language)
-    if not context:overlaps(ctx.root) then
-        return {}
-    end
-
-    local marks = {}
-    local user = M.config.custom_handlers[language]
-    if user then
-        log.buf('debug', 'handler', ctx.buf, 'user')
-        vim.list_extend(marks, user.parse(ctx))
-        if not user.extends then
-            return marks
-        end
-    end
-    local builtin = builtin_handlers[language]
-    if builtin then
-        log.buf('debug', 'handler', ctx.buf, 'builtin')
-        vim.list_extend(marks, builtin.parse(ctx))
-    end
-    return marks
 end
 
 return M

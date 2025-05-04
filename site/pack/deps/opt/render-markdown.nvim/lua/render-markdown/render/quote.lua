@@ -1,6 +1,6 @@
 local Base = require('render-markdown.render.base')
 local List = require('render-markdown.lib.list')
-local ts = require('render-markdown.integ.ts')
+local ts = require('render-markdown.core.ts')
 
 ---@class render.md.quote.Data
 ---@field query vim.treesitter.Query
@@ -41,7 +41,8 @@ function Render:setup()
 end
 
 function Render:render()
-    self.context:query(self.node:get(), self.data.query, function(capture, node)
+    local root = self.node:get()
+    self.context.view:query(root, self.data.query, function(capture, node)
         if capture == 'marker' then
             -- marker nodes are a single '>' at the start of a block quote
             -- overlay the only range if it is at the current level
