@@ -4,7 +4,7 @@ local ts = require('render-markdown.core.ts')
 
 ---@class render.md.handler.buf.Html
 ---@field private query vim.treesitter.Query
----@field private renderers table<string, render.md.Render>
+---@field private renders table<string, render.md.Render>
 ---@field private context render.md.request.Context
 local Handler = {}
 Handler.__index = Handler
@@ -20,9 +20,9 @@ function Handler.new(buf)
             (element) @tag
         ]]
     )
-    self.renderers = {
-        comment = require('render-markdown.render.html_comment'),
-        tag = require('render-markdown.render.html_tag'),
+    self.renders = {
+        comment = require('render-markdown.render.html.comment'),
+        tag = require('render-markdown.render.html.tag'),
     }
     self.context = Context.get(buf)
     return self
@@ -35,13 +35,10 @@ function Handler:parse(root)
         return {}
     end
     local marks = Marks.new(self.context, true)
-    self.context.view:query(root, self.query, function(capture, node)
-        local renderer = self.renderers[capture]
-        assert(renderer ~= nil, 'unhandled html capture: ' .. capture)
-        local render = renderer:new(self.context, marks, node)
-        if render:setup() then
-            render:render()
-        end
+    self.context.view:nodes(root, self.query, function(capture, node)
+        local render = self.renders[capture]
+        assert(render ~= nil, 'unhandled html capture: ' .. capture)
+        render:execute(self.context, marks, node)
     end)
     return marks:get()
 end

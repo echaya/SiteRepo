@@ -180,6 +180,16 @@ to free <Esc> mapping in Normal mode for something else. >lua
   local action = function() vim.cmd('nohlsearch') end
   require('mini.keymap').map_combo({ 'n','i','x','c' }, '<Esc><Esc>', action)
 <
+## Buffer navigation ~
+
+Replace some movements with easier to type alternatives: >lua
+
+  local map_combo = require('mini.keymap').map_combo
+  map_combo({ 'n', 'x' }, 'll', 'g$')
+  map_combo({ 'n', 'x' }, 'hh', 'g^')
+  map_combo({ 'n', 'x' }, 'jj', '}')
+  map_combo({ 'n', 'x' }, 'kk', '{')
+<
 ------------------------------------------------------------------------------
                                                             *MiniKeymap.setup()*
                           `MiniKeymap.setup`({config})
@@ -232,10 +242,10 @@ Available built-in steps ("For key" is a suggestion, any can be used):
 │ minipairs_cr        │ Module set up  │ <CR> respecting pairs    │ <CR>    │
 │ minipairs_bs        │ Module set up  │ <BS> respecting pairs    │ <BS>    │
 ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ Jump around in Insert mode ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
-│ jump_after_tsnode   │ Mode + parser  │ Jump after node end      │ <Tab>   │
-│ jump_before_tsnode  │ Mode + parser  │ Jump before node start   │ <S-Tab> │
-│ jump_after_close    │ Mode           │ Jump after  )]}"'`       │ <Tab>   │
-│ jump_before_open    │ Mode           │ Jump before ([{"'`       │ <S-Tab> │
+│ jump_after_tsnode   │ TS parser      │ Jump after node end      │ <Tab>   │
+│ jump_before_tsnode  │ TS parser      │ Jump before node start   │ <S-Tab> │
+│ jump_after_close    │ Insert mode    │ Jump after  )]}"'`       │ <Tab>   │
+│ jump_before_open    │ Insert mode    │ Jump before ([{"'`       │ <S-Tab> │
 ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ Work with whitespace ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
 │ increase_indent     │ Is on indent   │ Increase indent          │ <Tab>   │
 │ decrease_indent     │ Is on indent   │ Decrease indent          │ <S-Tab> │
@@ -339,8 +349,8 @@ This is a table with function elements. Call to actually get a step.
         `MiniKeymap.gen_step.search_pattern`({pattern}, {flags}, {opts})
 Search pattern step
 
-Use |search()| in Insert mode to jump to pattern match. Possibly adjust final
-side (before or after) of cursor.
+Use |search()| to jump to pattern match. Possibly adjust final position to
+be just to the right of the match (useful in Insert mode).
 
 Parameters ~
 {pattern} `(string)` Same as for |search()|.
@@ -349,22 +359,25 @@ Parameters ~
   - <side> `(string)` - one of `"before"` (default) or `"after"`.
 
 Return ~
-`(table)` Step which searches pattern only in Insert mode.
+`(table)` Step which searches pattern.
 
 Usage ~
 Built-in |MiniKeymap.map_multistep()| steps "jump_after_close" and
-"jump_before_open" use this.
+"jump_before_open" use this, but only in Insert mode.
 
-Example of steps that jump before/after all consecutive brackets: >lua
+Steps that jump before/after all consecutive brackets in several modes: >lua
 
   local keymap = require('mini.keymap')
-  local tab_step = keymap.gen_step.search_pattern(
+  local tab_step_insert = keymap.gen_step.search_pattern(
+    -- Need to use 'c' flag and 'after' side for robust "chaining"
     [=[[)\]}]\+]=], 'ceW', { side = 'after' }
   )
-  keymap.map_multistep('i', '<Tab>', { tab_step })
+  keymap.map_multistep('i', '<Tab>', { tab_step_insert })
+  local tab_step = keymap.gen_step.search_pattern([=[[)\]}]\+]=], 'eW')
+  keymap.map_multistep({ 'n', 'x' }, '<Tab>', { tab_step })
 
   local stab_step = keymap.gen_step.search_pattern([=[[(\[{]\+]=], 'bW')
-  keymap.map_multistep({ 'i' }, '<S-Tab>', { stab_step })
+  keymap.map_multistep({ 'i', 'n', 'x' }, '<S-Tab>', { stab_step })
 
 ------------------------------------------------------------------------------
                                                         *MiniKeymap.map_combo()*

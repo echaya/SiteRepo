@@ -178,6 +178,16 @@
 ---   local action = function() vim.cmd('nohlsearch') end
 ---   require('mini.keymap').map_combo({ 'n','i','x','c' }, '<Esc><Esc>', action)
 --- <
+--- ## Buffer navigation ~
+---
+--- Replace some movements with easier to type alternatives: >lua
+---
+---   local map_combo = require('mini.keymap').map_combo
+---   map_combo({ 'n', 'x' }, 'll', 'g$')
+---   map_combo({ 'n', 'x' }, 'hh', 'g^')
+---   map_combo({ 'n', 'x' }, 'jj', '}')
+---   map_combo({ 'n', 'x' }, 'kk', '{')
+--- <
 ---@tag MiniKeymap-examples
 
 ---@diagnostic disable:undefined-field
@@ -250,10 +260,10 @@ MiniKeymap.config = {}
 --- │ minipairs_cr        │ Module set up  │ <CR> respecting pairs    │ <CR>    │
 --- │ minipairs_bs        │ Module set up  │ <BS> respecting pairs    │ <BS>    │
 --- ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ Jump around in Insert mode ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
---- │ jump_after_tsnode   │ Mode + parser  │ Jump after node end      │ <Tab>   │
---- │ jump_before_tsnode  │ Mode + parser  │ Jump before node start   │ <S-Tab> │
---- │ jump_after_close    │ Mode           │ Jump after  )]}"'`       │ <Tab>   │
---- │ jump_before_open    │ Mode           │ Jump before ([{"'`       │ <S-Tab> │
+--- │ jump_after_tsnode   │ TS parser      │ Jump after node end      │ <Tab>   │
+--- │ jump_before_tsnode  │ TS parser      │ Jump before node start   │ <S-Tab> │
+--- │ jump_after_close    │ Insert mode    │ Jump after  )]}"'`       │ <Tab>   │
+--- │ jump_before_open    │ Insert mode    │ Jump before ([{"'`       │ <S-Tab> │
 --- ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ Work with whitespace ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
 --- │ increase_indent     │ Is on indent   │ Increase indent          │ <Tab>   │
 --- │ decrease_indent     │ Is on indent   │ Decrease indent          │ <S-Tab> │
@@ -377,29 +387,32 @@ MiniKeymap.gen_step = {}
 
 --- Search pattern step
 ---
---- Use |search()| in Insert mode to jump to pattern match. Possibly adjust final
---- side (before or after) of cursor.
+--- Use |search()| to jump to pattern match. Possibly adjust final position to
+--- be just to the right of the match (useful in Insert mode).
 ---
 ---@param pattern string Same as for |search()|.
 ---@param flags string|nil Same as for |search()|.
 ---@param opts table|nil Options. Possible fields:
 ---   - <side> `(string)` - one of `"before"` (default) or `"after"`.
 ---
----@return table Step which searches pattern only in Insert mode.
+---@return table Step which searches pattern.
 ---
 ---@usage Built-in |MiniKeymap.map_multistep()| steps "jump_after_close" and
---- "jump_before_open" use this.
+--- "jump_before_open" use this, but only in Insert mode.
 ---
---- Example of steps that jump before/after all consecutive brackets: >lua
+--- Steps that jump before/after all consecutive brackets in several modes: >lua
 ---
 ---   local keymap = require('mini.keymap')
----   local tab_step = keymap.gen_step.search_pattern(
+---   local tab_step_insert = keymap.gen_step.search_pattern(
+---     -- Need to use 'c' flag and 'after' side for robust "chaining"
 ---     [=[[)\]}]\+]=], 'ceW', { side = 'after' }
 ---   )
----   keymap.map_multistep('i', '<Tab>', { tab_step })
+---   keymap.map_multistep('i', '<Tab>', { tab_step_insert })
+---   local tab_step = keymap.gen_step.search_pattern([=[[)\]}]\+]=], 'eW')
+---   keymap.map_multistep({ 'n', 'x' }, '<Tab>', { tab_step })
 ---
 ---   local stab_step = keymap.gen_step.search_pattern([=[[(\[{]\+]=], 'bW')
----   keymap.map_multistep({ 'i' }, '<S-Tab>', { stab_step })
+---   keymap.map_multistep({ 'i', 'n', 'x' }, '<S-Tab>', { stab_step })
 ---<
 MiniKeymap.gen_step.search_pattern = function(pattern, flags, opts)
   if type(pattern) ~= 'string' then H.error('`pattern` should be string, not ' .. vim.inspect(type(pattern))) end
@@ -429,7 +442,7 @@ MiniKeymap.gen_step.search_pattern = function(pattern, flags, opts)
     adjust_cursor()
   end
 
-  return { condition = function() return vim.fn.mode() == 'i' end, action = function() return act end }
+  return { condition = function() return true end, action = function() return act end }
 end
 
 --- Map combo post action
@@ -513,16 +526,13 @@ MiniKeymap.map_combo = function(mode, lhs, action, opts)
   local i, last_time, n_seq = 0, hrtime(), #seq
   local delay_ns = 1000000 * delay
 
-  local ignore = false
-  local unignore = vim.schedule_wrap(function() ignore = false end)
-
   -- Explicitly ignore keys from action. Otherwise they will be processed
   -- because `nvim_input` mocks "as if typed" approach.
   local input_keys = vim.schedule_wrap(function(keys)
-    ignore = true
+    H.combo_ignore = true
     vim.api.nvim_input(keys)
     -- NOTE: Can't unignore right away because `nvim_input` is executed later
-    unignore()
+    H.combo_unignore_later()
   end)
 
   if type(action) == 'string' then
@@ -539,7 +549,7 @@ MiniKeymap.map_combo = function(mode, lhs, action, opts)
   local watcher = function(key, typed)
     -- Use only keys "as if typed" and in proper mode
     key = get_key(key, typed)
-    if key == '' or (i == 0 and not mode_tbl[H.cur_mode]) or ignore then return end
+    if key == '' or (i == 0 and not mode_tbl[H.cur_mode]) or H.combo_ignore then return end
 
     -- Advance tracking and reset if not in sequence
     i = i + 1
@@ -582,6 +592,10 @@ H.ns_id_combo = {}
 
 -- Current mode used in "combo" mappings, for better speed
 H.cur_mode = 'n'
+
+-- Whether to ignore current keys as part of the combo. Needs to be global for
+-- combo's RHS keys not interfering with tracking of other combos.
+H.combo_ignore = false
 
 -- Helper functionality =======================================================
 -- Settings -------------------------------------------------------------------
@@ -631,6 +645,8 @@ H.combo_make_mode_tbl = function(mode)
   end
   return res
 end
+
+H.combo_unignore_later = vim.schedule_wrap(function() H.combo_ignore = false end)
 
 H.combo_get_key = function(_, typed) return typed end
 if vim.fn.has('nvim-0.11') == 0 then H.combo_get_key = function(key) return key end end
@@ -689,7 +705,7 @@ H.steps_builtin.minipairs_bs = { condition = H.has_minipairs, action = function(
 H.can_jump_tsnode = function()
   -- TODO: Remove `opts.error` after compatibility with Neovim=0.11 is dropped
   local has_parser, parser = pcall(vim.treesitter.get_parser, 0, nil, { error = false })
-  return vim.fn.mode() == 'i' and has_parser and parser ~= nil
+  return has_parser and parser ~= nil
 end
 
 H.make_jump_tsnode = function(side)
@@ -706,12 +722,15 @@ H.make_jump_tsnode = function(side)
       local row = side == 'before' and from_row or to_row
       local col = side == 'before' and from_col or to_col
       new_pos = H.normalize_pos(row, col)
-      -- Iterate up the tree until different position is found. This is mostly
-      -- useful for "before" direction.
+      -- Iterate up the tree until different position is found. This is useful
+      -- for "before" direction and non-Insert mode.
+      if not (new_pos[1] == pos[1] and new_pos[2] == pos[2]) then
+        pcall(vim.api.nvim_win_set_cursor, 0, new_pos)
+        new_pos = vim.api.nvim_win_get_cursor(0)
+      end
       if not (new_pos[1] == pos[1] and new_pos[2] == pos[2]) then break end
       node = node:parent()
     end
-    pcall(vim.api.nvim_win_set_cursor, 0, new_pos)
   end
 
   -- Return callable which is wrapped to be executed after expression mapping
@@ -721,8 +740,17 @@ end
 H.steps_builtin.jump_after_tsnode  = { condition = H.can_jump_tsnode, action = H.make_jump_tsnode('after') }
 H.steps_builtin.jump_before_tsnode = { condition = H.can_jump_tsnode, action = H.make_jump_tsnode('before') }
 
-H.steps_builtin.jump_after_close = MiniKeymap.gen_step.search_pattern([=[[)\]}"'`]]=], 'cW', { side = 'after' })
-H.steps_builtin.jump_before_open = MiniKeymap.gen_step.search_pattern([=[[(\[{"'`]]=], 'bW', { side = 'before' })
+H.steps_builtin.jump_after_close = {
+  condition = function() return vim.fn.mode() == 'i' end,
+  -- NOTE: In Insert mode 'c' flag (accept at cursor) with 'after' adjust are
+  -- needed for working "chaining". In other modes it is no flag and no adjust,
+  -- which is why these steps only work in Insert mode.
+  action = MiniKeymap.gen_step.search_pattern([=[[)\]}"'`]]=], 'cW', { side = 'after' }).action,
+}
+H.steps_builtin.jump_before_open = {
+  condition = function() return vim.fn.mode() == 'i' end,
+  action = MiniKeymap.gen_step.search_pattern([=[[(\[{"'`]]=], 'bW', { side = 'before' }).action,
+}
 
 H.is_in_indent = function()
   local line, col = vim.api.nvim_get_current_line(), vim.fn.col('.')
