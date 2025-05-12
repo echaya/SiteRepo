@@ -147,6 +147,7 @@ Nvim by running `:help lspconfig-all`.
 - [jinja_lsp](#jinja_lsp)
 - [jqls](#jqls)
 - [jsonls](#jsonls)
+- [jsonnet_ls](#jsonnet_ls)
 - [julials](#julials)
 - [just](#just)
 - [kcl](#kcl)
@@ -333,6 +334,7 @@ Nvim by running `:help lspconfig-all`.
 - [vacuum](#vacuum)
 - [vala_ls](#vala_ls)
 - [vale_ls](#vale_ls)
+- [vectorcode_server](#vectorcode_server)
 - [verible](#verible)
 - [veridian](#veridian)
 - [veryl_ls](#veryl_ls)
@@ -5667,6 +5669,38 @@ Default config:
 - `root_markers` :
   ```lua
   { ".git" }
+  ```
+
+---
+
+## jsonnet_ls
+
+https://github.com/grafana/jsonnet-language-server
+
+A Language Server Protocol (LSP) server for Jsonnet.
+
+The language server can be installed with `go`:
+```sh
+go install github.com/grafana/jsonnet-language-server@latest
+```
+
+Snippet to enable the language server:
+```lua
+vim.lsp.enable('jsonnet_ls')
+```
+
+Default config:
+- `cmd` :
+  ```lua
+  { "jsonnet-language-server" }
+  ```
+- `filetypes` :
+  ```lua
+  { "jsonnet", "libsonnet" }
+  ```
+- `root_markers` :
+  ```lua
+  { "jsonnetfile.json", ".git" }
   ```
 
 ---
@@ -12385,6 +12419,30 @@ Default config:
 - `root_markers` :
   ```lua
   { ".vale.ini" }
+  ```
+
+---
+
+## vectorcode_server
+
+https://github.com/Davidyz/VectorCode
+
+A Language Server Protocol implementation for VectorCode, a code repository indexing tool.
+
+Snippet to enable the language server:
+```lua
+vim.lsp.enable('vectorcode_server')
+```
+
+Default config:
+- `cmd` :
+  ```lua
+  { "vectorcode-server" }
+  ```
+- `root_dir`: [../lsp/vectorcode_server.lua:5](../lsp/vectorcode_server.lua#L5)
+- `settings` :
+  ```lua
+  {}
   ```
 
 ---
