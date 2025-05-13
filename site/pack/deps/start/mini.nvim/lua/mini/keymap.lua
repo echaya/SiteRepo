@@ -536,6 +536,14 @@ MiniKeymap.map_combo = function(mode, lhs, action, opts)
   local hrtime, get_key = vim.loop.hrtime, H.combo_get_key
   local i, last_time, n_seq = 0, hrtime(), #seq
   local delay_ns = 1000000 * delay
+  -- NOTE: It is possible to track mode in 'ModeChanged' event and use it for
+  -- all combos (instead of `get_mode()` for each). Although it scales well
+  -- (O(1) instead of O(n) by number of combos), it can fail when something is
+  -- executed with 'eventignore' blocking 'ModeChanged' event (can happen with
+  -- plugins). Median `get_mode()` execution time is 0.15 microseconds and it
+  -- gets executed on every keystroke. If it proves to be too much, can be
+  -- reverted to 'ModeChanged' approach.
+  local get_mode = vim.fn.mode
 
   -- Explicitly ignore keys from action. Otherwise they will be processed
   -- because `nvim_input` mocks "as if typed" approach.
@@ -556,27 +564,24 @@ MiniKeymap.map_combo = function(mode, lhs, action, opts)
     local keys = action()
     if type(keys) == 'string' and keys ~= '' then input_keys(keys) end
   end)
+  local reset = function(key)
+    -- Make latest key start new combo, like for 'jjk' or j-wait-jj for 'jj'
+    i = seq[1] == key and 1 or 0
+    last_time = i == 0 and last_time or hrtime()
+  end
 
   local watcher = function(key, typed)
     -- Use only keys "as if typed" and in proper mode
     key = get_key(key, typed)
-    if key == '' or (i == 0 and not mode_tbl[H.cur_mode]) or H.combo_ignore then return end
+    if key == '' or (i == 0 and not mode_tbl[get_mode()]) or H.combo_ignore then return end
 
     -- Advance tracking and reset if not in sequence
     i = i + 1
-    if seq[i] ~= key then
-      -- Allow latest key to start new combo (like during typing 'jjk')
-      i = seq[1] == key and 1 or 0
-      last_time = i == 0 and last_time or hrtime()
-      return
-    end
+    if seq[i] ~= key then return reset(key) end
 
     -- Reset if time between key presses is too big
     local cur_time = hrtime()
-    if (cur_time - last_time) > delay_ns and i > 1 then
-      i = 0
-      return
-    end
+    if (cur_time - last_time) > delay_ns and i > 1 then return reset(key) end
     last_time = cur_time
 
     -- Wait for more info if sequence is not exhausted, act otherwise
@@ -590,7 +595,6 @@ MiniKeymap.map_combo = function(mode, lhs, action, opts)
   local ns_id = vim.api.nvim_create_namespace(ns_name)
   table.insert(H.ns_id_combo, ns_id)
 
-  H.ensure_mode_tracking()
   return vim.on_key(watcher, ns_id)
 end
 
@@ -621,12 +625,6 @@ H.apply_config = function(config) MiniKeymap.config = config end
 H.is_disabled = function() return vim.g.minikeymap_disable == true or vim.b.minikeymap_disable == true end
 
 -- Combo ----------------------------------------------------------------------
-H.ensure_mode_tracking = function()
-  local gr = vim.api.nvim_create_augroup('MiniKeymapCombo', {})
-  local track_mode = function() H.cur_mode = vim.fn.mode() end
-  vim.api.nvim_create_autocmd('ModeChanged', { group = gr, callback = track_mode, desc = 'Track mode' })
-end
-
 H.combo_lhs_to_seq = function(lhs)
   if H.is_array_of(lhs, H.is_string) then return vim.deepcopy(lhs) end
   if type(lhs) ~= 'string' then H.error('`lhs` should be string or array of strings') end
