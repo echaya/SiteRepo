@@ -1,4 +1,4 @@
-*blink-cmp.txt*            For NVIM v0.10.0           Last change: 2025 May 02
+*blink-cmp.txt*            For NVIM v0.10.0           Last change: 2025 May 11
 
 ==============================================================================
 Table of Contents                                *blink-cmp-table-of-contents*
@@ -899,7 +899,7 @@ For more common configurations, see the recipes <../recipes.md>.
 APPEARANCE                                       *blink-cmp-config-appearance*
 
 If you’re looking for how to change the appearance of the completion menu,
-check out the menu draw configuration <./completion#completion-menu-draw>.
+check out the menu draw configuration <./completion#menu-draw>.
 
 
 HIGHLIGHT GROUPS ~
@@ -1673,11 +1673,12 @@ LUASNIP ~
         },
       }
     }
-    
-    
-    ## `mini.snippets`
-    
-    ```lua
+<
+
+
+MINI.SNIPPETS ~
+
+>lua
     {
       'saghen/blink.cmp',
       dependencies = 'echasnovski/mini.snippets',
@@ -1879,6 +1880,8 @@ sources
 - ecolog.nvim <https://github.com/philosofonusus/ecolog.nvim>
 - gitmoji.nvim <https://github.com/Dynge/gitmoji.nvim/>: Completion for gitmojis <https://gitmoji.dev/>
 - blink-cmp-agda-symbols <https://github.com/4e554c4c/blink-cmp-agda-symbols>: Completion for Agda <https://wiki.portal.chalmers.se/agda/pmwiki.php>
+- blink-cmp-latex <https://github.com/erooke/blink-cmp-latex>: Completion for unicode symbols via latex macros
+- blink-cmp-npm <https://github.com/alexandre-abrioux/blink-cmp-npm.nvim>: Completion for NPM package names and versions
 
 
 REFERENCE                                         *blink-cmp-config-reference*

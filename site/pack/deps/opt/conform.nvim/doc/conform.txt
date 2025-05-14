@@ -326,6 +326,7 @@ FORMATTERS                                                    *conform-formatter
 `deno_fmt` - Use [Deno](https://deno.land/) to format TypeScript,
            JavaScript/JSON and markdown.
 `dfmt` - Formatter for D source code.
+`dioxus` - Format `rsx!` snippets in Rust files.
 `djlint` - ✨ HTML Template Linter and Formatter. Django - Jinja - Nunjucks -
          Handlebars - GoLang.
 `docformatter` - docformatter automatically formats docstrings to follow a
