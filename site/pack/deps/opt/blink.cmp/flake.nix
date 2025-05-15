@@ -39,7 +39,7 @@
           # all that are not nix, nor rust, nor other ignored files
           nvimFs =
             fs.difference ./. (fs.unions [ nixFs rustFs ./doc ./repro.lua ]);
-          version = "1.3.0";
+          version = "1.3.1";
         in {
           blink-fuzzy-lib = let
             inherit (inputs'.fenix.packages.minimal) toolchain;
@@ -55,6 +55,7 @@
               fileset = rustFs;
             };
             cargoLock = { lockFile = ./Cargo.lock; };
+            buildInputs = with pkgs; lib.optionals stdenv.hostPlatform.isAarch64 [ rust-jemalloc-sys ]; # revisit once https://github.com/NixOS/nix/issues/12426 is solved
             nativeBuildInputs = with pkgs; [ git ];
           };
 
