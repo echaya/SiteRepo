@@ -1,34 +1,5 @@
 " Autoload interface functions -------------------------------------------------
 
-function! quick_scope#Wallhacks(motion=2) abort
-  call quick_scope#Ready()
-  if (a:motion ==? 'f')
-    let direction = 1
-  elseif (a:motion ==? 't')
-    let direction = 0
-  else
-    let direction = a:motion
-  endif
-
-  augroup quick_scope_wallhacks
-    for useraucmd in g:qs_augrp_clean
-      execute printf('autocmd User ' .  useraucmd . 'call quick_scope#UnhighlightLine()')
-    endfor
-    autocmd CursorMoved,ColorScheme,FocusGained,InsertEnter,BufLeave,TabLeave,WinLeave,FocusLost * ++once call quick_scope#UnhighlightLine()
-    if g:qs_lazy_highlight
-      autocmd InsertEnter,BufLeave,TabLeave,WinLeave,FocusLost * ++once call quick_scope#StopTimer()
-    endif
-  augroup END
-
-  if g:qs_lazy_highlight
-    call quick_scope#HighlightLineDelay(direction, g:qs_accepted_chars)
-  else
-    call quick_scope#HighlightLine(direction, g:qs_accepted_chars)
-    redraw
-  endif
-  return ''
-endfunction
-
 function! quick_scope#SetMode(mode) abort
   if !exists('s:qs_mode')
     let s:qs_mode = a:mode
@@ -449,3 +420,4 @@ function! s:handle_extra_highlight(state) abort
     autocmd! quick_scope CursorMoved
   endif
 endfunction
+
