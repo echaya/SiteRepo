@@ -5,6 +5,33 @@ There are following change types:
 - `Refine` - change in previously intended functionality *without* adding new one. This is usually described as a "breaking change", but used here in a sense that it might break user's expectations about existing functionality.
 - `Expand` - adding new functionality without affecting existing ones. This is essentially new features.
 
+# Version 0.16.0.9000
+
+## mini.jump2d
+
+### Evolve
+
+- Update `builtin_opts.word_start` to use built-in notion of "keyword" (see `:h 'iskeyword'`) when computing word start.
+
+### Refine
+
+- Move `gen_xxx_spotter` into separate `gen_spotter` table for consistency with other modules:
+    - `gen_pattern_spotter` -> `gen_spotter.pattern`
+    - `gen_union_spotter` -> `gen_spotter.union`
+
+    The `gen_xxx_spotter` functions will work (with warning) until at least next release.
+
+### Expand
+
+- Add `gen_spotter.vimpattern()` that can generate spotter based on Vimscript (not Lua) pattern.
+
+## mini.pick
+
+### Expand
+
+- "Paste" action now supports special registers: `<C-w>` (word at cursor), `<C-a>` (WORD at cursor), `<C-l>` (line at cursor), `<C-f>` (filename at cursor).
+
+
 # Version 0.16.0
 
 ## All
