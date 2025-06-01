@@ -172,6 +172,16 @@ yarepl.setup {
             send_delayed_cr_after_sending = true,
         },
     },
+    print_1st_line_on_source = false, -- If true, sends the first non-empty line of sourced content as a comment
+    comment_prefixes = {
+        -- Defines comment characters for different REPLs
+        python = '# ',
+        ipython = '# ',
+        R = '# ',
+        bash = '# ',
+        zsh = '# ',
+        lua = '-- ',
+    },
 }
 ```
 
@@ -730,6 +740,16 @@ yarepl.formatter.factory {
             -- Join the lines with `\r` before sending to REPL.
             join_lines_with_cr = true,
         },
+    },
+    print_1st_line_on_source = false, -- If true, sends the first non-empty line of sourced content as a comment
+    comment_prefixes = {
+        -- Defines comment characters for different REPLs
+        python = '# ',
+        ipython = '# ',
+        R = '# ',
+        bash = '# ',
+        zsh = '# ',
+        lua = '-- ',
     },
 }
 
