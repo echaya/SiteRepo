@@ -134,38 +134,40 @@ to column 12. Another typing `a)` changes selection to [1; 13]. Also, besides
 visual selection, any |operator| can be used or `g[`/`g]` motions to move
 to left/right edge of `a` textobject.
 >
- |Key|     Name      |   Example line   |   a    |   i    |   2a   |   2i   |
- |---|---------------|-1234567890123456-|--------|--------|--------|--------|
- | ( |  Balanced ()  | (( *a (bb) ))    |        |        |        |        |
- | [ |  Balanced []  | [[ *a [bb] ]]    | [2;12] | [4;10] | [1;13] | [2;12] |
- | { |  Balanced {}  | {{ *a {bb} }}    |        |        |        |        |
- | < |  Balanced <>  | << *a <bb> >>    |        |        |        |        |
- |---|---------------|-1234567890123456-|--------|--------|--------|--------|
- | ) |  Balanced ()  | (( *a (bb) ))    |        |        |        |        |
- | ] |  Balanced []  | [[ *a [bb] ]]    |        |        |        |        |
- | } |  Balanced {}  | {{ *a {bb} }}    | [2;12] | [3;11] | [1;13] | [2;12] |
- | > |  Balanced <>  | << *a <bb> >>    |        |        |        |        |
- | b |  Alias for    | [( *a {bb} )]    |        |        |        |        |
- |   |  ), ], or }   |                  |        |        |        |        |
- |---|---------------|-1234567890123456-|--------|--------|--------|--------|
- | " |  Balanced "   | "*a" " bb "      |        |        |        |        |
- | ' |  Balanced '   | '*a' ' bb '      |        |        |        |        |
- | ` |  Balanced `   | `*a` ` bb `      | [1;4]  | [2;3]  | [6;11] | [7;10] |
- | q |  Alias for    | '*a' " bb "      |        |        |        |        |
- |   |  ", ', or `   |                  |        |        |        |        |
- |---|---------------|-1234567890123456-|--------|--------|--------|--------|
- | ? |  User prompt  | e*e o e o o      | [3;5]  | [4;4]  | [7;9]  | [8;8]  |
- |   |(typed e and o)|                  |        |        |        |        |
- |---|---------------|-1234567890123456-|--------|--------|--------|--------|
- | t |      Tag      | <x><y>*a</y></x> | [4;12] | [7;8]  | [1;16] | [4;12] |
- |---|---------------|-1234567890123456-|--------|--------|--------|--------|
- | f | Function call | f(a, g(*b, c) )  | [6;13] | [8;12] | [1;15] | [3;14] |
- |---|---------------|-1234567890123456-|--------|--------|--------|--------|
- | a |   Argument    | f(*a, g(b, c) )  | [3;5]  | [3;4]  | [5;14] | [7;13] |
- |---|---------------|-1234567890123456-|--------|--------|--------|--------|
- |   |    Default    | aa_*b__cc___     | [4;7]  | [4;5]  | [8;12] | [8;9]  |
- |   |   (typed _)   |                  |        |        |        |        |
- |---|---------------|-1234567890123456-|--------|--------|--------|--------|
+ ┌───┬───────────────┬──────────────────┬────────┬────────┬────────┬────────┐
+ │Key│     Name      │   Example line   │   a    │   i    │   2a   │   2i   │
+ ├───┴───────────────┴──────────────────┴────────┴────────┴────────┴────────┤
+ ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+ │ ( │  Balanced ()  │ (( *a (bb) ))    │        │        │        │        │
+ │ [ │  Balanced []  │ [[ *a [bb] ]]    │ [2;12] │ [4;10] │ [1;13] │ [2;12] │
+ │ { │  Balanced {}  │ {{ *a {bb} }}    │        │        │        │        │
+ │ < │  Balanced <>  │ << *a <bb> >>    │        │        │        │        │
+ ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+ │ ) │  Balanced ()  │ (( *a (bb) ))    │        │        │        │        │
+ │ ] │  Balanced []  │ [[ *a [bb] ]]    │        │        │        │        │
+ │ } │  Balanced {}  │ {{ *a {bb} }}    │ [2;12] │ [3;11] │ [1;13] │ [2;12] │
+ │ > │  Balanced <>  │ << *a <bb> >>    │        │        │        │        │
+ │ b │  Alias for    │ [( *a {bb} )]    │        │        │        │        │
+ │   │  ), ], or }   │                  │        │        │        │        │
+ ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+ │ " │  Balanced "   │ "*a" " bb "      │        │        │        │        │
+ │ ' │  Balanced '   │ '*a' ' bb '      │        │        │        │        │
+ │ ` │  Balanced `   │ `*a` ` bb `      │ [1;4]  │ [2;3]  │ [6;11] │ [7;10] │
+ │ q │  Alias for    │ '*a' " bb "      │        │        │        │        │
+ │   │  ", ', or `   │                  │        │        │        │        │
+ ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+ │ ? │  User prompt  │ e*e o e o o      │ [3;5]  │ [4;4]  │ [7;9]  │ [8;8]  │
+ │   │(typed e and o)│                  │        │        │        │        │
+ ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+ │ t │      Tag      │ <x><y>*a</y></x> │ [4;12] │ [7;8]  │ [1;16] │ [4;12] │
+ ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+ │ f │ Function call │ f(a, g(*b, c) )  │ [6;13] │ [8;12] │ [1;15] │ [3;14] │
+ ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+ │ a │   Argument    │ f(*a, g(b, c) )  │ [3;5]  │ [3;4]  │ [5;14] │ [7;13] │
+ ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+ │   │    Default    │ aa_*b__cc___     │ [4;7]  │ [4;5]  │ [8;12] │ [8;9]  │
+ │   │   (typed _)   │                  │        │        │        │        │
+ └───┴───────────────┴──────────────────┴────────┴────────┴────────┴────────┘
 <
 Notes:
 - All examples assume default `config.search_method`.
@@ -748,10 +750,6 @@ Example configuration for function definition textobject with
   })
 <
 Notes:
-- By default query is done using 'nvim-treesitter' plugin if it is present
-  (falls back to builtin methods otherwise). This allows for a more
-  advanced features (like multiple buffer languages, custom directives, etc.).
-  See `opts.use_nvim_treesitter` for how to disable this.
 - Be sure that query files don't contain unknown |treesitter-directives|
   (like `#make-range!`, for example). Otherwise textobject for such capture
   might not be found as |vim.treesitter| won't treat them as captures. Verify
@@ -769,9 +767,11 @@ Parameters ~
   array of such captures (best among all matches will be chosen).
 {opts} `(table|nil)` Options. Possible values:
   - <use_nvim_treesitter> - whether to try to use 'nvim-treesitter' plugin
-    (if present) to do the query. It implements more advanced behavior at
-    cost of increased execution time. Provides more coherent experience if
-    'nvim-treesitter-textobjects' queries are used. Default: `true`.
+    (if present) to do the query. It used to implement more advanced behavior
+    and more coherent experience if 'nvim-treesitter-textobjects' queries are
+    used. However, as |lua-treesitter-core| methods are more capable now,
+    the option will soon be removed. Only present for backward compatibility.
+    Default: `false`.
 
 Return ~
 `(function)` Function with |MiniAi.find_textobject()| signature which
@@ -781,9 +781,23 @@ Return ~
 See also ~
 |MiniAi-textobject-specification| for how this type of textobject
   specification is processed.
-|get_query()| for how query is fetched in case of no 'nvim-treesitter'.
+|vim.treesitter.get_query()| for how query is fetched.
 |Query:iter_captures()| for how all query captures are iterated in case of
   no 'nvim-treesitter'.
+
+------------------------------------------------------------------------------
+                                                 *MiniAi.gen_spec.user_prompt()*
+                        `MiniAi.gen_spec.user_prompt`()
+Specification from user prompt
+
+- Ask user for left and right textobject edges as raw strings (no pattern).
+- Construct specification for a textobject that matches from left edge string
+  to right edge string: `a` includes both strings, `i` only insides.
+
+Used for |MiniAi-textobject-builtin| with identifier `?`.
+
+Return ~
+`(function)` Textobject specification as function.
 
 ------------------------------------------------------------------------------
                                                     *MiniAi.select_textobject()*

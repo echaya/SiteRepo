@@ -225,5 +225,15 @@
         "prefix": "~",
         "body": "###",
         "description": "Add a new cell"
-    }
+    },
+    "reload package": {
+    "prefix": "reimport",
+    "body": [
+      "if __name__ == \"__main__\":",
+      "\timport importlib",
+      "\timportlib.reload(${1:your_package_name})",
+      "\t$0"
+    ],
+    "description": "use importlib to reload package"
+  }
 }

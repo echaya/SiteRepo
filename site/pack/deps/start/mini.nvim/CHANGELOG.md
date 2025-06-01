@@ -7,6 +7,16 @@ There are following change types:
 
 # Version 0.16.0.9000
 
+## mini.ai
+
+### Refine
+
+- Update `gen_spec.treesitter()` to have `use_nvim_treesitter = false` as default option value (instead of `true`). It used to implement more advanced behavior, but as built-in `vim.treesitter` is capable enough, there is no need in extra dependency. The option will be removed after the release.
+
+### Expand
+
+- Add `gen_spec.user_prompt` that acts the same as `?` built-in textobject. It can be used for using this textobject under another identifier.
+
 ## mini.diff
 
 ### Expand
@@ -48,6 +58,18 @@ There are following change types:
 ### Expand
 
 - "Paste" action now supports special registers: `<C-w>` (word at cursor), `<C-a>` (WORD at cursor), `<C-l>` (line at cursor), `<C-f>` (filename at cursor).
+
+## mini.test
+
+### Refine
+
+- Soft deprecate `ignore_lines` option in `expect.reference_screenshot()` in favor of more capable `ignore_text` and `ignore_attr` options. For example, `ignore_lines = { 1 }` is the same as supplying both `ignore_text = { 1 }` and `ignore_attr = { 1 }`.
+
+    It will work at least until the next release, after which its support will be removed. Sorry for the inconvenience.
+
+### Expand
+
+- Update `expect.reference_screenshot()` to support separate ignoring of text and attribute screenshot data via new `ignore_text` and `ignore_attr` options.
 
 
 # Version 0.16.0

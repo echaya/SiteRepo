@@ -132,38 +132,40 @@
 --- visual selection, any |operator| can be used or `g[`/`g]` motions to move
 --- to left/right edge of `a` textobject.
 --- >
----  |Key|     Name      |   Example line   |   a    |   i    |   2a   |   2i   |
----  |---|---------------|-1234567890123456-|--------|--------|--------|--------|
----  | ( |  Balanced ()  | (( *a (bb) ))    |        |        |        |        |
----  | [ |  Balanced []  | [[ *a [bb] ]]    | [2;12] | [4;10] | [1;13] | [2;12] |
----  | { |  Balanced {}  | {{ *a {bb} }}    |        |        |        |        |
----  | < |  Balanced <>  | << *a <bb> >>    |        |        |        |        |
----  |---|---------------|-1234567890123456-|--------|--------|--------|--------|
----  | ) |  Balanced ()  | (( *a (bb) ))    |        |        |        |        |
----  | ] |  Balanced []  | [[ *a [bb] ]]    |        |        |        |        |
----  | } |  Balanced {}  | {{ *a {bb} }}    | [2;12] | [3;11] | [1;13] | [2;12] |
----  | > |  Balanced <>  | << *a <bb> >>    |        |        |        |        |
----  | b |  Alias for    | [( *a {bb} )]    |        |        |        |        |
----  |   |  ), ], or }   |                  |        |        |        |        |
----  |---|---------------|-1234567890123456-|--------|--------|--------|--------|
----  | " |  Balanced "   | "*a" " bb "      |        |        |        |        |
----  | ' |  Balanced '   | '*a' ' bb '      |        |        |        |        |
----  | ` |  Balanced `   | `*a` ` bb `      | [1;4]  | [2;3]  | [6;11] | [7;10] |
----  | q |  Alias for    | '*a' " bb "      |        |        |        |        |
----  |   |  ", ', or `   |                  |        |        |        |        |
----  |---|---------------|-1234567890123456-|--------|--------|--------|--------|
----  | ? |  User prompt  | e*e o e o o      | [3;5]  | [4;4]  | [7;9]  | [8;8]  |
----  |   |(typed e and o)|                  |        |        |        |        |
----  |---|---------------|-1234567890123456-|--------|--------|--------|--------|
----  | t |      Tag      | <x><y>*a</y></x> | [4;12] | [7;8]  | [1;16] | [4;12] |
----  |---|---------------|-1234567890123456-|--------|--------|--------|--------|
----  | f | Function call | f(a, g(*b, c) )  | [6;13] | [8;12] | [1;15] | [3;14] |
----  |---|---------------|-1234567890123456-|--------|--------|--------|--------|
----  | a |   Argument    | f(*a, g(b, c) )  | [3;5]  | [3;4]  | [5;14] | [7;13] |
----  |---|---------------|-1234567890123456-|--------|--------|--------|--------|
----  |   |    Default    | aa_*b__cc___     | [4;7]  | [4;5]  | [8;12] | [8;9]  |
----  |   |   (typed _)   |                  |        |        |        |        |
----  |---|---------------|-1234567890123456-|--------|--------|--------|--------|
+---  ┌───┬───────────────┬──────────────────┬────────┬────────┬────────┬────────┐
+---  │Key│     Name      │   Example line   │   a    │   i    │   2a   │   2i   │
+---  ├───┴───────────────┴──────────────────┴────────┴────────┴────────┴────────┤
+---  ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+---  │ ( │  Balanced ()  │ (( *a (bb) ))    │        │        │        │        │
+---  │ [ │  Balanced []  │ [[ *a [bb] ]]    │ [2;12] │ [4;10] │ [1;13] │ [2;12] │
+---  │ { │  Balanced {}  │ {{ *a {bb} }}    │        │        │        │        │
+---  │ < │  Balanced <>  │ << *a <bb> >>    │        │        │        │        │
+---  ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+---  │ ) │  Balanced ()  │ (( *a (bb) ))    │        │        │        │        │
+---  │ ] │  Balanced []  │ [[ *a [bb] ]]    │        │        │        │        │
+---  │ } │  Balanced {}  │ {{ *a {bb} }}    │ [2;12] │ [3;11] │ [1;13] │ [2;12] │
+---  │ > │  Balanced <>  │ << *a <bb> >>    │        │        │        │        │
+---  │ b │  Alias for    │ [( *a {bb} )]    │        │        │        │        │
+---  │   │  ), ], or }   │                  │        │        │        │        │
+---  ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+---  │ " │  Balanced "   │ "*a" " bb "      │        │        │        │        │
+---  │ ' │  Balanced '   │ '*a' ' bb '      │        │        │        │        │
+---  │ ` │  Balanced `   │ `*a` ` bb `      │ [1;4]  │ [2;3]  │ [6;11] │ [7;10] │
+---  │ q │  Alias for    │ '*a' " bb "      │        │        │        │        │
+---  │   │  ", ', or `   │                  │        │        │        │        │
+---  ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+---  │ ? │  User prompt  │ e*e o e o o      │ [3;5]  │ [4;4]  │ [7;9]  │ [8;8]  │
+---  │   │(typed e and o)│                  │        │        │        │        │
+---  ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+---  │ t │      Tag      │ <x><y>*a</y></x> │ [4;12] │ [7;8]  │ [1;16] │ [4;12] │
+---  ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+---  │ f │ Function call │ f(a, g(*b, c) )  │ [6;13] │ [8;12] │ [1;15] │ [3;14] │
+---  ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+---  │ a │   Argument    │ f(*a, g(b, c) )  │ [3;5]  │ [3;4]  │ [5;14] │ [7;13] │
+---  ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈1234567890123456┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤
+---  │   │    Default    │ aa_*b__cc___     │ [4;7]  │ [4;5]  │ [8;12] │ [8;9]  │
+---  │   │   (typed _)   │                  │        │        │        │        │
+---  └───┴───────────────┴──────────────────┴────────┴────────┴────────┴────────┘
 --- <
 --- Notes:
 --- - All examples assume default `config.search_method`.
@@ -942,10 +944,6 @@ end
 ---   })
 --- <
 --- Notes:
---- - By default query is done using 'nvim-treesitter' plugin if it is present
----   (falls back to builtin methods otherwise). This allows for a more
----   advanced features (like multiple buffer languages, custom directives, etc.).
----   See `opts.use_nvim_treesitter` for how to disable this.
 --- - Be sure that query files don't contain unknown |treesitter-directives|
 ---   (like `#make-range!`, for example). Otherwise textobject for such capture
 ---   might not be found as |vim.treesitter| won't treat them as captures. Verify
@@ -962,9 +960,11 @@ end
 ---   array of such captures (best among all matches will be chosen).
 ---@param opts table|nil Options. Possible values:
 ---   - <use_nvim_treesitter> - whether to try to use 'nvim-treesitter' plugin
----     (if present) to do the query. It implements more advanced behavior at
----     cost of increased execution time. Provides more coherent experience if
----     'nvim-treesitter-textobjects' queries are used. Default: `true`.
+---     (if present) to do the query. It used to implement more advanced behavior
+---     and more coherent experience if 'nvim-treesitter-textobjects' queries are
+---     used. However, as |lua-treesitter-core| methods are more capable now,
+---     the option will soon be removed. Only present for backward compatibility.
+---     Default: `false`.
 ---
 ---@return function Function with |MiniAi.find_textobject()| signature which
 ---   returns array of current buffer regions representing matches for
@@ -972,11 +972,12 @@ end
 ---
 ---@seealso |MiniAi-textobject-specification| for how this type of textobject
 ---   specification is processed.
---- |get_query()| for how query is fetched in case of no 'nvim-treesitter'.
+--- |vim.treesitter.get_query()| for how query is fetched.
 --- |Query:iter_captures()| for how all query captures are iterated in case of
 ---   no 'nvim-treesitter'.
 MiniAi.gen_spec.treesitter = function(ai_captures, opts)
-  opts = vim.tbl_deep_extend('force', { use_nvim_treesitter = true }, opts or {})
+  -- TODO: Remove after releasing 'mini.nvim' 0.17.0
+  opts = vim.tbl_deep_extend('force', { use_nvim_treesitter = false }, opts or {})
   ai_captures = H.prepare_ai_captures(ai_captures)
 
   return function(ai_type, _, _)
@@ -992,6 +993,35 @@ MiniAi.gen_spec.treesitter = function(ai_captures, opts)
       -- Ranges are 0-based numbers for end-exclusive region
       return { from = { line = range[1] + 1, col = range[2] + 1 }, to = { line = range[3] + 1, col = range[4] } }
     end, matched_ranges)
+  end
+end
+
+--- Specification from user prompt
+---
+--- - Ask user for left and right textobject edges as raw strings (no pattern).
+--- - Construct specification for a textobject that matches from left edge string
+---   to right edge string: `a` includes both strings, `i` only insides.
+---
+--- Used for |MiniAi-textobject-builtin| with identifier `?`.
+---
+---@return function Textobject specification as function.
+MiniAi.gen_spec.user_prompt = function()
+  return function()
+    -- Using cache allows for a dot-repeat without another user input
+    if H.cache.prompted_textobject ~= nil then return H.cache.prompted_textobject end
+
+    local left = H.user_input('Left edge')
+    if left == nil or left == '' then return end
+    local right = H.user_input('Right edge')
+    if right == nil or right == '' then return end
+
+    -- Clean command line from prompt messages (does not work in Visual mode)
+    vim.cmd([[echo '' | redraw]])
+
+    local left_esc, right_esc = vim.pesc(left), vim.pesc(right)
+    local res = { string.format('%s().-()%s', left_esc, right_esc) }
+    H.cache.prompted_textobject = res
+    return res
   end
 end
 
@@ -1118,23 +1148,7 @@ H.builtin_textobjects = {
   ['"'] = { '%b""', '^.().*().$' },
   ['`'] = { '%b``', '^.().*().$' },
   -- Derived from user prompt
-  ['?'] = function()
-    -- Using cache allows for a dot-repeat without another user input
-    if H.cache.prompted_textobject ~= nil then return H.cache.prompted_textobject end
-
-    local left = H.user_input('Left edge')
-    if left == nil or left == '' then return end
-    local right = H.user_input('Right edge')
-    if right == nil or right == '' then return end
-
-    -- Clean command line from prompt messages (does not work in Visual mode)
-    vim.cmd([[echo '' | redraw]])
-
-    local left_esc, right_esc = vim.pesc(left), vim.pesc(right)
-    local res = { string.format('%s().-()%s', left_esc, right_esc) }
-    H.cache.prompted_textobject = res
-    return res
-  end,
+  ['?'] = MiniAi.gen_spec.user_prompt(),
   -- Argument
   ['a'] = MiniAi.gen_spec.argument(),
   -- Brackets
@@ -1525,21 +1539,26 @@ H.get_matched_ranges_plugin = function(captures)
 end
 
 H.get_matched_ranges_builtin = function(captures)
-  -- Fetch treesitter data for buffer
-  local lang = vim.bo.filetype
+  -- Get buffer's parser (LanguageTree)
   -- TODO: Remove `opts.error` after compatibility with Neovim=0.11 is dropped
-  local has_parser, parser = pcall(vim.treesitter.get_parser, 0, lang, { error = false })
-  if not has_parser or parser == nil then H.error_treesitter('parser', lang) end
+  local has_parser, parser = pcall(vim.treesitter.get_parser, 0, nil, { error = false })
+  if not has_parser or parser == nil then H.error_treesitter('parser') end
 
+  -- Get parser (LanguageTree) at cursor (important for injected languages)
+  local pos = vim.api.nvim_win_get_cursor(0)
+  local lang_tree = parser:language_for_range({ pos[1] - 1, pos[2], pos[1] - 1, pos[2] })
+  local lang = lang_tree:lang()
+
+  -- Get query file depending on the local language
   local get_query = vim.fn.has('nvim-0.9') == 1 and vim.treesitter.query.get or vim.treesitter.get_query
   local query = get_query(lang, 'textobjects')
-  if query == nil then H.error_treesitter('query', lang) end
+  if query == nil then H.error_treesitter('query') end
 
   -- Compute ranges of matched captures
   local capture_is_requested = vim.tbl_map(function(c) return vim.tbl_contains(captures, '@' .. c) end, query.captures)
 
   local res = {}
-  for _, tree in ipairs(parser:trees()) do
+  for _, tree in ipairs(lang_tree:trees()) do
     for capture_id, node, metadata in query:iter_captures(tree:root(), 0) do
       if capture_is_requested[capture_id] then
         metadata = (metadata or {})[capture_id] or {}
@@ -1552,9 +1571,11 @@ end
 
 H.get_match_range = function(node, metadata) return (metadata or {}).range and metadata.range or { node:range() } end
 
-H.error_treesitter = function(failed_get, lang)
-  local bufnr = vim.api.nvim_get_current_buf()
-  local msg = string.format([[Can not get %s for buffer %d and language '%s'.]], failed_get, bufnr, lang)
+H.error_treesitter = function(failed_get)
+  local buf_id, ft = vim.api.nvim_get_current_buf(), vim.bo.filetype
+  local has_lang, lang = pcall(vim.treesitter.language.get_lang, ft)
+  lang = has_lang and lang or ft
+  local msg = string.format('Can not get %s for buffer %d and language "%s".', failed_get, buf_id, lang)
   H.error(msg)
 end
 
