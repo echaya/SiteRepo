@@ -29,6 +29,12 @@ There are following change types:
 
 - Add `pickers.colorschemes` picker. By @pkazmier, PR #1789.
 
+## mini.hues
+
+### Refine
+
+- Make black (0 and 8) and white (7 and 15) colors for built-in terminal different from regular background and foreground. This improves color coverage and does not affect default uncolored text (it is highlighted as `Normal`).
+
 ## mini.jump
 
 ### Expand
@@ -58,6 +64,12 @@ There are following change types:
 ### Expand
 
 - "Paste" action now supports special registers: `<C-w>` (word at cursor), `<C-a>` (WORD at cursor), `<C-l>` (line at cursor), `<C-f>` (filename at cursor).
+
+## mini.surround
+
+### Refine
+
+- Update `gen_spec.inpuf.treesitter()` to have `use_nvim_treesitter = false` as default option value (instead of `true`). It used to implement more advanced behavior, but as built-in `vim.treesitter` is capable enough, there is no need in extra dependency. The option will be removed after the release.
 
 ## mini.test
 

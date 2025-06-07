@@ -39,9 +39,10 @@
 
 ---@class (exact) render.md.anti.conceal.UserConfig
 ---@field enabled? boolean
----@field ignore? render.md.conceal.Ignore
+---@field disabled_modes? render.md.Modes
 ---@field above? integer
 ---@field below? integer
+---@field ignore? render.md.conceal.Ignore
 
 ---@class (exact) render.md.base.UserConfig
 ---@field enabled? boolean
@@ -88,7 +89,7 @@
 ---@field language_icon? boolean
 ---@field language_name? boolean
 ---@field disable_background? boolean|string[]
----@field width? render.md.base.Width
+---@field width? render.md.code.Width
 ---@field left_margin? number
 ---@field left_pad? number
 ---@field right_pad? number
@@ -138,7 +139,7 @@
 ---@field icons? render.md.heading.String
 ---@field position? render.md.heading.Position
 ---@field signs? string[]
----@field width? render.md.base.Width|(render.md.base.Width)[]
+---@field width? render.md.heading.Width|(render.md.heading.Width)[]
 ---@field left_margin? number|number[]
 ---@field left_pad? number|number[]
 ---@field right_pad? number|number[]

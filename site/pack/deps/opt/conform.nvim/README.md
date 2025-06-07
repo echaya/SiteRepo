@@ -333,6 +333,7 @@ You can view this list in vim with `:help conform-formatters`
 - [prettypst](https://github.com/antonWetzel/prettypst) - Formatter for Typst.
 - [puppet-lint](https://github.com/puppetlabs/puppet-lint) - Check that your Puppet manifests conform to the style guide.
 - [purs-tidy](https://github.com/natefaubion/purescript-tidy) - A syntax tidy-upper for PureScript.
+- [pycln](https://github.com/hadialqattan/pycln) - A Python formatter for finding and removing unused import statements.
 - [pyink](https://github.com/google/pyink) - A Python formatter, forked from Black with a few different formatting behaviors.
 - [pyproject-fmt](https://github.com/tox-dev/toml-fmt/tree/main/pyproject-fmt) - Apply a consistent format to your pyproject.toml file with comment support.
 - [python-ly](https://github.com/frescobaldi/python-ly) - A Python package and commandline tool to manipulate LilyPond files.
@@ -370,7 +371,8 @@ You can view this list in vim with `:help conform-formatters`
 - [stylish-haskell](https://github.com/haskell/stylish-haskell) - Haskell code prettifier.
 - [stylua](https://github.com/JohnnyMorganz/StyLua) - An opinionated code formatter for Lua.
 - [superhtml](https://github.com/kristoff-it/superhtml) - HTML Language Server and Templating Language Library.
-- [swift_format](https://github.com/apple/swift-format) - Swift formatter from apple. Requires building from source with `swift build`.
+- [swift](https://github.com/swiftlang/swift-format) - Official Swift formatter. Requires Swift 6.0 or later.
+- [swift_format](https://github.com/swiftlang/swift-format) - Official Swift formatter. For Swift 6.0 or later prefer setting the `swift` formatter instead.
 - [swiftformat](https://github.com/nicklockwood/SwiftFormat) - SwiftFormat is a code library and command-line tool for reformatting `swift` code on macOS or Linux.
 - [swiftlint](https://github.com/realm/SwiftLint) - A tool to enforce Swift style and conventions.
 - [syntax_tree](https://github.com/ruby-syntax-tree/syntax_tree) - Syntax Tree is a suite of tools built on top of the internal CRuby parser.
@@ -381,6 +383,7 @@ You can view this list in vim with `:help conform-formatters`
 - [tex-fmt](https://github.com/WGUNDERWOOD/tex-fmt) - An extremely fast LaTeX formatter written in Rust.
 - [tlint](https://github.com/tighten/tlint) - Tighten linter for Laravel conventions with support for auto-formatting.
 - [tofu_fmt](https://opentofu.org/docs/cli/commands/fmt/) - The tofu-fmt command rewrites OpenTofu configuration files to a canonical format and style.
+- [treefmt](https://github.com/numtide/treefmt) - one CLI to format your repo.
 - [trim_newlines](https://github.com/stevearc/conform.nvim/blob/master/lua/conform/formatters/trim_newlines.lua) - Trim empty lines at the end of the file.
 - [trim_whitespace](https://github.com/stevearc/conform.nvim/blob/master/lua/conform/formatters/trim_whitespace.lua) - Trim trailing whitespace.
 - [twig-cs-fixer](https://github.com/VincentLanglet/Twig-CS-Fixer) - Automatically fix Twig Coding Standards issues
@@ -672,30 +675,31 @@ require("conform").formatters.my_formatter = {
 `format(opts, callback): boolean` \
 Format a buffer
 
-| Param             | Type                                                 | Desc                                                                                                                                                 |
-| ----------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| opts              | `nil\|conform.FormatOpts`                            |                                                                                                                                                      |
-| >timeout_ms       | `nil\|integer`                                       | Time in milliseconds to block for formatting. Defaults to 1000. No effect if async = true.                                                           |
-| >bufnr            | `nil\|integer`                                       | Format this buffer (default 0)                                                                                                                       |
-| >async            | `nil\|boolean`                                       | If true the method won't block. Defaults to false. If the buffer is modified before the formatter completes, the formatting will be discarded.       |
-| >dry_run          | `nil\|boolean`                                       | If true don't apply formatting changes to the buffer                                                                                                 |
-| >undojoin         | `nil\|boolean`                                       | Use undojoin to merge formatting changes with previous edit (default false)                                                                          |
-| >formatters       | `nil\|string[]`                                      | List of formatters to run. Defaults to all formatters for the buffer filetype.                                                                       |
-| >lsp_format       | `nil\|conform.LspFormatOpts`                         | Configure if and when LSP should be used for formatting. Defaults to "never".                                                                        |
-|                   | `"never"`                                            | never use the LSP for formatting (default)                                                                                                           |
-|                   | `"fallback"`                                         | LSP formatting is used when no other formatters are available                                                                                        |
-|                   | `"prefer"`                                           | use only LSP formatting when available                                                                                                               |
-|                   | `"first"`                                            | LSP formatting is used when available and then other formatters                                                                                      |
-|                   | `"last"`                                             | other formatters are used then LSP formatting when available                                                                                         |
-| >stop_after_first | `nil\|boolean`                                       | Only run the first available formatter in the list. Defaults to false.                                                                               |
-| >quiet            | `nil\|boolean`                                       | Don't show any notifications for warnings or failures. Defaults to false.                                                                            |
-| >range            | `nil\|conform.Range`                                 | Range to format. Table must contain `start` and `end` keys with {row, col} tuples using (1,0) indexing. Defaults to current selection in visual mode |
-| >>start           | `integer[]`                                          |                                                                                                                                                      |
-| >>end             | `integer[]`                                          |                                                                                                                                                      |
-| >id               | `nil\|integer`                                       | Passed to vim.lsp.buf.format when using LSP formatting                                                                                               |
-| >name             | `nil\|string`                                        | Passed to vim.lsp.buf.format when using LSP formatting                                                                                               |
-| >filter           | `nil\|fun(client: table): boolean`                   | Passed to vim.lsp.buf.format when using LSP formatting                                                                                               |
-| callback          | `nil\|fun(err: nil\|string, did_edit: nil\|boolean)` | Called once formatting has completed                                                                                                                 |
+| Param               | Type                                                 | Desc                                                                                                                                                 |
+| ------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| opts                | `nil\|conform.FormatOpts`                            |                                                                                                                                                      |
+| >timeout_ms         | `nil\|integer`                                       | Time in milliseconds to block for formatting. Defaults to 1000. No effect if async = true.                                                           |
+| >bufnr              | `nil\|integer`                                       | Format this buffer (default 0)                                                                                                                       |
+| >async              | `nil\|boolean`                                       | If true the method won't block. Defaults to false. If the buffer is modified before the formatter completes, the formatting will be discarded.       |
+| >dry_run            | `nil\|boolean`                                       | If true don't apply formatting changes to the buffer                                                                                                 |
+| >undojoin           | `nil\|boolean`                                       | Use undojoin to merge formatting changes with previous edit (default false)                                                                          |
+| >formatters         | `nil\|string[]`                                      | List of formatters to run. Defaults to all formatters for the buffer filetype.                                                                       |
+| >lsp_format         | `nil\|conform.LspFormatOpts`                         | Configure if and when LSP should be used for formatting. Defaults to "never".                                                                        |
+|                     | `"never"`                                            | never use the LSP for formatting (default)                                                                                                           |
+|                     | `"fallback"`                                         | LSP formatting is used when no other formatters are available                                                                                        |
+|                     | `"prefer"`                                           | use only LSP formatting when available                                                                                                               |
+|                     | `"first"`                                            | LSP formatting is used when available and then other formatters                                                                                      |
+|                     | `"last"`                                             | other formatters are used then LSP formatting when available                                                                                         |
+| >stop_after_first   | `nil\|boolean`                                       | Only run the first available formatter in the list. Defaults to false.                                                                               |
+| >quiet              | `nil\|boolean`                                       | Don't show any notifications for warnings or failures. Defaults to false.                                                                            |
+| >range              | `nil\|conform.Range`                                 | Range to format. Table must contain `start` and `end` keys with {row, col} tuples using (1,0) indexing. Defaults to current selection in visual mode |
+| >>start             | `integer[]`                                          |                                                                                                                                                      |
+| >>end               | `integer[]`                                          |                                                                                                                                                      |
+| >id                 | `nil\|integer`                                       | Passed to vim.lsp.buf.format when using LSP formatting                                                                                               |
+| >name               | `nil\|string`                                        | Passed to vim.lsp.buf.format when using LSP formatting                                                                                               |
+| >filter             | `nil\|fun(client: table): boolean`                   | Passed to vim.lsp.buf.format when using LSP formatting                                                                                               |
+| >formatting_options | `nil\|table`                                         | Passed to vim.lsp.buf.format when using LSP formatting                                                                                               |
+| callback            | `nil\|fun(err: nil\|string, did_edit: nil\|boolean)` | Called once formatting has completed                                                                                                                 |
 
 Returns:
 
