@@ -16,7 +16,6 @@ M._open_file = function(full_path, open_cmd)
 		if win_nr ~= -1 then
 			local win_id = vim.fn.win_getid(win_nr)
 			vim.api.nvim_set_current_win(win_id)
-			M._create_buffer_keymaps(buffer_number)
 			return
 		end
 	end
@@ -28,41 +27,40 @@ M._open_file = function(full_path, open_cmd)
 		vim.api.nvim_win_set_buf(0, bn_to_open)
 	end
 
-	local current_buffer_number = vim.api.nvim_get_current_buf()
-	M._create_buffer_keymaps(current_buffer_number)
 end
 
 M._create_buffer_keymaps = function(buffer_number)
-	local opts = { noremap = true, silent = true, nowait = true }
+	-- Helper function to set keymaps with descriptions cleanly.
+	local function set_keymap(mode, key, command, description)
+		vim.api.nvim_buf_set_keymap(buffer_number, mode, key, command, {
+			noremap = true,
+			silent = true,
+			nowait = true,
+			desc = "Kiwi: " .. description,
+		})
+	end
 
-	-- Visual mode keymaps for create or following links
-	vim.api.nvim_buf_set_keymap(
-		buffer_number,
-		"v",
-		"<CR>",
-		":'<,'>lua require('kiwi').create_or_open_wiki_file()<CR>",
-		opts
-	)
-	vim.api.nvim_buf_set_keymap(
-		buffer_number,
+	-- Visual mode keymaps for creating links from a selection
+	set_keymap("v", "<CR>", ":'<,'>lua require('kiwi').create_or_open_wiki_file()<CR>", "Create Link from Selection")
+	set_keymap(
 		"v",
 		"<S-CR>",
 		":'<,'>lua require('kiwi').create_or_open_wiki_file('vsplit')<CR>",
-		opts
+		"Create Link from Selection (VSplit)"
 	)
-	vim.api.nvim_buf_set_keymap(
-		buffer_number,
+	set_keymap(
 		"v",
 		"<C-CR>",
 		":'<,'>lua require('kiwi').create_or_open_wiki_file('split')<CR>",
-		opts
+		"Create Link from Selection (Split)"
 	)
 
 	-- Normal mode keymaps for following links
-	vim.api.nvim_buf_set_keymap(buffer_number, "n", "<CR>", ':lua require("kiwi").open_link()<CR>', opts)
-	vim.api.nvim_buf_set_keymap(buffer_number, "n", "<S-CR>", ':lua require("kiwi").open_link("vsplit")<CR>', opts)
-	vim.api.nvim_buf_set_keymap(buffer_number, "n", "<C-CR>", ':lua require("kiwi").open_link("split")<CR>', opts)
-	vim.api.nvim_buf_set_keymap(buffer_number, "n", "<Tab>", ':let @/="\\\\[.\\\\{-}\\\\]"<CR>nl', opts)
+	set_keymap("n", "<CR>", ':lua require("kiwi").open_link()<CR>', "Open Link Under Cursor")
+	set_keymap("n", "<S-CR>", ':lua require("kiwi").open_link("vsplit")<CR>', "Open Link Under Cursor (VSplit)")
+	set_keymap("n", "<C-CR>", ':lua require("kiwi").open_link("split")<CR>', "Open Link Under Cursor (Split)")
+	set_keymap("n", "<Tab>", ':let @/="\\\\[.\\\\{-}\\\\]"<CR>nl', "Jump to Next Link")
+	set_keymap("n", "<Backspace>", ':lua require("kiwi").jump_to_index()<CR>', "Jump to Index")
 end
 
 -- Private handler that finds a link under the cursor and delegates opening to _open_file.
@@ -85,21 +83,32 @@ M._open_link_handler = function(open_cmd)
 end
 
 M.open_wiki_index = function(name)
-	if config.folders ~= nil then
-		if name ~= nil then
-			for _, v in pairs(config.folders) do
-				if v.name == name then
-					config.path = v.path
+	local function open_index_from_path(wiki_path)
+		if not wiki_path then
+			return
+		end
+		config.path = wiki_path
+		local wiki_index_path = vim.fs.joinpath(config.path, "index.md")
+		M._open_file(wiki_index_path)
+	end
+
+	if config.folders then
+		if name then
+			-- User specified a wiki name directly, find it and proceed.
+			local found_path = nil
+			for _, props in ipairs(config.folders) do
+				if props.name == name then
+					found_path = props.path
+					break
 				end
 			end
+			open_index_from_path(found_path) -- Open it (or do nothing if not found).
 		else
-			utils.prompt_folder(config)
+			utils.prompt_folder(config, open_index_from_path)
 		end
 	else
-		require("kiwi").setup()
+		open_index_from_path(config.path)
 	end
-	local wiki_index_path = vim.fs.joinpath(config.path, "index.md")
-	M._open_file(wiki_index_path)
 end
 
 -- Create a new Wiki entry in Journal folder on highlighting word and pressing <CR>
@@ -123,6 +132,16 @@ end
 
 M.open_link = function(open_cmd)
 	M._open_link_handler(open_cmd)
+end
+
+M.jump_to_index = function()
+	local root = vim.b[0].wiki_root
+	if root and root ~= "" then
+		local index_path = vim.fs.joinpath(root, "index.md")
+		M._open_file(index_path) -- Open in the current window
+	else
+		vim.notify("Kiwi: Could not determine wiki root for this buffer.", vim.log.levels.WARN)
+	end
 end
 
 return M

@@ -1,8 +1,5 @@
 local todo = {}
 
--- Cache the buffer line count for the duration of a single toggle operation to avoid redundant API calls.
-local line_count_cache = 0
-
 ---
 -- Retrieves the indentation level of a task on a given line.
 -- @param line (string): The line content to inspect.
@@ -29,7 +26,6 @@ end
 
 ---
 -- If a line is a markdown list item, finds the column where the text content begins.
--- Handles ordered (e.g., "1. ", "10) ") and unordered (e.g., "* ", "- ") lists.
 -- @param line (string): The line content to inspect.
 -- @return (number|nil): The 1-based column number for insertion, or nil if not a list item.
 local function get_list_marker_info(line)
@@ -37,19 +33,19 @@ local function get_list_marker_info(line)
 		return nil
 	end
 
-	-- Regex for unordered lists: optional indent, then *, -, or +, then one or more spaces.
+	-- Regex for unordered lists
 	local _, match_end = line:find("^%s*[%*%-+]%s+")
 	if match_end then
-		return match_end + 1 -- The text starts right after the marker.
+		return match_end + 1
 	end
 
-	-- Regex for ordered lists: optional indent, then digits, then . or ), then one or more spaces.
+	-- Regex for ordered lists
 	_, match_end = line:find("^%s*%d+[.%)%)]%s+")
 	if match_end then
-		return match_end + 1 -- The text starts right after the marker.
+		return match_end + 1
 	end
 
-	return nil -- Not a recognized list format.
+	return nil
 end
 
 ---
@@ -57,67 +53,54 @@ end
 -- @param line (string): The line content.
 -- @return (boolean|nil): True if done, false if not, nil if indeterminate.
 local function is_marked_done(line)
-	-- Find the state ('x' or ' ') within the first checkbox on the line.
 	local state = line:match("%[(.)%]")
-
 	if state == "x" then
 		return true
 	elseif state == " " then
 		return false
+	end
+	return nil
+end
+
+---
+-- Marks a task as done or undone in the provided lines table.
+-- @param lines (table): The table of buffer lines.
+-- @param line_nr (number): The 1-based line number to modify.
+-- @param should_be_done (boolean): The new state to apply.
+local function set_task_state(lines, line_nr, should_be_done)
+	local line = lines[line_nr]
+	if not line or get_bound(line) == nil then
+		return
+	end
+
+	local currently_done = is_marked_done(line)
+	if currently_done == should_be_done then
+		return -- Already in the desired state.
+	end
+
+	if should_be_done then
+		lines[line_nr] = line:gsub("%[ %]", "[x]", 1)
 	else
-		return nil
+		lines[line_nr] = line:gsub("%[x%]", "[ ]", 1)
 	end
 end
 
 ---
--- Marks a task as done by replacing '[ ]' with '[x]'.
--- @param line_nr (number): The line number to modify.
-local function mark_done(line_nr)
-	local line = vim.api.nvim_buf_get_lines(0, line_nr - 1, line_nr, false)[1]
-	if not line or get_bound(line) == nil then
-		return
-	end
-
-	if not is_marked_done(line) then
-		local new_line = line:gsub("%[ %]", "[x]")
-		vim.api.nvim_buf_set_lines(0, line_nr - 1, line_nr, false, { new_line })
-	end
-end
-
----
--- Marks a task as undone by replacing '[x]' with '[ ]'.
--- @param line_nr (number): The line number to modify.
-local function mark_undone(line_nr)
-	local line = vim.api.nvim_buf_get_lines(0, line_nr - 1, line_nr, false)[1]
-	if not line or get_bound(line) == nil then
-		return
-	end
-
-	if is_marked_done(line) then
-		local new_line = line:gsub("%[x%]", "[ ]")
-		vim.api.nvim_buf_set_lines(0, line_nr - 1, line_nr, false, { new_line })
-	end
-end
-
----
--- Toggles the state of all descendant tasks.
--- @param line_number (number): The line number of the parent task.
+-- Toggles the state of all descendant tasks in the lines table.
+-- @param lines (table): The table of buffer lines.
+-- @param line_number (number): The 1-based line number of the parent task.
 -- @param bound (number): The indentation level of the parent task.
 -- @param state (boolean): The new state to apply (true for done, false for undone).
-local function toggle_children(line_number, bound, state)
-	for ln = line_number + 1, line_count_cache do
-		local line = vim.fn.getline(ln)
+local function toggle_children(lines, line_number, bound, state)
+	for ln = line_number + 1, #lines do
+		local line = lines[ln]
 		local new_bound = get_bound(line)
 
 		if new_bound then
 			if new_bound > bound then
-				if state then
-					mark_done(ln)
-				else
-					mark_undone(ln)
-				end
+				set_task_state(lines, ln, state)
 			else
-				break
+				break -- Exited the child block.
 			end
 		end
 	end
@@ -125,12 +108,13 @@ end
 
 ---
 -- Finds the line number of the parent task.
--- @param cursor (number): The line number of the child task.
+-- @param lines (table): The table of buffer lines.
+-- @param cursor (number): The 1-based line number of the child task.
 -- @param bound (number): The indentation level of the child task.
 -- @return (number|nil): The line number of the parent task or nil.
-local function find_parent(cursor, bound)
+local function find_parent(lines, cursor, bound)
 	for ln = cursor - 1, 1, -1 do
-		local line = vim.fn.getline(ln)
+		local line = lines[ln]
 		local new_bound = get_bound(line)
 		if new_bound and new_bound < bound then
 			return ln
@@ -141,21 +125,22 @@ end
 
 ---
 -- Checks if all immediate children of a task are complete.
--- @param cursor (number): The line number of the parent task.
+-- @param lines (table): The table of buffer lines.
+-- @param cursor (number): The 1-based line number of the parent task.
 -- @param bound (number): The indentation level of the parent task.
 -- @return (boolean): True if all children are complete, otherwise false.
-local function is_children_complete(cursor, bound)
+local function is_children_complete(lines, cursor, bound)
 	local child_bound = nil
 	local found_a_child = false
 	local all_done = true
 
-	for ln = cursor + 1, line_count_cache do
-		local line = vim.fn.getline(ln)
+	for ln = cursor + 1, #lines do
+		local line = lines[ln]
 		local new_bound = get_bound(line)
 
 		if new_bound then
 			if new_bound <= bound then
-				break
+				break -- Exited the child block.
 			end
 
 			if not child_bound then
@@ -166,6 +151,7 @@ local function is_children_complete(cursor, bound)
 				found_a_child = true
 				if not is_marked_done(line) then
 					all_done = false
+					-- No need to check further, we found an undone child.
 				end
 			end
 		end
@@ -175,25 +161,26 @@ end
 
 ---
 -- Updates the status of all ancestor tasks based on their children.
--- @param cursor (number): The line number of the task that was changed.
+-- @param lines (table): The table of buffer lines.
+-- @param cursor (number): The 1-based line number of the task that was changed.
 -- @param bound (number): The indentation level of the task that was changed.
-local function validate_parent_tasks(cursor, bound)
+local function validate_parent_tasks(lines, cursor, bound)
 	local current_ln = cursor
 	local current_bound = bound
 
 	while true do
-		local parent_ln = find_parent(current_ln, current_bound)
+		local parent_ln = find_parent(lines, current_ln, current_bound)
 		if not parent_ln then
 			break
 		end
 
-		local parent_line = vim.fn.getline(parent_ln)
+		local parent_line = lines[parent_ln]
 		local parent_bound = get_bound(parent_line)
 
-		if is_children_complete(parent_ln, parent_bound) then
-			mark_done(parent_ln)
+		if is_children_complete(lines, parent_ln, parent_bound) then
+			set_task_state(lines, parent_ln, true)
 		else
-			mark_undone(parent_ln)
+			set_task_state(lines, parent_ln, false)
 		end
 
 		current_ln = parent_ln
@@ -204,36 +191,34 @@ end
 ---
 -- Main function to toggle a task's state or create a new task from a list item.
 todo.toggle = function()
-	line_count_cache = vim.api.nvim_buf_line_count(0)
+	--- Read all lines from the current buffer into a table. This is the core performance improvement.
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 	local original_cursor = vim.api.nvim_win_get_cursor(0)
 	local cursor_ln = original_cursor[1]
-	local line = vim.fn.getline(cursor_ln)
+	local line = lines[cursor_ln]
+
 	local bound = get_bound(line)
 
 	if bound == nil then
-		-- NOT A TASK: Check if it's a list item we can convert.
 		local text_start_col = get_list_marker_info(line)
 		if text_start_col then
-			-- It is a list item. Insert a checkbox to convert it.
 			local prefix = line:sub(1, text_start_col - 1)
 			local suffix = line:sub(text_start_col)
 			local new_line = prefix .. "[ ] " .. suffix
+			lines[cursor_ln] = new_line -- Modify the in-memory table.
 
-			vim.api.nvim_buf_set_lines(0, cursor_ln - 1, cursor_ln, false, { new_line })
-
-			-- Since we created a new (undone) task, validate parents.
 			local new_bound = get_bound(new_line)
 			if new_bound then
-				validate_parent_tasks(cursor_ln, new_bound)
+				validate_parent_tasks(lines, cursor_ln, new_bound)
 			end
+			--- Write the modified lines back to the buffer in a single API call.
+			vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
 			return
 		end
-		-- Not a task and not a convertible list item. Notify the user.
 		vim.notify("Not a valid todo task or list item.", vim.log.levels.WARN)
 		return
 	end
 
-	-- IS A TASK: Proceed with the toggle logic.
 	local currently_done = is_marked_done(line)
 	if currently_done == nil then
 		vim.notify("Could not determine task state.", vim.log.levels.WARN)
@@ -241,14 +226,12 @@ todo.toggle = function()
 	end
 	local new_state_is_done = not currently_done
 
-	if new_state_is_done then
-		mark_done(cursor_ln)
-	else
-		mark_undone(cursor_ln)
-	end
+	set_task_state(lines, cursor_ln, new_state_is_done)
+	toggle_children(lines, cursor_ln, bound, new_state_is_done)
+	validate_parent_tasks(lines, cursor_ln, bound)
 
-	toggle_children(cursor_ln, bound, new_state_is_done)
-	validate_parent_tasks(cursor_ln, bound)
+	--- Write all accumulated changes back to the buffer at once.
+	vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
 	vim.api.nvim_win_set_cursor(0, original_cursor)
 end
 
