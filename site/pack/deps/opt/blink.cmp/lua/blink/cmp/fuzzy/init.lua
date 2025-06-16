@@ -89,32 +89,45 @@ function fuzzy.fuzzy(line, cursor_col, haystacks_by_provider, range)
   local nearby_text = table.concat(vim.api.nvim_buf_get_lines(0, start_row, end_row, false), '\n')
   local nearby_words = #nearby_text < 10000 and fuzzy.implementation.get_words(nearby_text) or {}
 
+  -- get the keyword
   local keyword_start_col, keyword_end_col = fuzzy.get_keyword_range(line, cursor_col, config.completion.keyword.range)
   local keyword_length = keyword_end_col - keyword_start_col
   local keyword = line:sub(keyword_start_col, keyword_end_col)
 
-  local filtered_items = {}
-  for provider_id, haystack in pairs(haystacks_by_provider) do
-    -- perform fuzzy search
-    local scores, matched_indices, exacts = fuzzy.implementation.fuzzy(line, cursor_col, provider_id, {
-      -- TODO: make this configurable
-      max_typos = config.fuzzy.max_typos(keyword),
-      use_frecency = config.fuzzy.use_frecency and keyword_length > 0,
-      use_proximity = config.fuzzy.use_proximity and keyword_length > 0,
-      nearby_words = nearby_words,
-      match_suffix = range == 'full',
-      snippet_score_offset = config.snippets.score_offset,
-    })
+  -- Sort in rust if none of the sort functions are lua functions
+  local sort_in_rust = fuzzy.implementation_type == 'rust'
+    and #vim.tbl_filter(function(v) return type(v) ~= 'function' end, config.fuzzy.sorts) == #config.fuzzy.sorts
 
-    for idx, item_index in ipairs(matched_indices) do
-      local item = haystack[item_index + 1]
-      -- TODO: maybe we should declare these fields in `blink.cmp.CompletionItem`?
-      item.score = scores[idx]
-      item.exact = exacts[idx]
-      table.insert(filtered_items, item)
-    end
+  local max_typos = type(config.fuzzy.max_typos) == 'function' and config.fuzzy.max_typos(keyword)
+    or config.fuzzy.max_typos
+  --- @cast max_typos number
+
+  -- perform fuzzy search
+  local provider_ids = vim.tbl_keys(haystacks_by_provider)
+  local provider_idxs, matched_indices, scores, exacts = fuzzy.implementation.fuzzy(line, cursor_col, provider_ids, {
+    max_typos = max_typos,
+    use_frecency = config.fuzzy.use_frecency and keyword_length > 0,
+    use_proximity = config.fuzzy.use_proximity and keyword_length > 0,
+    nearby_words = nearby_words,
+    match_suffix = range == 'full',
+    snippet_score_offset = config.snippets.score_offset,
+    sorts = sort_in_rust and config.fuzzy.sorts or nil,
+  })
+
+  -- add items to the final list
+  local filtered_items = {}
+  for idx, provider_idx in ipairs(provider_idxs) do
+    local provider_id = provider_ids[provider_idx + 1]
+    local haystack = haystacks_by_provider[provider_id]
+
+    local item = haystack[matched_indices[idx] + 1]
+    item.score = scores[idx]
+    item.exact = exacts[idx]
+
+    table.insert(filtered_items, item)
   end
 
+  if sort_in_rust then return filtered_items end
   return require('blink.cmp.fuzzy.sort').sort(filtered_items, config.fuzzy.sorts)
 end
 

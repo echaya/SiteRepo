@@ -72,6 +72,8 @@ local function run_async_lua(buf_text, callback)
 
   local cancelled = false
   local pos = 1
+  local all_words = {}
+
   local function next_chunk()
     if cancelled then return end
 
@@ -93,11 +95,13 @@ local function run_async_lua(buf_text, callback)
 
     local chunk_text = string.sub(buf_text, start_pos, end_pos)
     local chunk_words = require('blink.cmp.fuzzy').get_words(chunk_text)
-    local words = require('blink.cmp.lib.utils').deduplicate(chunk_words)
+    vim.list_extend(all_words, chunk_words)
 
     -- next iter
     if pos < total_length then return vim.schedule(next_chunk) end
-    -- or finish
+
+    -- Deduplicate and finish
+    local words = require('blink.cmp.lib.utils').deduplicate(all_words)
     vim.schedule(function() callback(words_to_items(words)) end)
   end
 
@@ -109,25 +113,68 @@ end
 --- @class blink.cmp.BufferOpts
 --- @field get_bufnrs fun(): integer[]
 --- @field get_search_bufnrs fun(): integer[]
+--- @field max_sync_buffer_size integer Maximum buffer text size for sync processing
+--- @field max_async_buffer_size integer Maximum buffer text size for async processing
+--- @field enable_in_ex_commands boolean Whether to enable buffer source in substitute (:s) and global (:g) commands
 
 --- Public API
 
 local buffer = {}
 
 function buffer.new(opts)
-  --- @cast opts blink.cmp.BufferOpts
-
   local self = setmetatable({}, { __index = buffer })
-  self.get_bufnrs = opts.get_bufnrs
-    or function()
+
+  --- @type blink.cmp.BufferOpts
+  opts = vim.tbl_deep_extend('keep', opts or {}, {
+    get_bufnrs = function()
       return vim
         .iter(vim.api.nvim_list_wins())
         :map(function(win) return vim.api.nvim_win_get_buf(win) end)
         :filter(function(buf) return vim.bo[buf].buftype ~= 'nofile' end)
         :totable()
-    end
-  self.get_search_bufnrs = opts.get_search_bufnrs or function() return { vim.api.nvim_get_current_buf() } end
+    end,
+    get_search_bufnrs = function() return { vim.api.nvim_get_current_buf() } end,
+    max_sync_buffer_size = 20000,
+    max_async_buffer_size = 500000,
+    enable_in_ex_commands = false,
+  })
+  require('blink.cmp.config.utils').validate('sources.providers.buffer', {
+    get_bufnrs = { opts.get_bufnrs, 'function' },
+    get_search_bufnrs = { opts.get_search_bufnrs, 'function' },
+    max_sync_buffer_size = { opts.max_sync_buffer_size, 'number' },
+    max_async_buffer_size = { opts.max_async_buffer_size, 'number' },
+    enable_in_ex_commands = { opts.enable_in_ex_commands, 'boolean' },
+  }, opts)
+
+  -- HACK: When using buffer completion sources in ex commands
+  -- while 'inccommand' is active, Neovim's UI redraw is delayed by one frame.
+  -- This causes completion popups to appear out of sync with user input,
+  -- due to a known Neovim limitation (see neovim/neovim#9783).
+  -- To work around this, temporarily disable 'inccommand'.
+  -- This sacrifice live substitution previews, but restores correct redraw.
+  if opts.enable_in_ex_commands then
+    vim.on_key(function()
+      if vim.fn.getcmdtype() == ':' and vim.o.inccommand ~= '' then vim.o.inccommand = '' end
+    end)
+  end
+
+  self.opts = opts
   return self
+end
+
+function buffer:enabled()
+  local cmdtype = vim.fn.getcmdtype()
+  -- Enable in regular buffer
+  if cmdtype == '' then return true end
+  -- Enable in search mode
+  if cmdtype == '/' or cmdtype == '?' then return true end
+  -- Enable for substitute and global commands in ex mode
+  if cmdtype == ':' and self.opts.enable_in_ex_commands then
+    local valid_cmd, parsed = pcall(vim.api.nvim_parse_cmd, vim.fn.getcmdline(), {})
+    local cmd = (valid_cmd and parsed.cmd) or ''
+    if vim.tbl_contains({ 'substitute', 'global', 'vglobal' }, cmd) then return true end
+  end
+  return false
 end
 
 function buffer:get_completions(_, callback)
@@ -136,8 +183,8 @@ function buffer:get_completions(_, callback)
   end
 
   vim.schedule(function()
-    local is_search = vim.tbl_contains({ '/', '?' }, vim.fn.getcmdtype())
-    local get_bufnrs = is_search and self.get_search_bufnrs or self.get_bufnrs
+    local is_search = vim.tbl_contains({ '/', '?', ':' }, vim.fn.getcmdtype())
+    local get_bufnrs = is_search and self.opts.get_search_bufnrs or self.opts.get_bufnrs
     local bufnrs = require('blink.cmp.lib.utils').deduplicate(get_bufnrs())
 
     local buf_texts = {}
@@ -147,10 +194,10 @@ function buffer:get_completions(_, callback)
     local buf_text = table.concat(buf_texts, '\n')
 
     -- should take less than 2ms
-    if #buf_text < 20000 then
+    if #buf_text < self.opts.max_sync_buffer_size then
       run_sync(buf_text, transformed_callback)
     -- should take less than 10ms
-    elseif #buf_text < 500000 then
+    elseif #buf_text < self.opts.max_async_buffer_size then
       if fuzzy.implementation_type == 'rust' then
         return run_async_rust(buf_text, transformed_callback)
       else

@@ -21,7 +21,7 @@ sources = {
   default = { 'lsp', 'buffer', 'snippets', 'path' },
 
   per_filetype = {
-    sql = { 'dadbod' }
+    sql = { 'dadbod' },
     -- optionally inherit from the `default` sources
     lua = { inherit_defaults = true, 'lazydev' }
   },
@@ -40,7 +40,7 @@ All of the fields shown below apply to all sources. The `opts` field is passed t
 sources.providers.lsp = {
   name = 'LSP',
   module = 'blink.cmp.sources.lsp',
-  opts = {} -- Passed to the source directly, varies by source
+  opts = {}, -- Passed to the source directly, varies by source
 
   --- NOTE: All of these options may be functions to get dynamic behavior
   --- See the type definitions for more information
@@ -61,7 +61,7 @@ sources.providers.lsp = {
 
 ### Show Buffer completions with LSP
 
-By default, the buffer source will only show when the LSP source returns no items. You may always show the buffer source via:
+By default, the buffer source will only show when the LSP source is disabled or returns no items. You may always show the buffer source via:
 
 ```lua
 sources = {
@@ -118,3 +118,7 @@ See [blink.compat](https://github.com/Saghen/blink.compat) for using `nvim-cmp` 
 - [blink-cmp-agda-symbols](https://github.com/4e554c4c/blink-cmp-agda-symbols): Completion for [Agda](https://wiki.portal.chalmers.se/agda/pmwiki.php)
 - [blink-cmp-latex](https://github.com/erooke/blink-cmp-latex): Completion for unicode symbols via latex macros
 - [blink-cmp-npm](https://github.com/alexandre-abrioux/blink-cmp-npm.nvim): Completion for NPM package names and versions
+- [blink-cmp-kitty](https://github.com/garyhurtz/blink_cmp_kitty): Kitty terminal completion source
+- [blink-cmp-yanky](https://github.com/marcoSven/blink-cmp-yanky): Completion for [yanky.nvim](https://github.com/gbprod/yanky.nvim)
+- [blink-cmp-register](https://github.com/phanen/blink-cmp-register)
+- [blink-cmp-sshconfig](https://github.com/bydlw98/blink-cmp-sshconfig)

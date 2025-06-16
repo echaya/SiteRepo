@@ -54,11 +54,26 @@ completion.trigger = {
   -- When false, will not show the completion window automatically when in a snippet
   show_in_snippet = true,
 
+  -- When true, will show completion window after backspacing
+  show_on_backspace = false,
+
+  -- When true, will show completion window after backspacing into a keyword
+  show_on_backspace_in_keyword = false,
+
+  -- When true, will show the completion window after accepting a completion and then backspacing into a keyword
+  show_on_backspace_after_accept = true,
+
+  -- When true, will show the completion window after entering insert mode and backspacing into keyword
+  show_on_backspace_after_insert_enter = true,
+
   -- When true, will show the completion window after typing any of alphanumerics, `-` or `_`
   show_on_keyword = true,
 
   -- When true, will show the completion window after typing a trigger character
   show_on_trigger_character = true,
+
+  -- When true, will show the completion window after entering insert mode
+  show_on_insert = false,
   
   -- LSPs can indicate when to show the completion window via trigger characters
   -- however, some LSPs (i.e. tsserver) return characters that would essentially
@@ -99,7 +114,7 @@ completion.list = {
     -- preselect = function(ctx) return vim.bo.filetype ~= 'markdown' end,
 
     -- When `true`, inserts the completion item automatically when selecting it
-    -- You may want to bind a key to the `cancel` command (default <C-e>) when using this option, 
+    -- You may want to bind a key to the `cancel` command (default <C-e>) when using this option,
     -- which will both undo the selection and hide the completion menu
     auto_insert = true,
     -- auto_insert = function(ctx) return vim.bo.filetype ~= 'markdown' end
@@ -168,6 +183,11 @@ completion.menu = {
   -- Which directions to show the window,
   -- falling back to the next direction when there's not enough space
   direction_priority = { 's', 'n' },
+  -- Can accept a function if you need more control
+  -- direction_priority = function()
+  --   if condition then return { 'n', 's' } end
+  --   return { 's', 'n' }
+  -- end,
 
   -- Whether to automatically show the window when new completion items are available
   auto_show = true,
@@ -350,6 +370,12 @@ signature = {
     -- falling back to the next direction when there's not enough space,
     -- or another window is in the way
     direction_priority = { 'n', 's' },
+    -- Can accept a function if you need more control
+    -- direction_priority = function()
+    --   if condition then return { 'n', 's' } end
+    --   return { 's', 'n' }
+    -- end,
+
     -- Disable if you run into performance issues
     treesitter_highlighting = true,
     show_documentation = true,
@@ -447,7 +473,7 @@ See the [mode specific configurations](#mode-specific) for setting sources for `
 sources = {
   -- Static list of providers to enable, or a function to dynamically enable/disable providers based on the context
   default = { 'lsp', 'path', 'snippets', 'buffer' },
-  
+
   -- You may also define providers per filetype
   per_filetype = {
     -- optionally inherit from the `default` sources
@@ -529,7 +555,7 @@ sources.providers = {
       ignored_filetypes = {},
       get_filetype = function(context)
         return vim.bo.filetype
-      end
+      end,
       -- Set to '+' to use the system clipboard, or '"' to use the unnamed register
       clipboard_register = nil,
     }
@@ -540,6 +566,8 @@ sources.providers = {
       use_show_condition = true,
       -- Whether to show autosnippets in the completion list
       show_autosnippets = true,
+      -- Whether to prefer docTrig placeholders over trig when expanding regTrig snippets
+      prefer_doc_trig = false,
     }
 
     -- For `snippets.preset == 'mini_snippets'`
@@ -563,6 +591,16 @@ sources.providers = {
       end,
       -- buffers when searching with `/` or `?`
       get_search_bufnrs = function() return { vim.api.nvim_get_current_buf() } end,
+      -- Maximum total number of characters (across all selected buffers) for which buffer completion runs synchronously. Above this, asynchronous processing is used.
+      max_sync_buffer_size = 20000,
+      -- Maximum total number of characters (across all selected buffers) for which buffer completion runs asynchronously. Above this, buffer completions are skipped to avoid performance issues.
+      max_async_buffer_size = 500000,
+      -- Whether to enable buffer source in substitute (:s) and global (:g) commands.
+      -- Note: Enabling this option will temporarily disable Neovim's 'inccommand' feature
+      -- while editing Ex commands, due to a known redraw issue (see neovim/neovim#9783).
+      -- This means you will lose live substitution previews when using :s, :smagic, or :snomagic
+      -- while buffer completions are active.
+      enable_in_ex_commands = false,
     }
   },
 
@@ -645,14 +683,22 @@ cmdline = {
   enabled = true,
   -- use 'inherit' to inherit mappings from top level `keymap` config
   keymap = { preset = 'cmdline' },
-  sources = function()
-    local type = vim.fn.getcmdtype()
-    -- Search forward and backward
-    if type == '/' or type == '?' then return { 'buffer' } end
-    -- Commands
-    if type == ':' or type == '@' then return { 'cmdline' } end
-    return {}
-  end,
+  sources = { 'buffer', 'cmdline' },
+
+  -- OR explicitly configure per cmd type
+  -- This ends up being equivalent to above since the sources disable themselves automatically
+  -- when not available. You may override their `enabled` functions via
+  -- `sources.providers.cmdline.override.enabled = function() return your_logic end`
+
+  -- sources = function()
+  --   local type = vim.fn.getcmdtype()
+  --   -- Search forward and backward
+  --   if type == '/' or type == '?' then return { 'buffer' } end
+  --   -- Commands
+  --   if type == ':' or type == '@' then return { 'cmdline', 'buffer' } end
+  --   return {}
+  -- end,
+
   completion = {
     trigger = {
       show_on_blocked_trigger_characters = {},
@@ -669,7 +715,7 @@ cmdline = {
     -- Whether to automatically show the window when new completion items are available
     menu = { auto_show = false },
     -- Displays a preview of the selected item on the current line
-    ghost_text = { enabled = true }
+    ghost_text = { enabled = true },
   }
 }
 ```
@@ -702,6 +748,7 @@ term = {
     -- Whether to automatically show the window when new completion items are available
     menu = { auto_show = nil },
     -- Displays a preview of the selected item on the current line
-    ghost_text = { enabled = nil }
+    ghost_text = { enabled = nil },
   }
 }
+```
