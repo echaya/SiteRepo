@@ -1,26 +1,26 @@
 {
     "comp_diff":{
-		"prefix":"dfcompare",
+		"prefix":";compare",
 		"body": ["$1.merge($2,indicator = True, how='outer').loc[lambda x : x['_merge']!='both']"],
 		"description": "compare 2 dataframe"
 	},
     "rename":{
-		"prefix":"dfrename",
+		"prefix":";rename",
 		"body": ["$1.rename({'$2':'$3'},axis=1,inplace=True)"],
 		"description": "rename dataframe"
 	},
     "drop":{
-		"prefix":"dfdrop",
+		"prefix":";drop",
 		"body": ["$1.drop(['$2'],axis=1,inplace=True)"],
 		"description": "drop columns from dataframe"
 	},
     "reset_index":{
-		"prefix":"dfreset_index",
+		"prefix":";reset_index",
 		"body": ["$1.reset_index(inplace=True)"],
 		"description": "reset dataframe index"
 	},
     "reset_index":{
-		"prefix":"dfset_index",
+		"prefix":";set_index",
 		"body": ["$1.set_index(['$2'], inplace=True)"],
 		"description": "set columns as dataframe index"
 	}

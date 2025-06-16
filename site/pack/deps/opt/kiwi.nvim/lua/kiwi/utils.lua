@@ -53,59 +53,138 @@ utils.ensure_directories = function(config)
 	end
 end
 
--- Check if the cursor is on a link on the line
+---
+-- Process a raw link target string.
+local process_link_target = function(target)
+	if not target or not target:match("%S") then
+		return nil
+	end
+
+	local clean_target = target:match("^%s*(.-)%s*$")
+
+	if not clean_target:match("^%a+://") and not clean_target:match("%.md$") then
+		clean_target = clean_target .. ".md"
+	end
+	return clean_target
+end
+
+---
+-- Finds all valid link targets on a single line of text.
+local find_all_link_targets = function(line)
+	local targets = {}
+
+	for file in line:gmatch("%]%(<?([^)>]+)>?%)") do
+		local processed = process_link_target(file)
+		if processed then
+			table.insert(targets, processed)
+		end
+	end
+
+	for file in line:gmatch("%[%[([^]]+)%]%]") do
+		local processed = process_link_target(file)
+		if processed then
+			table.insert(targets, processed)
+		end
+	end
+
+	return targets
+end
+
+---
+-- Checks if the cursor is on a link and returns the cleaned link target.
 utils.is_link = function(cursor, line)
 	cursor[2] = cursor[2] + 1 -- because vim counts from 0 but lua from 1
 
 	-- Pattern for [title](file)
 	local pattern1 = "%[(.-)%]%(<?([^)>]+)>?%)"
-	local start_pos = 1
+	local start_pos1 = 1
 	while true do
-		local match_start, match_end, _, file = line:find(pattern1, start_pos)
+		local match_start, match_end, _, file = line:find(pattern1, start_pos1)
 		if not match_start then
 			break
 		end
-		start_pos = match_end + 1 -- Move past the current match
-		file = utils._is_cursor_on_file(cursor, file, match_start, match_end)
-		if file then
-			return file
+		start_pos1 = match_end + 1
+
+		if cursor[2] >= match_start and cursor[2] <= match_end then
+			return process_link_target(file)
 		end
 	end
 
-	-- Pattern for [[file]]
+	-- --- Check for [[file]] ---
+	-- This pattern has one capture.
 	local pattern2 = "%[%[(.-)%]%]"
-	start_pos = 1
+	local start_pos2 = 1
 	while true do
-		local match_start, match_end, file = line:find(pattern2, start_pos)
+		local match_start, match_end, file = line:find(pattern2, start_pos2)
 		if not match_start then
 			break
 		end
-		start_pos = match_end + 1 -- Move past the current match
-		file = utils._is_cursor_on_file(cursor, file, match_start, match_end)
-		if file then
-			return "./" .. file
+		start_pos2 = match_end + 1
+
+		if cursor[2] >= match_start and cursor[2] <= match_end then
+			local processed_link = process_link_target(file)
+			if processed_link then
+				return "./" .. processed_link
+			end
 		end
 	end
 
 	return nil
 end
 
--- Private function to determine if cursor is placed on a valid file
-utils._is_cursor_on_file = function(cursor, file, match_start, match_end)
-	if cursor[2] >= match_start and cursor[2] <= match_end then
-		if not file:match("%.md$") then
-			file = file .. ".md"
+utils.cleanup_broken_links = function()
+	local choice = vim.fn.confirm("Clean up all broken links from this page?", "&Yes\n&No")
+	if choice ~= 1 then
+		vim.notify("Kiwi: Link cleanup skipped.", vim.log.levels.INFO)
+		return
+	end
+
+	local current_buf_path = vim.api.nvim_buf_get_name(0)
+	local current_dir = vim.fn.fnamemodify(current_buf_path, ":p:h")
+	local all_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+
+	local lines_to_keep = {}
+	local deleted_lines_info = {}
+
+	for i, line in ipairs(all_lines) do
+		local has_broken_link = false
+		local link_targets = find_all_link_targets(line)
+
+		for _, target in ipairs(link_targets) do
+			local full_target_path = vim.fn.fnamemodify(vim.fs.joinpath(current_dir, target), ":p")
+			if vim.fn.filereadable(full_target_path) == 0 then
+				has_broken_link = true
+				break
+			end
 		end
-		return file
+
+		if has_broken_link then
+			table.insert(deleted_lines_info, "Line " .. i .. ": " .. line)
+		else
+			table.insert(lines_to_keep, line)
+		end
+	end
+
+	if #deleted_lines_info > 0 then
+		vim.api.nvim_buf_set_lines(0, 0, -1, false, lines_to_keep)
+		local message = "Kiwi: Link cleanup complete.\nRemoved "
+			.. #deleted_lines_info
+			.. " line(s) with broken links:\n"
+			.. table.concat(deleted_lines_info, "\n")
+		vim.notify(message, vim.log.levels.INFO, {
+			on_open = function(win)
+				local width = vim.api.nvim_win_get_width(win)
+				local height = #deleted_lines_info + 3
+				vim.api.nvim_win_set_config(win, { height = height, width = math.min(width, 100) })
+			end,
+		})
+	else
+		vim.notify("Kiwi: No broken links were found.", vim.log.levels.INFO)
 	end
 end
 
 -- Prompts the user to select a wiki from a list and executes a callback with the result.
--- @param folders (table): A list of folder configuration tables.
--- @param on_complete (function): A callback function to execute with the chosen path.
---                                It receives one argument: the full path string, or nil if canceled.
 utils.choose_wiki = function(folders, on_complete)
-	-- Create a stable, indexed list of folder names for the UI select.
 	local items = {}
 	for _, folder in ipairs(folders) do
 		table.insert(items, folder.name)
@@ -133,9 +212,6 @@ utils.choose_wiki = function(folders, on_complete)
 end
 
 -- Determines the correct wiki path and executes a callback.
--- If multiple wikis exist, it prompts the user. If one, it uses it directly.
--- @param config (table): The plugin's configuration table.
--- @param on_complete (function): The callback to execute with the final path.
 utils.prompt_folder = function(config, on_complete)
 	if not config.folders or #config.folders == 0 then
 		vim.notify("Kiwi: No wiki folders configured.", vim.log.levels.ERROR)
@@ -153,18 +229,13 @@ utils.prompt_folder = function(config, on_complete)
 end
 
 -- Scans a base path recursively to find all directories containing an index file.
--- @param search_path (string): The top-level directory to begin the scan from.
--- @param index_filename (string): The name of the index file to locate.
--- @return (table): A list of absolute paths to the directories containing the index file.
 utils.find_nested_roots = function(search_path, index_filename)
 	local roots = {}
 	if not search_path or search_path == "" then
 		return roots
 	end
 
-	-- The '**' pattern recursively searches all subdirectories at any depth.
 	local search_pattern = vim.fs.joinpath("**", index_filename)
-	-- The third 'true' enables list output, the second 'true' handles path separators. (Note: Signature is path, expr, keep_empty, list)
 	local index_files = vim.fn.globpath(search_path, search_pattern, false, true)
 
 	for _, file_path in ipairs(index_files) do
@@ -176,8 +247,6 @@ utils.find_nested_roots = function(search_path, index_filename)
 end
 
 -- Normalizes a file path for reliable comparison on any OS.
--- @param path (string) The file path to normalize.
--- @return (string) The normalized path.
 utils.normalize_path_for_comparison = function(path)
 	if not path then
 		return ""
