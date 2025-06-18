@@ -1,27 +1,37 @@
 {
     "comp_diff":{
-		"prefix":";compare",
-		"body": ["$1.merge($2,indicator = True, how='outer').loc[lambda x : x['_merge']!='both']"],
+		"prefix":"~compare",
+		"body": [".merge($1,indicator = True, how='outer', on=['$2']).loc[lambda x : x['_merge']!='both']"],
 		"description": "compare 2 dataframe"
 	},
     "rename":{
-		"prefix":";rename",
-		"body": ["$1.rename({'$2':'$3'},axis=1,inplace=True)"],
+		"prefix":"~rename",
+		"body": [".rename({'$1':'$2'}, axis=1, inplace=True)"],
 		"description": "rename dataframe"
 	},
     "drop":{
-		"prefix":";drop",
-		"body": ["$1.drop(['$2'],axis=1,inplace=True)"],
+		"prefix":"~drop",
+		"body": [".drop(['$1'], axis=1,, inplace=True)"],
 		"description": "drop columns from dataframe"
 	},
     "reset_index":{
-		"prefix":";reset_index",
-		"body": ["$1.reset_index(inplace=True)"],
+		"prefix":"~reset_index",
+		"body": [".reset_index(inplace=True)"],
 		"description": "reset dataframe index"
 	},
-    "reset_index":{
-		"prefix":";set_index",
-		"body": ["$1.set_index(['$2'], inplace=True)"],
+    "set_index":{
+		"prefix":"~set_index",
+		"body": [".set_index(['$1'], inplace=True)"],
 		"description": "set columns as dataframe index"
+	},
+    "print_1st_row":{
+		"prefix":"~print_1st_row",
+		"body": ["print($1.iloc[0].T)"],
+		"description": "print first row"
+	},
+    "print_last_row":{
+		"prefix":"~print_last_row",
+		"body": ["print($1.iloc[-1].T)"],
+		"description": "print last row"
 	}
 }

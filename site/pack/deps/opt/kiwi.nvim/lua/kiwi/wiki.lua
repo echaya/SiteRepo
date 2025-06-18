@@ -1,4 +1,5 @@
 local config = require("kiwi.config")
+local todo = require("kiwi.todo")
 local utils = require("kiwi.utils")
 
 local M = {}
@@ -29,41 +30,77 @@ M._open_file = function(full_path, open_cmd)
 end
 
 M._create_buffer_keymaps = function(buffer_number)
-	-- TODO to expose the keymap for override
-	-- Helper function to set keymaps with descriptions cleanly.
-	local function set_keymap(mode, key, command, description)
-		vim.api.nvim_buf_set_keymap(buffer_number, mode, key, command, {
-			noremap = true,
-			silent = true,
-			nowait = true,
-			desc = "Kiwi: " .. description,
-		})
+	utils.make_repeatable("n", "<Plug>(KiwiToggleTask)", todo.toggle_task)
+	local link_pattern = [[\(\[.\{-}\](.\{-})\)\|\(\[\[.\{-}\]\]\)]]
+
+	local actions = {
+		follow_link = { mode = "n", rhs = require("kiwi.wiki").open_link, desc = "Open Link" },
+		follow_link_vsplit = {
+			mode = "n",
+			rhs = function()
+				require("kiwi.wiki").open_link("vsplit")
+			end,
+			desc = "Open Link (VSplit)",
+		},
+		follow_link_split = {
+			mode = "n",
+			rhs = function()
+				require("kiwi.wiki").open_link("split")
+			end,
+			desc = "Open Link (Split)",
+		},
+		next_link = {
+			mode = "n",
+			rhs = (function()
+				local p = link_pattern
+				return string.format(":let @/=%s<CR>nl:noh<CR>", vim.fn.string(p))
+			end)(),
+			desc = "Jump to Next Link",
+		},
+		prev_link = {
+			mode = "n",
+			rhs = (function()
+				local p = link_pattern
+				return string.format(":let @/=%s<CR>NNl:noh<CR>", vim.fn.string(p))
+			end)(),
+			desc = "Jump to Prev Link",
+		},
+		jump_to_index = { mode = "n", rhs = require("kiwi.wiki").jump_to_index, desc = "Jump to Index" },
+		delete_page = { mode = "n", rhs = require("kiwi.wiki").delete_wiki, desc = "Delete Wiki Page" },
+		cleanup_links = { mode = "n", rhs = utils.cleanup_broken_links, desc = "Clean Broken Links" },
+		toggle_task = { mode = "n", rhs = "<Plug>(KiwiToggleTask)", desc = "Toggle Task Status", remap = true },
+
+		create_link = {
+			mode = "v",
+			rhs = ":'<,'>lua require('kiwi').create_or_open_wiki_file()<CR>",
+			desc = "Create Link from Selection",
+		},
+		create_link_vsplit = {
+			mode = "v",
+			rhs = ":'<,'>lua require('kiwi').create_or_open_wiki_file('vsplit')<CR>",
+			desc = "Create Link from Selection (VSplit)",
+		},
+		create_link_split = {
+			mode = "v",
+			rhs = ":'<,'>lua require('kiwi').create_or_open_wiki_file('split')<CR>",
+			desc = "Create Link from Selection (Split)",
+		},
+	}
+
+	for _, maps in pairs(config.keymaps) do -- e.g., group = "normal"
+		for name, lhs in pairs(maps) do -- e.g., name = "toggle_task", lhs = "<leader>wt"
+			if lhs and lhs ~= "" and actions[name] then
+				local action = actions[name]
+				-- This is now a direct, clean call to the modern API.
+				vim.keymap.set(action.mode, lhs, action.rhs, {
+					buffer = buffer_number,
+					desc = "Kiwi: " .. action.desc,
+					remap = action.remap, -- Correctly handles remap = true for our <Plug> map
+					silent = true,
+				})
+			end
+		end
 	end
-
-	-- Visual mode keymaps for creating links from a selection
-	set_keymap("v", "<CR>", ":'<,'>lua require('kiwi').create_or_open_wiki_file()<CR>", "Create Link from Selection")
-	set_keymap(
-		"v",
-		"<S-CR>",
-		":'<,'>lua require('kiwi').create_or_open_wiki_file('vsplit')<CR>",
-		"Create Link from Selection (VSplit)"
-	)
-	set_keymap(
-		"v",
-		"<C-CR>",
-		":'<,'>lua require('kiwi').create_or_open_wiki_file('split')<CR>",
-		"Create Link from Selection (Split)"
-	)
-
-	-- Normal mode keymaps for following links
-	set_keymap("n", "<CR>", ':lua require("kiwi").open_link()<CR>', "Open Link Under Cursor")
-	set_keymap("n", "<S-CR>", ':lua require("kiwi").open_link("vsplit")<CR>', "Open Link Under Cursor (VSplit)")
-	set_keymap("n", "<C-CR>", ':lua require("kiwi").open_link("split")<CR>', "Open Link Under Cursor (Split)")
-	-- TODO to set the search using vim.fn.search
-	set_keymap("n", "<Tab>", ':let @/="\\\\[.\\\\{-}\\\\]\\("<CR>nl:noh<cr>', "Jump to Next Link")
-	set_keymap("n", "<S-Tab>", ':let @/="\\\\[.\\\\{-}\\\\]\\("<CR>NNl:noh<cr>', "Jump to Prev Link")
-	set_keymap("n", "<Backspace>", ':lua require("kiwi").jump_to_index()<CR>', "Jump to Index")
-	set_keymap("n", "<leader>wd", ':lua require("kiwi.wiki").delete_wiki()<CR>', "Delete Wiki Page")
 end
 
 -- Private handler that finds a link under the cursor and delegates opening to _open_file.
@@ -85,36 +122,44 @@ M._open_link_handler = function(open_cmd)
 	end
 end
 
-M.open_wiki_index = function(name)
+local open_wiki_index = function(name, open_cmd)
 	local function open_index_from_path(wiki_path)
 		if not wiki_path then
 			return
 		end
 		config.path = wiki_path
 		local wiki_index_path = vim.fs.joinpath(config.path, "index.md")
-		M._open_file(wiki_index_path)
+		M._open_file(wiki_index_path, open_cmd)
 	end
 
-	if config.folders then
+	if config.wiki_dirs then
 		if name then
 			-- User specified a wiki name directly, find it and proceed.
 			local found_path = nil
-			for _, props in ipairs(config.folders) do
-				if props.name == name then
-					found_path = props.path
+			for _, wiki_dir in ipairs(config.wiki_dirs) do
+				if wiki_dir.name == name then
+					found_path = wiki_dir.path
 					break
 				end
 			end
 			open_index_from_path(found_path) -- Open it (or do nothing if not found).
 		else
-			utils.prompt_folder(config, open_index_from_path)
+			utils.prompt_wiki_dir(config, open_index_from_path)
 		end
 	else
 		open_index_from_path(config.path)
 	end
 end
 
--- Create a new Wiki entry in Journal folder on highlighting word and pressing <CR>
+M.open_wiki = function(name)
+	open_wiki_index(name)
+end
+
+M.open_wiki_in_new_tab = function(name)
+	open_wiki_index(name, "tabnew")
+end
+
+-- Create a new Wiki entry in Journal wiki_dir on highlighting word and pressing <CR>
 M.create_or_open_wiki_file = function(open_cmd)
 	local selection_start = vim.fn.getpos("'<")
 	local selection_end = vim.fn.getpos("'>")
@@ -157,9 +202,9 @@ M.delete_wiki = function()
 
 	local file_path = vim.api.nvim_buf_get_name(0)
 	local file_name = vim.fn.fnamemodify(file_path, ":t")
-	local root_index_path = vim.fs.joinpath(root, "index.md")
-
-	if vim.fn.fnamemodify(file_path, ":p") == root_index_path then
+	local normalized_root_index_path = utils.normalize_path_for_comparison(vim.fs.joinpath(root, "index.md"))
+	local normalized_file_path = utils.normalize_path_for_comparison(vim.fn.fnamemodify(file_path, ":p"))
+	if normalized_root_index_path == normalized_file_path then
 		vim.notify("Kiwi: Cannot delete the root index.md file.", vim.log.levels.ERROR)
 		return
 	end
@@ -187,3 +232,4 @@ M.delete_wiki = function()
 end
 
 return M
+

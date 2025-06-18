@@ -190,7 +190,7 @@ end
 
 ---
 -- Main function to toggle a task's state or create a new task from a list item.
-todo.toggle = function()
+todo.toggle_task = function()
 	--- Read all lines from the current buffer into a table. This is the core performance improvement.
 	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 	local original_cursor = vim.api.nvim_win_get_cursor(0)
@@ -236,3 +236,4 @@ todo.toggle = function()
 end
 
 return todo
+
