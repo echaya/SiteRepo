@@ -334,12 +334,14 @@ MiniJump2d.config = {
 ---@param opts table|nil Configuration of jumping, overriding global and buffer
 ---   local values. Has the same structure as |MiniJump2d.config|
 ---   without <mappings> field. Extra allowed fields:
----     - <hl_group> - which highlight group to use for first step.
----       Default: "MiniJump2dSpot".
----     - <hl_group_ahead> - which highlight group to use for second step and later.
----       Default: "MiniJump2dSpotAhead".
----     - <hl_group_dim> - which highlight group to use dimming used lines.
----       Default: "MiniJump2dSpotDim".
+---     - <hl_group> - highlight group for first step.
+---       Default: `"MiniJump2dSpot"`.
+---     - <hl_group_ahead> - highlight group for second and later steps.
+---       Default: `"MiniJump2dSpotAhead"`.
+---     - <hl_group_dim> - highlight group for dimming used lines.
+---       Default: `"MiniJump2dDim"`.
+---     - <hl_group_unique> - highlight group for unique next step.
+---       Default: `"MiniJump2dSpotUnique"`.
 ---
 ---@usage >lua
 ---   -- Start default jumping
@@ -816,10 +818,11 @@ end
 
 -- Jump spots -----------------------------------------------------------------
 H.spots_compute = function(opts)
-  local win_id_init = vim.api.nvim_get_current_win()
+  local win_id_init, allowed = vim.api.nvim_get_current_win(), opts.allowed_windows
   local win_id_arr = vim.tbl_filter(function(win_id)
-    if win_id == win_id_init then return opts.allowed_windows.current end
-    return opts.allowed_windows.not_current
+    if not vim.api.nvim_win_get_config(win_id).focusable then return false end
+    if win_id == win_id_init then return allowed.current end
+    return allowed.not_current
   end, H.tabpage_list_wins(0))
 
   local res = {}

@@ -244,7 +244,7 @@ function Render:padding(box)
     end
     for row = self.node.start_row, self.node.end_row - 1 do
         self.marks:add(false, row, 0, {
-            priority = 0,
+            priority = 100,
             virt_text = line:get(),
             virt_text_pos = 'inline',
         })
@@ -266,9 +266,9 @@ function Render:border(box, above)
     local icon = above and self.config.above or self.config.below
 
     local line = self:line():pad(box.margin)
-    line:text(icon:rep(box.padding), bg)
-    line:text(icon:rep(prefix), fg)
-    line:text(icon:rep(width - box.padding - prefix), bg)
+    line:rep(icon, box.padding, bg)
+    line:rep(icon, prefix, fg)
+    line:rep(icon, width - box.padding - prefix, bg)
 
     local virtual = self.config.border_virtual
     local row, target = self.node:line(above and 'above' or 'below', 1)
