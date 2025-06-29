@@ -1,6 +1,5 @@
-local state = require("neowiki.state")
-
 local util = {}
+local is_windows = vim.fn.has("win32") == 1
 
 ---
 -- Recursively merges two tables. Values in `override` take precedence.
@@ -21,13 +20,114 @@ util.deep_merge = function(base, override)
 end
 
 ---
--- Gets the default wiki path, which is `~/wiki`.
--- @return (string): The default wiki path.
+-- Filters a table by applying a predicate function to each item.
+-- This is a pure function that does not depend on any external state or modules.
+-- @param list (table): The list to filter.
+-- @param predicate (function): A function that takes an item and returns `true` to keep it or `false` to discard it.
+-- @return (table): A new table containing only the items for which the predicate returned true.
 --
-util.get_default_path = function()
-  return vim.fs.joinpath(vim.loop.os_homedir(), "wiki")
+util.filter_list = function(list, predicate)
+  local result = {}
+  for _, item in ipairs(list) do
+    if predicate(item) then
+      table.insert(result, item)
+    end
+  end
+  return result
 end
 
+--- Normalizes a given path for reliable comparison.
+-- @param path (string) The file or directory path.
+-- @return (string) A clean, absolute path using forward slashes.
+local normalize_path = function(path)
+  -- 1. Get the absolute path.
+  local abs_path = vim.fn.fnamemodify(path, ":p")
+  -- 2. Standardize to forward slashes.
+  abs_path = abs_path:gsub("\\", "/")
+  -- 3. Collapse any multiple slashes into a single one (e.g., "a//b" -> "a/b").
+  --    This is critical to prevent empty strings when splitting the path.
+  abs_path = abs_path:gsub("//+", "/")
+  -- 4. Remove any trailing slash to ensure consistency before splitting.
+  return abs_path:gsub("/$", "")
+end
+
+--- Calculates the relative path from a source directory to a target file/directory.
+-- @param from_path (string) The absolute or relative path of the source. Can be a directory or a file.
+-- @param to_path (string) The absolute or relative path of the target file or directory.
+-- @return (string) The relative path from `from_path` to `to_path`.
+function util.get_relative_path(from_path, to_path)
+  -- Step 1: Determine the correct base directory from `from_path`.
+  local from_base_path
+  -- Check if the provided 'from_path' is a directory.
+  if vim.fn.isdirectory(from_path) == 1 then
+    -- If it's a directory, use it directly.
+    from_base_path = from_path
+  else
+    -- If it's a file, get its containing directory using ':h'.
+    from_base_path = vim.fn.fnamemodify(from_path, ":h")
+  end
+
+  -- Normalize both paths.
+  local from_dir = normalize_path(from_base_path)
+  local to_abs = normalize_path(to_path)
+
+  local from_parts = vim.split(from_dir, "/")
+  local to_parts = vim.split(to_abs, "/")
+
+  -- On Windows, if the drives are different, a relative path is not possible.
+  if
+    is_windows
+    and from_parts[1]
+    and to_parts[1]
+    and from_parts[1]:lower() ~= to_parts[1]:lower()
+  then
+    return to_abs -- Fallback to the absolute path of the target.
+  end
+
+  -- Step 2: Find the last common directory in the paths.
+  local common_base_idx = 0
+  local max_common_len = math.min(#from_parts, #to_parts)
+  for i = 1, max_common_len do
+    local part_from = is_windows and from_parts[i]:lower() or from_parts[i]
+    local part_to = is_windows and to_parts[i]:lower() or to_parts[i]
+
+    if part_from ~= part_to then
+      break
+    end
+    common_base_idx = i
+  end
+
+  local rel_parts = {}
+
+  -- Step 3: For each directory we need to move up from `from_dir`, add '..'.
+  for _ = common_base_idx + 1, #from_parts do
+    table.insert(rel_parts, "..")
+  end
+
+  -- Step 4: Add the remaining parts of the `to_path` to navigate to the target.
+  for i = common_base_idx + 1, #to_parts do
+    table.insert(rel_parts, to_parts[i])
+  end
+
+  -- If paths resolve to the same directory, the relative path is './'.
+  if #rel_parts == 0 then
+    return "./"
+  end
+
+  local final_path = table.concat(rel_parts, "/")
+
+  -- Prepend "./" if the path doesn't already indicate it's relative.
+  if not final_path:match("^%.%.?/") then
+    final_path = "./" .. final_path
+  end
+
+  -- If the result is just '.', return './' for consistency in links.
+  if final_path == "." then
+    return "./"
+  end
+
+  return final_path
+end
 ---
 -- Sorts a list of wiki path objects by path length, descending.
 -- This ensures that more specific (deeper) paths are matched first.
@@ -76,175 +176,6 @@ util.ensure_path_exists = function(path)
 end
 
 ---
--- Processes a raw link target, cleaning it and appending the configured extension if necessary.
--- @param target (string): The raw link target string (e.g., "my page").
--- @return (string|nil): The processed link target (e.g., "my_page.md"), or nil.
---
-local process_link_target = function(target)
-  if not target or not target:match("%S") then
-    return nil
-  end
-  local clean_target = target:match("^%s*(.-)%s*$")
-
-  local ext = state.markdown_extension
-  if not clean_target:match("^%a+://") and not clean_target:match("%.%w+$") then
-    clean_target = clean_target .. ext
-  end
-  return clean_target
-end
-
----
--- Finds all valid markdown link targets on a single line of text.
--- @param line (string): The line to search.
--- @return (table): A list of processed link targets found on the line.
---
-util.find_all_link_targets = function(line)
-  local targets = {}
-
-  -- Find standard markdown links: [text](target)
-  for file in line:gmatch("%]%(<?([^)>]+)>?%)") do
-    local processed = process_link_target(file)
-    if processed then
-      table.insert(targets, processed)
-    end
-  end
-
-  -- Find wikilinks: [[target]]
-  for file in line:gmatch("%[%[([^]]+)%]%]") do
-    local processed = process_link_target(file)
-    if processed then
-      table.insert(targets, processed)
-    end
-  end
-
-  return targets
-end
-
----
--- Processes the text under the cursor to find and return a markdown link target, if one exists.
--- @param cursor (table): The cursor position `{row, col}`.
--- @param line (string): The content of the current line.
--- @return (string|nil): The processed link target if the cursor is on a link, otherwise nil.
---
-util.process_link = function(cursor, line)
-  cursor[2] = cursor[2] + 1 -- Adjust to 1-based indexing for find.
-  -- Pattern for [title](file)
-  local pattern1 = "%[(.-)%]%(<?([^)>]+)>?%)"
-  local start_pos1 = 1
-  while true do
-    local match_start, match_end, _, file = line:find(pattern1, start_pos1)
-    if not match_start then
-      break
-    end
-    start_pos1 = match_end + 1
-
-    if cursor[2] >= match_start and cursor[2] <= match_end then
-      return process_link_target(file)
-    end
-  end
-  -- Pattern for [[file]]
-  local pattern2 = "%[%[(.-)%]%]"
-  local start_pos2 = 1
-  while true do
-    local match_start, match_end, file = line:find(pattern2, start_pos2)
-    if not match_start then
-      break
-    end
-    start_pos2 = match_end + 1
-
-    if cursor[2] >= match_start and cursor[2] <= match_end then
-      local processed_link = process_link_target(file)
-      if processed_link then
-        return "./" .. processed_link
-      end
-    end
-  end
-
-  return nil
-end
-
----
--- Displays a `vim.ui.select` prompt for the user to choose a wiki.
--- @param wiki_dirs (table): A list of configured wiki directory objects.
--- @param on_complete (function): Callback to execute with the selected wiki path.
---
-local choose_wiki = function(wiki_dirs, on_complete)
-  local items = {}
-  for _, wiki_dir in ipairs(wiki_dirs) do
-    table.insert(items, wiki_dir.name)
-  end
-  vim.ui.select(items, {
-    prompt = "Select wiki:",
-    format_item = function(item)
-      return "  " .. item
-    end,
-  }, function(choice)
-    if not choice then
-      vim.notify("Wiki selection cancelled.", vim.log.levels.INFO, { title = "neowiki" })
-      on_complete(nil)
-      return
-    end
-    for _, wiki_dir in pairs(wiki_dirs) do
-      if wiki_dir.name == choice then
-        on_complete(wiki_dir.path)
-        return
-      end
-    end
-    vim.notify(
-      "Error: Could not find path for selected wiki.",
-      vim.log.levels.ERROR,
-      { title = "neowiki" }
-    )
-    on_complete(nil)
-  end)
-end
-
----
--- Prompts the user to select a wiki if multiple are configured; otherwise,
--- directly provides the path to the single configured wiki.
--- @param config (table): The plugin configuration table.
--- @param on_complete (function): Callback to execute with the resulting wiki path.
---
-util.prompt_wiki_dir = function(config, on_complete)
-  if not config.wiki_dirs or #config.wiki_dirs == 0 then
-    vim.notify("No wiki directories configured.", vim.log.levels.ERROR, { title = "neowiki" })
-    if on_complete then
-      on_complete(nil)
-    end
-    return
-  end
-
-  if #config.wiki_dirs > 1 then
-    choose_wiki(config.wiki_dirs, on_complete)
-  else
-    on_complete(config.wiki_dirs[1].path)
-  end
-end
-
----
--- Finds all directories under a given search_path that contain the specified index_filename.
--- @param search_path (string): The base path to search from.
--- @param index_filename (string): The name of the index file (e.g., "index.md").
--- @return (table): A list of absolute paths to the directories containing the index file.
---
-util.find_nested_roots = function(search_path, index_filename)
-  local roots = {}
-  if not search_path or search_path == "" then
-    return roots
-  end
-
-  local search_pattern = vim.fs.joinpath("**", index_filename)
-  local index_files = vim.fn.globpath(search_path, search_pattern, false, true)
-
-  for _, file_path in ipairs(index_files) do
-    local root_path = vim.fn.fnamemodify(file_path, ":p:h")
-    table.insert(roots, root_path)
-  end
-
-  return roots
-end
-
----
 -- Normalizes a file path for case-insensitive and slash-consistent comparison.
 -- @param path (string): The file path to normalize.
 -- @return (string): The normalized path.
@@ -253,7 +184,7 @@ util.normalize_path_for_comparison = function(path)
   if not path then
     return ""
   end
-  return path:lower():gsub("\\", "/"):gsub("//", "/")
+  return normalize_path(path):lower()
 end
 
 ---
@@ -279,6 +210,159 @@ util.make_repeatable = function(mode, lhs, rhs)
     pcall(vim.fn["repeat#set"], vim.api.nvim_replace_termcodes(lhs, true, true, true))
   end)
   return lhs
+end
+
+---
+-- Opens a given URL in the default external application (e.g., a web browser).
+-- This function is cross-platform and supports macOS, Linux, and Windows.
+-- @param url (string): The URL to open.
+--
+util.open_external = function(url)
+  if not url or url == "" then
+    return
+  end
+
+  local os_name = vim.loop.os_uname().sysname
+  local command
+
+  if os_name == "Darwin" then
+    -- Use `shellescape` without the second argument for POSIX shells.
+    command = "open " .. vim.fn.shellescape(url)
+  elseif os_name == "Linux" then
+    command = "xdg-open " .. vim.fn.shellescape(url)
+  elseif os_name:find("Windows") then
+    -- Use `shellescape` with `true` for Windows' cmd.exe.
+    command = "start " .. vim.fn.shellescape(url, true)
+  end
+
+  if command then
+    vim.cmd("!" .. command)
+    vim.notify("Opening in external app: " .. url, vim.log.levels.INFO, { title = "neowiki" })
+  else
+    vim.notify(
+      "Unsupported OS for opening external links: " .. os_name,
+      vim.log.levels.WARN,
+      { title = "neowiki" }
+    )
+  end
+end
+
+---
+-- Helper function to detect if the current window is a float.
+-- @return boolean True if the window is a float, false otherwise.
+--
+util.is_float = function()
+  local win_id = vim.api.nvim_get_current_win()
+  local conf = vim.api.nvim_win_get_config(win_id)
+  return conf.relative and conf.relative ~= ""
+end
+
+util.is_web_link = function(target)
+  if not target or target == "" then
+    return false
+  end
+  -- Returns true if the string starts with a protocol like http:// or with www.
+  return target:match("^%a+://") or target:match("^www%.")
+end
+
+-- Populates the quickfix list with the provided broken link information and opens it.
+-- @param broken_links_info (table) A list of objects, each with `filename`, `lnum` and `text`
+--
+util.populate_quickfix_list = function(quickfix_info, title)
+  if not quickfix_info or #quickfix_info == 0 then
+    return
+  end
+
+  local qf_list = {}
+  for _, info in ipairs(quickfix_info) do
+    table.insert(qf_list, {
+      filename = info.filename,
+      lnum = info.lnum,
+      text = info.text,
+    })
+  end
+
+  if #qf_list > 0 then
+    -- Set the quickfix list with our findings.
+    vim.fn.setqflist(qf_list)
+    -- Open the quickfix window to display the list.
+    vim.cmd("copen")
+
+    -- Use the provided title or a sensible default.
+    local notification_message = title or (#qf_list .. " item(s) added to quickfix list.")
+    vim.notify(notification_message, vim.log.levels.INFO, { title = "neowiki" })
+  end
+end
+
+---
+-- Processes a raw link target, cleaning it and appending the configured extension if necessary.
+-- @param target (string): The raw link target string (e.g., "my page").
+-- @param ext (string): The extension (e.g., ".md").
+-- @return (string|nil): The processed link target (e.g., "my_page.md"), or nil.
+--
+util.process_link_target = function(target, ext)
+  if not target or not target:match("%S") then
+    return nil
+  end
+  local clean_target = target:match("^%s*(.-)%s*$")
+
+  if util.is_web_link(clean_target) then
+    return clean_target
+  end
+
+  local has_extension = clean_target:match("%.%w+$")
+  if not has_extension then
+    clean_target = clean_target .. ext
+  end
+  return clean_target
+end
+
+---
+-- Reads a file, applies a list of replacements, and writes it back.
+-- @param file_path (string): The absolute path to the file to modify.
+-- @param replacements (table): A list of tables, each with a `search` and `replace` key.
+--   e.g., {{ search = "foo", replace = "bar" }, { search = "baz", replace = "qux" }}
+-- @return (boolean, string|nil): Returns true on success, or false and an error message.
+--
+util.replace_in_file = function(file_path, replacements)
+  -- Ensure the file is readable before proceeding.
+  if vim.fn.filereadable(file_path) == 0 then
+    return false, "File not readable: " .. file_path
+  end
+
+  local ok, lines = pcall(vim.fn.readfile, file_path)
+  if not ok or not lines then
+    return false, "Failed to read file: " .. file_path
+  end
+
+  local was_modified = false
+  for i, line in ipairs(lines) do
+    local line_was_modified = false
+    for _, rep in ipairs(replacements) do
+      -- Escape the search string to ensure it's treated as a literal string.
+      -- This prevents issues with special characters in filenames or link formats.
+      local search_pattern = vim.pesc(rep.search)
+      local new_line, count = line:gsub(search_pattern, rep.replace)
+      if count > 0 then
+        line = new_line -- Use the updated line for any subsequent replacements
+        line_was_modified = true
+      end
+    end
+
+    if line_was_modified then
+      lines[i] = line
+      was_modified = true
+    end
+  end
+
+  if was_modified then
+    local write_ok, write_err = pcall(vim.fn.writefile, lines, file_path)
+    if not write_ok then
+      return false, "Failed to write to file: " .. (write_err or "unknown error")
+    end
+  end
+
+  return true
 end
 
 return util

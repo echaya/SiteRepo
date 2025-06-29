@@ -1,8 +1,9 @@
 local config = require("neowiki.config")
 local util = require("neowiki.util")
+local finder = require("neowiki.finder")
 local wiki = require("neowiki.wiki")
-local gtd = require("neowiki.gtd")
 local state = require("neowiki.state")
+local wiki_action = require("neowiki.wiki_action")
 
 local M = {}
 local markdown_patterns = {
@@ -14,7 +15,7 @@ local markdown_patterns = {
 
 --- Public API ---
 
-M.VERSION = "0.1.0"
+M.VERSION = "0.2.0"
 M.open_wiki = wiki.open_wiki
 M.open_wiki_new_tab = wiki.open_wiki_new_tab
 M.open_wiki_floating = wiki.open_wiki_floating
@@ -40,7 +41,7 @@ local function process_wiki_paths(local_config)
     end
   else
     -- Fallback to default path if no wiki_dirs are provided.
-    local default_path = util.get_default_path()
+    local default_path = wiki.get_default_path()
     local resolved_path = util.resolve_path(default_path)
     if resolved_path then
       util.ensure_path_exists(resolved_path)
@@ -53,7 +54,7 @@ local function process_wiki_paths(local_config)
     all_roots_set[path] = true
 
     -- Find nested roots using the full index_file name from config.
-    local nested_roots = util.find_nested_roots(path, local_config.index_file)
+    local nested_roots = finder.find_nested_roots(path, local_config.index_file)
     for _, nested_root in ipairs(nested_roots) do
       all_roots_set[nested_root] = true
     end
@@ -144,25 +145,15 @@ M.setup = function(opts)
   vim.api.nvim_create_autocmd("BufEnter", {
     group = neowiki_augroup,
     pattern = markdown_patterns,
-    callback = wiki.setup_buffer,
-    desc = "Set neowiki keymaps for markdown files in wiki directories.",
-  })
-
-  -- Add an autocommand to update progress display on text changes.
-  vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
-    group = neowiki_augroup,
-    pattern = markdown_patterns,
     callback = function()
-      -- Debounce the function to prevent it from running on every keystroke.
-      vim.defer_fn(function()
-        if vim.b.wiki_root and vim.api.nvim_buf_is_valid(0) then
-          gtd.run_full_validation()
-          gtd.update_progress()
-        end
-      end, 200) -- 200ms delay
+      wiki.setup_buffer()
+      if vim.b.wiki_root then
+        require("neowiki.gtd").attach_to_buffer(vim.api.nvim_get_current_buf())
+      end
     end,
-    desc = "Update neowiki gtd progress and state on text change.",
+    desc = "Set neowiki keymaps for markdown files in wiki directories.",
   })
 end
 
 return M
+

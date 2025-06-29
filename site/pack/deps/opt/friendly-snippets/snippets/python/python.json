@@ -235,5 +235,16 @@
       "\t$0"
     ],
     "description": "use importlib to reload package"
+  },
+    "reload package": {
+    "prefix": "gensummary",
+    "body": [
+      "if __name__ == \"__main__\":",
+      "\tfrom btutils.bt_functools import gen_summary_file",
+      "\tdf_input = pd.read_csv(file_name)",
+      "\tgen_summary_file('$1', df_input, dict_result, lst_benchmark=['$2', '$3'])",
+      "\t$0"
+    ],
+    "description": "generate backtest summay"
   }
 }

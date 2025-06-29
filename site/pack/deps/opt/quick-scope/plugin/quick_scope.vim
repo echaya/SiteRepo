@@ -99,6 +99,12 @@ else
   endfor
 endif
 
+for mapmode in ['nnoremap', 'onoremap', 'xnoremap']
+  for motion in split('FT', '\zs')
+    execute printf(mapmode . ' <expr> <Plug>(QuickScopeWallhacks%s) quick_scope#Wallhacks("%s")', motion, motion)
+  endfor
+  execute printf(mapmode . ' <expr> <Plug>(QuickScopeWallhacks) quick_scope#Wallhacks()')
+endfor
 " User commands --------------------------------------------------------------
 command! -nargs=0 QuickScopeToggle call quick_scope#Toggle()
 
@@ -173,4 +179,3 @@ call s:set_highlight_colors()
 
 let &cpo = s:cpo_save
 unlet s:cpo_save
-
