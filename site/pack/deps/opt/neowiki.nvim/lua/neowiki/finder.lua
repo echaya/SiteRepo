@@ -55,7 +55,7 @@ local find_files = function(search_path, search_term, search_type)
     end
   end
 
-  if vim.fn.executable("git") == 1 and vim.fn.isdirectory(vim.fs.joinpath(search_path, ".git")) then
+  if vim.fn.executable("git") == 1 and vim.fn.isdirectory(util.join_path(search_path, ".git")) then
     command = { "git", "-C", search_path, "ls-files", "--cached", "--others", "--exclude-standard" }
     local all_files = vim.fn.systemlist(command)
     if vim.v.shell_error == 0 then
@@ -74,7 +74,7 @@ local find_files = function(search_path, search_term, search_type)
 
         if should_add then
           -- git ls-files returns paths relative to `search_path`, so join them to make them absolute.
-          table.insert(results, vim.fs.joinpath(search_path, file))
+          table.insert(results, util.join_path(search_path, file))
         end
       end
       -- vim.notify("git is used")
@@ -232,7 +232,8 @@ finder.find_broken_links_in_buffer = function()
     for _, target in ipairs(link_targets) do
       -- Ignore external URLs when checking for broken file links.
       if not util.is_web_link(target) then
-        local full_target_path = vim.fn.fnamemodify(vim.fs.joinpath(current_dir, target), ":p")
+        local full_target_path = util.join_path(current_dir, target)
+        full_target_path = vim.fn.fnamemodify(full_target_path, ":p")
         -- A link is considered broken if the target file isn't readable.
         if vim.fn.filereadable(full_target_path) == 0 then
           has_broken_link_on_line = true
@@ -259,7 +260,7 @@ end
 -- @param search_path (string) The absolute path of the directory to search within.
 -- @param target_filename (string) The filename to search for in links.
 -- @return (table|nil) A list of match objects, or nil if rg is not available or finds nothing.
---   Each object contains: { file = absolute_path, lnum = line_number, line = text_of_line }
+--   Each object contains: { file = absolute_path, lnum = line_number, text = text_of_line }
 finder.find_backlinks = function(search_path, target_filename)
   if vim.fn.executable("rg") ~= 1 then
     return nil -- Ripgrep is required for this enhanced search.
@@ -308,6 +309,41 @@ finder.find_backlinks = function(search_path, target_filename)
     end
   end
 
+  return #matches > 0 and matches or nil
+end
+
+---
+-- Uses native lua to find all backlinks to wiki index file
+-- @param search_targets (table) A list of search target files
+-- @return (table|nil) A list of match objects, or nil if none is found
+--   Each object contains: { file = absolute_path, lnum = line_number, text = text_of_line }
+finder.find_backlink_fallback = function(search_targets, search_term)
+  vim.notify(
+    "rg not found. Falling back to searching the immediate index file.",
+    vim.log.levels.INFO,
+    { title = "neowiki" }
+  )
+  local matches = {}
+  for file_path, _ in pairs(search_targets) do
+    if vim.fn.filereadable(file_path) == 1 then
+      local all_lines = vim.fn.readfile(file_path)
+      for i, line in ipairs(all_lines) do
+        if line:find(search_term, 1, true) then
+          table.insert(matches, {
+            file = file_path,
+            lnum = i,
+            text = line,
+          })
+        end
+      end
+    else
+      vim.notify(
+        "Could not read " .. file_path .. " for backlink search: " .. file_path,
+        vim.log.levels.WARN,
+        { title = "neowiki" }
+      )
+    end
+  end
   return #matches > 0 and matches or nil
 end
 

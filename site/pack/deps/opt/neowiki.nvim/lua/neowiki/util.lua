@@ -36,6 +36,13 @@ util.filter_list = function(list, predicate)
   return result
 end
 
+util.delete_target_buffer = function(abs_path)
+  local old_bufnr = vim.fn.bufnr(abs_path)
+  if old_bufnr ~= -1 then
+    vim.cmd("bdelete! " .. old_bufnr)
+  end
+end
+
 --- Normalizes a given path for reliable comparison.
 -- @param path (string) The file or directory path.
 -- @return (string) A clean, absolute path using forward slashes.
@@ -286,7 +293,9 @@ util.populate_quickfix_list = function(quickfix_info, title)
     -- Set the quickfix list with our findings.
     vim.fn.setqflist(qf_list)
     -- Open the quickfix window to display the list.
-    vim.cmd("copen")
+    vim.schedule(function()
+      vim.cmd("copen")
+    end)
 
     -- Use the provided title or a sensible default.
     local notification_message = title or (#qf_list .. " item(s) added to quickfix list.")
@@ -365,4 +374,14 @@ util.replace_in_file = function(file_path, replacements)
   return true
 end
 
+--- Joins a base path and a filename and resolves it to a full, canonical path.
+--
+-- @param file_path string The base path (e.g., a directory). Can be relative or absolute.
+-- @param filename string The name of the file or sub-directory to append.
+-- @return string The absolute, canonical path to the resulting file or directory.
+--
+util.join_path = function(file_path, filename)
+  local joined_path = vim.fs.joinpath(file_path, filename)
+  return vim.fn.resolve(joined_path)
+end
 return util

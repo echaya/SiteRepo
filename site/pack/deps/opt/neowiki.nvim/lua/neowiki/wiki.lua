@@ -42,19 +42,13 @@ end
 -- @param open_cmd (string|nil): Optional command for opening the file (e.g., 'vsplit').
 --
 wiki.follow_link = function(open_cmd)
-  local active_wiki_path = vim.b[vim.api.nvim_get_current_buf()].active_wiki_path
+  if not wiki_action.check_in_neowiki() then
+    return
+  end
   local active_path
   local buf_path = vim.api.nvim_buf_get_name(0)
   if buf_path and buf_path ~= "" then
     active_path = vim.fn.fnamemodify(buf_path, ":h")
-  end
-
-  if not active_path or not active_wiki_path then
-    vim.notify(
-      "Current buffer is not associated with a file.",
-      vim.log.levels.WARN,
-      { title = "neowiki" }
-    )
   end
 
   local cursor = vim.api.nvim_win_get_cursor(0)
@@ -68,8 +62,7 @@ wiki.follow_link = function(open_cmd)
       return
     end
 
-    local joined_path = vim.fs.joinpath(active_path, filename)
-    local full_path = vim.fn.resolve(joined_path)
+    local full_path = util.join_path(active_path, filename)
 
     -- reuse the current floating window to open the new link.
     if util.is_float() and not open_cmd then
@@ -109,47 +102,41 @@ end
 
 ---
 -- Creates a new wiki page from the visual selection, replacing the selection with a link.
--- Then opens the new page. If the new page is config.index_file, its parent directory
--- is registered as a new wiki root.
+-- This function handles the buffer text manipulation and delegates the file system
+-- operations to wiki_action.create_page_from_filename.
 -- @param open_cmd (string|nil): Optional command for opening the new file.
 --
 wiki.create_or_open_wiki_file = function(open_cmd)
-  local selection_start = vim.fn.getpos("'<")
-  local selection_end = vim.fn.getpos("'>")
-  local line = vim.fn.getline(selection_start[2], selection_end[2])
-  local name = line[1]:sub(selection_start[3], selection_end[3])
-
-  local filename = name:gsub(" ", "_"):gsub("[\\?%%*:|'\"<>]", "") .. state.markdown_extension
-  local filename_link = "[" .. name .. "](" .. "./" .. filename .. ")"
-  local newline = line[1]:sub(0, selection_start[3] - 1)
-    .. filename_link
-    .. line[1]:sub(selection_end[3] + 1, string.len(line[1]))
-  vim.api.nvim_set_current_line(newline)
-
-  local active_wiki_path = vim.b[vim.api.nvim_get_current_buf()].active_wiki_path
-  if not active_wiki_path then
-    vim.notify("no active wiki path is set")
+  if not wiki_action.check_in_neowiki() then
     return
   end
-  local full_path = vim.fs.joinpath(active_wiki_path, filename)
-  local dir_path = vim.fn.fnamemodify(full_path, ":h")
-
-  if vim.fn.fnamemodify(filename, ":t") == config.index_file then
-    wiki_action.add_wiki_root(dir_path)
+  local selection_start_pos = vim.fn.getpos("'<")
+  local selection_end_pos = vim.fn.getpos("'>")
+  local start_row = selection_start_pos[2] - 1
+  local start_col = selection_start_pos[3] - 1
+  local end_row = selection_end_pos[2] - 1
+  local end_col = selection_end_pos[3]
+  local end_line_content = vim.api.nvim_buf_get_lines(0, end_row, end_row + 1, false)[1] or ""
+  if end_col > #end_line_content then
+    start_col = 0
+    end_col = #end_line_content
+  end
+  local selected_lines = vim.api.nvim_buf_get_text(0, start_row, start_col, end_row, end_col, {})
+  local link_display_text = ((selected_lines[1] or ""):match("^%s*(.-)%s*$"))
+  if link_display_text == "" then
+    vim.notify(
+      "No text selected on the first line; cannot create link.",
+      vim.log.levels.WARN,
+      { title = "neowiki" }
+    )
+    return
   end
 
-  util.ensure_path_exists(dir_path)
-  if vim.fn.filereadable(full_path) == 0 then
-    local ok, err = pcall(function()
-      local file = assert(io.open(full_path, "w"), "Failed to open file for writing.")
-      file:close()
-    end)
-    if not ok then
-      vim.notify("Error creating file: " .. err, vim.log.levels.ERROR, { title = "neowiki" })
-      return
-    end
-  end
-  wiki_action.open_file(full_path, open_cmd)
+  local filename = link_display_text:gsub(" ", "_"):gsub("[\\?%%*:|'\"<>]", "")
+    .. state.markdown_extension
+  local filename_link = "[" .. link_display_text .. "](" .. "./" .. filename .. ")"
+  vim.api.nvim_buf_set_text(0, start_row, start_col, end_row, end_col, { filename_link })
+  wiki_action.create_page_from_filename(filename, open_cmd)
 end
 
 ---
@@ -158,7 +145,7 @@ end
 wiki.jump_to_index = function()
   local root = vim.b[0].wiki_root
   if root and root ~= "" then
-    local index_path = vim.fs.joinpath(root, config.index_file)
+    local index_path = util.join_path(root, config.index_file)
     wiki_action.open_file(index_path)
   else
     vim.notify(
@@ -174,48 +161,12 @@ end
 -- root config.index_file and then triggers a cleanup of broken links.
 --
 wiki.delete_wiki = function()
-  local root = vim.b[0].wiki_root
-  if not root or root == "" then
-    vim.notify("Not a wiki file.", vim.log.levels.WARN, { title = "neowiki" })
+  -- Pre-check to ensure we are in a valid wiki context.
+  if not wiki_action.check_in_neowiki() then
     return
   end
-
-  local file_path = vim.api.nvim_buf_get_name(0)
-  local file_name = vim.fn.fnamemodify(file_path, ":t")
-
-  -- Prevent deletion of the main config.index_file.
-  local normalized_root_index_path =
-    util.normalize_path_for_comparison(vim.fs.joinpath(root, config.index_file))
-  local normalized_file_path =
-    util.normalize_path_for_comparison(vim.fn.fnamemodify(file_path, ":p"))
-  if normalized_root_index_path == normalized_file_path then
-    vim.notify(
-      "Cannot delete the root config.index_file.",
-      vim.log.levels.ERROR,
-      { title = "neowiki" }
-    )
-    return
-  end
-
-  local choice = vim.fn.confirm('Permanently delete "' .. file_name .. '"?', "&Yes\n&No")
-  if choice == 1 then
-    local ok, err = pcall(os.remove, file_path)
-
-    if ok then
-      vim.notify('Deleted "' .. file_name .. '"', vim.log.levels.INFO, { title = "neowiki" })
-      vim.cmd("bdelete! " .. vim.fn.bufnr("%"))
-      wiki.jump_to_index()
-
-      -- Schedule broken link cleanup to run after jumping to the index.
-      vim.schedule(function()
-        wiki.cleanup_broken_links()
-      end)
-    else
-      vim.notify("Error deleting file: " .. err, vim.log.levels.ERROR, { title = "neowiki" })
-    end
-  else
-    vim.notify("Delete operation canceled.", vim.log.levels.INFO, { title = "neowiki" })
-  end
+  -- Delegate the complex logic to the wiki_action module.
+  wiki_action.delete_wiki_page()
 end
 
 ---
@@ -262,20 +213,13 @@ end
 -- It uses a prompt from wiki_action to select the page.
 --
 wiki.insert_wiki_link = function()
-  local search_root = vim.b[0].ultimate_wiki_root
-  if not search_root or search_root == "" then
-    vim.notify(
-      "Not inside a neowiki wiki. Cannot insert link.",
-      vim.log.levels.WARN,
-      { title = "neowiki" }
-    )
+  if not wiki_action.check_in_neowiki() then
     return
   end
 
+  local search_root = vim.b[0].ultimate_wiki_root
   local current_buf_path = vim.api.nvim_buf_get_name(0)
 
-  -- This callback function contains the logic to execute once a page has been selected.
-  -- It is passed to the wiki_action prompt.
   local function on_page_select(selected_path)
     if not selected_path then
       return -- Operation was cancelled by the user.
@@ -297,12 +241,7 @@ end
 
 wiki.rename_wiki_page = function()
   -- Pre-check to ensure we are in a valid wiki context.
-  if not vim.b[0] or not vim.b[0].wiki_root then
-    vim.notify(
-      "Not inside a neowiki wiki. Cannot rename page.",
-      vim.log.levels.WARN,
-      { title = "neowiki" }
-    )
+  if not wiki_action.check_in_neowiki() then
     return
   end
   wiki_action.rename_wiki_page()
