@@ -13,6 +13,14 @@ There are following change types:
 
 - Stop official support of Neovim 0.8.
 
+### Expand
+
+- Add new bundled color schemes based on 'mini.hues':
+    - `miniwinter`: "icy winter" palette with azure background.
+    - `minispring`: "blooming spring" palette with green background.
+    - `minisummer`: "hot summer" palette with brown/yellow background.
+    - `miniautumn`: "cooling autumn" palette with purple background.
+
 ## mini.ai
 
 ### Refine
@@ -46,6 +54,10 @@ There are following change types:
 ### Refine
 
 - Make black (0 and 8) and white (7 and 15) colors for built-in terminal different from regular background and foreground. This improves color coverage and does not affect default uncolored text (it is highlighted as `Normal`).
+
+### Expand
+
+- Add `get_palette()` function.
 
 ## mini.jump
 

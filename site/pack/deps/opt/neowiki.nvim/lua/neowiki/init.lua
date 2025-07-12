@@ -1,7 +1,8 @@
+-- lua/neowiki/init.lua
 local config = require("neowiki.config")
 local util = require("neowiki.util")
-local finder = require("neowiki.finder")
-local wiki = require("neowiki.wiki")
+local finder = require("neowiki.core.finder")
+local api = require("neowiki.api")
 local state = require("neowiki.state")
 
 local M = {}
@@ -14,12 +15,20 @@ local markdown_patterns = {
 
 --- Public API ---
 
-M.VERSION = "0.2.0"
-M.open_wiki = wiki.open_wiki
-M.open_wiki_new_tab = wiki.open_wiki_new_tab
-M.open_wiki_floating = wiki.open_wiki_floating
+M.VERSION = "0.3.0"
+M.open_wiki = api.open_wiki
+M.open_wiki_new_tab = api.open_wiki_new_tab
+M.open_wiki_floating = api.open_wiki_floating
 
 --- Private Functions ---
+
+---
+-- Gets the default wiki path, which is `~/wiki`.
+-- @return (string): The default wiki path.
+--
+local function get_default_path()
+  return vim.fs.joinpath(vim.loop.os_homedir(), "wiki")
+end
 
 ---
 -- Processes the user's configuration to identify all wiki root directories,
@@ -40,7 +49,7 @@ local function process_wiki_paths(local_config)
     end
   else
     -- Fallback to default path if no wiki_dirs are provided.
-    local default_path = wiki.get_default_path()
+    local default_path = get_default_path() -- uses local function
     local resolved_path = util.resolve_path(default_path)
     if resolved_path then
       util.ensure_path_exists(resolved_path)
@@ -51,11 +60,12 @@ local function process_wiki_paths(local_config)
   local all_roots_set = {}
   for _, path in ipairs(manual_wiki_dirs) do
     all_roots_set[path] = true
-
-    -- Find nested roots using the full index_file name from config.
-    local nested_roots = finder.find_nested_roots(path, local_config.index_file)
-    for _, nested_root in ipairs(nested_roots) do
-      all_roots_set[nested_root] = true
+    if local_config.discover_nested_roots then
+      -- Find nested roots using the full index_file name from config.
+      local nested_roots = finder.find_nested_roots(path, local_config.index_file)
+      for _, nested_root in ipairs(nested_roots) do
+        all_roots_set[nested_root] = true
+      end
     end
   end
 
@@ -145,9 +155,9 @@ M.setup = function(opts)
     group = neowiki_augroup,
     pattern = markdown_patterns,
     callback = function()
-      wiki.setup_buffer()
+      api.setup_buffer()
       if vim.b.wiki_root then
-        require("neowiki.gtd").attach_to_buffer(vim.api.nvim_get_current_buf())
+        require("neowiki.features.gtd").attach_to_buffer(vim.api.nvim_get_current_buf())
       end
     end,
     desc = "Set neowiki keymaps for markdown files in wiki directories.",
@@ -155,4 +165,3 @@ M.setup = function(opts)
 end
 
 return M
-

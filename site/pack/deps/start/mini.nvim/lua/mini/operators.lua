@@ -284,6 +284,7 @@ MiniOperators.config = {
 
   -- Exchange text regions
   exchange = {
+    -- NOTE: Default `gx` is remapped to `gX`
     prefix = 'gx',
 
     -- Whether to reindent new text to match previous indent
@@ -300,6 +301,7 @@ MiniOperators.config = {
 
   -- Replace text with register
   replace = {
+    -- NOTE: Default `gr*` LSP mappings are removed
     prefix = 'gr',
 
     -- Whether to reindent new text to match previous indent
@@ -725,8 +727,9 @@ H.apply_config = function(config)
       remove_lsp_mapping('n', 'gra')
       remove_lsp_mapping('x', 'gra')
       remove_lsp_mapping('n', 'gri')
-      remove_lsp_mapping('n', 'grr')
       remove_lsp_mapping('n', 'grn')
+      remove_lsp_mapping('n', 'grr')
+      remove_lsp_mapping('n', 'grt')
     end
 
     if prefix == 'gx' and vim.fn.has('nvim-0.10') == 1 then

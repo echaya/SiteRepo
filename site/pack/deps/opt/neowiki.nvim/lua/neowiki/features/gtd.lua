@@ -1,5 +1,7 @@
+-- lua/neowiki/features/gtd.lua
 local config = require("neowiki.config")
-local gtd = {}
+
+local M = {}
 
 -- Namespace for the progress virtual text.
 local progress_ns = vim.api.nvim_create_namespace("neowiki_gtd_progress")
@@ -236,7 +238,7 @@ local function run_update_pipeline(bufnr)
   if not (content:find("%[ ]") or content:find("%[x]")) then
     -- If no tasks are present, clean the cache and progress
     gtd_cache[bufnr] = nil
-    gtd.update_progress(bufnr)
+    M.update_progress(bufnr)
     return
   end
 
@@ -247,14 +249,14 @@ local function run_update_pipeline(bufnr)
   if changes_made then
     _build_gtd_tree(bufnr)
   end
-  gtd.update_progress(bufnr)
+  M.update_progress(bufnr)
 end
 
 ---
 -- Updates the virtual text for GTD progress based on the cached tree.
 -- @param bufnr (number) The buffer to update.
 --
-gtd.update_progress = function(bufnr)
+M.update_progress = function(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, progress_ns, 0, -1)
   local cache = gtd_cache[bufnr]
   if not config.gtd or not config.gtd.show_gtd_progress or not cache then
@@ -377,7 +379,7 @@ local function _create_task_from_list_item(node, is_batch_operation)
     if #non_task_ancestors > 0 then
       local prompt =
         string.format("Convert %d parent item(s) to tasks as well?", #non_task_ancestors)
-      local choice = vim.fn.confirm(prompt, "&Yes\n&No", 2, "Question")
+      local _, choice = pcall(vim.fn.confirm, prompt, "&Yes\n&No", 2, "Question")
       if choice == 1 then
         for _, ancestor in ipairs(non_task_ancestors) do
           table.insert(nodes_to_create, ancestor)
@@ -405,6 +407,11 @@ end
 local function _process_lnum(lnum, is_batch)
   local node = toggle_op.cache.nodes[lnum]
   if not node then
+    vim.notify(
+      "Only list items can be turned into tasks. Aborting.",
+      vim.log.levels.WARN,
+      { title = "neowiki" }
+    )
     return
   end
 
@@ -436,15 +443,20 @@ local function _process_visual_selection(start_ln, end_ln)
     local node = toggle_op.cache.nodes[i]
     local current_state = get_node_state(node)
     if current_state == "INVALID" then
-      vim.notify("Neowiki: Selection contains non-list items. Aborting.", vim.log.levels.WARN)
+      vim.notify(
+        "Selection contains non-list items. Aborting.",
+        vim.log.levels.WARN,
+        { title = "neowiki" }
+      )
       return
     end
     if not first_node_state then
       first_node_state = current_state
     elseif first_node_state ~= current_state then
       vim.notify(
-        "Neowiki: Selection contains items with mixed states. Aborting.",
-        vim.log.levels.WARN
+        "Selection contains items with mixed states. Aborting.",
+        vim.log.levels.WARN,
+        { title = "neowiki" }
       )
       return
     end
@@ -457,10 +469,14 @@ local function _process_visual_selection(start_ln, end_ln)
 end
 
 ---
--- Toggles the state of a task.
--- @param opts (table|nil) Can contain `{ visual = true }`
+-- Toggles the state of a task on the current line or in a visual selection.
+-- This function handles multiple scenarios:
+--   - Toggles a task between complete `[x]` and incomplete `[ ]`.
+--   - Converts a plain list item (e.g., `* item`) into a new task.
+--   - Propagates changes to parent and child tasks to maintain consistency.
+-- @param opts (table|nil) Can contain `{ visual = true }` to operate on a visual selection.
 --
-gtd.toggle_task = function(opts)
+M.toggle_task = function(opts)
   opts = opts or {}
   local bufnr = vim.api.nvim_get_current_buf()
 
@@ -500,7 +516,7 @@ end
 -- Attaches GTD functionality to a buffer. This is the main entry point from init.lua.
 -- @param bufnr (number) The buffer number to attach to.
 --
-gtd.attach_to_buffer = function(bufnr)
+M.attach_to_buffer = function(bufnr)
   -- Run the pipeline once when the buffer is first entered to establish state.
   run_update_pipeline(bufnr)
 
@@ -533,4 +549,4 @@ gtd.attach_to_buffer = function(bufnr)
     desc = "Clean up GTD cache on buffer detach",
   })
 end
-return gtd
+return M

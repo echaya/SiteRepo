@@ -23,6 +23,8 @@
 --- - Lua function to compute palette used in color scheme.
 ---   See |MiniHues.make_palette()|.
 ---
+--- - Bundled color schemes. See |MiniHues-color-schemes|.
+---
 --- Supported highlight groups:
 --- - All built-in UI and syntax groups.
 ---
@@ -96,6 +98,9 @@
 --- <
 --- # Notes ~
 ---
+--- - This is used to create some of plugin's color schemes
+---   (see |MiniHues-color-schemes|).
+---
 --- - Using `setup()` doesn't actually create a |colorscheme|. It basically
 ---   creates a coordinated set of |highlight|s. To create your own scheme:
 ---     - Put "myscheme.lua" file (name after your chosen theme name) inside
@@ -108,19 +113,24 @@
 ---   Use |mini.colors| module, |MiniColors-colorscheme:add_cterm_attributes()|
 ---   in particular.
 
---- Random hue color scheme ~
+--- Bundled color schemes
 ---
---- This module comes with a pre-built color scheme but with a twist: every
---- `:colorscheme randomhue` call will result in a different (randomly yet
---- carefully selected) colors.
+--- - *miniwinter* : "icy winter" palette with azure background.
+--- - *minispring* : "blooming spring" palette with green background.
+--- - *minisummer* : "hot summer" palette with brown/yellow background.
+--- - *miniautumn* : "cooling autumn" palette with purple background.
 ---
---- It is essentially a combination of calls to |MiniHues.setup()| and
---- |MiniHues.gen_random_base_colors()| with a slight adjustments for
---- 'background' value.
+--- - *randomhue* : uses randomly generated same hue background and foreground.
+---   Every `:colorscheme randomhue` call results in a different (randomly yet
+---   carefully selected) colors.
 ---
---- Activate it as regular |colorscheme|. Get currently active config with
---- `:lua print(vim.inspect(MiniHues.config))`.
----@tag randomhue
+---   It is essentially a combination of calls to |MiniHues.setup()| and
+---   |MiniHues.gen_random_base_colors()| with a slight adjustments for
+---   'background' value.
+---
+---   Activate it as regular |colorscheme|. Get currently active config with
+---   `:lua print(vim.inspect(MiniHues.config))`.
+---@tag MiniHues-color-schemes
 
 ---@diagnostic disable:undefined-field
 ---@diagnostic disable:discard-returns
@@ -314,6 +324,8 @@ MiniHues.config = {
 ---     background.
 ---   - <accent> and <accent_bg> represent accent colors with foreground and
 ---     background lightness values.
+---
+---@seealso |MiniHues.get_palette()|
 MiniHues.make_palette = function(config)
   config = vim.tbl_deep_extend('force', MiniHues.config, config or {})
   local bg = H.validate_hex(config.background, 'background')
@@ -420,10 +432,13 @@ end
 ---   palette.cyan_bg = '#004629'
 ---   require('mini.hues').apply_palette(palette)
 --- <
+---@seealso |MiniHues.get_palette()|
 MiniHues.apply_palette = function(palette, plugins)
   if type(palette) ~= 'table' then H.error('`palette` should be table with palette colors.') end
   plugins = plugins or MiniHues.config.plugins
   if type(plugins) ~= 'table' then H.error('`plugins` should be table with plugin integrations data.') end
+
+  H.palette = vim.deepcopy(palette)
 
   -- Prepare highlighting application. Notes:
   -- - Clear current highlight only if other theme was loaded previously.
@@ -1506,6 +1521,12 @@ MiniHues.apply_palette = function(palette, plugins)
   vim.g.terminal_color_15 = p[white .. '_edge2']
 end
 
+--- Get latest applied palette
+---
+---@return table Table with structure as |MiniHues.make_palette()| output that was
+---   the latest applied (via |MiniHues.apply_palette()|) palette.
+MiniHues.get_palette = function() return vim.deepcopy(H.palette) end
+
 --- Generate random base colors
 ---
 --- Compute background and foreground colors based on randomly generated hue
@@ -1621,6 +1642,9 @@ H.cusps = {
   {27.04,65.51},{26.92,65.40},{26.81,65.30},{26.66,65.16},{26.55,65.06},{26.45,64.96},{26.35,64.87},
 }
 --stylua: ignore end
+
+-- Latest applied palette
+H.palette = nil
 
 -- Helper functionality =======================================================
 -- Settings -------------------------------------------------------------------

@@ -11,7 +11,7 @@
 	},
     "drop":{
 		"prefix":"~drop",
-		"body": [".drop(['$1'], axis=1,, inplace=True)"],
+		"body": [".drop(['$1'], axis=1, inplace=True)"],
 		"description": "drop columns from dataframe"
 	},
     "reset_index":{
