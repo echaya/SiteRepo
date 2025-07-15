@@ -11,12 +11,14 @@ function text_edits.apply(text_edit, additional_text_edits)
   additional_text_edits = additional_text_edits or {}
 
   local mode = context.get_mode()
-  assert(mode == 'default' or mode == 'cmdline' or mode == 'term', 'Unsupported mode for text edits: ' .. mode)
+  assert(
+    vim.tbl_contains({ 'default', 'cmdline', 'cmdwin', 'term' }, mode),
+    'Unsupported mode for text edits: ' .. mode
+  )
 
-  if mode == 'default' then
-    -- writing to dot repeat may fail in cases like `q:`, which aren't easy to detect
-    -- so we ignore the error
-    if config.completion.accept.dot_repeat then pcall(text_edits.write_to_dot_repeat, text_edit) end
+  if mode == 'default' or mode == 'cmdwin' then
+    -- writing to dot repeat may fail in command-line window
+    if mode == 'default' and config.completion.accept.dot_repeat then text_edits.write_to_dot_repeat(text_edit) end
 
     local all_edits = utils.shallow_copy(additional_text_edits)
     table.insert(all_edits, text_edit)
@@ -147,12 +149,12 @@ function text_edits.get_from_item(item)
   text_edit.replace = nil
   --- @cast text_edit lsp.TextEdit
 
-  text_edit = text_edits.compensate_for_cursor_movement(text_edit, item.cursor_column, context.get_cursor()[2])
+  local offset_encoding = text_edits.offset_encoding_from_item(item)
+  text_edit = text_edits.compensate_for_cursor_movement(text_edit, offset_encoding)
 
   -- convert the offset encoding to utf-8
   -- TODO: we have to do this last because it applies a max on the position based on the length of the line
   -- so it would break the offset code when removing characters at the end of the line
-  local offset_encoding = text_edits.offset_encoding_from_item(item)
   text_edit = text_edits.to_utf_8(text_edit, offset_encoding)
 
   text_edit.range = text_edits.clamp_range_to_bounds(text_edit.range)
@@ -160,18 +162,21 @@ function text_edits.get_from_item(item)
   return text_edit
 end
 
---- Adjust the position of the text edit to be the current cursor position
---- since the data might be outdated. We compare the cursor column position
---- from when the items were fetched versus the current.
+--- Adjust the position of the text edit to match the current cursor position.
+--- This is necessary because the user may have typed additional characters
+--- after the completion items were fetched, or because new completion items
+--- may have been fetched after typing a trigger character.
 --- HACK: is there a better way?
---- TODO: take into account the offset_encoding
 --- @param text_edit lsp.TextEdit
---- @param old_cursor_col number Position of the cursor when the text edit was created
---- @param new_cursor_col number New position of the cursor
-function text_edits.compensate_for_cursor_movement(text_edit, old_cursor_col, new_cursor_col)
+--- @param offset_encoding ?string
+--- @return lsp.TextEdit
+function text_edits.compensate_for_cursor_movement(text_edit, offset_encoding)
   text_edit = vim.deepcopy(text_edit)
-  local offset = new_cursor_col - old_cursor_col
-  text_edit.range['end'].character = text_edit.range['end'].character + offset
+  offset_encoding = offset_encoding or 'utf-8'
+
+  local new_cursor_col = vim.str_utfindex(context.get_line(), offset_encoding, context.get_cursor()[2])
+  text_edit.range['end'].character = new_cursor_col
+
   return text_edit
 end
 

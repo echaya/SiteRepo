@@ -41,7 +41,7 @@ local sources = {
   completions_queue = nil,
   providers = {},
   per_filetype_provider_ids = {},
-  completions_emitter = require('blink.cmp.lib.event_emitter').new('source_completions', 'BlinkCmpSourceCompletions'),
+  completions_emitter = require('blink.cmp.lib.event_emitter').new('source_completions'),
 }
 local deduplicate = require('blink.cmp.lib.utils').deduplicate
 
@@ -55,7 +55,10 @@ end
 
 function sources.get_enabled_provider_ids(mode)
   -- Mode-specific sources
-  if mode == 'cmdline' or mode == 'term' then
+  if vim.tbl_contains({ 'cmdline', 'cmdwin', 'term' }, mode) then
+    -- 'cmdwin' use the 'cmdline' source provider
+    if mode == 'cmdwin' then mode = 'cmdline' end
+
     if not config[mode].enabled then return {} end
 
     local providers = config[mode].sources

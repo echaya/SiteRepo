@@ -478,6 +478,7 @@ sources = {
   per_filetype = {
     -- optionally inherit from the `default` sources
     -- lua = { inherit_defaults = true, 'lsp', 'path' },
+    -- vim = { inherit_defaults = true, 'cmdline' },
   },
 
   -- Function to use when transforming the items before they're returned for all providers
@@ -501,13 +502,6 @@ sources.providers = {
     -- You may enable the buffer source, when LSP is available, by setting this to `{}`
     -- You may want to set the score_offset of the buffer source to a lower value, such as -5 in this case
     fallbacks = { 'buffer' },
-    -- Filter text items from the LSP provider, since we have the buffer provider for that
-    transform_items = function(_, items)
-      return vim.tbl_filter(
-        function(item) return item.kind ~= require('blink.cmp.types').CompletionItemKind.Text end,
-        items
-      )
-    end,
     opts = { tailwind_color_icon = '██' },
 
     --- These properties apply to !!ALL sources!!
@@ -594,7 +588,13 @@ sources.providers = {
       -- Maximum total number of characters (across all selected buffers) for which buffer completion runs synchronously. Above this, asynchronous processing is used.
       max_sync_buffer_size = 20000,
       -- Maximum total number of characters (across all selected buffers) for which buffer completion runs asynchronously. Above this, buffer completions are skipped to avoid performance issues.
-      max_async_buffer_size = 500000,
+      max_async_buffer_size = 200000,
+      -- Maximum text size across all buffers (default: 500KB)
+      max_total_buffer_size = 500000,
+      -- Order in which buffers are retained for completion, up to the max total size limit (see above)
+      retention_order = { 'focused', 'visible', 'recency', 'largest' },
+      -- Cache words for each buffer which increases memory usage but drastically reduces cpu usage. Memory usage depends on the size of the buffers from `get_bufnrs`. For 100k items, it will use ~20MBs of memory. Invalidated and refreshed whenever the buffer content is modified.
+      use_cache = true,
       -- Whether to enable buffer source in substitute (:s) and global (:g) commands.
       -- Note: Enabling this option will temporarily disable Neovim's 'inccommand' feature
       -- while editing Ex commands, due to a known redraw issue (see neovim/neovim#9783).
@@ -606,12 +606,6 @@ sources.providers = {
 
   cmdline = {
     module = 'blink.cmp.sources.cmdline',
-    -- Disable shell commands on windows, since they cause neovim to hang
-    enabled = function()
-      return vim.fn.has('win32') == 0
-        or vim.fn.getcmdtype() ~= ':'
-        or not vim.fn.getcmdline():match("^[%%0-9,'<>%-]*!")
-    end,
   },
 
   omni = {
@@ -713,7 +707,8 @@ cmdline = {
       },
     },
     -- Whether to automatically show the window when new completion items are available
-    menu = { auto_show = false },
+    -- Default is false for cmdline, true for cmdwin (command-line window)
+    menu = { auto_show = function(ctx, _) return ctx.mode == 'cmdwin' end },
     -- Displays a preview of the selected item on the current line
     ghost_text = { enabled = true },
   }

@@ -4,6 +4,7 @@
 
 local async = require('blink.cmp.lib.async')
 local constants = require('blink.cmp.sources.cmdline.constants')
+local utils = require('blink.cmp.sources.lib.utils')
 local path_lib = require('blink.cmp.sources.path.lib')
 
 --- Split the command line into arguments, handling path escaping and trailing spaces.
@@ -17,7 +18,7 @@ local function smart_split(context, is_path_completion)
 
   local function contains_vim_expr(line)
     -- Checks for common Vim expressions: %, #, %:h, %:p, etc.
-    return line:find('%%[:#]') or line:find('%% ') or line:find('#')
+    return vim.regex([[%\%(:[phtrwe~.]\)\?]]):match_str(line) ~= nil
   end
 
   if is_path_completion and not contains_vim_expr(line) then
@@ -52,19 +53,43 @@ local function longest_match(str, patterns)
   return best
 end
 
+--- Returns completion items for a given pattern and type, with special handling for shell commands on Windows/WSL.
+--- @param pattern string The partial command to match for completion
+--- @param type string The type of completion
+--- @param completion_type? string Original completion type from vim.fn.getcmdcompltype()
+--- @return table completions
+local function get_completions(pattern, type, completion_type)
+  -- If a shell command is requested on Windows or WSL, update PATH to avoid performance issues.
+  if completion_type == 'shellcmd' then
+    local separator, filter_fn
+
+    if vim.fn.has('win32') == 1 then
+      separator = ';'
+      -- Remove System32 folder on native Windows
+      filter_fn = function(part) return not part:lower():match('^[a-z]:\\windows\\system32$') end
+    elseif vim.fn.has('wsl') == 1 then
+      separator = ':'
+      -- Remove all Windows filesystem mounts on WSL
+      filter_fn = function(part) return not part:lower():match('^/mnt/[a-z]/') end
+    end
+
+    if filter_fn then
+      local orig_path = vim.env.PATH
+      local new_path = table.concat(vim.tbl_filter(filter_fn, vim.split(orig_path, separator)), separator)
+      vim.env.PATH = new_path
+      local completions = vim.fn.getcompletion(pattern, type)
+      vim.env.PATH = orig_path
+      return completions
+    end
+  end
+
+  return vim.fn.getcompletion(pattern, type)
+end
+
 --- @class blink.cmp.Source
 local cmdline = {
   ---@type table<string, vim.api.keyset.get_option_info?>
-  options = setmetatable({}, {
-    __index = function(tbl, key)
-      -- Skip 'all' since it's not a real option but a special argument
-      -- used to display all options. Attempting to query it as an option fails.
-      if key == 'all' then return nil end
-      local info = vim.api.nvim_get_option_info2(key, {})
-      rawset(tbl, key, info)
-      return info
-    end,
-  }),
+  options = vim.api.nvim_get_all_options_info(),
 }
 
 function cmdline.new()
@@ -78,7 +103,8 @@ end
 
 ---@return boolean
 function cmdline:enabled()
-  return vim.api.nvim_get_mode().mode == 'c' and vim.tbl_contains({ ':', '@' }, vim.fn.getcmdtype())
+  return vim.bo.ft == 'vim'
+    or (utils.is_command_line({ ':', '@' }) and not utils.in_ex_context({ 'substitute', 'global', 'vglobal' }))
 end
 
 ---@return table
@@ -88,7 +114,7 @@ function cmdline:get_trigger_characters() return { ' ', '.', '#', '-', '=', '/',
 ---@param callback fun(result?: blink.cmp.CompletionResponse)
 ---@return fun()
 function cmdline:get_completions(context, callback)
-  local completion_type = vim.fn.getcmdcompltype()
+  local completion_type = utils.get_completion_type(context.mode)
 
   local is_path_completion = vim.tbl_contains(constants.completion_types.path, completion_type)
   local is_buffer_completion = vim.tbl_contains(constants.completion_types.buffer, completion_type)
@@ -119,7 +145,7 @@ function cmdline:get_completions(context, callback)
       local completions = {}
 
       -- Input mode (vim.fn.input())
-      if vim.fn.getcmdtype() == '@' then
+      if utils.is_command_line({ '@' }) then
         local completion_args = vim.split(completion_type, ',', { plain = true })
         local completion_type = completion_args[1]
         local completion_func = completion_args[2]
@@ -134,7 +160,7 @@ function cmdline:get_completions(context, callback)
           and not vim.startswith(completion_func:lower(), '<sid>')
         then
           local success, fn_completions =
-            pcall(vim.fn.call, completion_func, { current_arg_prefix, vim.fn.getcmdline(), vim.fn.getcmdpos() })
+            pcall(vim.fn.call, completion_func, { current_arg_prefix, context.get_line(), context.cursor[2] + 1 })
 
           if success then
             if type(fn_completions) == 'table' then
@@ -154,7 +180,7 @@ function cmdline:get_completions(context, callback)
             -- path completions uniquely expect only the current path
             query = is_path_completion and current_arg_prefix or query
 
-            completions = vim.fn.getcompletion(query, compl_type)
+            completions = get_completions(query, compl_type, completion_type)
             if type(completions) ~= 'table' then completions = {} end
           end
         end
@@ -162,7 +188,7 @@ function cmdline:get_completions(context, callback)
       -- Cmdline mode
       else
         local query = (text_before_argument .. current_arg_prefix):gsub([[\\]], [[\\\\]])
-        completions = vim.fn.getcompletion(query, 'cmdline')
+        completions = get_completions(query, 'cmdline', completion_type)
       end
 
       return completions
@@ -206,7 +232,7 @@ function cmdline:get_completions(context, callback)
         -- buffer commands
         elseif is_buffer_completion then
           label = unique_prefixes[completion] or completion
-          if #unique_prefixes[completion] then
+          if unique_prefixes[completion] then
             label_details = { description = completion:sub(1, -#unique_prefixes[completion] - 2) }
           end
           new_text = vim.fn.fnameescape(completion)
@@ -223,11 +249,24 @@ function cmdline:get_completions(context, callback)
           new_text = '$' .. completion
 
         -- for other completions, prepend the prefix
-        elseif vim.tbl_contains({ 'filetype', 'lua', 'shellcmd', '' }, completion_type) then
+        elseif vim.tbl_contains({ 'expression', 'filetype', 'lua', 'shellcmd' }, completion_type) then
           new_text = current_arg_prefix .. completion
+
+        -- treat custom and empty completion '' as special case, this can be:
+        -- args (usually from user-defined commands): :Cmd [arg=]value
+        -- values (from vim/user-defined commands), :set option=[value], :Cmd arg=[value]
+        elseif completion_type == '' or vim.startswith(completion_type, 'custom') then
+          if completion:sub(1, #current_arg_prefix) == current_arg_prefix then
+            -- same prefix, only need to sanitize the value for filtering
+            filter_text = completion:sub(#current_arg_prefix + 1)
+          else
+            -- different, prepend the prefix for new_text
+            new_text = current_arg_prefix .. completion
+          end
         end
 
         local start_pos = #text_before_argument + #leading_spaces
+        local line = context.cursor[1] - 1
 
         -- exclude range for commands on the first argument
         if arg_number == 1 and completion_type == 'command' then
@@ -249,13 +288,13 @@ function cmdline:get_completions(context, callback)
           textEdit = {
             newText = new_text,
             insert = {
-              start = { line = 0, character = start_pos },
-              ['end'] = { line = 0, character = vim.fn.getcmdpos() - 1 },
+              start = { line = line, character = start_pos },
+              ['end'] = { line = line, character = context.cursor[2] },
             },
             replace = {
-              start = { line = 0, character = start_pos },
+              start = { line = line, character = start_pos },
               ['end'] = {
-                line = 0,
+                line = line,
                 character = math.min(start_pos + #current_arg, context.bounds.start_col + context.bounds.length - 1),
               },
             },
@@ -266,11 +305,10 @@ function cmdline:get_completions(context, callback)
 
         if option_info and option_info.type == 'boolean' then
           filter_text = 'no' .. filter_text
-          label_details.description = 'no' .. label_details.description
           items[#items + 1] = vim.tbl_deep_extend('force', {}, item, {
             label = filter_text,
             filterText = filter_text,
-            labelDetails = label_details,
+            labelDetails = { description = 'no' .. label_details.description },
             sortText = filter_text,
             textEdit = { newText = 'no' .. new_text },
           }) --[[@as blink.cmp.CompletionItem]]

@@ -56,13 +56,6 @@ local sources = {
         name = 'LSP',
         module = 'blink.cmp.sources.lsp',
         fallbacks = { 'buffer' },
-        transform_items = function(_, items)
-          -- filter out text items, since we have the buffer source
-          return vim.tbl_filter(
-            function(item) return item.kind ~= require('blink.cmp.types').CompletionItemKind.Text end,
-            items
-          )
-        end,
       },
       path = {
         module = 'blink.cmp.sources.path',
@@ -79,12 +72,6 @@ local sources = {
       },
       cmdline = {
         module = 'blink.cmp.sources.cmdline',
-        -- Disable shell commands on windows, since they cause neovim to hang
-        enabled = function()
-          return vim.fn.has('win32') == 0
-            or vim.fn.getcmdtype() ~= ':'
-            or not vim.fn.getcmdline():match("^[%%0-9,'<>%-]*!")
-        end,
       },
       omni = {
         module = 'blink.cmp.sources.complete_func',

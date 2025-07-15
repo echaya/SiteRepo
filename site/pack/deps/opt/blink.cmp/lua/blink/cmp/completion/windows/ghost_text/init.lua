@@ -69,7 +69,7 @@ function ghost_text.show_preview(items, selection_idx)
   ghost_text.selected_item = selected_item
 
   vim.api.nvim_set_decoration_provider(ghost_text.ns, {
-    on_win = function(_, _, buf) return utils.is_noice() and buf == ghost_text_buf end,
+    on_win = function(_, _, buf) return (utils.is_cmdwin() or utils.is_noice()) and buf == ghost_text_buf end,
     on_line = function() ghost_text.draw_preview() end,
   })
 
@@ -107,20 +107,32 @@ function ghost_text.draw_preview()
       or text_edit.newText
   end
 
-  local display_lines = vim.split(utils.get_still_untyped_text(text_edit), '\n', { plain = true }) or {}
+  local range = text_edit.range
+  local typed_length = range['end'].character - range.start.character
+  local extmark_col = range['end'].character
+
+  -- For multiline edits, LSP's end.character may not always match the cursor column.
+  -- (e.g. rust-analyzer with unmatched parens).
+  -- Prefer the actual cursor position to avoid out-of-bounds errors.
+  if range.start.line ~= range['end'].line then
+    local cursor_col = vim.api.nvim_win_get_cursor(0)[2]
+    typed_length = (cursor_col - 1) - range.start.character
+    extmark_col = cursor_col
+  end
+
+  -- Clamp typed_length to valid bounds
+  typed_length = math.max(0, math.min(typed_length, #text_edit.newText))
+
+  local untyped_text = text_edit.newText:sub(typed_length + 1)
+  local display_lines = vim.split(untyped_text, '\n', { plain = true }) or {}
+
   local virt_lines = {}
   for i = 2, #display_lines do
     virt_lines[i - 1] = { { display_lines[i], 'BlinkCmpGhostText' } }
   end
 
-  -- draw
-  local cursor_pos = {
-    text_edit.range.start.line,
-    text_edit.range['end'].character,
-  }
-
   ghost_text.extmark_id =
-    vim.api.nvim_buf_set_extmark(buf, highlight_ns, cursor_pos[1], cursor_pos[2] + utils.get_offset(), {
+    vim.api.nvim_buf_set_extmark(buf, highlight_ns, range.start.line, extmark_col + utils.get_offset(), {
       id = ghost_text.extmark_id,
       virt_text_pos = 'inline',
       virt_text = { { display_lines[1], 'BlinkCmpGhostText' } },

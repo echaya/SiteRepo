@@ -107,6 +107,7 @@ See [blink.compat](https://github.com/Saghen/blink.compat) for using `nvim-cmp` 
 - [blink-cmp-git](https://github.com/Kaiser-Yang/blink-cmp-git)
 - [blink-cmp-spell](https://github.com/ribru17/blink-cmp-spell.git)
 - [blink-cmp-tmux](https://github.com/mgalliou/blink-cmp-tmux)
+- [blink-cmp-wezterm](https://github.com/junkblocker/blink-cmp-wezterm)
 - [css-vars.nvim](https://github.com/jdrupal-dev/css-vars.nvim)
 - [blink-cmp-env](https://github.com/bydlw98/blink-cmp-env)
 - [blink-cmp-avante](https://github.com/Kaiser-Yang/blink-cmp-avante)
@@ -122,3 +123,12 @@ See [blink.compat](https://github.com/Saghen/blink.compat) for using `nvim-cmp` 
 - [blink-cmp-yanky](https://github.com/marcoSven/blink-cmp-yanky): Completion for [yanky.nvim](https://github.com/gbprod/yanky.nvim)
 - [blink-cmp-register](https://github.com/phanen/blink-cmp-register)
 - [blink-cmp-sshconfig](https://github.com/bydlw98/blink-cmp-sshconfig)
+- [blink-cmp-words](https://github.com/archie-judd/blink-cmp-words): Definitions and synonyms
+- [blink-cmp-vsnip](https://codeberg.org/FelipeLema/blink-cmp-vsnip)
+
+### Working `nvim-cmp` sources via `blink.compat`
+
+The vast majority of `nvim-cmp` sources work with `blink.compat`, see the [`nvim-cmp`](https://github.com/topics/nvim-cmp) topic on github. The following is a non-exhaustive list of sources that have been tested by their author or the community.
+
+- [cmp-rails-fixture-names](https://github.com/wassimk/cmp-rails-fixture-names): Ruby on Rails fixture names completion
+- [cmp-rails-fixture-types](https://github.com/wassimk/cmp-rails-fixture-types): Ruby on Rails fixture types completion

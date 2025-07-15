@@ -1,4 +1,4 @@
-*blink-cmp.txt*           For NVIM v0.10.0           Last change: 2025 June 10
+*blink-cmp.txt*           For NVIM v0.10.0           Last change: 2025 July 13
 
 ==============================================================================
 Table of Contents                                *blink-cmp-table-of-contents*
@@ -1344,6 +1344,11 @@ path via `:echo stdpath('data')`. Use `.so` for linux, `.dylib` for mac, and
 `.dll` for windows. If you’re unsure whether you want `-musl` or `-gnu` for
 linux, you very likely want `-gnu`.
 
+
+  [!IMPORTANT] For the version verification to succeed, you must either ensure
+  there is no `version` file adjacent to your `libblink_cmp_fuzzy` library or you
+  must have `git` installed with the `.git` folder present in the `blink.cmp`
+  directory
 >sh
     # Linux
     ~/.local/share/nvim/lazy/blink.cmp/target/release/libblink_cmp_fuzzy.so
@@ -1374,10 +1379,13 @@ For recipes, see the recipes section <../recipes.md#fuzzy-sorting-filtering>.
 
 SORTING
 
-The sorting can be customized by providing a custom function to sort the
-entries, based on sorting in Lua
-<https://www.lua.org/manual/5.1/manual.html#pdf-table.sort>, or by using one of
-the built-in sorts:
+You can control how entries are sorted by choosing from several built-in
+sorting methods or by providing your own custom Lua function.
+
+
+BUILT-IN SORTS
+
+The following built-in sort strings are available:
 
 - `exact`: Sorts by exact match, case-sensitive
 - `score`: Sorts by the fuzzy matching score
@@ -1387,6 +1395,39 @@ the built-in sorts:
 - `label`: Sorts by the `label` field, deprioritizing entries with a leading `_`
 - `kind`: Sorts by the numeric `kind` field
     - Check the order via `:lua vim.print(vim.lsp.protocol.CompletionItemKind)`
+
+
+SORTING PRIORITY AND TIE-BREAKING
+
+**The order in which you specify sorts in your configuration determines their
+priority.**
+
+When sorting, each entry pair is compared using the first method in your list.
+If that comparison results in a tie, the next method is used, and so on. This
+allows you to build multi-level sorting logic.
+
+>lua
+    fuzzy = {
+      sorts = {
+        'score',      -- Primary sort: by fuzzy matching score
+        'sort_text',  -- Secondary sort: by sortText field if scores are equal
+        'label',      -- Tertiary sort: by label if still tied
+      }
+    }
+<
+
+In the example above:
+
+- Entries are first sorted by score.
+- If two entries have the same score, they are then sorted by sort_text.
+- If still tied, they are sorted by label.
+
+
+CUSTOM SORTING
+
+You may also provide a custom Lua function to define your own sorting logic.
+The function should follow the Lua table.sort
+<https://www.lua.org/manual/5.1/manual.html#pdf-table.sort> convention.
 
 >lua
     fuzzy = {
@@ -1404,6 +1445,13 @@ the built-in sorts:
         'sort_text',
     }
 <
+
+In the example above:
+
+- The custom function is the primary sort: it puts entries starting with _ last.
+- If two entries are equal according to the custom function, they are then sorted by score.
+- If still tied, they are sorted by sort_text.
+
 
 
 KEYMAP                                               *blink-cmp-config-keymap*
@@ -1720,7 +1768,7 @@ LSP specific options while setting them up. Some examples:
     -- For `rust-analyzer`
     lspconfig['rust-analyzer'].setup({
       completion = {
-        capable = {
+        callable = {
           snippets = 'add_parenthesis'
         }
       }
@@ -1871,6 +1919,7 @@ sources
 - blink-cmp-git <https://github.com/Kaiser-Yang/blink-cmp-git>
 - blink-cmp-spell <https://github.com/ribru17/blink-cmp-spell.git>
 - blink-cmp-tmux <https://github.com/mgalliou/blink-cmp-tmux>
+- blink-cmp-wezterm <https://github.com/junkblocker/blink-cmp-wezterm>
 - css-vars.nvim <https://github.com/jdrupal-dev/css-vars.nvim>
 - blink-cmp-env <https://github.com/bydlw98/blink-cmp-env>
 - blink-cmp-avante <https://github.com/Kaiser-Yang/blink-cmp-avante>
@@ -1886,6 +1935,19 @@ sources
 - blink-cmp-yanky <https://github.com/marcoSven/blink-cmp-yanky>: Completion for yanky.nvim <https://github.com/gbprod/yanky.nvim>
 - blink-cmp-register <https://github.com/phanen/blink-cmp-register>
 - blink-cmp-sshconfig <https://github.com/bydlw98/blink-cmp-sshconfig>
+- blink-cmp-words <https://github.com/archie-judd/blink-cmp-words>: Definitions and synonyms
+- blink-cmp-vsnip <https://codeberg.org/FelipeLema/blink-cmp-vsnip>
+
+
+WORKING NVIM-CMP SOURCES VIA BLINK.COMPAT
+
+The vast majority of `nvim-cmp` sources work with `blink.compat`, see the
+`nvim-cmp` <https://github.com/topics/nvim-cmp> topic on github. The following
+is a non-exhaustive list of sources that have been tested by their author or
+the community.
+
+- cmp-rails-fixture-names <https://github.com/wassimk/cmp-rails-fixture-names>: Ruby on Rails fixture names completion
+- cmp-rails-fixture-types <https://github.com/wassimk/cmp-rails-fixture-types>: Ruby on Rails fixture types completion
 
 
 REFERENCE                                         *blink-cmp-config-reference*
@@ -2379,6 +2441,7 @@ See the |blink-cmp-mode-specific-configurations| for setting sources for
       per_filetype = {
         -- optionally inherit from the `default` sources
         -- lua = { inherit_defaults = true, 'lsp', 'path' },
+        -- vim = { inherit_defaults = true, 'cmdline' },
       },
     
       -- Function to use when transforming the items before they're returned for all providers
@@ -2403,13 +2466,6 @@ PROVIDERS
         -- You may enable the buffer source, when LSP is available, by setting this to `{}`
         -- You may want to set the score_offset of the buffer source to a lower value, such as -5 in this case
         fallbacks = { 'buffer' },
-        -- Filter text items from the LSP provider, since we have the buffer provider for that
-        transform_items = function(_, items)
-          return vim.tbl_filter(
-            function(item) return item.kind ~= require('blink.cmp.types').CompletionItemKind.Text end,
-            items
-          )
-        end,
         opts = { tailwind_color_icon = '██' },
     
         --- These properties apply to !!ALL sources!!
@@ -2496,7 +2552,13 @@ PROVIDERS
           -- Maximum total number of characters (across all selected buffers) for which buffer completion runs synchronously. Above this, asynchronous processing is used.
           max_sync_buffer_size = 20000,
           -- Maximum total number of characters (across all selected buffers) for which buffer completion runs asynchronously. Above this, buffer completions are skipped to avoid performance issues.
-          max_async_buffer_size = 500000,
+          max_async_buffer_size = 200000,
+          -- Maximum text size across all buffers (default: 500KB)
+          max_total_buffer_size = 500000,
+          -- Order in which buffers are retained for completion, up to the max total size limit (see above)
+          retention_order = { 'focused', 'visible', 'recency', 'largest' },
+          -- Cache words for each buffer which increases memory usage but drastically reduces cpu usage. Memory usage depends on the size of the buffers from `get_bufnrs`. For 100k items, it will use ~20MBs of memory. Invalidated and refreshed whenever the buffer content is modified.
+          use_cache = true,
           -- Whether to enable buffer source in substitute (:s) and global (:g) commands.
           -- Note: Enabling this option will temporarily disable Neovim's 'inccommand' feature
           -- while editing Ex commands, due to a known redraw issue (see neovim/neovim#9783).
@@ -2508,12 +2570,6 @@ PROVIDERS
     
       cmdline = {
         module = 'blink.cmp.sources.cmdline',
-        -- Disable shell commands on windows, since they cause neovim to hang
-        enabled = function()
-          return vim.fn.has('win32') == 0
-            or vim.fn.getcmdtype() ~= ':'
-            or not vim.fn.getcmdline():match("^[%%0-9,'<>%-]*!")
-        end,
       },
     
       omni = {
@@ -2620,7 +2676,8 @@ CMDLINE
           },
         },
         -- Whether to automatically show the window when new completion items are available
-        menu = { auto_show = false },
+        -- Default is false for cmdline, true for cmdwin (command-line window)
+        menu = { auto_show = function(ctx, _) return ctx.mode == 'cmdwin' end },
         -- Displays a preview of the selected item on the current line
         ghost_text = { enabled = true },
       }
