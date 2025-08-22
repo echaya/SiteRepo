@@ -37,6 +37,12 @@ There are following change types:
 
 - Add `MiniCompletionWindowOpen` and `MiniCompletionWindowUpdate` events.
 
+## mini.clue
+
+### Expand
+
+- Add `gen_clues.square_brackets` to generate clues for `[` and `]` keys. By @TheLeoP, PR #1937.
+
 ## mini.diff
 
 ### Expand
@@ -48,6 +54,8 @@ There are following change types:
 ### Expand
 
 - Add `pickers.colorschemes` picker. By @pkazmier, PR #1789.
+
+- Add `<C-e>` mapping for `pickers.history` picker to edit commands or searches in cmdline. By @TheLeoP, PR #1960.
 
 ## mini.files
 
@@ -90,6 +98,12 @@ There are following change types:
 ### Expand
 
 - Add `gen_spotter.vimpattern()` that can generate spotter based on Vimscript (not Lua) pattern.
+
+## mini.misc
+
+### Expand
+
+- Update `zoom()` to return whether current buffer is zoomed in. By @loichyan, PR #1954.
 
 ## mini.pick
 

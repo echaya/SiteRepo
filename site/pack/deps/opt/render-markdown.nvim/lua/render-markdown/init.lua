@@ -8,6 +8,7 @@ local M = {}
 ---@field file_types string[]
 ---@field ignore fun(buf: integer): boolean
 ---@field change_events string[]
+---@field restart_highlighter boolean
 ---@field injections render.md.injection.Configs
 ---@field patterns render.md.pattern.Configs
 ---@field on render.md.on.Config
@@ -37,6 +38,7 @@ local M = {}
 ---@field quote render.md.quote.Config
 ---@field sign render.md.sign.Config
 ---@field win_options render.md.window.Configs
+---@field yaml render.md.yaml.Config
 
 ---@private
 ---@type boolean
@@ -76,6 +78,10 @@ M.default = {
     end,
     -- Additional events that will trigger this plugin's render loop.
     change_events = {},
+    -- Whether the treesitter highlighter should be restarted after this plugin attaches to its
+    -- first buffer for the first time. May be necessary if this plugin is lazy loaded to clear
+    -- highlights that have been dynamically disabled.
+    restart_highlighter = false,
     injections = require('render-markdown.config.injections').default,
     patterns = require('render-markdown.config.patterns').default,
     anti_conceal = require('render-markdown.config.anti_conceal').default,
@@ -101,6 +107,7 @@ M.default = {
     win_options = require('render-markdown.config.win_options').default,
     overrides = require('render-markdown.config.overrides').default,
     custom_handlers = require('render-markdown.config.handlers').default,
+    yaml = require('render-markdown.config.yaml').default,
 }
 
 ---@param opts? render.md.UserConfig

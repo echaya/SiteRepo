@@ -240,6 +240,10 @@
 ---       { mode = 'n', keys = '<Leader>' },
 ---       { mode = 'x', keys = '<Leader>' },
 ---
+---       -- `[` and `]` keys
+---       { mode = 'n', keys = '[' },
+---       { mode = 'n', keys = ']' },
+---
 ---       -- Built-in completion
 ---       { mode = 'i', keys = '<C-x>' },
 ---
@@ -269,6 +273,7 @@
 ---
 ---     clues = {
 ---       -- Enhance this by adding descriptions for <Leader> mapping groups
+---       miniclue.gen_clues.square_brackets(),
 ---       miniclue.gen_clues.builtin_completion(),
 ---       miniclue.gen_clues.g(),
 ---       miniclue.gen_clues.marks(),
@@ -803,6 +808,68 @@ MiniClue.gen_clues.g = function()
   }
 end
 
+--- Generate clues for `[` and `]` keys
+---
+--- Contains clues for the following triggers: >lua
+---
+---   { mode = 'n', keys = '[' }
+---   { mode = 'n', keys = ']' }
+--- <
+---@return table Array of clues.
+MiniClue.gen_clues.square_brackets = function()
+  --stylua: ignore
+  return {
+    { mode = 'n', keys = '[<C-D>', desc = 'Go to first macro def with cursor word', },
+    { mode = 'n', keys = '[<C-I>', desc = 'Go to first match with cursor word', },
+    { mode = 'n', keys = '[%', desc = 'Go to previous unmatched group' },
+    { mode = 'n', keys = '[#', desc = 'Go to previous unmatched #if/#else/#ifdef' },
+    { mode = 'n', keys = "['", desc = 'Go to previous mark, first non-blank' },
+    { mode = 'n', keys = '[`', desc = 'Go to previous mark' },
+    { mode = 'n', keys = '[(', desc = "Go to previous unmatched '('" },
+    { mode = 'n', keys = '[/', desc = 'Go to previous C comment start' },
+    { mode = 'n', keys = '[*', desc = 'Go to previous C comment start' },
+    { mode = 'n', keys = '[I', desc = 'Show lines with cursor word', },
+    { mode = 'n', keys = '[D', desc = 'Show macro defs with cursor word' },
+    { mode = 'n', keys = '[p', desc = 'Paste with current indent' },
+    { mode = 'n', keys = '[P', desc = 'Paste with current indent' },
+    { mode = 'n', keys = '[[', desc = 'Go to previous section' },
+    { mode = 'n', keys = '[]', desc = 'Go to previous SECTION' },
+    { mode = 'n', keys = '[c', desc = 'Go to previous change' },
+    { mode = 'n', keys = '[d', desc = 'Show first macro def with cursor word' },
+    { mode = 'n', keys = '[f', desc = 'Edit file under cursor' },
+    { mode = 'n', keys = '[i', desc = 'Show first line with cursor word', },
+    { mode = 'n', keys = '[m', desc = 'Go to previous method start' },
+    { mode = 'n', keys = '[M', desc = 'Go to previous method end' },
+    { mode = 'n', keys = '[s', desc = 'Go to previous misspelled word' },
+    { mode = 'n', keys = '[z', desc = 'Go to current open fold start' },
+    { mode = 'n', keys = '[{', desc = "Go to previous unmatched '{'" },
+    { mode = 'n', keys = ']<C-D>', desc = 'Go to next macro def with cursor word', },
+    { mode = 'n', keys = ']<C-I>', desc = 'Go to next match with cursor word', },
+    { mode = 'n', keys = ']%', desc = 'Go to next unmatched group' },
+    { mode = 'n', keys = ']#', desc = 'Go to next unmatched #if/#else/#ifdef' },
+    { mode = 'n', keys = "]'", desc = "Go to next mark, first non-blank" },
+    { mode = 'n', keys = ']`', desc = 'Go to next mark' },
+    { mode = 'n', keys = '])', desc = "Go to next unmatched ')'" },
+    { mode = 'n', keys = ']/', desc = 'Go to next C comment end' },
+    { mode = 'n', keys = ']*', desc = 'Go to next C comment end' },
+    { mode = 'n', keys = ']D', desc = 'Show below macro defs with cursor word' },
+    { mode = 'n', keys = ']I', desc = 'Show below lines with cursor word', },
+    { mode = 'n', keys = ']P', desc = 'Paste with current indent' },
+    { mode = 'n', keys = '][', desc = 'Go to next SECTION' },
+    { mode = 'n', keys = ']]', desc = 'Go to next section' },
+    { mode = 'n', keys = ']c', desc = 'Go to next change' },
+    { mode = 'n', keys = ']d', desc = 'Show next macro def with cursor word' },
+    { mode = 'n', keys = ']f', desc = 'Edit file under cursor' },
+    { mode = 'n', keys = ']i', desc = 'Show next line with cursor word', },
+    { mode = 'n', keys = ']m', desc = 'Go to next method start' },
+    { mode = 'n', keys = ']M', desc = 'Go to next method end' },
+    { mode = 'n', keys = ']p', desc = 'Paste with current indent' },
+    { mode = 'n', keys = ']s', desc = 'Go to next misspelled word' },
+    { mode = 'n', keys = ']z', desc = 'Go to current open fold end' },
+    { mode = 'n', keys = ']}', desc = "Go to next unmatched '}'" },
+  }
+end
+
 --- Generate clues for marks
 ---
 --- Contains clues for the following triggers: >lua
@@ -1154,21 +1221,19 @@ H.apply_config = function(config)
   MiniClue.enable_all_triggers()
 
   -- Tweak macro execution
-  local macro_keymap_opts = { nowait = true, desc = "Execute macro without 'mini.clue' triggers" }
-  local exec_macro = function(keys)
-    local register = H.getcharstr()
+  local exec_macro = function(key, register)
     if register == nil then return end
     MiniClue.disable_all_triggers()
-    vim.schedule(MiniClue.enable_all_triggers)
-    pcall(vim.api.nvim_feedkeys, vim.v.count1 .. '@' .. register, 'nx', false)
+    vim.schedule(function() MiniClue.enable_all_triggers() end)
+    pcall(vim.api.nvim_feedkeys, vim.v.count1 .. key .. register, 'nx', false)
   end
-  if vim.fn.maparg('@', 'n') == '' then vim.keymap.set('n', '@', exec_macro, macro_keymap_opts) end
 
-  local exec_latest_macro = function(keys)
-    MiniClue.disable_all_triggers()
-    vim.schedule(MiniClue.enable_all_triggers)
-    vim.api.nvim_feedkeys(vim.v.count1 .. 'Q', 'nx', false)
-  end
+  local macro_keymap_opts = { nowait = true, desc = "Execute macro without 'mini.clue' triggers" }
+
+  local exec_register_macro = function() exec_macro('@', H.getcharstr()) end
+  if vim.fn.maparg('@', 'n') == '' then vim.keymap.set('n', '@', exec_register_macro, macro_keymap_opts) end
+
+  local exec_latest_macro = function() exec_macro('Q', '') end
   if vim.fn.maparg('Q', 'n') == '' then vim.keymap.set('n', 'Q', exec_latest_macro, macro_keymap_opts) end
 end
 
@@ -1199,10 +1264,20 @@ H.create_autocommands = function()
   local special_ft = { 'help', 'git' }
   au('Filetype', special_ft, ensure_triggers, 'Ensure buffer-local trigger keymaps')
 
-  -- Disable all triggers when recording macro as they interfere with what is
-  -- actually recorded
-  au('RecordingEnter', '*', MiniClue.disable_all_triggers, 'Disable all triggers')
-  au('RecordingLeave', '*', MiniClue.enable_all_triggers, 'Enable all triggers')
+  -- Disable all triggers (current and future) when recording macro as they
+  -- interfere with what is actually recorded
+  local cache_disable
+  local disable_all_plus = function()
+    MiniClue.disable_all_triggers()
+    cache_disable = vim.g.miniclue_disable
+    vim.g.miniclue_disable = true
+  end
+  local enable_all_plus = function()
+    vim.g.miniclue_disable = cache_disable
+    MiniClue.enable_all_triggers()
+  end
+  au('RecordingEnter', '*', disable_all_plus, 'Disable all triggers')
+  au('RecordingLeave', '*', enable_all_plus, 'Enable all triggers')
 
   au('VimResized', '*', H.window_update, 'Update window on resize')
   au('ColorScheme', '*', H.create_default_hl, 'Ensure colors')

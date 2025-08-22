@@ -1,16 +1,16 @@
 local compat = require('render-markdown.lib.compat')
 local env = require('render-markdown.lib.env')
+local interval = require('render-markdown.lib.interval')
 local str = require('render-markdown.lib.str')
-
----@class render.md.request.conceal.Section
----@field start_col integer
----@field end_col integer
----@field width integer
----@field character? string
 
 ---@class render.md.request.conceal.Line
 ---@field hidden boolean
 ---@field sections render.md.request.conceal.Section[]
+
+---@class render.md.request.conceal.Section
+---@field col render.md.Range
+---@field width integer
+---@field character? string
 
 ---@class render.md.request.Conceal
 ---@field private buf integer
@@ -53,8 +53,7 @@ function Conceal:add(row, entry)
     if type(entry) == 'boolean' then
         line.hidden = entry
     else
-        -- If the section is covered by an existing one don't add it
-        if entry.width > 0 and not self:has(line, entry) then
+        if entry.width > 0 and not Conceal.contains(line, entry) then
             line.sections[#line.sections + 1] = entry
         end
     end
@@ -64,11 +63,9 @@ end
 ---@param line render.md.request.conceal.Line
 ---@param entry render.md.request.conceal.Section
 ---@return boolean
-function Conceal:has(line, entry)
+function Conceal.contains(line, entry)
     for _, section in ipairs(line.sections) do
-        local starts_before = section.start_col <= entry.start_col
-        local ends_after = section.end_col >= entry.end_col
-        if starts_before and ends_after then
+        if interval.contains(section.col, entry.col) then
             return true
         end
     end
@@ -101,10 +98,9 @@ end
 ---@return integer
 function Conceal:get(node)
     local result = 0
+    local col = { node.start_col, node.end_col } ---@type render.md.Range
     for _, section in ipairs(self:line(node).sections) do
-        local before_end = node.start_col < section.end_col
-        local after_start = node.end_col > section.start_col
-        if before_end and after_start then
+        if interval.overlaps(section.col, col, true) then
             local width = section.width - self:width(section.character)
             result = result + width
         end
@@ -168,8 +164,7 @@ function Conceal:tree(language, root)
             local row, start_col, _, end_col = Conceal.range(id, node, data)
             local text = vim.treesitter.get_node_text(node, self.buf)
             self:add(row, {
-                start_col = start_col,
-                end_col = end_col,
+                col = { start_col, end_col },
                 width = str.width(text),
                 character = data.conceal,
             })

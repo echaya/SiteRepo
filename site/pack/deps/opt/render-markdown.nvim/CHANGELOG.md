@@ -2,6 +2,21 @@
 
 ## Pre-release
 
+### Features
+
+- yaml render list item bullet points [#496](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/496)
+  [d7be79b](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/d7be79b1a006a2afd9945b5d48d3f1f3ce41ce69)
+- yaml render wiki style links [#496](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/496)
+  [146d4ff](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/146d4ff582017f1a1a16ada841aa08175a87aaea)
+- add scope_highlight to wiki config [ca86b59](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/ca86b5941a56b04ac140837ee7a366cf3fa5cd88)
+- add cell_offset function to pipe_table configuration [e5c3c50](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/e5c3c500d66e9aaf04c116cdfdb0b040d56a1521)
+
+### Bug Fixes
+
+- prioritize hide over highlight_border [7b37aab](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/7b37aaba005df5744fc7a6bd4225983576b2a950)
+- add option to restart treesitter highlighter to clear invalid state [#488](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/488)
+  [ec74afa](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/ec74afa498b6ce3ee686131adf2b3941b713f307)
+
 ## 8.7.0 (2025-08-08)
 
 ### Features

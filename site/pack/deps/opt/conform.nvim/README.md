@@ -192,6 +192,7 @@ You can view this list in vim with `:help conform-formatters`
 - [autocorrect](https://github.com/huacnlee/autocorrect) - A linter and formatter to help you to improve copywriting, correct spaces, words, and punctuations between CJK.
 - [autoflake](https://github.com/PyCQA/autoflake) - Removes unused imports and unused variables as reported by pyflakes.
 - [autopep8](https://github.com/hhatto/autopep8) - A tool that automatically formats Python code to conform to the PEP 8 style guide.
+- [bake](https://github.com/EbodShojaei/bake) - A Makefile formatter and linter.
 - [bean-format](https://beancount.github.io/docs/running_beancount_and_generating_reports.html#bean-format) - Reformat Beancount files to right-align all the numbers at the same, minimal column.
 - [beautysh](https://github.com/lovesegfault/beautysh) - A Bash beautifier for the masses.
 - [bibtex-tidy](https://github.com/FlamingTempura/bibtex-tidy) - Cleaner and Formatter for BibTeX files.
@@ -232,6 +233,7 @@ You can view this list in vim with `:help conform-formatters`
 - [dioxus](https://github.com/dioxuslabs/dioxus) - Format `rsx!` snippets in Rust files.
 - [djlint](https://github.com/Riverside-Healthcare/djLint) - ✨ HTML Template Linter and Formatter. Django - Jinja - Nunjucks - Handlebars - GoLang.
 - [docformatter](https://pypi.org/project/docformatter/) - docformatter automatically formats docstrings to follow a subset of the PEP 257 conventions.
+- [dockerfmt](https://github.com/reteps/dockerfmt) - Dockerfile formatter. a modern dockfmt.
 - [docstrfmt](https://github.com/LilSpazJoekp/docstrfmt) - reStructuredText formatter.
 - [doctoc](https://github.com/thlorenz/doctoc) - Generates table of contents for markdown files inside local git repository.
 - [dprint](https://github.com/dprint/dprint) - Pluggable and configurable code formatting platform written in Rust.
@@ -255,6 +257,7 @@ You can view this list in vim with `:help conform-formatters`
 - [gci](https://github.com/daixiang0/gci) - GCI, a tool that controls Go package import order and makes it always deterministic.
 - [gdformat](https://github.com/Scony/godot-gdscript-toolkit) - A formatter for Godot's gdscript.
 - [gersemi](https://github.com/BlankSpruce/gersemi) - A formatter to make your CMake code the real treasure.
+- [ghdl](https://ghdl.github.io/ghdl/) - Open-source analyzer, compiler, simulator and synthesizer for VHDL.
 - [ghokin](https://github.com/antham/ghokin) - Parallelized formatter with no external dependencies for gherkin.
 - [gleam](https://github.com/gleam-lang/gleam) - ⭐️ A friendly language for building type-safe, scalable systems!
 - [gluon_fmt](https://github.com/gluon-lang/gluon) - Code formatting for the gluon programming language.
@@ -334,13 +337,16 @@ You can view this list in vim with `:help conform-formatters`
 - [prettierd](https://github.com/fsouza/prettierd) - prettier, as a daemon, for ludicrous formatting speed.
 - [pretty-php](https://github.com/lkrms/pretty-php) - The opinionated PHP code formatter.
 - [prettypst](https://github.com/antonWetzel/prettypst) - Formatter for Typst.
+- [prolog](https://github.com/jamesnvc/lsp_server) - Language Server Protocol server and formatter for SWI-Prolog.
 - [puppet-lint](https://github.com/puppetlabs/puppet-lint) - Check that your Puppet manifests conform to the style guide.
 - [purs-tidy](https://github.com/natefaubion/purescript-tidy) - A syntax tidy-upper for PureScript.
 - [pycln](https://github.com/hadialqattan/pycln) - A Python formatter for finding and removing unused import statements.
 - [pyink](https://github.com/google/pyink) - A Python formatter, forked from Black with a few different formatting behaviors.
+- [pymarkdownlnt](https://github.com/jackdewinter/pymarkdown) - A markdown linter and formatter.
 - [pyproject-fmt](https://github.com/tox-dev/toml-fmt/tree/main/pyproject-fmt) - Apply a consistent format to your pyproject.toml file with comment support.
 - [python-ly](https://github.com/frescobaldi/python-ly) - A Python package and commandline tool to manipulate LilyPond files.
 - [pyupgrade](https://github.com/asottile/pyupgrade) - A tool to automatically upgrade syntax for newer versions of Python.
+- [qmlformat](https://doc.qt.io/qt-6//qtqml-tooling-qmlformat.html) - A tool that automatically formats QML files.
 - [reformat-gherkin](https://github.com/ducminh-phan/reformat-gherkin) - Formatter for Gherkin language.
 - [reorder-python-imports](https://github.com/asottile/reorder-python-imports) - Rewrites source to reorder python imports
 - [rescript-format](https://rescript-lang.org/) - The built-in ReScript formatter.
@@ -362,6 +368,8 @@ You can view this list in vim with `:help conform-formatters`
 - [sleek](https://github.com/nrempel/sleek) - Sleek is a CLI tool for formatting SQL.
 - [smlfmt](https://github.com/shwestrick/smlfmt) - A custom parser and code formatter for Standard ML.
 - [snakefmt](https://github.com/snakemake/snakefmt) - a formatting tool for Snakemake files following the design of Black.
+- [spotless_gradle](https://github.com/diffplug/spotless) - Spotless plugin for Gradle.
+- [spotless_maven](https://github.com/diffplug/spotless) - Spotless plugin for Maven.
 - [sql_formatter](https://github.com/sql-formatter-org/sql-formatter) - A whitespace formatter for different query languages.
 - [sqlfluff](https://github.com/sqlfluff/sqlfluff) - A modular SQL linter and auto-formatter with support for multiple dialects and templated code.
 - [sqlfmt](https://docs.sqlfmt.com) - sqlfmt formats your dbt SQL files so you don't have to. It is similar in nature to Black, gofmt, and rustfmt (but for SQL)
@@ -457,13 +465,13 @@ In addition to being able to override any of the original properties on the form
 
 ```lua
 require("conform").formatters.shfmt = {
-  prepend_args = { "-i", "2" },
+  append_args = { "-i", "2" },
   -- The base args are { "-filename", "$FILENAME" } so the final args will be
-  -- { "-i", "2", "-filename", "$FILENAME" }
+  -- { "-filename", "$FILENAME", "-i", "2" }
 }
--- prepend_args can be a function, just like args
+-- append_args can be a function, just like args
 require("conform").formatters.shfmt = {
-  prepend_args = function(self, ctx)
+  append_args = function(self, ctx)
     return { "-i", "2" }
   end,
 }
@@ -475,7 +483,7 @@ If you want to overwrite the entire formatter definition and _not_ merge with th
 require("conform").formatters.shfmt = {
   inherit = false,
   command = "shfmt",
-  args = { "-i", "2", "-filename", "$FILENAME" },
+  args = { "-filename", "$FILENAME", "-i", "2" },
 }
 ```
 

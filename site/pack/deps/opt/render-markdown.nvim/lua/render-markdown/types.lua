@@ -7,6 +7,7 @@
 ---@field file_types? string[]
 ---@field ignore? fun(buf: integer): boolean
 ---@field change_events? string[]
+---@field restart_highlighter? boolean
 ---@field injections? render.md.injection.UserConfigs
 ---@field patterns? render.md.pattern.UserConfigs
 ---@field on? render.md.on.UserConfig
@@ -36,6 +37,7 @@
 ---@field quote? render.md.quote.UserConfig
 ---@field sign? render.md.sign.UserConfig
 ---@field win_options? render.md.window.UserConfigs
+---@field yaml? render.md.yaml.UserConfig
 
 ---@class (exact) render.md.anti.conceal.UserConfig
 ---@field enabled? boolean
@@ -215,6 +217,7 @@
 ---@field icon? string
 ---@field body? fun(ctx: render.md.link.Context): render.md.mark.Text|string?
 ---@field highlight? string
+---@field scope_highlight? string
 
 ---@class (exact) render.md.link.custom.UserConfig
 ---@field pattern? string
@@ -255,6 +258,7 @@
 ---@class (exact) render.md.table.UserConfig: render.md.base.UserConfig
 ---@field preset? render.md.table.Preset
 ---@field cell? render.md.table.Cell
+---@field cell_offset? fun(ctx: render.md.table.cell.Context): integer
 ---@field padding? integer
 ---@field min_width? integer
 ---@field border? string[]
@@ -280,3 +284,5 @@
 ---@class (exact) render.md.window.UserConfig
 ---@field default? render.md.option.Value
 ---@field rendered? render.md.option.Value
+
+---@class (exact) render.md.yaml.UserConfig: render.md.base.UserConfig

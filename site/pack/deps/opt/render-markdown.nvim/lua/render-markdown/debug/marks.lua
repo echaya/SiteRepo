@@ -99,7 +99,11 @@ end
 ---@param lines render.md.mark.Line[]
 ---@return string
 function Mark.lines(lines)
-    return #lines > 0 and Mark.line(lines[1]) or ''
+    local result = {} ---@type string[]
+    for _, line in ipairs(lines) do
+        result[#result + 1] = Mark.line(line)
+    end
+    return ('{%s}'):format(table.concat(result, ', '))
 end
 
 ---@private
@@ -113,7 +117,7 @@ function Mark.line(line)
             Mark.highlight(text[2])
         )
     end
-    return table.concat(result, ' + ')
+    return ('[%s]'):format(table.concat(result, ', '))
 end
 
 ---@private
@@ -148,18 +152,16 @@ end
 local M = {}
 
 function M.show()
-    local Range = require('render-markdown.lib.range')
     local env = require('render-markdown.lib.env')
     local ui = require('render-markdown.core.ui')
 
     local buf = env.buf.current()
     local win = env.win.current()
     local row = assert(env.row.get(buf, win), 'row must be known')
-    local range = Range.new(row, row)
 
     local marks = {} ---@type render.md.debug.Mark[]
     for _, extmark in ipairs(ui.get(buf):get()) do
-        if extmark:overlaps(range) then
+        if extmark:overlaps({ row, row }) then
             marks[#marks + 1] = Mark.new(extmark:get())
         end
     end

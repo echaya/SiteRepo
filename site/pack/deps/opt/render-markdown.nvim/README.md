@@ -51,10 +51,12 @@ Plugin to improve viewing Markdown files in Neovim
 - [treesitter](https://github.com/nvim-treesitter/nvim-treesitter) parsers:
   - [markdown & markdown_inline](https://github.com/tree-sitter-grammars/tree-sitter-markdown):
     Used to parse `markdown` files
-  - [latex](https://github.com/latex-lsp/tree-sitter-latex) (Optional):
-    Used to get `latex` blocks from `markdown` files
   - [html](https://github.com/tree-sitter/tree-sitter-html) (Optional):
     Used to conceal `HTML` comments
+  - [latex](https://github.com/latex-lsp/tree-sitter-latex) (Optional):
+    Used to get `latex` blocks from `markdown` files
+  - [yaml](https://github.com/tree-sitter-grammars/tree-sitter-yaml) (Optional):
+    Used to render elements in `frontmatter` metadata
 - Icon provider plugin (Optional): Used for icon above code blocks
   - [mini.icons](https://github.com/echasnovski/mini.nvim/blob/main/readmes/mini-icons.md)
   - [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons)
@@ -213,6 +215,10 @@ require('render-markdown').setup({
     end,
     -- Additional events that will trigger this plugin's render loop.
     change_events = {},
+    -- Whether the treesitter highlighter should be restarted after this plugin attaches to its
+    -- first buffer for the first time. May be necessary if this plugin is lazy loaded to clear
+    -- highlights that have been dynamically disabled.
+    restart_highlighter = false,
     injections = {
         -- Out of the box language injections for known filetypes that allow markdown to be interpreted
         -- in specified locations, see :h treesitter-language-injections.
@@ -672,6 +678,10 @@ require('render-markdown').setup({
         -- | padded  | raw + cells are padded to maximum visual width for each column             |
         -- | trimmed | padded except empty space is subtracted from visual width calculation      |
         cell = 'padded',
+        -- Adjust the computed width of table cells using custom logic.
+        cell_offset = function()
+            return 0
+        end,
         -- Amount of space to put between cell contents and border.
         padding = 1,
         -- Minimum column width to use for padded or trimmed cell.
@@ -773,6 +783,7 @@ require('render-markdown').setup({
                 return nil
             end,
             highlight = 'RenderMarkdownWikiLink',
+            scope_highlight = nil,
         },
         -- Define custom destination patterns so icons can quickly inform you of what a link
         -- contains. Applies to 'inline_link', 'uri_autolink', and wikilink nodes. When multiple
@@ -878,9 +889,9 @@ require('render-markdown').setup({
         -- More granular configuration mechanism, allows different aspects of buffers to have their own
         -- behavior. Values default to the top level configuration if no override is provided. Supports
         -- the following fields:
-        --   enabled, max_file_size, debounce, render_modes, anti_conceal, padding, heading, paragraph,
-        --   code, dash, bullet, checkbox, quote, pipe_table, callout, link, sign, indent, latex, html,
-        --   win_options
+        --   enabled, render_modes, max_file_size, debounce, anti_conceal, bullet, callout, checkbox,
+        --   code, dash, document, heading, html, indent, inline_highlight, latex, link, padding,
+        --   paragraph, pipe_table, quote, sign, win_options, yaml
 
         -- Override for different buflisted values, @see :h 'buflisted'.
         buflisted = {},
@@ -898,6 +909,12 @@ require('render-markdown').setup({
     custom_handlers = {
         -- Mapping from treesitter language to user defined handlers.
         -- @see [Custom Handlers](doc/custom-handlers.md)
+    },
+    yaml = {
+        -- Turn on / off all yaml rendering.
+        enabled = true,
+        -- Additional modes to render yaml.
+        render_modes = false,
     },
 })
 ```
@@ -1364,6 +1381,10 @@ require('render-markdown').setup({
         -- | padded  | raw + cells are padded to maximum visual width for each column             |
         -- | trimmed | padded except empty space is subtracted from visual width calculation      |
         cell = 'padded',
+        -- Adjust the computed width of table cells using custom logic.
+        cell_offset = function()
+            return 0
+        end,
         -- Amount of space to put between cell contents and border.
         padding = 1,
         -- Minimum column width to use for padded or trimmed cell.
@@ -1495,6 +1516,7 @@ require('render-markdown').setup({
                 return nil
             end,
             highlight = 'RenderMarkdownWikiLink',
+            scope_highlight = nil,
         },
         -- Define custom destination patterns so icons can quickly inform you of what a link
         -- contains. Applies to 'inline_link', 'uri_autolink', and wikilink nodes. When multiple
