@@ -10,12 +10,23 @@
   [146d4ff](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/146d4ff582017f1a1a16ada841aa08175a87aaea)
 - add scope_highlight to wiki config [ca86b59](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/ca86b5941a56b04ac140837ee7a366cf3fa5cd88)
 - add cell_offset function to pipe_table configuration [e5c3c50](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/e5c3c500d66e9aaf04c116cdfdb0b040d56a1521)
+- inline render single line latex equations [#508](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/508)
+  [b7dad79](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/b7dad793f4750b7e95884c0db374b917898a979b)
+- allow nested markdown to be skipped [#510](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/510)
+  [c203eae](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/c203eae127bd3397985408038f4d74fc952532e2)
 
 ### Bug Fixes
 
 - prioritize hide over highlight_border [7b37aab](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/7b37aaba005df5744fc7a6bd4225983576b2a950)
 - add option to restart treesitter highlighter to clear invalid state [#488](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/488)
   [ec74afa](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/ec74afa498b6ce3ee686131adf2b3941b713f307)
+- use display width for latex formula alignment [c4ff9ac](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/c4ff9acddcf0f79b3187393319adb5cac5865bd3)
+- anti-conceal ignore modes [8074a9c](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/8074a9cc9a6f737320b7a0d76b2c4c3485155688)
+- component level render modes [84d4928](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/84d4928cb4b508847294002835989880da4ce13b)
+
+### Collaborator Shoutouts
+
+- @LexeyKhom
 
 ## 8.7.0 (2025-08-08)
 

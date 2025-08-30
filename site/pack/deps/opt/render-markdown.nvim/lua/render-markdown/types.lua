@@ -6,6 +6,7 @@
 ---@field log_runtime? boolean
 ---@field file_types? string[]
 ---@field ignore? fun(buf: integer): boolean
+---@field nested? boolean
 ---@field change_events? string[]
 ---@field restart_highlighter? boolean
 ---@field injections? render.md.injection.UserConfigs
@@ -197,6 +198,7 @@
 ---@field position? render.md.latex.Position
 ---@field top_pad? integer
 ---@field bottom_pad? integer
+---@field virtual? boolean
 
 ---@class (exact) render.md.link.UserConfig: render.md.base.UserConfig
 ---@field footnote? render.md.link.footnote.UserConfig
