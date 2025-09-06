@@ -57,6 +57,12 @@ call s:SetGlobalOptDefault('table_mode_sort_map', g:table_mode_map_prefix.'s')
 call s:SetGlobalOptDefault('table_mode_tableize_map', g:table_mode_map_prefix.'t')
 call s:SetGlobalOptDefault('table_mode_tableize_d_map', '<Leader>T')
 
+call s:SetGlobalOptDefault('table_mode_syntax_dict', {
+\   'contains': 'TableBorder,TableSeparator,TableColumnAlign,' .
+\               'yesCell,noCell,maybeCell,redCell,greenCell,yellowCell,blueCell,whiteCell,darkCell',
+\   'containedin': 'ALL'
+\})
+
 call s:SetGlobalOptDefault('table_mode_syntax', 1)
 call s:SetGlobalOptDefault('table_mode_auto_align', 1)
 call s:SetGlobalOptDefault('table_mode_update_time', 500)
