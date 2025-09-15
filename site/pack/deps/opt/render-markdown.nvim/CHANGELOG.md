@@ -2,6 +2,8 @@
 
 ## Pre-release
 
+## 8.8.0 (2025-09-09)
+
 ### Features
 
 - yaml render list item bullet points [#496](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/496)
@@ -23,6 +25,8 @@
 - use display width for latex formula alignment [c4ff9ac](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/c4ff9acddcf0f79b3187393319adb5cac5865bd3)
 - anti-conceal ignore modes [8074a9c](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/8074a9cc9a6f737320b7a0d76b2c4c3485155688)
 - component level render modes [84d4928](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/84d4928cb4b508847294002835989880da4ce13b)
+- scope and autolink highlights conflict [#518](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/518)
+  [7fd9116](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/7fd911692e5bc705c5487ae1c390d0b6d9738d87)
 
 ### Collaborator Shoutouts
 
