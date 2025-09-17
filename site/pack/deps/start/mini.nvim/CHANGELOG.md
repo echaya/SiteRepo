@@ -15,6 +15,15 @@ There are following change types:
 
     This change is made to improve long term project stability. See more details [here](https://github.com/nvim-mini/mini.nvim/discussions/1970).
 
+- Start setting custom Neovim method implementation during `setup()` (if module provides one). This is usually the expected behavior for majority of use cases and should improve "out of the box" experience. Modules should still export a function to manually adjust the implementation.
+
+    It is a breaking change only if the implementation was not explicitly used. Can still be done if set or restored *after* calling module's `setup()`.
+
+    Affected modules:
+
+    - 'mini.notify' sets `vim.notify`.
+    - 'mini.pick' sets `vim.ui.select`.
+
 ### Refine
 
 - Stop official support of Neovim 0.8.
@@ -38,6 +47,10 @@ There are following change types:
 - Add `gen_spec.user_prompt` that acts the same as `?` built-in textobject. It can be used for using this textobject under another identifier.
 
 ## mini.completion
+
+### Evolve
+
+- Update `setup()` to remove "t" flag from 'complete' option (if not previously set and fallback action is default) as it leads to visible lags.
 
 ### Expand
 
@@ -110,14 +123,6 @@ There are following change types:
 ### Expand
 
 - Update `zoom()` to return whether current buffer is zoomed in. By @loichyan, PR #1954.
-
-## mini.notify
-
-### Evolve
-
-- Update `setup()` to set `vim.notify` to a custom implementation, which is arguably the expected behavior for majority of use cases. This makes it unnecessary to manually `vim.notify = MiniNotify.make_notify()` after the `setup()`, but still can be done to adjust the behavior with custom options.
-
-    This is a breaking change for users who do not use 'mini.notify' for `vim.notify` implementation. To keep doing that, set `vim.notify` *after* executing `require('mini.notify').setup()`.
 
 ## mini.pick
 

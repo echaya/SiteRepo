@@ -193,12 +193,11 @@
 ---@field highlight? string
 
 ---@class (exact) render.md.latex.UserConfig: render.md.base.UserConfig
----@field converter? string
+---@field converter? string|string[]
 ---@field highlight? string
 ---@field position? render.md.latex.Position
 ---@field top_pad? integer
 ---@field bottom_pad? integer
----@field virtual? boolean
 
 ---@class (exact) render.md.link.UserConfig: render.md.base.UserConfig
 ---@field footnote? render.md.link.footnote.UserConfig

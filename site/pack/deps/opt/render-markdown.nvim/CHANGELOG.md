@@ -2,6 +2,19 @@
 
 ## Pre-release
 
+### Features
+
+- remove delimiters around latex text before converting [2c6cf12](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/2c6cf127c577712bd29d38f6391b3045c5f0180a)
+- convert latex asynchronously [44cbac6](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/44cbac697e50ae32e4644652da08cf692b9a5a57)
+- combine latex virtual lines use center positioning [#520](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/520)
+  [9a746ff](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/9a746ff62a482f5eb722b3bfc7eefb2e9d638858)
+- latex converter can now be a list, prefer utftex, fallback to latex2text [5f437a2](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/5f437a26a8a8b964eff683dd6f68bc2a0d38c5db)
+
+### Bug Fixes
+
+- use display width of concealed ranges [b4885a9](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/b4885a95e5082a6ed164830c581aac257a74f355)
+- top & bottom padding for latex [5b01324](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/5b01324a5fce277183098eac0a2cdb9c1b446b73)
+
 ## 8.8.0 (2025-09-09)
 
 ### Features

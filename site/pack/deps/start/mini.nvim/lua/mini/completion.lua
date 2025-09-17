@@ -88,6 +88,8 @@
 ---   To enable fuzzy matching, manually set to "menuone,noselect,fuzzy". Consider
 ---   also adding "nosort" flag to preserve initial order when filtering.
 --- - 'shortmess' is appended with "c" flag for silent <C-n> fallback.
+--- - 'complete' gets removed "t" flag (if fallback action is default), as it
+---   leads to visible lags.
 ---
 --- # Snippets ~
 ---
@@ -796,6 +798,10 @@ H.apply_config = function(config)
   local shortmess_flags = 'c' .. (vim.fn.has('nvim-0.10') == 0 and 'C' or '')
   was_set = vim.api.nvim_get_option_info2('shortmess', { scope = 'global' }).was_set
   if not was_set then vim.opt.shortmess:append(shortmess_flags) end
+
+  -- - Remove "t" flag to reduce visible lags
+  was_set = vim.api.nvim_get_option_info2('complete', { scope = 'global' }).was_set
+  if not was_set and config.fallback_action == '<C-n>' then vim.opt.complete:remove('t') end
 end
 
 H.create_autocommands = function(config)
@@ -1339,10 +1345,17 @@ H.make_lsp_extra_actions = function(lsp_data)
     pcall(vim.api.nvim_buf_set_text, 0, from[1] - 1, from[2], to[1] - 1, to[2], { prefix })
     to = { from[1], from[2] + init_base.length }
 
+    -- Possibly adjust tracked range to come from LSP item. Clamp to existing
+    -- text state because some LSP servers update `textEdit` during resolve
+    -- (although the must not to) which can error when setting extmarks.
     local edit_range = H.get_lsp_edit_range({ result = { item } })
     if edit_range ~= nil then
-      from = { edit_range.start.line + 1, edit_range.start.character }
-      to = { edit_range['end'].line + 1, edit_range['end'].character }
+      local n_lines = vim.api.nvim_buf_line_count(0)
+      local start_lnum = math.min(edit_range.start.line + 1, n_lines)
+      local end_lnum = math.min(edit_range['end'].line + 1, n_lines)
+      local start_col = math.min(edit_range.start.character, vim.fn.getline(start_lnum):len())
+      local end_col = math.min(edit_range['end'].character, vim.fn.getline(end_lnum):len())
+      from, to = { start_lnum, start_col }, { end_lnum, end_col }
     end
 
     -- Try to apply additional text edits *after* restoring state because their
