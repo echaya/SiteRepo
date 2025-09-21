@@ -172,11 +172,15 @@ yarepl.setup {
             send_delayed_cr_after_sending = true,
         },
     },
-    -- Display the first line as virtual text to indicate the actual
-    -- command sent to the REPL.
-    source_command_hint = {
-        enabled = false,
-        hl_group = 'Comment',
+    print_1st_line_on_source = false, -- If true, sends the first non-empty line of sourced content as a comment
+    comment_prefixes = {
+        -- Defines comment characters for different REPLs
+        python = '# ',
+        ipython = '# ',
+        R = '# ',
+        bash = '# ',
+        zsh = '# ',
+        lua = '-- ',
     },
 }
 ```
@@ -377,11 +381,6 @@ Note that the REPL configuration requires a corresponding `source_syntax`
 implementation. For more information, refer to the section [Customizing the
 Source Syntax](#customizing-the-source-syntax). Built-in source
 implementations are available for Python, R, and Bash.
-
-Consider enabling `config.source_command_hint.enabled = true`. When enabled,
-the first non-empty line of the code chunk displays as virtual text alongside
-the source command sent to the REPL, providing a useful hint about the actual
-command being executed.
 
 ### REPLSendLine
 
@@ -592,11 +591,6 @@ yarepl.setup {
 }
 ```
 
-Similar to `wincmd` (which allows you to configure a global default with
-meta-local overrides), you can also set meta-local overrides for
-`source_command_hint`. The configuration option name for meta-local overrides
-is identical to the global setting.
-
 # Customizing REPLs
 
 You can disable a built-in REPL meta by set the key to `false`:
@@ -747,6 +741,16 @@ yarepl.formatter.factory {
             join_lines_with_cr = true,
         },
     },
+    print_1st_line_on_source = false, -- If true, sends the first non-empty line of sourced content as a comment
+    comment_prefixes = {
+        -- Defines comment characters for different REPLs
+        python = '# ',
+        ipython = '# ',
+        R = '# ',
+        bash = '# ',
+        zsh = '# ',
+        lua = '-- ',
+    },
 }
 
 -- `yarepl` provides three builtin formatters that can be referenced by name:
@@ -787,7 +791,7 @@ local yarepl = require 'yarepl'
 
 yarepl.setup {
     metas = {
-        radian = {
+        ipython = {
             cmd = 'radian',
             formatter = 'bracketed_pasting_no_final_new_line',
             source_syntax = 'eval(parse(text = "{{file}}"))',
