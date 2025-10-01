@@ -1002,7 +1002,7 @@ function M.sections.terminal(opts)
           }
           for seq, repl in pairs(termenv) do
             if data:find(seq) then
-              vim.fn.chansend(jid, repl())
+              pcall(vim.fn.chansend, jid, repl())
               data = data:gsub(seq, "")
             end
           end

@@ -49,7 +49,7 @@ sync_module () {
   # - Move all known relative links one step higher (and hope that it doesn't
   #   occur anywhere else in patch). NOTE: There can be other relative links
   #   which should be corrected manually
-  sed -i "s/\[help file\](\.\.\//[help file](/" $patch
+  sed -i "s/\[Documentation\](\.\.\/doc/[Documentation](doc/" $patch
 
   # Possibly pull repository
   if [[ ! -d $repo ]]

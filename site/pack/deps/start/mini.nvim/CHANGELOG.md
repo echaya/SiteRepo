@@ -1,6 +1,7 @@
 This is the log of changes for past and current development versions. It lists changes in user-facing functionality per module (or all modules) and type.
 
 There are following change types:
+
 - `Evolve` - change in previously intended functionality *while* adding a new one.
 - `Refine` - change in previously intended functionality *without* adding new one. This is usually described as a "breaking change", but used here in a sense that it might break user's expectations about existing functionality.
 - `Expand` - adding new functionality without affecting existing ones. This is essentially new features.
@@ -55,6 +56,8 @@ There are following change types:
 ### Expand
 
 - Add `MiniCompletionWindowOpen` and `MiniCompletionWindowUpdate` events.
+
+- Add support for highlighting LSP item label via setting `abbr_hlgroup` field as part of an LSP item (like inside `config.lsp_completion.process_items`).
 
 ## mini.clue
 
@@ -227,8 +230,9 @@ There are following change types:
 
 ### Evolve
 
-- Add snippet support. By default uses 'mini.snippets' to manage snippet session (if enabled, **highly recommended), falls back to `vim.snippet` on Neovim>=0.10. See "Snippets" section in `:h MiniCompletion` for more details.<br>
-  This affect existing functionality because items with `Snippet` kind are no longer filtered out by default.
+- Add snippet support. By default uses 'mini.snippets' to manage snippet session (if enabled, **highly recommended), falls back to `vim.snippet` on Neovim>=0.10. See "Snippets" section in `:h MiniCompletion` for more details.
+
+    This affect existing functionality because items with `Snippet` kind are no longer filtered out by default.
 
 - Rework how LSP completion items are converted to Neovim's completion items:
     - Show `detail` highlighted as buffer's language at the start of info window, but only if `detail` provides information not already present in `documentation`. It was previously used as extra text in the popup menu (via `menu` field), but this doesn't quite follow LSP specification: `detail` and `documentation` fields can be delayed up until `completionItem/resolve` request which implies they should be treated similarly.

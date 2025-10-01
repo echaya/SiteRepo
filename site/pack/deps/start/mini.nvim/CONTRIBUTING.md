@@ -109,6 +109,7 @@ If your contribution updates code, please make sure that it doesn't break existi
 This plugin uses 'mini.test' to manage its tests. For a more hands-on introduction, see [TESTING.md](TESTING.md).
 
 **Notes**:
+
 - If new functionality relies on an external dependency (`git` CLI tool, LSP server, etc.), use mocking (writing Lua code which emulates dependency usage as close as reasonably possible). For examples, take a look at tests for 'mini.pick', 'mini.completion', and 'mini.statusline'.
 - There is a certain number of tests that are flaky (i.e. will sometimes report an error due to other reasons than actual functionality being broke). It is usually the ones which test time related functionality (i.e. that certain action was done after specific amount of delay).
 
@@ -149,6 +150,7 @@ Here is a list of all highlight groups defined inside 'mini.nvim' modules. See d
 
 - 'mini.completion':
     - `MiniCompletionActiveParameter`
+    - `MiniCompletionDeprecated`
     - `MiniCompletionInfoBorderOutdated`
 
 - 'mini.cursorword':

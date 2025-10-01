@@ -2,7 +2,7 @@
 
 Writing tests for Neovim Lua plugin is hard. Writing good tests for Neovim Lua plugin is even harder. The 'mini.test' module is designed to make it reasonably easier while still allowing lots of flexibility. It deliberately favors a more verbose and program-like style of writing tests, opposite to "human readable, DSL like" approach of [nvim-lua/plenary.nvim](https://github.com/nvim-lua/plenary.nvim) ("busted-style testing" from [Olivine-Labs/busted](https://github.com/Olivine-Labs/busted)). Although the latter is also possible.
 
-This file is intended as a hands-on introduction to 'mini.test' with examples. For more details, see 'mini.test' section of [help file](doc/mini.txt) and tests of this plugin's modules.
+This file is intended as a hands-on introduction to 'mini.test' with examples. For more details, see [its documentation](doc/mini-test.txt) and tests of this plugin's modules.
 
 General approach of writing test files:
 
@@ -150,6 +150,7 @@ To write tests, you'll need these files:
 Mandatory:
 
 - **Your Lua plugin in 'lua' directory**. Here we will be testing 'hello_lines' plugin.
+
 - **Test files**. By default they should be Lua files located in 'tests/' directory and named with 'test_' prefix. For example, we will write everything in 'test_hello_lines.lua'. It is usually a good idea to follow this template (will be assumed for the rest of this file):
 
     <details><summary>Template for test files</summary>
@@ -165,7 +166,7 @@ Mandatory:
     return T
     ```
 
-    </details><br>
+    </details>
 
 - **'mini.nvim' dependency**. It is needed to use its 'mini.test' module. Proposed way to store it is in 'deps/mini.nvim' directory. Create it with `git`:
 
@@ -193,7 +194,7 @@ Mandatory:
     end
     ```
 
-    </details><br>
+    </details>
 
 Recommended:
 
@@ -216,7 +217,7 @@ Recommended:
     	git clone --filter=blob:none https://github.com/nvim-mini/mini.nvim $@
     ```
 
-    </details><br>
+    </details>
 
 - **'mini.test' script** at 'scripts/minitest.lua'. Use it to customize what is tested (which files, etc.) and how. Usually not needed, but otherwise should have some variant of a call to `MiniTest.run()`.
 
@@ -226,7 +227,6 @@ The 'mini.test' module out of the box supports two major ways of running tests:
 
 - **Interactive**. All test files will be run directly inside current Neovim session. This proved to be very useful for debugging while writing tests. To run tests, simply execute `:lua MiniTest.run()` / `:lua MiniTest.run_file()` / `:lua MiniTest.run_at_location()` (assuming, you already have 'mini.test' set up with `require('mini.test').setup()`). With default configuration this will result into floating window with information about results of test execution. Press `q` to close it. **Note**: Be careful though, as it might affect your current setup. To avoid this, [use child processes](#using-child-process) inside tests.
 - **Headless** (from shell). Start headless Neovim process with proper startup file and execute `lua MiniTest.run()`. Assuming full file organization from previous section, this can be achieved with `make test`. This will show information about results of test execution directly in shell.
-
 
 ## Basics
 
@@ -893,8 +893,8 @@ return T
 
 One of the main difficulties in testing Neovim plugins is verifying that something is actually displayed in the way you intend. Like general highlighting, statusline, tabline, sign column, extmarks, etc. Testing screen state with screenshots makes this a lot easier. There is a `child.get_screenshot()` method which basically calls `screenstring()` (`:h screenstring()`) and `screenattr()` (`:h screenattr()`) for every visible cell (row from 1 to 'lines' option, column from 1 to 'columns' option). It then returns screenshot with two layers:
 
-- <text> - "2d array" (row-column) of single characters displayed at particular cells.
-- <attr> - "2d array" (row-column) of symbols representing how text is displayed (basically, "coded" appearance/highlighting). They should be used only in relation to each other: same/different symbols for two cells mean same/different visual appearance. Note: there will be false positives if there are more than 94 different attribute values. To make output more portable and visually useful, outputs of `screenattr()` are coded with single character symbols.
+- `text` - "2d array" (row-column) of single characters displayed at particular cells.
+- `attr` - "2d array" (row-column) of symbols representing how text is displayed (basically, "coded" appearance/highlighting). They should be used only in relation to each other: same/different symbols for two cells mean same/different visual appearance. Note: there will be false positives if there are more than 94 different attribute values. To make output more portable and visually useful, outputs of `screenattr()` are coded with single character symbols.
 
 Couple of caveats:
 

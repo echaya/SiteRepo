@@ -722,6 +722,7 @@ H.apply_palette = function(palette, use_cterm)
     hi('MiniClueTitle',               {fg=p.base0D, bg=p.base01, attr='bold', sp=nil})
 
     hi('MiniCompletionActiveParameter',    {link='LspSignatureActiveParameter'})
+    hi('MiniCompletionDeprecated',         {link='DiagnosticDeprecated'})
     hi('MiniCompletionInfoBorderOutdated', {link='DiagnosticFloatingWarn'})
 
     hi('MiniCursorword',        {fg=nil, bg=nil, attr='underline', sp=nil})
