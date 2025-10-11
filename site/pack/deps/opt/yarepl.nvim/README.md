@@ -23,10 +23,12 @@
   - [Keymaps](#keymaps)
 - [Window configuration](#window-configuration)
 - [Customizing REPLs](#customizing-repls)
+  - [Delayed Final CR Option](#delayed-final-cr-option)
 - [Customizing the Source Syntax](#customizing-the-source-syntax)
 - [Example keybinding setup](#example-keybinding-setup)
 - [Extensions](#extensions)
   - [aider](#aider)
+  - [codex](#codex)
   - [code-cell](#code-cell)
   - [fzf-lua](#fzf-lua)
   - [telescope](#telescope)
@@ -43,24 +45,23 @@
 
 # yarepl.nvim
 
-Yet Another REPL is a flexible REPL / TUI App management tool that supports
-multiple paradigms for interacting with tui-apps\*. This plugin also works with
+Yet Another REPL is a flexible REPL / CLI App management tool that supports
+multiple paradigms for interacting with them. This plugin also works with
 project-level config and tmux, and includes native dot-repeat without requiring
 vim-repeat.
 
 Flexibility and parallelism are core priorities. With yarepl.nvim, you can
-effortlessly interact with multiple tui-apps through various paradigms:
+effortlessly interact with multiple CLI Apps through various paradigms:
 
-- Send text from multiple buffers (same or different file types) to a single tui-app.
-- Send text from a single buffer to multiple tui-apps (same program or different)
-- Attach a buffer to a dedicated tui-apps
+- Send text from multiple buffers (same or different file types) to a single
+  REPL / CLI App.
+- Send text from a single buffer to multiple CLI Apps (same program or different)
+- Attach a buffer to a dedicated CLI Apps
 
-\*tui-apps refers to both TUI Apps and REPLs collectively.
-
-The plugin features integration with `aider.chat` and provides convenient code
-cell text object definitions. Choose your preferred fuzzy finder among
-`telescope`, `fzf-lua`, or `Snacks.picker` to preview active REPLs. These
-features are available as [extensions](#extensions).
+The plugin features integration with `aider.chat` and `OpenAI Codex CLI`, and
+provides convenient code cell text object definitions. Choose your preferred
+fuzzy finder among `telescope`, `fzf-lua`, or `Snacks.picker` to preview active
+REPLs. These features are available as [extensions](#extensions).
 
 # Showcase
 
@@ -69,8 +70,13 @@ features are available as [extensions](#extensions).
 This image highlights an AI-driven coding assistant and REPL,
 [aider.chat](https://aider.chat), managed by `yarepl`.
 
-`yarepl` enables integration with `aider.chat`. For more details,
-refer to the [Extensions](#extensions) section.
+![codex showcase](assets/codex-showcase.jpg)
+
+This example showcases the Codex CLI integration running side by side with a
+Neovim buffer, all managed through `yarepl`.
+
+`yarepl` enables integration with the OpenAI's Codex CLI and Aider.chat. For
+more details, refer to the [Extensions](#extensions) section.
 
 # Why yarepl.nvim?
 
@@ -85,6 +91,14 @@ Furthermore, when conducting mixed-language programming in a literate
 programming style in text format such as `rmarkdown`, `quarto`, or plain
 `markdown`, I need to send text in the buffer to different REPLs such as R and
 Python .
+
+Additionally, `yarepl.nvim` features a `source_syntax` capability that allows
+sourcing large code chunks from temporary files instead of sending them
+directly to the REPL. This prevents cluttering your interaction history and
+provides better handling of substantial code content, especially useful on
+Windows where large stdin processing can be problematic. The plugin writes
+selected code regions/content to temporary files and provides convenient syntax
+definitions for how each REPL should source files.
 
 As a CLI fnatic, to communicate with chatgpt, I prefer through a REPL `aichat`.
 Additionally, I require a set of global hotkeys and an isolated REPL
@@ -169,18 +183,14 @@ yarepl.setup {
         -- them. The default options are recommended for Windows user.
         windows = {
             -- Send a final `\r` to the REPL with delay,
-            send_delayed_cr_after_sending = true,
+            send_delayed_final_cr = true,
         },
     },
-    print_1st_line_on_source = false, -- If true, sends the first non-empty line of sourced content as a comment
-    comment_prefixes = {
-        -- Defines comment characters for different REPLs
-        python = '# ',
-        ipython = '# ',
-        R = '# ',
-        bash = '# ',
-        zsh = '# ',
-        lua = '-- ',
+    -- Display the first line as virtual text to indicate the actual
+    -- command sent to the REPL.
+    source_command_hint = {
+        enabled = false,
+        hl_group = 'Comment',
     },
 }
 ```
@@ -381,6 +391,11 @@ Note that the REPL configuration requires a corresponding `source_syntax`
 implementation. For more information, refer to the section [Customizing the
 Source Syntax](#customizing-the-source-syntax). Built-in source
 implementations are available for Python, R, and Bash.
+
+Consider enabling `config.source_command_hint.enabled = true`. When enabled,
+the first non-empty line of the code chunk displays as virtual text alongside
+the source command sent to the REPL, providing a useful hint about the actual
+command being executed.
 
 ### REPLSendLine
 
@@ -591,6 +606,11 @@ yarepl.setup {
 }
 ```
 
+Similar to `wincmd` (which allows you to configure a global default with
+meta-local overrides), you can also set meta-local overrides for
+`source_command_hint`. The configuration option name for meta-local overrides
+is identical to the global setting.
+
 # Customizing REPLs
 
 You can disable a built-in REPL meta by set the key to `false`:
@@ -649,6 +669,7 @@ returns either a string or list of strings.
 1. A string that matches a builtin formatter name:
    - `bracketed_pasting`: wrap the content within bracketed paste sequences
    - `bracketed_pasting_no_final_new_line`: similar to `bracketed_pasting`, but does not add a new line at the end
+   - `bracketed_pasting_delayed_cr`: similar to `bracketed_pasting`, but use with `send_delayed_final_cr = true`
    - `trim_empty_lines`: remove empty lines from the input
 2. A function that takes a list of strings as input and returns a list of
    strings to send to the REPL
@@ -741,22 +762,13 @@ yarepl.formatter.factory {
             join_lines_with_cr = true,
         },
     },
-    print_1st_line_on_source = false, -- If true, sends the first non-empty line of sourced content as a comment
-    comment_prefixes = {
-        -- Defines comment characters for different REPLs
-        python = '# ',
-        ipython = '# ',
-        R = '# ',
-        bash = '# ',
-        zsh = '# ',
-        lua = '-- ',
-    },
 }
 
--- `yarepl` provides three builtin formatters that can be referenced by name:
+-- `yarepl` provides four builtin formatters that can be referenced by name:
 -- 1. 'bracketed_pasting' - Uses bracketed paste mode for modern REPLs
 -- 2. 'bracketed_pasting_no_final_new_line' - Same as above but without final newline
--- 3. 'trim_empty_lines' - Trims empty lines from input
+-- 3. 'bracketed_pasting_delayed_cr': similar to `bracketed_pasting`, but use with `send_delayed_final_cr = true`
+-- 4. 'trim_empty_lines' - Trims empty lines from input
 
 -- You can also create custom formatters by calling `yarepl.formatter.factory`:
 
@@ -779,6 +791,40 @@ yarepl.formatter.bracketed_pasting = yarepl.formatter.factory {
 
 </details>
 
+## Delayed Final CR Option
+
+`send_delayed_final_cr` (optional, defaults to `false`): Some REPLs do not
+recognize the final CR (return)'s purpose is to tell the REPL that we want to
+"finalize" (or evaluate) that command when it is input with a large chunk of
+text when bracketed pasting is enabled. To mitigate this, we have to send the
+final CR with a delay (to let the REPL realize that we want to evaluate that
+command). In general we should ignore this option (keep it as the default
+`false`). When you do enable this option, prefer using the
+`bracketed_pasting_delayed_cr` formatter so that the final CR is not included
+in the initial stream (it will be sent by the delayed event). The two observed
+exceptions are Claude Code and OpenAI Codex which should use `true`. PRs are
+welcome if you find other REPLs that require setting this option to `true`.
+
+Example usage:
+
+```lua
+metas = {
+    claude_code = {
+        cmd = 'claude',
+        formatter = 'bracketed_pasting_delayed_cr',
+        source_syntax = '@{{file}}',
+        send_delayed_final_cr = true
+    },
+    ipython = {
+        cmd = 'ipython',
+        formatter = 'bracketed_pasting',
+        send_delayed_final_cr = false  -- this is the default, can be omitted
+    },
+    -- yarepl provides builtin extension to use with codex.
+    codex = require('yarepl.extensions.codex').create_codex_meta(),
+}
+```
+
 # Customizing the Source Syntax
 
 To utilize `REPLSourceOperator` and `REPLSourceVisual`, your REPL meta
@@ -791,7 +837,7 @@ local yarepl = require 'yarepl'
 
 yarepl.setup {
     metas = {
-        ipython = {
+        radian = {
             cmd = 'radian',
             formatter = 'bracketed_pasting_no_final_new_line',
             source_syntax = 'eval(parse(text = "{{file}}"))',
@@ -992,6 +1038,11 @@ Currently, the module includes:
 
 This module enhances AI-assisted coding capabilities through
 [aider.chat](https://aider.chat) integration.
+
+## codex
+
+This module enhances AI-assisted coding capabilities through [OpenAI's Codex
+CLI](https://github.com/openai/codex) integration.
 
 ## code-cell
 
