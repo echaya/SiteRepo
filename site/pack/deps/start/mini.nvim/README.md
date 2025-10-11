@@ -1,5 +1,7 @@
 <p align="center"> <img src="logo.png" alt="mini.nvim" style="max-width:100%;border:solid 2px"/> </p>
 
+### All-in-one plugin
+
 Library of 40+ independent Lua modules improving overall [Neovim](https://github.com/neovim/neovim) (version 0.9 and higher) experience with minimal effort. They all share same configuration approaches and general design principles.
 
 Think about this project as "Swiss Army knife" among Neovim plugins: it has many different independent tools (modules) suitable for most common tasks. Each module can be used separately without any startup and usage overhead.
@@ -73,7 +75,9 @@ end
 
 ## Modules
 
-'mini.nvim' contains many modules which is slightly daunting at first. All of them can be used independently, one at a time. For easier exploration, here they are presented in groups based on module's primary functionality (although some modules can fit in several groups).
+'mini.nvim' contains many modules which is slightly daunting at first. All of them can be used independently, one at a time.
+
+For easier exploration, here they are presented in groups based on module's primary functionality (although some modules can fit in several groups). See more detailed listing [here](doc/mini-nvim.txt).
 
 ### Text editing
 
@@ -148,36 +152,57 @@ These modules don't quite fit in any of the previous categories.
 
 ## General principles
 
-- **Design**. Each module is designed to solve a particular problem targeting balance between feature-richness (handling as many edge-cases as possible) and simplicity of implementation/support. Granted, not all of them ended up with the same balance, but it is the goal nevertheless.
+### Design
 
-- **Independence**. Modules are independent of each other and can be run without external dependencies. Although some of them may need dependencies for full experience.
+Each module is designed to solve a particular problem targeting balance between feature-richness (handling as many edge-cases as possible) and simplicity of implementation/support. Granted, not all of them ended up with the same balance, but it is the goal nevertheless.
 
-- **Structure**. Each module is a submodule for a placeholder "mini" module. So, for example, "surround" module should be referred to as "mini.surround".  As later will be explained, this plugin can also be referred to as "MiniSurround".
+### Independence
 
-- **Setup**:
-    - Each module you want to use should be enabled separately with `require(<name of module>).setup({})`. Possibly replace `{}` with your config table or omit altogether to use defaults. You can supply only parts of config, the rest will be inferred from defaults.
+Modules are independent of each other and can be run without external dependencies. Although some of them may need dependencies for full experience.
 
-    - Call to module's `setup()` always creates a global Lua object with coherent camel-case name: `require('mini.surround').setup()` creates `_G.MiniSurround`. This allows for a simpler usage of plugin functionality: instead of `require('mini.surround')` use `MiniSurround` (or manually `:lua MiniSurround.*` in command line); available from `v:lua` like `v:lua.MiniSurround`. Considering this, "module" and "Lua object" names can be used interchangeably: 'mini.surround' and 'MiniSurround' will mean the same thing.
+### Structure
 
-    - Each supplied `config` table is stored in `config` field of global object. Like `MiniSurround.config`.
+Each module is a submodule for a placeholder "mini" module. So, for example, "surround" module should be referred to as "mini.surround".  As later will be explained, this plugin can also be referred to as "MiniSurround".
 
-    - Values of `config` which affect runtime activity can be changed on the fly to have effect. For example, `MiniSurround.config.n_lines` can be changed during runtime; but changing `MiniSurround.config.mappings` won't have any effect (as mappings are created once during `setup()`).
+### Setup
 
-    - If module works best with some specific non-default option value, it is set during `setup()`. If the value is not essential to module's functionality, it is done only if user or another plugin hasn't set it beforehand (no matter the value).
+- Each module you want to use should be enabled separately with `require(<name of module>).setup({})`. Possibly replace `{}` with your config table or omit altogether to use defaults. You can supply only parts of config, the rest will be inferred from defaults.
 
-- **Buffer local configuration**. Each module can be additionally configured to use certain runtime config settings locally to buffer. See `mini.nvim-buffer-local-config` section in help file for more information.
+- Call to module's `setup()` always creates a global Lua object with coherent camel-case name: `require('mini.surround').setup()` creates `_G.MiniSurround`. This allows for a simpler usage of plugin functionality: instead of `require('mini.surround')` use `MiniSurround` (or manually `:lua MiniSurround.*` in command line); available from `v:lua` like `v:lua.MiniSurround`. Considering this, "module" and "Lua object" names can be used interchangeably: 'mini.surround' and 'MiniSurround' will mean the same thing.
 
-- **Buffer names**. All module-related buffers are named according to the following format: `mini<module-name>://<buffer-number>/<useful-info>` (forward slashes are used on any platform; `<useful-info>` may be empty). This structure allows creating identifiable, reasonably unique, and useful buffer names. For example, 'mini.files' buffers are created per displayed directory/file with names like `minifiles://10/path/to/displayed/directory`.
+- Each supplied `config` table is stored in `config` field of global object. Like `MiniSurround.config`.
 
-- **Disabling**. Each module's core functionality can be disabled globally or locally to buffer. See "Disabling" section in module's help page for more details. See `mini.nvim-disabling-recipes` section in main help file for common recipes.
+- Values of `config` which affect runtime activity can be changed on the fly to have effect. For example, `MiniSurround.config.n_lines` can be changed during runtime; but changing `MiniSurround.config.mappings` won't have any effect (as mappings are created once during `setup()`).
 
-- **Silencing**. Each module providing non-error feedback can be configured to not do that by setting `config.silent = true` (either inside `setup()` call or on the fly).
+- If module works best with some specific non-default option value, it is set during `setup()`. If the value is not essential to module's functionality, it is done only if user or another plugin hasn't set it beforehand (no matter the value).
 
-- **Highlighting**. Appearance of module's output is controlled by certain set of highlight groups (see `:h highlight-groups`). By default they usually link to some semantically close built-in highlight group and are ensured to be defined after any color scheme takes effect. Use `:highlight` command or `vim.api.nvim_set_hl()` Lua function to customize highlighting. To see a more calibrated look, use 'mini.hues', 'mini.base16', or plugin's color scheme.
+### Buffer local configuration
 
-- **Stability**. Each module upon release is considered to be relatively stable: both in terms of setup and functionality. Any non-bugfix backward-incompatible change will be released gradually as much as possible.
+Each module can be additionally configured to use certain runtime config settings locally to buffer. See `mini.nvim-buffer-local-config` section in help file for more information.
 
-- **Not filetype/language specific**. Including functionality which needs several filetype/language specific implementations is an explicit no-goal of this project. This is mostly due to the potential increase in maintenance to keep implementation up to date. However, any part which might need filetype/language specific tuning should be designed to allow it by letting user set proper buffer options and/or local configuration.
+### Buffer names
+
+All module-related buffers are named according to the following format: `mini<module-name>://<buffer-number>/<useful-info>` (forward slashes are used on any platform; `<useful-info>` may be empty). This structure allows creating identifiable, reasonably unique, and useful buffer names. For example, 'mini.files' buffers are created per displayed directory/file with names like `minifiles://10/path/to/displayed/directory`.
+
+### Disabling
+
+Each module's core functionality can be disabled globally or locally to buffer. See "Disabling" section in module's help page for more details. See `mini.nvim-disabling-recipes` section in main help file for common recipes.
+
+### Silencing
+
+Each module providing non-error feedback can be configured to not do that by setting `config.silent = true` (either inside `setup()` call or on the fly).
+
+### Highlighting
+
+Appearance of module's output is controlled by certain set of highlight groups (see `:h highlight-groups`). By default they usually link to some semantically close built-in highlight group and are ensured to be defined after any color scheme takes effect. Use `:highlight` command or `vim.api.nvim_set_hl()` Lua function to customize highlighting. To see a more calibrated look, use 'mini.hues', 'mini.base16', or plugin's color scheme.
+
+### Stability
+
+Each module upon release is considered to be relatively stable: both in terms of setup and functionality. Any non-bugfix backward-incompatible change will be released gradually as much as possible.
+
+### Not filetype and language specific
+
+Including functionality which needs several filetype/language specific implementations is an explicit no-goal of this project. This is mostly due to the potential increase in maintenance to keep implementation up to date. However, any part which might need filetype/language specific tuning should be designed to allow it by letting user set proper buffer options and/or local configuration.
 
 ## Plugin color schemes
 

@@ -1,10 +1,7 @@
 --- *mini.indentscope* Visualize and work with indent scope
---- *MiniIndentscope*
 ---
 --- MIT License Copyright (c) 2022 Evgeni Chasnovski
----
---- ==============================================================================
----
+
 --- Indent scope (or just "scope") is a maximum set of consecutive lines which
 --- contains certain reference line (cursor line by default) and every member
 --- has indent not less than certain reference indent ("indent at cursor" by
@@ -18,7 +15,7 @@
 --- - Customization of scope computation options can be done on global level
 ---   (in |MiniIndentscope.config|), for a certain buffer (using
 ---   `vim.b.miniindentscope_config` buffer variable), or within a call (using
----   `opts` variable in |MiniIndentscope.get_scope|).
+---   `opts` variable in |MiniIndentscope.get_scope()|).
 ---
 --- - Customizable notion of a border: which adjacent lines with strictly lower
 ---   indent are recognized as such. This is useful for a certain filetypes
@@ -46,7 +43,7 @@
 ---
 --- # Comparisons ~
 ---
---- - 'lukas-reineke/indent-blankline.nvim':
+--- - [lukas-reineke/indent-blankline.nvim](https://github.com/lukas-reineke/indent-blankline.nvim):
 ---     - Its main functionality is about showing static guides of indent levels.
 ---     - Implementation of 'mini.indentscope' is similar to
 ---       'indent-blankline.nvim' (using |extmarks| on first column to be shown
@@ -55,13 +52,13 @@
 ---
 --- # Highlight groups ~
 ---
---- * `MiniIndentscopeSymbol` - symbol showing on every line of scope if its
+--- - `MiniIndentscopeSymbol` - symbol showing on every line of scope if its
 ---   indent is multiple of 'shiftwidth'.
---- * `MiniIndentscopeSymbolOff` - symbol showing on every line of scope if its
+--- - `MiniIndentscopeSymbolOff` - symbol showing on every line of scope if its
 ---   indent is not multiple of 'shiftwidth'.
 ---   Default: links to `MiniIndentscopeSymbol`.
 ---
---- To change any highlight group, modify it directly with |:highlight|.
+--- To change any highlight group, set it directly with |nvim_set_hl()|.
 ---
 --- # Disabling ~
 ---
@@ -70,9 +67,8 @@
 --- number of different scenarios and customization intentions, writing exact
 --- rules for disabling module's functionality is left to user. See
 --- |mini.nvim-disabling-recipes| for common recipes.
+---@tag MiniIndentscope
 
---- Drawing of scope indicator
----
 --- Draw of scope indicator is done as iterative animation. It has the
 --- following design:
 --- - Draw indicator on origin line (where cursor is at) immediately. Indicator
@@ -88,7 +84,7 @@
 ---   a discrete inverse version of its derivative. Such interface proved to be
 ---   more appropriate for kind of task at hand.
 ---
---- Special cases ~
+--- # Special cases ~
 ---
 --- - When scope to be drawn intersects (same indent, ranges overlap) currently
 ---   visible one (at process or finished drawing), drawing is done immediately
@@ -129,22 +125,18 @@ MiniIndentscope.setup = function(config)
   H.create_default_hl()
 end
 
---- Module config
----
---- Default values:
+--- Defaults ~
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
 ---@text # Options ~
 ---
---- - Options can be supplied globally (from this `config`), locally to buffer
----   (via `options` field of `vim.b.miniindentscope_config` buffer variable),
----   or locally to call (as argument to |MiniIndentscope.get_scope()|).
+--- ## Border ~
 ---
---- - Option `border` controls which line(s) with smaller indent to categorize
----   as border. This matters for textobjects and motions.
----   It also controls how empty lines are treated: they are included in scope
----   only if followed by a border. Another way of looking at it is that indent
----   of blank line is computed based on value of `border` option.
----   Here is an illustration of how `border` works in presence of empty lines: >
+--- Field `border` controls which line(s) with smaller indent to categorize
+--- as border. This matters for textobjects and motions.
+--- It also controls how empty lines are treated: they are included in scope
+--- only if followed by a border. Another way of looking at it is that indent
+--- of blank line is computed based on value of `border` option.
+--- Here is an illustration of how `border` works in presence of empty lines: >
 ---
 ---                              |both|bottom|top|none|
 ---   1|function foo()           | 0  |  0   | 0 | 0  |
@@ -153,37 +145,43 @@ end
 ---   4|                         | 4  |  4   | 2 | 2  |
 ---   5|  end                    | 2  |  2   | 2 | 2  |
 --- <
----   Numbers inside a table are indent values of a line computed with certain
----   value of `border`. So, for example, a scope with reference line 3 and
----   right-most column has body range depending on value of `border` option:
----     - `border` is "both":   range is 2-4, border is 1 and 5 with indent 2.
----     - `border` is "top":    range is 2-3, border is 1 with indent 0.
----     - `border` is "bottom": range is 3-4, border is 5 with indent 0.
----     - `border` is "none":   range is 3-3, border is empty with indent `nil`.
+--- Numbers inside a table are indent values of a line computed with certain
+--- value of `border`. So, for example, a scope with reference line 3 and
+--- right-most column has body range depending on value of `border` option:
+--- - `border` is "both":   range is 2-4, border is 1 and 5 with indent 2.
+--- - `border` is "top":    range is 2-3, border is 1 with indent 0.
+--- - `border` is "bottom": range is 3-4, border is 5 with indent 0.
+--- - `border` is "none":   range is 3-3, border is empty with indent `nil`.
 ---
---- - Option `indent_at_cursor` controls if cursor position should affect
----   computation of scope. If `true`, reference indent is a minimum of
----   reference line's indent and cursor column. In main example, here how
----   scope's body range differs depending on cursor column and `indent_at_cursor`
----   value (assuming cursor is on line 3 and it is whole buffer): >
+--- ## Indent at cursor ~
 ---
----     Column\Option true|false
----        1 and 2    2-5 | 2-4
----      3 and more   2-4 | 2-4
+--- Field `indent_at_cursor` controls if cursor position should affect computation
+--- of scope. If `true`, reference indent is a minimum of reference line's indent
+--- and cursor column. In main example, here how scope's body range differs
+--- depending on cursor column and `indent_at_cursor` value (assuming cursor is
+--- on line 3 and it is whole buffer): >
+---
+---   Column\Option true|false
+---      1 and 2    2-5 | 2-4
+---    3 and more   2-4 | 2-4
 --- <
---- - Option `n_lines` defines |MiniIndentscope.get_scope()| behavior for how many
----   lines above/below to check before iteration is stopped. Scope that reached
----   computation limit has <is_incomplete> field set to `true`. It will also not
----   be auto drawn with default `config.draw.predicate`.
----   Lower values will result in better overall performance in exchange for more
----   frequent incomplete scope computation. Set to `math.huge` for no restriction.
+--- ## Number of lines ~
 ---
---- - Option `try_as_border` controls how to act when input line can be
----   recognized as a border of some neighbor indent scope. In main example,
----   when input line is 1 and can be recognized as border for inner scope,
----   value `try_as_border = true` means that inner scope will be returned.
----   Similar, for input line 5 inner scope will be returned if it is
----   recognized as border.
+--- Field `n_lines` defines |MiniIndentscope.get_scope()| behavior for how many
+--- lines above/below to check before iteration is stopped. Scope that reached
+--- computation limit has <is_incomplete> field set to `true`. It will also not
+--- be auto drawn with default `config.draw.predicate`.
+---
+--- Lower values will result in better overall performance in exchange for more
+--- frequent incomplete scope computation. Set to `math.huge` for no restriction.
+---
+--- ## Try as border ~
+---
+--- Field `try_as_border` controls how to act when input line can be recognized
+--- as a border of some neighbor indent scope. In main example, when input line
+--- is 1 and can be recognized as border for inner scope, value `try_as_border=true`
+--- means that inner scope will be returned. Similar, for input line 5 inner scope
+--- will be returned if it is recognized as border.
 MiniIndentscope.config = {
   -- Draw options
   draw = {
@@ -258,7 +256,7 @@ MiniIndentscope.config = {
 ---   Useful to define local behavior (for example, for a certain filetype).
 --- - Global options from |MiniIndentscope.config|.
 ---
---- Algorithm overview ~
+--- # Algorithm overview ~
 ---
 --- - Compute reference "indent at column". Reference line is an input `line`
 ---   which might be modified to one of its neighbors if `try_as_border` option
@@ -277,7 +275,7 @@ MiniIndentscope.config = {
 ---   indent minus one in case of no border). This is used during drawing
 ---   visual indicator.
 ---
---- Indent computation ~
+--- # Indent computation ~
 ---
 --- For every line indent is intended to be computed unambiguously:
 --- - For "normal" lines indent is an output of |indent()|.
@@ -353,7 +351,7 @@ end
 --- equal to border indent plus one (or body indent if border is absent).
 --- Numbering starts from one.
 ---
----@param scope table|nil Scope. Default: output of |MiniIndentscope.get_scope|
+---@param scope table|nil Scope. Default: output of |MiniIndentscope.get_scope()|
 ---   with default arguments.
 ---@param opts table|nil Options. Currently supported:
 ---    - <animation_fun> - animation function for drawing. See
@@ -385,7 +383,7 @@ MiniIndentscope.undraw = function() H.undraw_scope() end
 --- Each field corresponds to one family of progression which can be customized
 --- further by supplying appropriate arguments.
 ---
---- Examples ~
+--- Examples:
 --- - Don't use animation: `MiniIndentscope.gen_animation.none()`
 --- - Use quadratic "out" easing with total duration of 1000 ms: >lua
 ---

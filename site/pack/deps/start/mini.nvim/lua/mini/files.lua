@@ -1,10 +1,7 @@
 --- *mini.files* Navigate and manipulate file system
---- *MiniFiles*
 ---
 --- MIT License Copyright (c) 2023 Evgeni Chasnovski
----
---- ==============================================================================
----
+
 --- Features:
 --- - Navigate file system using column view (Miller columns) to display nested
 ---   directories. See |MiniFiles-navigation| for overview.
@@ -14,7 +11,7 @@
 --- - Manipulate files and directories by editing text buffers: create, delete,
 ---   copy, rename, move. See |MiniFiles-manipulation| for overview.
 ---
---- - Use as default file explorer instead of |netrw|.
+--- - Use as default file explorer instead of `netrw`.
 ---
 --- - Configurable:
 ---     - Filter/prefix/sort of file system entries.
@@ -48,8 +45,9 @@
 ---
 --- Suggested dependencies (provide extra functionality, will work without them):
 ---
---- - Enabled |MiniIcons| module to show icons near file/directory names.
----   Falls back to 'nvim-tree/nvim-web-devicons' plugin or uses default icons.
+--- - Enabled |mini.icons| module to show icons near file/directory names.
+---   Falls back to [nvim-tree/nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons)
+---   plugin or uses default icons.
 ---
 --- # Setup ~
 ---
@@ -66,43 +64,42 @@
 ---
 --- # Comparisons ~
 ---
---- - 'nvim-tree/nvim-tree.lua':
+--- - [nvim-tree/nvim-tree.lua](https://github.com/nvim-tree/nvim-tree.lua):
 ---     - Provides tree view of file system, while this module uses column view.
 ---     - File system manipulation is done with custom set of mappings for each
 ---       action, while this module is designed to do that by editing text.
 ---     - Has more out of the box functionality with extra configuration, while
 ---       this module has not (by design).
 ---
---- - 'stevearc/oil.nvim':
+--- - [stevearc/oil.nvim](https://github.com/stevearc/oil.nvim):
 ---     - Uses single window to show information only about currently explored
 ---       directory, while this module uses column view to show whole currently
 ---       explored branch.
 ---     - Also uses text editing to manipulate file system entries.
 ---     - Can work for remote file systems, while this module can not (by design).
 ---
---- - 'nvim-neo-tree/neo-tree.nvim':
+--- - [nvim-neo-tree/neo-tree.nvim](https://github.com/nvim-neo-tree/neo-tree.nvim):
 ---     - Compares to this module mostly the same as 'nvim-tree/nvim-tree.lua'.
 ---
 --- # Highlight groups ~
 ---
---- * `MiniFilesBorder` - border of regular windows.
---- * `MiniFilesBorderModified` - border of windows showing modified buffer.
---- * `MiniFilesCursorLine` - cursor line in explorer windows.
---- * `MiniFilesDirectory` - text and icon representing directory.
---- * `MiniFilesFile` - text representing file.
---- * `MiniFilesNormal` - basic foreground/background highlighting.
---- * `MiniFilesTitle` - title of regular windows.
---- * `MiniFilesTitleFocused` - title of focused window.
+--- - `MiniFilesBorder` - border of regular windows.
+--- - `MiniFilesBorderModified` - border of windows showing modified buffer.
+--- - `MiniFilesCursorLine` - cursor line in explorer windows.
+--- - `MiniFilesDirectory` - text and icon representing directory.
+--- - `MiniFilesFile` - text representing file.
+--- - `MiniFilesNormal` - basic foreground/background highlighting.
+--- - `MiniFilesTitle` - title of regular windows.
+--- - `MiniFilesTitleFocused` - title of focused window.
 ---
---- To change any highlight group, modify it directly with |:highlight|.
+--- To change any highlight group, set it directly with |nvim_set_hl()|.
 ---
 --- # Disabling ~
 ---
 --- This plugin provides only manually started functionality, so no disabling
 --- is available.
+---@tag MiniFiles
 
---- Navigation ~
----
 --- Every navigation starts by calling |MiniFiles.open()|, either directly or via
 --- mapping (see its help for examples of some common scenarios). It will show
 --- an explorer consisting of side-by-side floating windows with the following
@@ -123,7 +120,7 @@
 ---   example, if there are more elements in the branch than can be shown windows.
 ---
 --- - Every buffer line represents separate file system entry following certain
----   format (not visible for users by default; set |conceallevel| to 0 to see it)
+---   format (not visible for users by default; set |'conceallevel'| to 0 to see it)
 ---
 --- - Once directory is shown, its buffer is not updated automatically following
 ---   external file system changes. Manually use |MiniFiles.synchronize()| for that.
@@ -214,8 +211,6 @@
 --- - Keys can be configured with `mappings` table of |MiniFiles.config|.
 ---@tag MiniFiles-navigation
 
---- Manipulation ~
----
 --- File system manipulation is done by editing text inside directory buffers,
 --- which are shown inside dedicated window(s). See |MiniFiles-navigation| for
 --- more information about navigating to a particular directory.
@@ -247,7 +242,7 @@
 --- at the start of every line representing file system entry.
 ---
 --- By default they are hidden as concealed text (along with prefix separators)
---- for more convenience but you can see them by setting |conceallevel| to 0.
+--- for more convenience but you can see them by setting |'conceallevel'| to 0.
 --- DO NOT modify text to the left of entry name.
 ---
 --- During synchronization, actual text for entry name is compared to path index
@@ -314,12 +309,10 @@
 --- - Moving directory inside itself is not supported.
 ---@tag MiniFiles-manipulation
 
---- Events ~
----
 --- To allow user customization and integration of external tools, certain |User|
 --- autocommand events are triggered under common circumstances.
 ---
---- UI events ~
+--- # UI events ~
 ---
 --- - `MiniFilesExplorerOpen` - just after explorer finishes opening.
 ---
@@ -346,7 +339,7 @@
 ---   `MiniFilesBufferCreate` and buffer's first `MiniFilesBufferUpdate` as
 ---   they are triggered before window is created.
 ---
---- File action events ~
+--- # File action events ~
 ---
 --- - `MiniFilesActionCreate` - after entry is successfully created.
 ---
@@ -366,8 +359,6 @@
 --- - <to> - full path of entry after action (`nil` for permanent "delete" action).
 ---@tag MiniFiles-events
 
---- Common configuration examples ~
----
 --- # Toggle explorer ~
 ---
 --- Use a combination of |MiniFiles.open()| and |MiniFiles.close()|: >lua
@@ -586,9 +577,7 @@ MiniFiles.setup = function(config)
 end
 
 --stylua: ignore
---- Module config
----
---- Default values:
+--- Defaults ~
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
 ---@text # Content ~
 ---
@@ -641,7 +630,7 @@ end
 --- # Options ~
 ---
 --- `options.use_as_default_explorer` is a boolean indicating whether this module
---- will be used as a default file explorer to edit directory (instead of |netrw|).
+--- will be used as a default file explorer to edit directory (instead of `netrw`).
 --- Note: to work with directory in |arglist|, do not lazy load this module.
 ---
 --- `options.permanent_delete` is a boolean indicating whether to perform
@@ -1172,7 +1161,7 @@ MiniFiles.default_filter = function(fs_entry) return true end
 
 --- Default prefix of file system entries
 ---
---- - If |MiniIcons| is set up, use |MiniIcons.get()| for "directory"/"file" category.
+--- - If set up |mini.icons|, use |MiniIcons.get()| for "directory"/"file" category.
 --- - Otherwise:
 ---     - For directory return fixed icon and "MiniFilesDirectory" group name.
 ---     - For file try to use `get_icon()` from 'nvim-tree/nvim-web-devicons'.

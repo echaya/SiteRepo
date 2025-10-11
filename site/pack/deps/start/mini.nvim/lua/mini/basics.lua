@@ -1,11 +1,8 @@
 --- *mini.basics* Common configuration presets
---- *MiniBasics*
 ---
 --- MIT License Copyright (c) 2023 Evgeni Chasnovski
----
---- ==============================================================================
----
---- Install, create 'init.lua', add `require('mini.basics').setup()` and you
+
+--- Install, create 'init.lua', add `require('mini.basics').setup()`, and you
 --- are good to go.
 ---
 --- Features:
@@ -46,14 +43,15 @@
 ---
 --- # Comparisons ~
 ---
---- - 'tpope/vim-sensible':
+--- - [tpope/vim-sensible](https://github.com/tpope/vim-sensible):
 ---     - Most of 'tpope/vim-sensible' is already incorporated as default
----       options in Neovim (see |nvim-default|). This module has a much
+---       options in Neovim (see |nvim-defaults|). This module has a much
 ---       broader effect.
---- - 'tpope/vim-unimpaired':
+--- - [tpope/vim-unimpaired](https://github.com/tpope/vim-unimpaired):
 ---     - The 'tpope/vim-unimpaired' has mapping for toggling options with `yo`
 ---       prefix. This module implements similar functionality with `\` prefix
 ---       (see |MiniBasics.config.mappings|).
+---@tag MiniBasics
 
 ---@diagnostic disable:undefined-field
 
@@ -86,12 +84,10 @@ MiniBasics.setup = function(config)
   H.apply_config(config)
 end
 
---- Module config
----
---- Default values:
+--- Defaults ~
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
----@text                                                      *MiniBasics.config.options*
---- # Options ~
+---@text # Options ~
+--- *MiniBasics.config.options*
 ---
 --- Usage example: >lua
 ---
@@ -116,34 +112,34 @@ end
 ---     - Sets |<Leader>| key to |<Space>|. Be sure to make all Leader mappings
 ---       after this (otherwise they are made with default <Leader>).
 ---     - Runs `:filetype plugin indent on` (see |:filetype-overview|)
----     - |backup|
----     - |mouse|
----     - |undofile|
----     - |writebackup|
+---     - |'backup'|
+---     - |'mouse'|
+---     - |'undofile'|
+---     - |'writebackup'|
 --- - Appearance
----     - |breakindent|
----     - |cursorline|
----     - |fillchars|
----     - |linebreak|
----     - |number|
----     - |ruler|
----     - |showmode|
----     - |signcolumn|
----     - |shortmess|
----     - |splitbelow|
----     - |splitkeep|
----     - |splitright|
----     - |termguicolors| (on Neovim<0.10; later versions have it smartly enabled)
----     - |wrap|
+---     - |'breakindent'|
+---     - |'cursorline'|
+---     - |'fillchars'|
+---     - |'linebreak'|
+---     - |'number'|
+---     - |'ruler'|
+---     - |'showmode'|
+---     - |'signcolumn'|
+---     - |'shortmess'|
+---     - |'splitbelow'|
+---     - |'splitkeep'|
+---     - |'splitright'|
+---     - |'termguicolors'| (on Neovim<0.10; later versions have it smartly enabled)
+---     - |'wrap'|
 --- - Editing
----     - |completeopt|
----     - |formatoptions|
----     - |ignorecase|
----     - |incsearch|
----     - |infercase|
----     - |smartcase|
----     - |smartindent|
----     - |virtualedit|
+---     - |'completeopt'|
+---     - |'formatoptions'|
+---     - |'ignorecase'|
+---     - |'incsearch'|
+---     - |'infercase'|
+---     - |'smartcase'|
+---     - |'smartindent'|
+---     - |'virtualedit'|
 ---
 --- ## options.extra_ui ~
 ---
@@ -153,27 +149,28 @@ end
 --- For exact changes, please see source code ('lua/mini/basics.lua').
 ---
 --- List of affected options:
---- - |list|
---- - |listchars|
---- - |pumblend|
---- - |pumheight|
---- - |winblend|
+--- - |'list'|
+--- - |'listchars'|
+--- - |'pumblend'|
+--- - |'pumheight'|
+--- - |'winblend'|
 --- - Runs `:syntax on` (see |:syntax-on|)
 ---
---- ## options.win_borders
+--- ## options.win_borders ~
 ---
---- The `config.options.win_borders` updates |fillchars| to have a consistent set of
---- characters for window border (`vert`, `horiz`, etc.).
+--- The `config.options.win_borders` updates |'fillchars'| to have a consistent set
+--- of characters for window border (`vert`, `horiz`, `msgsep`, etc.).
 ---
 --- Available values:
+--- - `'auto'` - infer from |'winborder'|. On Neovim<0.11 do nothing.
 --- - `'bold'` - bold lines.
 --- - `'dot'` - dot in every cell.
 --- - `'double'` - double line.
 --- - `'single'` - single line.
 --- - `'solid'` - no symbol, only background.
 ---
----                                                     *MiniBasics.config.mappings*
 --- # Mappings ~
+--- *MiniBasics.config.mappings*
 ---
 --- Usage example: >lua
 ---
@@ -227,7 +224,7 @@ end
 ---
 --- The `config.mappings.option_toggle_prefix` defines a prefix used for
 --- creating mappings that toggle common options. The result mappings will be
---- `<prefix> + <suffix>`. For example, with default value, `\w` will toggle |wrap|.
+--- `<prefix> + <suffix>`. For example, with default value, `\w` will toggle |'wrap'|.
 ---
 --- Other viable choices for prefix are
 --- - `,` (as a mnemonic for several values to toggle).
@@ -264,13 +261,13 @@ end
 ---
 --- It will only add a mapping if it wasn't manually created before.
 ---
---- Here is a list with created Normal mode mappings (all mappings respect |[count]|):
+--- Here is a list with created Normal mode mappings (all respect |[count]|):
 --- - Window navigation:
 ---     - `<C-h>` - focus on left window (see |CTRL-W_H|).
 ---     - `<C-j>` - focus on below window (see |CTRL-W_J|).
 ---     - `<C-k>` - focus on above window (see |CTRL-W_K|).
 ---     - `<C-l>` - focus on right window (see |CTRL-W_L|).
---- - Window resize (all use arrow keys; variants of |resize|; all respect |[count]|):
+--- - Window resize (all use arrow keys; variants of |:resize|; respect |[count]|):
 ---     - `<C-left>`  - decrease window width.
 ---     - `<C-down>`  - decrease window height.
 ---     - `<C-up>`    - increase window height.
@@ -280,7 +277,7 @@ end
 ---
 --- The `config.mappings.move_with_alt` creates mappings for a more consistent
 --- cursor move in Insert, Command, and Terminal modes. For example, it proves
---- useful in combination of autopair plugin (like |MiniPairs|) to move right
+--- useful in combination of autopair plugin (like |mini.pairs|) to move right
 --- outside of inserted pairs (no matter what the pair is).
 ---
 --- It will only add a mapping if it wasn't manually created before.
@@ -291,8 +288,8 @@ end
 --- - `<M-k>` - move cursor up.    Modes: Insert, Terminal.
 --- - `<M-l>` - move cursor right. Modes: Insert, Terminal, Command.
 ---
----                                                 *MiniBasics.config.autocommands*
 --- # Autocommands ~
+--- *MiniBasics.config.autocommands*
 ---
 --- Usage example: >lua
 ---
@@ -307,14 +304,14 @@ end
 ---
 --- The `config.autocommands.basic` creates some common autocommands:
 ---
---- - Starts insert mode when opening terminal (see |startinsert| and |TermOpen|).
+--- - Starts insert mode when opening terminal (see |:startinsert| and |TermOpen|).
 --- - Highlights yanked text for a brief period of time (see |vim.hl.on_yank()|;
----   on Neovim<0.11 - |vim.highlight.on_yank|) and |TextYankPost|).
+---   on Neovim<0.11 - |vim.hl.on_yank()|) and |TextYankPost|).
 ---
 --- ## autocommands.relnum_in_visual_mode ~
 ---
 --- The `config.autocommands.relnum_in_visual_mode` creates autocommands that
---- enable |relativenumber| in linewise and blockwise Visual modes and disable
+--- enable |'relativenumber'| in linewise and blockwise Visual modes and disable
 --- otherwise. See |ModeChanged|.
 MiniBasics.config = {
   -- Options. Set field to `false` to disable.
@@ -326,7 +323,8 @@ MiniBasics.config = {
     extra_ui = false,
 
     -- Presets for window borders ('single', 'double', ...)
-    win_borders = 'default',
+    -- Default 'auto' infers from 'winborder' option
+    win_borders = 'auto',
   },
 
   -- Mappings. Set field to `false` to disable.
@@ -496,10 +494,13 @@ H.apply_options = function(config)
   end
 
   -- Use some common window borders presets
-  local border_chars = H.win_borders_fillchars[config.options.win_borders]
-  if border_chars ~= nil then
-    vim.opt.fillchars:append(border_chars)
+  local win_borders = config.options.win_borders
+  if win_borders == 'auto' and vim.fn.has('nvim-0.11') == 1 then
+    local option_value = vim.o.winborder
+    win_borders = H.winborder_map[option_value] or option_value
   end
+  local border_chars = H.win_borders_fillchars[win_borders]
+  if border_chars ~= nil then vim.opt.fillchars:append(border_chars) end
 end
 
 H.vim_o = setmetatable({}, {
@@ -522,12 +523,13 @@ H.vim_opt = setmetatable({}, {
 
 --stylua: ignore
 H.win_borders_fillchars = {
-  bold   = 'vert:┃,horiz:━,horizdown:┳,horizup:┻,verthoriz:╋,vertleft:┫,vertright:┣',
-  dot    = 'vert:·,horiz:·,horizdown:·,horizup:·,verthoriz:·,vertleft:·,vertright:·',
-  double = 'vert:║,horiz:═,horizdown:╦,horizup:╩,verthoriz:╬,vertleft:╣,vertright:╠',
-  single = 'vert:│,horiz:─,horizdown:┬,horizup:┴,verthoriz:┼,vertleft:┤,vertright:├',
-  solid  = 'vert: ,horiz: ,horizdown: ,horizup: ,verthoriz: ,vertleft: ,vertright: ',
+  bold   = 'vert:┃,horiz:━,horizdown:┳,horizup:┻,verthoriz:╋,vertleft:┫,vertright:┣,msgsep:━',
+  dot    = 'vert:·,horiz:·,horizdown:·,horizup:·,verthoriz:·,vertleft:·,vertright:·,msgsep:·',
+  double = 'vert:║,horiz:═,horizdown:╦,horizup:╩,verthoriz:╬,vertleft:╣,vertright:╠,msgsep:═',
+  single = 'vert:│,horiz:─,horizdown:┬,horizup:┴,verthoriz:┼,vertleft:┤,vertright:├,msgsep:─',
+  solid  = 'vert: ,horiz: ,horizdown: ,horizup: ,verthoriz: ,vertleft: ,vertright: ,msgsep: ',
 }
+H.winborder_map = { none = 'solid', rounded = 'single', shadow = 'solid' }
 
 -- Mappings -------------------------------------------------------------------
 --stylua: ignore

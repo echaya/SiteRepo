@@ -166,7 +166,7 @@ M.vscode = {
     row = 1,
     width = 0.4,
     min_width = 80,
-    height = 0.4,
+    height = 0.7,
     border = "none",
     box = "vertical",
     { win = "input", height = 1, border = "rounded", title = "{title} {live} {flags}", title_pos = "center" },

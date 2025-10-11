@@ -118,6 +118,7 @@ M.bullet = {}
 ---@field right_pad render.md.bullet.Integer
 ---@field highlight render.md.bullet.String
 ---@field scope_highlight render.md.bullet.String
+---@field scope_priority? integer
 
 ---@class (exact) render.md.bullet.Context
 ---@field level integer
@@ -174,6 +175,8 @@ M.bullet.default = {
     -- Highlight for item associated with the bullet point.
     -- Output is evaluated using the same logic as 'icons'.
     scope_highlight = {},
+    -- Priority to assign to scope highlight.
+    scope_priority = nil,
 }
 
 ---@return render.md.Schema
@@ -198,6 +201,7 @@ function M.bullet.schema()
         right_pad = integer_provider,
         highlight = string_provider,
         scope_highlight = string_provider,
+        scope_priority = { optional = true, type = 'number' },
     })
 end
 
@@ -275,10 +279,12 @@ M.checkbox = {}
 
 ---@class (exact) render.md.checkbox.Config: render.md.base.Config
 ---@field bullet boolean
+---@field left_pad number
 ---@field right_pad integer
 ---@field unchecked render.md.checkbox.component.Config
 ---@field checked render.md.checkbox.component.Config
 ---@field custom table<string, render.md.checkbox.custom.Config>
+---@field scope_priority? integer
 
 ---@class (exact) render.md.checkbox.component.Config
 ---@field icon string
@@ -302,6 +308,8 @@ M.checkbox.default = {
     render_modes = false,
     -- Render the bullet point before the checkbox.
     bullet = false,
+    -- Padding to add to the left of checkboxes.
+    left_pad = 0,
     -- Padding to add to the right of checkboxes.
     right_pad = 1,
     unchecked = {
@@ -331,6 +339,8 @@ M.checkbox.default = {
     custom = {
         todo = { raw = '[-]', rendered = '󰥔 ', highlight = 'RenderMarkdownTodo', scope_highlight = nil },
     },
+    -- Priority to assign to scope highlight.
+    scope_priority = nil,
 }
 
 ---@return render.md.Schema
@@ -354,10 +364,12 @@ function M.checkbox.schema()
     }
     return M.base.schema({
         bullet = { type = 'boolean' },
+        left_pad = { type = 'number' },
         right_pad = { type = 'number' },
         unchecked = component,
         checked = component,
         custom = { map = { { type = 'string' }, custom } },
+        scope_priority = { optional = true, type = 'number' },
     })
 end
 
@@ -1162,6 +1174,7 @@ M.link = {}
 
 ---@class (exact) render.md.link.footnote.Config
 ---@field enabled boolean
+---@field icon string
 ---@field superscript boolean
 ---@field prefix string
 ---@field suffix string
@@ -1195,6 +1208,8 @@ M.link.default = {
     footnote = {
         -- Turn on / off footnote rendering.
         enabled = true,
+        -- Inlined with content.
+        icon = '󰯔 ',
         -- Replace value with superscript equivalent.
         superscript = true,
         -- Added before link content.
@@ -1260,6 +1275,7 @@ function M.link.schema()
         footnote = {
             record = {
                 enabled = { type = 'boolean' },
+                icon = { type = 'string' },
                 superscript = { type = 'boolean' },
                 prefix = { type = 'string' },
                 suffix = { type = 'string' },

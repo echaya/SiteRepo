@@ -4,11 +4,29 @@
 
 ### Features
 
+- add footnote icon [ceff151](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/ceff15170c173c9a62ba491ac6449858cbadadf3)
+- configurable scope priority [#534](https://github.com/MeanderingProgrammer/render-markdown.nvim/discussions/534)
+  [e174f52](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/e174f524cd4f07789ef8083fa0e1c3573e7fe328)
+- left padding for checkboxes [da260dd](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/da260dd4979d130f0dfc63e824c9cb2433cfded2)
+
+### Bug Fixes
+
+- ignore empty output from latex converter [#535](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/535)
+  [2064980](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/2064980580af7f00385859b6344c6a4737383257)
+
+## 8.9.0 (2025-10-06)
+
+### Features
+
 - remove delimiters around latex text before converting [2c6cf12](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/2c6cf127c577712bd29d38f6391b3045c5f0180a)
 - convert latex asynchronously [44cbac6](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/44cbac697e50ae32e4644652da08cf692b9a5a57)
 - combine latex virtual lines use center positioning [#520](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/520)
   [9a746ff](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/9a746ff62a482f5eb722b3bfc7eefb2e9d638858)
 - latex converter can now be a list, prefer utftex, fallback to latex2text [5f437a2](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/5f437a26a8a8b964eff683dd6f68bc2a0d38c5db)
+- scope highlight for html tags [#528](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/528)
+  [9ab9dad](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/9ab9dade85d8c7d411cc89b592028da3d1b7955a)
+- improve startup time performance [06c7598](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/06c7598471911742e8816617a2afb9b2f29a808d)
+  [7e6af36](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/7e6af36c846017122e07e68803bbf95f3c729ca3)
 
 ### Bug Fixes
 

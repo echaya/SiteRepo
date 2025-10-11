@@ -286,6 +286,7 @@ You can view this list in vim with `:help conform-formatters`
 - [joker](https://github.com/candid82/joker) - Small Clojure interpreter, linter and formatter.
 - [jq](https://github.com/stedolan/jq) - Command-line JSON processor.
 - [js_beautify](https://github.com/beautifier/js-beautify) - Beautifier for javascript.
+- [json_repair](https://github.com/mangiucugna/json_repair) - A python module to repair invalid JSON from LLMs.
 - [jsonnetfmt](https://github.com/google/go-jsonnet/tree/master/cmd/jsonnetfmt) - jsonnetfmt is a command line tool to format jsonnet files.
 - [just](https://github.com/casey/just) - Format Justfile.
 - [kcl](https://www.kcl-lang.io/docs/tools/cli/kcl/fmt) - The KCL Format tool modifies the files according to the KCL code style.
@@ -504,6 +505,7 @@ The following magic strings are available in `args` and `range_args`. They will 
 - [Format command](doc/recipes.md#format-command)
 - [Autoformat with extra features](doc/recipes.md#autoformat-with-extra-features)
 - [Command to toggle format-on-save](doc/recipes.md#command-to-toggle-format-on-save)
+- [Run LSP Commands Before Formatting](doc/recipes.md#run-lsp-commands-before-formatting)
 - [Lazy loading with lazy.nvim](doc/recipes.md#lazy-loading-with-lazynvim)
 - [Leave visual mode after range format](doc/recipes.md#leave-visual-mode-after-range-format)
 - [Run the first available formatter followed by more formatters](doc/recipes.md#run-the-first-available-formatter-followed-by-more-formatters)

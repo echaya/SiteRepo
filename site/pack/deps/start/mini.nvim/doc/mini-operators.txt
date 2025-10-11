@@ -1,10 +1,9 @@
 *mini.operators* Text edit operators
-*MiniOperators*
 
 MIT License Copyright (c) 2023 Evgeni Chasnovski
 
-==============================================================================
-
+------------------------------------------------------------------------------
+                                                                 *MiniOperators*
 Features:
 - Operators:
     - Evaluate text and replace with output.
@@ -34,7 +33,7 @@ as `MiniOperators.config`. See |mini.nvim-buffer-local-config| for more details.
 
 # Comparisons ~
 
-- 'gbprod/substitute.nvim':
+- [gbprod/substitute.nvim](https://github.com/gbprod/substitute.nvim):
     - Has "replace" and "exchange" variants, but not others from this module.
     - Has "replace/substitute" over range functionality, while this module
       does not by design (it is similar to |:s| functionality while not
@@ -42,18 +41,18 @@ as `MiniOperators.config`. See |mini.nvim-buffer-local-config| for more details.
     - "Replace" highlights pasted text, while in this module it doesn't.
     - "Exchange" doesn't work across buffers, while in this module it does.
 
-- 'svermeulen/vim-subversive':
+- [svermeulen/vim-subversive](https://github.com/svermeulen/vim-subversive):
     - Main inspiration for "replace" functionality, so they are mostly similar
       for this operator.
     - Has "replace/substitute" over range functionality, while this module
       does not by design.
 
-- 'tommcdo/vim-exchange':
+- [tommcdo/vim-exchange](https://github.com/tommcdo/vim-exchange):
     - Main inspiration for "exchange" functionality, so they are mostly
       similar for this operator.
     - Doesn't work across buffers, while this module does.
 
-- 'christoomey/vim-sort-motion':
+- [christoomey/vim-sort-motion](https://github.com/christoomey/vim-sort-motion):
     - Uses |:sort| for linewise sorting, while this module uses consistent
       sorting algorithm (by default, see |MiniOperators.default_sort_func()|).
     - Sorting algorithm can't be customized, while this module allows this
@@ -64,9 +63,9 @@ as `MiniOperators.config`. See |mini.nvim-buffer-local-config| for more details.
 
 # Highlight groups ~
 
-* `MiniOperatorsExchangeFrom` - first region to exchange.
+- `MiniOperatorsExchangeFrom` - first region to exchange.
 
-To change any highlight group, modify it directly with |:highlight|.
+To change any highlight group, set it directly with |nvim_set_hl()|.
 
 # Disabling ~
 
@@ -78,8 +77,6 @@ for disabling module's functionality is left to user. See
 
 ------------------------------------------------------------------------------
                                                         *MiniOperators-overview*
-# General overview ~
-
 Operator defines an action that will be performed on a textobject, motion,
 or visual selection (similar to |d|, |c|, etc.). When makes sense, it can also
 respect supplied register (like "replace" operator).
@@ -88,7 +85,7 @@ This module implements each operator in a separate dedicated function
 (like |MiniOperators.replace()| for "replace" operator). Each such function
 takes `mode` as argument and acts depending on it:
 
-- If `mode` is `nil` (or not explicitly supplied), it sets |operatorfunc|
+- If `mode` is `nil` (or not explicitly supplied), it sets |'operatorfunc'|
   to this dedicated function and returns `g@` assuming being called from
   expression mapping. See |:map-operator| and |:map-expression| for more details.
 
@@ -105,8 +102,8 @@ For more details about specific operator, see help for its function:
 - Replace:  |MiniOperators.replace()|
 - Sort:     |MiniOperators.sort()|
 
-                                                        *MiniOperators-mappings*
-## Mappings ~
+# Mappings ~
+*MiniOperators-mappings*
 
 All operators are automatically mapped during |MiniOperators.setup()| execution.
 Mappings keys are deduced from `prefix` field of corresponding `config` entry.
@@ -167,9 +164,7 @@ Usage ~
 ------------------------------------------------------------------------------
                                                           *MiniOperators.config*
                              `MiniOperators.config`
-Module config
-
-Default values:
+Defaults ~
 >lua
   MiniOperators.config = {
     -- Each entry configures one operator.
@@ -240,10 +235,9 @@ config (`vim.b.minioperators_config`; see |mini.nvim-buffer-local-config|).
 `exchange.prefix` is a string used to automatically infer operator mappings keys
 during |MiniOperators.setup()|. See |MiniOperators-mappings|.
 
-Note: default value "gx" overrides |netrw-gx| and |gx| / |v_gx|.
-Instead |gx| and |v_gx| are remapped to `gX` (if that is not already taken).
-To keep using `gx` with built-in feature (open URL at cursor) choose
-different `config.prefix`.
+Note: default value "gx" overrides |gx| / |v_gx|. Instead they are remapped
+to `gX` (if that is not already taken). To keep using `gx` with built-in
+feature (open URL at cursor) choose different `config.prefix`.
 
 `exchange.reindent_linewise` is a boolean indicating whether newly put linewise
 text should preserve indent of replaced text. In other words, if `false`,
@@ -293,7 +287,7 @@ Example of `sort.func` which asks user for custom delimiter for charwise region:
   end
 
   require('mini.operators').setup({ sort = { func = sort_func } })
-
+<
 ------------------------------------------------------------------------------
                                                       *MiniOperators.evaluate()*
                         `MiniOperators.evaluate`({mode})

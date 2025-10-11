@@ -1,10 +1,7 @@
 --- *mini.hipatterns* Highlight patterns in text
---- *MiniHipatterns*
 ---
 --- MIT License Copyright (c) 2023 Evgeni Chasnovski
----
---- ==============================================================================
----
+
 --- Features:
 --- - Highlight text with configurable patterns and highlight groups (can be
 ---   string or callable).
@@ -31,7 +28,7 @@
 ---     - Manually call |MiniHipatterns.update()|.
 ---
 --- - If you experience flicker when typing near highlighted pattern in Insert
----   mode, it might be due to `delay` configuration of 'mini.completion' or
+---   mode, it might be due to `delay` configuration of |mini.completion| or
 ---   using built-in completion.
 ---   For better experience with 'mini.completion', make sure that its
 ---   `delay.completion` is less than this module's `delay.text_change` (which
@@ -62,34 +59,34 @@
 ---
 --- # Comparisons ~
 ---
---- - 'folke/todo-comments':
+--- - [folke/todo-comments](https://github.com/folke/todo-comments):
 ---     - Oriented for "TODO", "NOTE", "FIXME" like patterns, while this module
 ---       can work with any Lua patterns and computable highlight groups.
 ---     - Has functionality beyond text highlighting (sign placing,
 ---       "telescope.nvim" extension, etc.), while this module only focuses on
 ---       highlighting text.
---- - 'folke/paint.nvim':
+--- - [folke/paint.nvim](https://github.com/folke/paint.nvim):
 ---     - Mostly similar to this module, but with slightly less functionality,
 ---       such as computed pattern and highlight group, asynchronous delay, etc.
---- - 'NvChad/nvim-colorizer.lua':
+--- - [NvChad/nvim-colorizer.lua](https://github.com/NvChad/nvim-colorizer.lua):
 ---     - Oriented for color highlighting, while this module can work with any
 ---       Lua patterns and computable highlight groups.
 ---     - Has more built-in color spaces to highlight, while this module out of
 ---       the box provides only hex color highlighting
 ---       (see |MiniHipatterns.gen_highlighter.hex_color()|). Other types are
 ---       also possible to implement.
---- - 'uga-rosa/ccc.nvim':
+--- - [uga-rosa/ccc.nvim](https://github.com/uga-rosa/ccc.nvim):
 ---     - Has more than color highlighting functionality, which is compared to
 ---       this module in the same way as 'NvChad/nvim-colorizer.lua'.
 ---
 --- # Highlight groups ~
 ---
---- * `MiniHipatternsFixme` - suggested group to use for `FIXME`-like patterns.
---- * `MiniHipatternsHack` - suggested group to use for `HACK`-like patterns.
---- * `MiniHipatternsTodo` - suggested group to use for `TODO`-like patterns.
---- * `MiniHipatternsNote` - suggested group to use for `NOTE`-like patterns.
+--- - `MiniHipatternsFixme` - suggested group to use for `FIXME`-like patterns.
+--- - `MiniHipatternsHack` - suggested group to use for `HACK`-like patterns.
+--- - `MiniHipatternsTodo` - suggested group to use for `TODO`-like patterns.
+--- - `MiniHipatternsNote` - suggested group to use for `NOTE`-like patterns.
 ---
---- To change any highlight group, modify it directly with |:highlight|.
+--- To change any highlight group, set it directly with |nvim_set_hl()|.
 ---
 --- # Disabling ~
 ---
@@ -102,6 +99,7 @@
 --- Considering high number of different scenarios and customization
 --- intentions, writing exact rules for disabling module's functionality is
 --- left to user. See |mini.nvim-disabling-recipes| for common recipes.
+---@tag MiniHipatterns
 
 --- # Common configuration examples ~
 ---
@@ -149,7 +147,7 @@
 ---     },
 ---   })
 --- <
---- - Trailing whitespace (if don't want to use more specific 'mini.trailspace'): >lua
+--- - Trailing whitespace (if don't want to use more specific |mini.trailspace|): >lua
 ---
 ---   { pattern = '%f[%s]%s*$', group = 'Error' }
 --- <
@@ -248,13 +246,9 @@ MiniHipatterns.setup = function(config)
   H.create_default_hl()
 end
 
---- Module config
----
---- Default values:
+--- Defaults ~
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
----@text # Options ~
----
---- ## Highlighters ~
+---@text # Highlighters ~
 ---
 --- `highlighters` table defines which patterns will be highlighted by placing
 --- |extmark| at the match start. It might or might not have explicitly named
@@ -267,9 +261,9 @@ end
 ---   either string, callable returning the string, or an array of those.
 ---   If string:
 ---     - It can have submatch delimited by placing `()` on start and end, NOT
----       by surrounding with it. Otherwise it will result in error containing
----       `number expected, got string`. Example: `xx()abcd()xx` will match `abcd`
----       only if `xx` is placed before and after it.
+---       by surrounding with it. Otherwise it will result in error
+---       containing `number expected, got string`. Example: `xx()abcd()xx`
+---       will match `abcd` only if `xx` is placed before and after it.
 ---
 ---   If callable:
 ---     - It will be called for every enabled buffer with its identifier as input.
@@ -303,7 +297,7 @@ end
 ---
 --- See "Common use cases" section for the examples.
 ---
---- ## Delay ~
+--- # Delay ~
 ---
 --- `delay` is a table defining delays in milliseconds used for asynchronous
 --- highlighting process.
@@ -609,7 +603,7 @@ end
 --- Compute and create group to highlight hex color string
 ---
 --- Notes:
---- - This works properly only with enabled |termguicolors|.
+--- - This works properly only with enabled |'termguicolors'|.
 ---
 --- - To increase performance, it caches highlight groups per `hex_color` and
 ---   `style` combination. Needs a call to |MiniHipatterns.setup()| to have

@@ -47,6 +47,16 @@ There are following change types:
 
 - Add `gen_spec.user_prompt` that acts the same as `?` built-in textobject. It can be used for using this textobject under another identifier.
 
+## mini.basics
+
+### Refine
+
+- Change default value of `options.win_border` to be `'auto'`.
+
+### Expand
+
+- Update `options.win_border` to allow value `'auto'` which infers target 'fillchars' values from 'winborder' option.
+
 ## mini.completion
 
 ### Evolve
@@ -121,6 +131,12 @@ There are following change types:
 
 - Add `gen_spotter.vimpattern()` that can generate spotter based on Vimscript (not Lua) pattern.
 
+## mini.map
+
+### Expand
+
+- Update `gen_integration.builtin_search()` to react to change of `v:hlsearch`.
+
 ## mini.misc
 
 ### Expand
@@ -144,6 +160,8 @@ There are following change types:
 ### Evolve
 
 - Stop creating `update_n_lines` mapping: it occupies "mapping real estate" while being rarely needed and straightforward to create manually using `MiniSurround.update_n_lines()`.
+
+- Automatically map `s` key to `<Nop>` if the key is not already mapped and any of created mappings starts with it. This prevents accidental trigger of built-in `s` if there is a long delay between pressing "s" and the next key.
 
 ### Refine
 

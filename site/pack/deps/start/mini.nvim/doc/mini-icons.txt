@@ -1,10 +1,9 @@
 *mini.icons* Icon provider
-*MiniIcons*
 
 MIT License Copyright (c) 2024 Evgeni Chasnovski
 
-==============================================================================
-
+------------------------------------------------------------------------------
+                                                                     *MiniIcons*
 Features:
 
 - Provide icons with their highlighting via a single |MiniIcons.get()| for
@@ -76,7 +75,7 @@ See |MiniIcons.config| for `config` structure and default values.
 
 # Comparisons ~
 
-- 'nvim-tree/nvim-web-devicons' (for users):
+- [nvim-tree/nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons) (for users):
     - Sets individual colors to each icon with separate specific highlight
       groups, while this modules uses fixed set of highlight groups.
       This makes it easier to customize in bulk and actually blend with any
@@ -103,7 +102,7 @@ See |MiniIcons.config| for `config` structure and default values.
       when called imitates installed 'nvim-web-devicons' plugin to support
       other plugins which do not provide 'mini.icons' yet.
 
-- 'nvim-tree/nvim-web-devicons' (for plugin developers):
+- [nvim-tree/nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons) (for plugin developers):
     - Both have main "get icon" type of function:
         - Both return tuple of icon and highlight group strings.
 
@@ -140,7 +139,7 @@ See |MiniIcons.config| for `config` structure and default values.
           management" categories. This modules does not include them due to
           relatively low demand.
 
-- 'onsails/lspkind.nvim':
+- [onsails/lspkind.nvim](https://github.com/onsails/lspkind.nvim):
     - Provides icons only for `CompletionItemKind`, while this module also has
       icons for `SymbolKind` and other non-LSP categories.
     - Provides dedicated formatting function for 'hrsh7th/nvim-cmp' while this
@@ -152,17 +151,17 @@ See |MiniIcons.config| for `config` structure and default values.
 Only the following set of highlight groups is used as icon highlight.
 It is recommended that they all only define colored foreground:
 
-* `MiniIconsAzure`  - azure.
-* `MiniIconsBlue`   - blue.
-* `MiniIconsCyan`   - cyan.
-* `MiniIconsGreen`  - green.
-* `MiniIconsGrey`   - grey.
-* `MiniIconsOrange` - orange.
-* `MiniIconsPurple` - purple.
-* `MiniIconsRed`    - red.
-* `MiniIconsYellow` - yellow.
+- `MiniIconsAzure`  - azure.
+- `MiniIconsBlue`   - blue.
+- `MiniIconsCyan`   - cyan.
+- `MiniIconsGreen`  - green.
+- `MiniIconsGrey`   - grey.
+- `MiniIconsOrange` - orange.
+- `MiniIconsPurple` - purple.
+- `MiniIconsRed`    - red.
+- `MiniIconsYellow` - yellow.
 
-To change any highlight group, modify it directly with |:highlight|.
+To change any highlight group, set it directly with |nvim_set_hl()|.
 
 ------------------------------------------------------------------------------
                                                              *MiniIcons.setup()*
@@ -181,9 +180,7 @@ Usage ~
 ------------------------------------------------------------------------------
                                                               *MiniIcons.config*
                                `MiniIcons.config`
-Module config
-
-Default values:
+Defaults ~
 >lua
   MiniIcons.config = {
     -- Icon style: 'glyph' or 'ascii'
@@ -494,7 +491,7 @@ Updating is done in one of these modes:
 Notes:
 - Makes |mini.completion| show icons, as it uses built-in protocol map.
 - Results in loading whole `vim.lsp` module, so might add significant amount
-  of time on startup. Call it lazily. For example, with |MiniDeps.later()|: >
+  of time on startup. Call it lazily. For example, with |MiniDeps.later()|: >lua
 
     require('mini.icons').setup()
     MiniDeps.later(MiniIcons.tweak_lsp_kind)
