@@ -126,7 +126,7 @@
 --- groups (see |highlight-groups|). By default they usually link to some
 --- semantically close built-in highlight group. Use |:highlight| command or
 --- |nvim_set_hl()| Lua function to customize highlighting. To see a more
---- calibrated look, use |mini.hues|, |MiniBase16|, or plugin's colorschemes.
+--- calibrated look, use |mini.hues|, |mini.base16|, or plugin's colorschemes.
 ---
 --- Stability ~
 --- Each module upon release is considered to be relatively stable: both in
@@ -160,7 +160,7 @@
 ---   builtin animations for cursor movement, scroll, resize, window open and
 ---   close. All of them can be customized and enabled/disabled independently.
 ---
---- - |MiniBase16| - fast implementation of base16 theme for manually supplied
+--- - |mini.base16| - fast implementation of base16 theme for manually supplied
 ---   palette. Supports 30+ plugin integrations. Has unique palette generator
 ---   which needs only background and foreground colors.
 ---
@@ -246,7 +246,7 @@
 --- - |mini.jump| - minimal and fast module for smarter jumping to a single
 ---   character.
 ---
---- - |MiniJump2d| - minimal and fast Lua plugin for jumping (moving cursor)
+--- - |mini.jump2d| - minimal and fast Lua plugin for jumping (moving cursor)
 ---   within visible lines via iterative label filtering. Supports custom jump
 ---   targets (spots), labels, hooks, allowed windows and lines, and more.
 ---

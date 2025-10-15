@@ -102,6 +102,7 @@ function M.setup(colors, config)
         -- PmenuThumb	Popup menu: Thumb of the scrollbar.
         PmenuThumb = { bg = theme.ui.pmenu.bg_thumb },
         -- Question	|hit-enter| prompt and yes/no questions.
+        PmenuBorder = { link = "FloatBorder" },
         Question = { link = "MoreMsg" },
         -- QuickFixLine	Current |quickfix| item in the quickfix window. Combined with |hl-CursorLine| when the cursor is there.
         QuickFixLine = { bg = theme.ui.bg_p1 },

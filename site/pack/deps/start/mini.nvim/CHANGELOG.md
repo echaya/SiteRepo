@@ -97,6 +97,10 @@ There are following change types:
 
 ## mini.hues
 
+### Evolve
+
+- Add auto adjusting of highlight groups based on certain events (like `MsgSeparator` group based on changing of `msgsep` flag of 'fillchars' option). It can be disabled via new `autoadjust` config setting or `opts.autoadjust` in `apply_palette()`.
+
 ### Refine
 
 - Make black (0 and 8) and white (7 and 15) colors for built-in terminal different from regular background and foreground. This improves color coverage and does not affect default uncolored text (it is highlighted as `Normal`).

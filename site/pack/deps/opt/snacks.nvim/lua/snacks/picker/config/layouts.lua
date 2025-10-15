@@ -142,7 +142,7 @@ M.vertical = {
 }
 
 M.select = {
-  preview = false,
+  hidden = { "preview" },
   layout = {
     backdrop = false,
     width = 0.5,
@@ -160,13 +160,13 @@ M.select = {
 }
 
 M.vscode = {
-  preview = false,
+  hidden = { "preview" },
   layout = {
     backdrop = false,
     row = 1,
     width = 0.4,
     min_width = 80,
-    height = 0.7,
+    height = 0.4,
     border = "none",
     box = "vertical",
     { win = "input", height = 1, border = "rounded", title = "{title} {live} {flags}", title_pos = "center" },

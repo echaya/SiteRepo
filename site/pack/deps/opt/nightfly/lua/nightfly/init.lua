@@ -12,6 +12,7 @@ end
 -- Variations of midnight-blue
 local black_blue = "#081e2f"
 local dark_blue = "#092236"
+local ink_blue = "#09243a"
 local deep_blue = "#0e293f"
 local storm_blue = "#1b2633"
 local stone_blue = "#252c3f"
@@ -19,6 +20,7 @@ local slate_blue = "#2c3043"
 local pickle_blue = "#38507a"
 local cello_blue = "#1f4462"
 local regal_blue = "#1d3b53"
+local carbon_blue = "#334e65"
 local steel_blue = "#4b6479"
 local grey_blue = "#7c8f8f"
 local graphite_blue = "#768799"
@@ -49,6 +51,7 @@ local bay_blue = "#24567f"
 local kashmir = "#4d618e"
 local plant = "#2a4e57"
 local bermuda = "#6e8da6"
+local haze = "#87a3ba"
 
 local nightfly_palette = function()
   return {
@@ -57,12 +60,14 @@ local nightfly_palette = function()
     bg = bg,
     black_blue = black_blue,
     dark_blue = dark_blue,
+    ink_blue = ink_blue,
     deep_blue = deep_blue,
     storm_blue = storm_blue,
     stone_blue = stone_blue,
     slate_blue = slate_blue,
     pickle_blue = pickle_blue,
     regal_blue = regal_blue,
+    carbon_blue = carbon_blue,
     steel_blue = steel_blue,
     grey_blue = grey_blue,
     cadet_blue = cadet_blue,
@@ -90,6 +95,7 @@ local nightfly_palette = function()
     kashmir = kashmir,
     plant = plant,
     bermuda = bermuda,
+    haze = haze,
   }
 end
 
@@ -292,10 +298,13 @@ M.style = function()
   highlight(0, "ErrorMsg", { bg = bg, fg = red })
   highlight(0, "WarningMsg", { bg = bg, fg = orange })
 
-  -- Auto-text-completion menu
-  highlight(0, "Pmenu", { bg = deep_blue, fg = white })
+  -- Completions
+  highlight(0, "ComplHint", { link = "NightflySteelBlue" })
+  highlight(0, "ComplHintMore", { link = "NightflyMalibu" })
+  highlight(0, "Pmenu", { bg = ink_blue, fg = white })
+  highlight(0, "PmenuBorder", { bg = ink_blue, fg = carbon_blue })
   highlight(0, "PmenuSel", { bg = cyan_blue, fg = white_blue })
-  highlight(0, "PmenuSbar", { link = "NightflyCurrentLine" })
+  highlight(0, "PmenuSbar", { bg = ink_blue })
   highlight(0, "PmenuThumb", { bg = steel_blue })
   highlight(0, "WildMenu", { bg = cyan_blue, fg = white_blue })
 
@@ -326,9 +335,9 @@ M.style = function()
   highlight(0, "CursorColumn", { bg = dark_blue })
   highlight(0, "CursorLine", { bg = dark_blue })
   highlight(0, "CursorLineSign", { link = "CursorLine" })
-  highlight(0, "Folded", { bg = dark_blue, fg = lime })
-  highlight(0, "FoldColumn", { bg = slate_blue, fg = lime })
-  highlight(0, "SignColumn", { bg = bg, fg = green })
+  highlight(0, "Folded", { bg = dark_blue, fg = haze })
+  highlight(0, "FoldColumn", { bg = bg, fg = haze })
+  highlight(0, "SignColumn", { bg = bg, fg = haze })
   highlight(0, "Todo", { bg = deep_blue, fg = yellow })
   highlight(0, "SpecialKey", { bg = bg, fg = blue })
   if g.nightflyUnderlineMatchParen then
@@ -1195,6 +1204,14 @@ M.style = function()
   highlight(0, "RainbowDelimiterViolet", { link = "NightflyViolet" })
   highlight(0, "RainbowDelimiterCyan", { link = "NightflyTurquoise" })
 
+  -- sidekick.nvim
+  highlight(0, "SidekickDiffAdd", { link = "DiffAdd" })
+  highlight(0, "SidekickDiffContext", { link = "DiffChange" })
+  highlight(0, "SidekickDiffDelete", { link = "DiffDelete" })
+  highlight(0, "SidekickSignAdd", { link = "GitSignsAdd" })
+  highlight(0, "SidekickSignChange", { link = "GitSignsChange" })
+  highlight(0, "SidekickSignDelete", { link = "GitSignsDelete" })
+
   -- snacks.nvim
   --   misc
   highlight(0, "SnacksWinBar", { link = "NightflyBlue" })
@@ -1400,12 +1417,14 @@ M.custom_colors = function(colors)
   bg = colors.bg and colors.bg or M.palette.bg
   black_blue = colors.black_blue and colors.black_blue or M.palette.black_blue
   dark_blue = colors.dark_blue and colors.dark_blue or M.palette.dark_blue
+  ink_blue = colors.ink_blue and colors.ink_blue or M.palette.ink_blue
   deep_blue = colors.deep_blue and colors.deep_blue or M.palette.deep_blue
   storm_blue = colors.storm_blue and colors.storm_blue or M.palette.storm_blue
   stone_blue = colors.stone_blue and colors.stone_blue or M.palette.stone_blue
   slate_blue = colors.slate_blue and colors.slate_blue or M.palette.slate_blue
   pickle_blue = colors.pickle_blue and colors.pickle_blue or M.palette.pickle_blue
   regal_blue = colors.regal_blue and colors.regal_blue or M.palette.regal_blue
+  carbon_blue = colors.carbon_blue and colors.carbon_blue or M.palette.carbon_blue
   steel_blue = colors.steel_blue and colors.steel_blue or M.palette.steel_blue
   grey_blue = colors.grey_blue and colors.grey_blue or M.palette.grey_blue
   cadet_blue = colors.cadet_blue and colors.cadet_blue or M.palette.cadet_blue
@@ -1433,6 +1452,7 @@ M.custom_colors = function(colors)
   kashmir = colors.kashmir and colors.kashmir or M.palette.kashmir
   plant = colors.plant and colors.plant or M.palette.plant
   bermuda = colors.bermuda and colors.bermuda or M.palette.bermuda
+  haze = colors.haze and colors.haze or M.palette.haze
 
   -- Rebuild the palette with custom colors.
   M.palette = nightfly_palette()

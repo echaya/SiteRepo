@@ -30,31 +30,39 @@ https://user-images.githubusercontent.com/24854248/236634787-ab0c33df-f697-4d96-
 
 - `miniwinter`: "icy winter" palette with azure background
 
-<img alt="miniwinter dark" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-miniwinter-dark.png?raw=true" style="width: 45%"/> <img alt="miniwinter light" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-miniwinter-light.png?raw=true" style="width: 45%"/>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-miniwinter-dark.png?raw=true"> <img alt="miniwinter dark" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-miniwinter-dark.png?raw=true" style="width: 45%"/> </a>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-miniwinter-light.png?raw=true"> <img alt="miniwinter light" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-miniwinter-light.png?raw=true" style="width: 45%"/> </a>
 
 - `minispring`: "blooming spring" palette with green background
 
-<img alt="minispring dark" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-minispring-dark.png?raw=true" style="width: 45%"/> <img alt="minispring light" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-minispring-light.png?raw=true" style="width: 45%"/>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-minispring-dark.png?raw=true"> <img alt="minispring dark" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-minispring-dark.png?raw=true" style="width: 45%"/> </a>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-minispring-light.png?raw=true"> <img alt="minispring light" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-minispring-light.png?raw=true" style="width: 45%"/> </a>
 
 - `minisummer`: "hot summer" palette with brown/yellow background
 
-<img alt="minisummer dark" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-minisummer-dark.png?raw=true" style="width: 45%"/> <img alt="minisummer light" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-minisummer-light.png?raw=true" style="width: 45%"/>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-minisummer-dark.png?raw=true"> <img alt="minisummer dark" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-minisummer-dark.png?raw=true" style="width: 45%"/> </a>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-minisummer-light.png?raw=true"> <img alt="minisummer light" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-minisummer-light.png?raw=true" style="width: 45%"/> </a>
 
 - `miniautumn`: "cooling autumn" palette with purple background
 
-<img alt="miniautumn dark" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-miniautumn-dark.png?raw=true" style="width: 45%"/> <img alt="miniautumn light" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-miniautumn-light.png?raw=true" style="width: 45%"/>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-miniautumn-dark.png?raw=true"> <img alt="miniautumn dark" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-miniautumn-dark.png?raw=true" style="width: 45%"/> </a>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-miniautumn-light.png?raw=true"> <img alt="miniautumn light" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-miniautumn-light.png?raw=true" style="width: 45%"/> </a>
 
 #### `randomhue`
 
 `randomhue` uses **randomly generated** background and foreground of same hue (color will change on every `:colorscheme randomhue` call):
 
-<img alt="Dark purple" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_dark-purple.png?raw=true" style="width: 45%"/> <img alt="Light purple" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_light-purple.png?raw=true" style="width: 45%"/>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_dark-purple.png?raw=true"> <img alt="Dark purple" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_dark-purple.png?raw=true" style="width: 45%"/> </a>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_light-purple.png?raw=true"> <img alt="Light purple" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_light-purple.png?raw=true" style="width: 45%"/> </a>
 
-<img alt="Dark azure" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_dark-azure.png?raw=true" style="width: 45%"/> <img alt="Light azure" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_light-azure.png?raw=true" style="width: 45%"/>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_dark-azure.png?raw=true"> <img alt="Dark azure" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_dark-azure.png?raw=true" style="width: 45%"/> </a>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_light-azure.png?raw=true"> <img alt="Light azure" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_light-azure.png?raw=true" style="width: 45%"/> </a>
 
-<img alt="Dark green" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_dark-green.png?raw=true" style="width: 45%"/> <img alt="Light green" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_light-green.png?raw=true" style="width: 45%"/>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_dark-green.png?raw=true"> <img alt="Dark green" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_dark-green.png?raw=true" style="width: 45%"/> </a>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_light-green.png?raw=true"> <img alt="Light green" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_light-green.png?raw=true" style="width: 45%"/> </a>
 
-<img alt="Dark orange" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_dark-orange.png?raw=true" style="width: 45%"/> <img alt="Light orange" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_light-orange.png?raw=true" style="width: 45%"/>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_dark-orange.png?raw=true"> <img alt="Dark orange" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_dark-orange.png?raw=true" style="width: 45%"/> </a>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_light-orange.png?raw=true"> <img alt="Light orange" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-randomhue_light-orange.png?raw=true" style="width: 45%"/> </a>
 
 ## Example configurations
 
@@ -248,6 +256,9 @@ Here are code snippets for some common installation methods (use only one):
   -- Plugin integrations. Use `default = false` to disable all integrations.
   -- Also can be set per plugin (see |MiniHues.config|).
   plugins = { default = true },
+
+  -- Whether to auto adjust highlight groups based on certain events
+  autoadjust = true,
 }
 ```
 

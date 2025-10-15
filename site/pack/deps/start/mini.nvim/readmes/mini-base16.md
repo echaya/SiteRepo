@@ -27,11 +27,13 @@ If you want to help this project grow but don't know where to start, check out [
 
 Using `minischeme` color scheme:
 
-<img alt="minischeme dark" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minischeme-dark.png?raw=true" style="width: 45%"/> <img alt="minischeme light" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minischeme-light.png?raw=true" style="width: 45%"/>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minischeme-dark.png?raw=true"> <img alt="minischeme dark" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minischeme-dark.png?raw=true" style="width: 45%"/> </a>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minischeme-light.png?raw=true"> <img alt="minischeme light" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minischeme-light.png?raw=true" style="width: 45%"/> </a>
 
 Using `minicyan` color scheme:
 
-<img alt="minicyan dark" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minicyan-dark.png?raw=true" style="width: 45%"/> <img alt="minicyan light" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minicyan-light.png?raw=true" style="width: 45%"/>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minicyan-dark.png?raw=true"> <img alt="minicyan dark" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minicyan-dark.png?raw=true" style="width: 45%"/> </a>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minicyan-light.png?raw=true"> <img alt="minicyan light" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minicyan-light.png?raw=true" style="width: 45%"/> </a>
 
 ## Features
 

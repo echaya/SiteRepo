@@ -4,6 +4,7 @@ let s:white        = '#c3ccdc'
 " Variations of midnight-blue
 let s:black_blue   = '#081e2f'
 let s:dark_blue    = '#092236'
+let s:ink_blue     = '#09243a'
 let s:deep_blue    = '#0e293f'
 let s:storm_blue   = "#1b2633"
 let s:stone_blue   = '#252c3f'
@@ -11,6 +12,7 @@ let s:slate_blue   = '#2c3043'
 let s:pickle_blue  = '#38507a'
 let s:cello_blue   = '#1f4462'
 let s:regal_blue   = '#1d3b53'
+let s:carbon_blue  = '#334e65'
 let s:steel_blue   = '#4b6479'
 let s:grey_blue    = '#7c8f8f'
 let s:cadet_blue   = '#a1aab8'
@@ -38,6 +40,7 @@ let s:cyan_blue    = '#316394'
 let s:bay_blue     = '#24567F'
 let s:kashmir      = '#4d618e'
 let s:plant        = '#2a4e57'
+let s:haze         = "#87a3ba"
 
 function! nightfly#Style() abort
     "-----------------------------------------------------------------------
@@ -223,10 +226,11 @@ function! nightfly#Style() abort
     exec 'highlight ErrorMsg guibg=bg guifg=' . s:red
     exec 'highlight WarningMsg guibg=bg guifg=' . s:orange
 
-    " Auto-text-completion menu
-    exec 'highlight Pmenu guibg=' . s:deep_blue . ' guifg=fg'
+    " Completions
+    exec 'highlight Pmenu guibg=' . s:ink_blue . ' guifg=fg'
+    exec 'highlight PmenuBorder guibg=' . s:ink_blue . ' guifg=' . s:carbon_blue
     exec 'highlight PmenuSel guibg=' . s:cyan_blue . ' guifg=' . s:white_blue
-    exec 'highlight PmenuSbar guibg=' . s:deep_blue
+    exec 'highlight PmenuSbar guibg=' . s:ink_blue
     exec 'highlight PmenuThumb guibg=' . s:steel_blue
     exec 'highlight WildMenu guibg=' . s:cyan_blue . ' guifg=' . s:white_blue
 
@@ -257,9 +261,9 @@ function! nightfly#Style() abort
     exec 'highlight CursorColumn guibg=' . s:dark_blue
     exec 'highlight CursorLine cterm=none guibg=' . s:dark_blue
     highlight! link CursorLineSign CursorLine
-    exec 'highlight Folded guibg=' . s:dark_blue . ' guifg='. s:lime
-    exec 'highlight FoldColumn guibg=' . s:slate_blue . ' guifg=' . s:lime
-    exec 'highlight SignColumn guibg=bg guifg=' . s:green
+    exec 'highlight Folded guibg=' . s:dark_blue . ' guifg='. s:haze
+    exec 'highlight FoldColumn guibg=bg guifg=' . s:haze
+    exec 'highlight SignColumn guibg=bg guifg=' . s:haze
     exec 'highlight Todo guibg=' . s:deep_blue . ' guifg=' . s:yellow
     exec 'highlight SpecialKey guibg=bg guifg=' . s:blue
     if g:nightflyUnderlineMatchParen
