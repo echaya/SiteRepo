@@ -283,6 +283,9 @@
 ---
 --- - It is not needed to end directory name with `/`.
 ---
+--- - Appending `/` to a file name will delete it and create empty directory
+---   with the same name.
+---
 --- - Cyclic renames ("a" to "b" and "b" to "a") are not supported.
 ---
 --- ## Copy ~
@@ -1672,10 +1675,16 @@ H.explorer_compute_fs_actions = function(explorer)
   for _, diff in pairs(raw_copy) do
     local action, target = 'copy', copy
     if delete_map[diff.from] then
-      action = H.fs_get_parent(diff.from) == H.fs_get_parent(diff.to) and 'rename' or 'move'
-      target = action == 'rename' and rename or move
-      -- NOTE: Use map instead of array to ensure single move/rename per path
-      delete_map[diff.from] = nil
+      -- Treat appending `/` to file name as file -> directory conversion
+      -- (i.e. delete file + create directory)
+      if diff.to == (diff.from .. '/') and H.fs_get_type(diff.from) == 'file' then
+        target, action, diff.from = create, 'create', nil
+      else
+        action = H.fs_get_parent(diff.from) == H.fs_get_parent(diff.to) and 'rename' or 'move'
+        target = action == 'rename' and rename or move
+        -- NOTE: Use map instead of array to ensure single move/rename per path
+        delete_map[diff.from] = nil
+      end
     end
     table.insert(target, { action = action, dir = diff.dir, from = diff.from, to = diff.to })
   end
@@ -1697,9 +1706,11 @@ H.explorer_compute_fs_actions = function(explorer)
     for _, diff in ipairs(arr) do
       local will_be_deleted = false
       for _, del in ipairs(delete) do
-        local from_is_affected = del.from == diff.from or vim.startswith(diff.from or '', del.from .. '/')
+        local del_from_dir = del.from .. '/'
+        local from_is_affected = del.from == diff.from or vim.startswith(diff.from or '', del_from_dir)
         -- Don't directly account for deleted path to allow "act on freed path"
-        local to_is_affected = vim.startswith(diff.to, del.from .. '/')
+        -- But make "append `/` to file" work as "delete file" + "create dir"
+        local to_is_affected = vim.startswith(diff.to, del_from_dir) and diff.to ~= del_from_dir
         will_be_deleted = will_be_deleted or from_is_affected or to_is_affected
       end
       table.insert(will_be_deleted and before_delete or after_delete, diff)

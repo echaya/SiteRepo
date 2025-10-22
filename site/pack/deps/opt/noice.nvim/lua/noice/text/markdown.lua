@@ -26,7 +26,7 @@ end
 
 ---@param text string
 function M.html_entities(text)
-  local entities = { nbsp = "", lt = "<", gt = ">", amp = "&", quot = '"', apos = "'", ensp = " ", emsp = " " }
+  local entities = { nbsp = " ", lt = "<", gt = ">", amp = "&", quot = '"', apos = "'", ensp = " ", emsp = " " }
   for entity, char in pairs(entities) do
     text = text:gsub("&" .. entity .. ";", char)
   end
@@ -202,8 +202,8 @@ function M.format(message, text, opts)
         for _, t in ipairs(M.get_highlights(block.line)) do
           message:append(t)
         end
-        md_lines = md_lines + 1
       end
+      md_lines = md_lines + 1
     end
   end
   emit_md()

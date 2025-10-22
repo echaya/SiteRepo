@@ -57,6 +57,12 @@ There are following change types:
 
 - Update `options.win_border` to allow value `'auto'` which infers target 'fillchars' values from 'winborder' option.
 
+## mini.colors
+
+- Update `add_transparency()` color scheme method to adjust more groups:
+    - `XxxMsg` groups in case of `opts.general = true`.
+    - `DiagnosticSignXxx` groups in case of `opts.statuscolumn = true`.
+
 ## mini.completion
 
 ### Evolve
@@ -90,6 +96,10 @@ There are following change types:
 - Add `<C-e>` mapping for `pickers.history` picker to edit commands or searches in cmdline. By @TheLeoP, PR #1960.
 
 ## mini.files
+
+### Evolve
+
+- Allow appending `/` to a file name to mean "delete file" + "create directory". This is useful when initial intention was to create a directory but there was no `/` at the end.
 
 ### Refine
 
@@ -152,6 +162,8 @@ There are following change types:
 ### Expand
 
 - "Paste" action now supports special registers: `<C-w>` (word at cursor), `<C-a>` (WORD at cursor), `<C-l>` (line at cursor), `<C-f>` (filename at cursor).
+
+- Key query process now respects most language mappings. By @yehorb, PR #2026.
 
 ## mini.sessions
 

@@ -113,7 +113,7 @@ local defaults = {
   formats = {
     icon = function(item)
       if item.file and item.icon == "file" or item.icon == "directory" then
-        return M.icon(item.file, item.icon)
+        return Snacks.dashboard.icon(item.file, item.icon)
       end
       return { item.icon, width = 2, hl = "icon" }
     end,
@@ -806,7 +806,9 @@ function M.oldfiles(opts)
       if want then
         done[file] = true
         for _, f in ipairs(filter) do
-          if (file:sub(1, #f.path) == f.path) ~= f.want then
+          local matches = file:sub(1, #f.path) == f.path
+            and (file == f.path or file:sub(#f.path + 1, #f.path + 1):find("[/\\]") ~= nil)
+          if matches ~= f.want then
             want = false
             break
           end
@@ -833,7 +835,7 @@ function M.sections.session(item)
     { "possession.nvim", ":PossessionLoadCwd" },
     { "mini.sessions", ":lua require('mini.sessions').read()" },
     { "mini.nvim", ":lua require('mini.sessions').read()" },
-    { "auto-session", ":SessionRestore" },
+    { "auto-session", ":AutoSession restore" },
   }
   for _, plugin in pairs(plugins) do
     if M.have_plugin(plugin[1]) then
@@ -853,9 +855,11 @@ function M.sections.recent_files(opts)
   return function()
     opts = opts or {}
     local limit = opts.limit or 5
-    local root = opts.cwd and svim.fs.normalize(opts.cwd == true and vim.fn.getcwd() or opts.cwd) or ""
+    local root = opts.cwd and svim.fs.normalize(opts.cwd == true and vim.fn.getcwd() or opts.cwd) or nil
+    -- Only filter by directory when root is specified. If nil, M.oldfiles will use default filters only (excludes stdpath data/cache/state).
+    local oldfiles_opts = root and { filter = { [root] = true } } or nil
     local ret = {} ---@type snacks.dashboard.Section
-    for file in M.oldfiles({ filter = { [root] = true } }) do
+    for file in M.oldfiles(oldfiles_opts) do
       if not opts.filter or opts.filter(file) then
         ret[#ret + 1] = {
           file = file,
@@ -877,7 +881,7 @@ end
 --- try to restore the session and open the picker if the session is not restored.
 --- You can customize the behavior by providing a custom action.
 --- Use `opts.dirs` to provide a list of directories to use instead of the git roots.
----@param opts? {limit?:number, dirs?:(string[]|fun():string[]), pick?:boolean, session?:boolean, action?:fun(dir)}
+---@param opts? {limit?:number, dirs?:(string[]|fun():string[]), pick?:boolean, session?:boolean, action?:fun(dir), filter?:fun(dir:string):boolean?}
 function M.sections.projects(opts)
   opts = vim.tbl_extend("force", { pick = true, session = true }, opts or {})
   local limit = opts.limit or 5
@@ -889,9 +893,11 @@ function M.sections.projects(opts)
     for file in M.oldfiles() do
       local dir = Snacks.git.get_root(file)
       if dir and not vim.tbl_contains(dirs, dir) then
-        table.insert(dirs, dir)
-        if #dirs >= limit then
-          break
+        if not opts.filter or opts.filter(dir) then
+          table.insert(dirs, dir)
+          if #dirs >= limit then
+            break
+          end
         end
       end
     end
@@ -899,15 +905,16 @@ function M.sections.projects(opts)
 
   local ret = {} ---@type snacks.dashboard.Item[]
   for _, dir in ipairs(dirs) do
-    ret[#ret + 1] = {
-      file = dir,
-      icon = "directory",
-      action = function(self)
-        if opts.action then
-          return opts.action(dir)
-        end
-        vim.fn.chdir(dir)
-        local session = M.sections.session()
+    if not opts.filter or opts.filter(dir) then
+      ret[#ret + 1] = {
+        file = dir,
+        icon = "directory",
+        action = function(self)
+          if opts.action then
+            return opts.action(dir)
+          end
+          vim.fn.chdir(dir)
+          local session = M.sections.session()
         -- stylua: ignore
         if opts.session and session then
           local session_loaded = false
@@ -917,9 +924,10 @@ function M.sections.projects(opts)
         elseif opts.pick then
           M.pick()
         end
-      end,
-      autokey = true,
-    }
+        end,
+        autokey = true,
+      }
+    end
   end
   return ret
 end
@@ -1185,13 +1193,28 @@ function M.setup()
   local options = { showtabline = vim.o.showtabline, laststatus = vim.o.laststatus }
   vim.o.showtabline, vim.o.laststatus = 0, 0
   local dashboard = M.open({ buf = buf, win = wins[1] })
-  D.on("Closed", function()
+
+  local function restore()
     for k, v in pairs(options) do
       if vim.o[k] == 0 and v ~= 0 then
         vim.o[k] = v
       end
     end
-  end, dashboard.augroup)
+    options = {}
+  end
+
+  D.on("Closed", restore, dashboard.augroup)
+
+  vim.api.nvim_create_autocmd("WinEnter", {
+    group = dashboard.augroup,
+    callback = function()
+      local win = vim.api.nvim_get_current_win()
+      local is_float = vim.api.nvim_win_get_config(win).relative ~= ""
+      if win ~= dashboard.win and not is_float then
+        restore()
+      end
+    end,
+  })
 
   if Snacks.config.dashboard.debug then
     Snacks.debug.stats({ min = 0.2 })

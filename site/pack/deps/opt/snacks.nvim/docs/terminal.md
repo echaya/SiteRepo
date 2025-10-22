@@ -82,6 +82,7 @@ docs for more information on how to customize these styles
     filetype = "snacks_terminal",
   },
   wo = {},
+  stack = true, -- when enabled, multiple split windows with the same position will be stacked together (useful for terminals)
   keys = {
     q = "hide",
     gf = function(self)
@@ -187,6 +188,16 @@ Open a new terminal window.
 ---@param cmd? string | string[]
 ---@param opts? snacks.terminal.Opts
 Snacks.terminal.open(cmd, opts)
+```
+
+### `Snacks.terminal.tid()`
+
+Get a terminal id based on the `cmd`, `cwd`, `env` and `vim.v.count1` options.
+
+```lua
+---@param cmd? string | string[]
+---@param opts? snacks.terminal.Opts
+Snacks.terminal.tid(cmd, opts)
 ```
 
 ### `Snacks.terminal.toggle()`

@@ -421,8 +421,9 @@
 --- *MiniColors-colorscheme:add_transparency()*
 ---
 --- Add transparency by removing background from a certain highlight groups.
---- Requires actual transparency from terminal emulator to experience visible
---- transparency.
+--- Requires actual transparency from terminal emulator to see background image.
+--- Has no effect on linked groups; use |MiniColors-colorscheme:resolve_links()|
+--- explicitly before applying transparency.
 ---
 --- ### Parameters ~
 --- {opts} `(table|nil)` Options. Possible fields can be used to configure which
@@ -430,8 +431,8 @@
 ---   - <general> `(boolean)` - general groups (like `Normal`). Default: `true`.
 ---   - <float> `(boolean)` - built-in groups for floating windows. Default: `false`.
 ---   - <statuscolumn> `(boolean)` - groups related to 'statuscolumn' (signcolumn,
----     numbercolumn, foldcolumn). Also updates groups for all currently
----     defined signs. Default: `false`.
+---     numbercolumn, foldcolumn, `DiagnosticSignXxx`, and `XxxMsg` groups). Also
+---     updates groups for all currently defined signs. Default: `false`.
 ---   - <statusline> `(boolean)` - built-in groups for 'statusline'. Default: `false`.
 ---   - <tabline> `(boolean)` - built-in groups for 'tabline'. Default: `false`.
 ---   - <winbar> `(boolean)` - built-in groups for 'winbar'. Default: `false`.
@@ -1296,12 +1297,15 @@ H.cs_add_transparency = function(self, opts)
 
   if opts.general then
     update({ 'Normal', 'NormalNC', 'EndOfBuffer', 'MsgArea', 'MsgSeparator', 'VertSplit', 'WinSeparator' })
+    update({ 'ErrorMsg', 'WarningMsg', 'OkMsg', 'ModeMsg', 'MoreMsg', 'StderrMsg', 'StdoutMsg' })
   end
 
   if opts.float then update({ 'FloatBorder', 'FloatTitle', 'NormalFloat' }) end
 
   if opts.statuscolumn then
     update({ 'FoldColumn', 'LineNr', 'LineNrAbove', 'LineNrBelow', 'SignColumn' })
+    local diag_hl = vim.tbl_map(function(x) return 'DiagnosticSign' .. x end, { 'Error', 'Warn', 'Info', 'Hint', 'Ok' })
+    update(diag_hl)
 
     -- Remove statuscolumn background coming from signs
     local signs = vim.fn.sign_getdefined()
