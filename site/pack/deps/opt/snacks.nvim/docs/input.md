@@ -53,7 +53,7 @@ docs for more information on how to customize these styles
 {
   backdrop = false,
   position = "float",
-  border = "rounded",
+  border = true,
   title_pos = "center",
   height = 1,
   width = 60,

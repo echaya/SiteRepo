@@ -1,4 +1,4 @@
-*snacks-scratch*        For Neovim       Last change: 2025 October 22
+*snacks-scratch*        For Neovim       Last change: 2025 October 23
 
 ==============================================================================
 Table of Contents                      *snacks.nvim-scratch-table-of-contents*
@@ -134,9 +134,8 @@ SCRATCH                                   *snacks.nvim-scratch-styles-scratch*
       -- position = "right",
       zindex = 20,
       wo = { winhighlight = "NormalFloat:Normal" },
-      border = "rounded",
-      title_pos = "center",
-      footer_pos = "center",
+      footer_keys = true,
+      border = true,
     }
 <
 

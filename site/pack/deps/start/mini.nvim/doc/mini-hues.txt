@@ -207,6 +207,11 @@ events relevant to them. Currently adjusted groups:
 - |hl-MsgSeparator| is adjusted based on `msgsep` flag in |'fillchars'|.
   If it is whitespace - highlight background, otherwise - foreground.
 
+- |hl-Pmenu| is adjusted based on |'pumborder'| value (on Neovim>=0.12).
+  If it results in a border - same as floating window (but with no accent
+  foreground in border), otherwise - same as |hl-CursorLine|. This design
+  makes |ins-completion-menu| stand out from regular floating windows.
+
 # Examples ~
 *MiniHues-examples*
 

@@ -333,7 +333,8 @@ M.git_status = {
   },
 }
 
----@type snacks.picker.git.Config
+---@class snacks.picker.git.diff.Config: snacks.picker.git.Config
+---@field base? string base commit/branch/tag to diff against (default: HEAD)
 M.git_diff = {
   finder = "git_diff",
   format = "file",
@@ -806,6 +807,21 @@ M.registers = {
 -- Special picker that resumes the last picker
 M.resume = {}
 
+-- Open or create scratch buffers
+M.scratch = {
+  finder = "scratch",
+  format = "scratch_format",
+  confirm = "scratch_open",
+  win = {
+    input = {
+      keys = {
+        ["<c-x>"] = { "scratch_delete", mode = { "n", "i" } },
+        ["<c-n>"] = { "scratch_new", mode = { "n", "i" } },
+      },
+    },
+  },
+}
+
 -- Neovim search history
 ---@type snacks.picker.history.Config
 M.search_history = {
@@ -821,6 +837,8 @@ M.search_history = {
 
 --- Config used by `vim.ui.select`.
 --- Not meant to be used directly.
+---@class snacks.picker.select.Config: snacks.picker.Config
+---@field kinds? table<string, snacks.picker.Config|{}> custom snacks picker configs for specific `vim.ui.select` kinds
 M.select = {
   items = {}, -- these are set dynamically
   main = { current = true },
@@ -847,6 +865,14 @@ M.spelling = {
   main = { current = true },
   layout = { preset = "vscode" },
   confirm = "item_action",
+}
+
+-- Search tags file
+---@class snacks.picker.tags.Config: snacks.picker.Config
+M.tags = {
+  workspace = true, -- search tags in the workspace
+  finder = "vim_tags",
+  format = "lsp_symbol",
 }
 
 ---@class snacks.picker.treesitter.Config: snacks.picker.Config

@@ -1195,13 +1195,16 @@ function M.setup()
   local dashboard = M.open({ buf = buf, win = wins[1] })
 
   local function restore()
+    local view = vim.fn.winsaveview()
     for k, v in pairs(options) do
       if vim.o[k] == 0 and v ~= 0 then
         vim.o[k] = v
       end
     end
     options = {}
+    vim.fn.winrestview(view)
   end
+  restore = vim.schedule_wrap(restore)
 
   D.on("Closed", restore, dashboard.augroup)
 

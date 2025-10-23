@@ -202,7 +202,7 @@ docs for more information on how to customize these styles
 ```lua
 {
   relative = "cursor",
-  border = "rounded",
+  border = true,
   focusable = false,
   backdrop = false,
   row = 1,
@@ -224,6 +224,7 @@ docs for more information on how to customize these styles
 ---@class snacks.image.Env
 ---@field name string
 ---@field env table<string, string|true>
+---@field terminal? string
 ---@field supported? boolean default: false
 ---@field placeholders? boolean default: false
 ---@field setup? fun(): boolean?

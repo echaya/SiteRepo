@@ -54,6 +54,7 @@ M.meta = {
 ---@class snacks.win.Config: vim.api.keyset.win_config
 ---@field style? string merges with config from `Snacks.config.styles[style]`
 ---@field show? boolean Show the window immediately (default: true)
+---@field footer_keys? boolean Show keys footer (default: false)
 ---@field height? number|fun(self:snacks.win):number Height of the window. Use <1 for relative height. 0 means full height. (default: 0.9)
 ---@field width? number|fun(self:snacks.win):number Width of the window. Use <1 for relative width. 0 means full width. (default: 0.9)
 ---@field min_height? number Minimum height of the window
@@ -64,7 +65,7 @@ M.meta = {
 ---@field row? number|fun(self:snacks.win):number Row of the window. Use <1 for relative row. (default: center)
 ---@field minimal? boolean Disable a bunch of options to make the window minimal (default: true)
 ---@field position? "float"|"bottom"|"top"|"left"|"right"|"current"
----@field border? "none"|"top"|"right"|"bottom"|"left"|"hpad"|"vpad"|"rounded"|"single"|"double"|"solid"|"shadow"|string[]|false
+---@field border? "none"|"top"|"right"|"bottom"|"left"|"hpad"|"vpad"|"rounded"|"single"|"double"|"solid"|"shadow"|"bold"|string[]|false|true
 ---@field buf? number If set, use this buffer instead of creating a new one
 ---@field file? string If set, use this file instead of creating a new buffer
 ---@field enter? boolean Enter the window after opening (default: false)
@@ -91,12 +92,15 @@ local defaults = {
   position = "float",
   minimal = true,
   wo = {
-    winhighlight = "Normal:SnacksNormal,NormalNC:SnacksNormalNC,WinBar:SnacksWinBar,WinBarNC:SnacksWinBarNC",
+    winhighlight = "Normal:SnacksNormal,NormalNC:SnacksNormalNC,WinBar:SnacksWinBar,WinBarNC:SnacksWinBarNC,FloatTitle:SnacksTitle,FloatFooter:SnacksFooter",
   },
   bo = {},
+  title_pos = "center",
   keys = {
     q = "close",
   },
+  footer_pos = "center",
+  footer_keys = false,
 }
 
 Snacks.config.style("float", {
@@ -194,8 +198,12 @@ local borders = {
 
 Snacks.util.set_hl({
   Backdrop = { bg = "#000000" },
+  Footer = "FloatFooter",
+  FooterDesc = "DiagnosticInfo",
+  FooterKey = "DiagnosticVirtualTextInfo",
   Normal = "NormalFloat",
   NormalNC = "NormalFloat",
+  Title = "FloatTitle",
   WinBar = "Title",
   WinBarNC = "SnacksWinBar",
   WinKey = "Keyword",
@@ -808,6 +816,20 @@ function M:show()
     self.opts.on_buf(self)
   end
 
+  if self.opts.footer_keys then
+    self.opts.footer = {}
+    table.sort(self.keys, function(a, b)
+      return a[1] < b[1]
+    end)
+    for _, key in ipairs(self.keys) do
+      local keymap = vim.fn.keytrans(Snacks.util.keycode(key[1]))
+      table.insert(self.opts.footer, { " ", "SnacksFooter" })
+      table.insert(self.opts.footer, { " " .. keymap .. " ", "SnacksFooterKey" })
+      table.insert(self.opts.footer, { " " .. (key.desc or keymap) .. " ", "SnacksFooterDesc" })
+    end
+    table.insert(self.opts.footer, { " ", "SnacksFooter" })
+  end
+
   self:open_win()
   self.closed = false
   -- window local variables
@@ -1078,7 +1100,9 @@ function M:win_opts()
     opts[k] = self.opts[k]
   end
 
-  opts.border = opts.border and (borders[opts.border] or opts.border) or "none"
+  local border = self:border()
+
+  opts.border = border and (borders[border] or border) or "none"
 
   if opts.relative == "cursor" then
     self.opts.row = self.opts.row or 0
@@ -1089,21 +1113,18 @@ function M:win_opts()
   opts.height, opts.width = dim.height, dim.width
   opts.row, opts.col = dim.row, dim.col
 
-  if opts.title_pos and not opts.title then
-    opts.title_pos = nil
-  end
-  if opts.footer_pos and not opts.footer then
-    opts.footer_pos = nil
-  end
-
   if vim.fn.has("nvim-0.10") == 0 then
     opts.footer, opts.footer_pos = nil, nil
   end
 
-  if not self:has_border() then
+  if border then
+    opts.title_pos = opts.title and (opts.title_pos or "center") or nil
+    opts.footer_pos = opts.footer and (opts.footer_pos or "center") or nil
+  else
     opts.title, opts.footer = nil, nil
     opts.title_pos, opts.footer_pos = nil, nil
   end
+
   return opts
 end
 
@@ -1120,7 +1141,27 @@ function M:size()
 end
 
 function M:has_border()
-  return self.opts.border and self.opts.border ~= "" and self.opts.border ~= "none"
+  return self:border() ~= nil
+end
+
+function M.is_border(border)
+  return border and border ~= "" and border ~= "none"
+end
+
+function M:border()
+  if not M.is_border(self.opts.border) then
+    return
+  end
+
+  if self.opts.border == true then
+    local border ---@type string|string[]|nil
+    pcall(function()
+      border = vim.o.winborder
+      border = border:find(",") and vim.split(border, ",") or border
+    end)
+    return M.is_border(border) and border or "rounded"
+  end
+  return self.opts.border
 end
 
 --- Calculate the size of the border
@@ -1129,7 +1170,7 @@ function M:border_size()
   -- chars building up the border in a clockwise fashion
   -- starting with the top-left corner.
   -- { "╔", "═" ,"╗", "║", "╝", "═", "╚", "║" }
-  local border = self:has_border() and self.opts.border or { "" }
+  local border = self:border() or { "" }
   border = type(border) == "string" and borders[border] or border
   border = type(border) == "string" and { "x" } or border
   assert(type(border) == "table", "Invalid border type")

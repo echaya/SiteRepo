@@ -1,10 +1,16 @@
 local M = {}
 
----@alias snacks.picker.ui_select fun(items: any[], opts?: {prompt?: string, format_item?: (fun(item: any): string), kind?: string}, on_choice: fun(item?: any, idx?: number))
+---@class vim.ui.select.Opts
+---@field prompt? string
+---@field format_item? fun(item: any): string
+---@field kind? string
+
+---@alias vim.ui.select.on_choice fun(item?: any, idx?: number)
+---@alias snacks.picker.ui_select fun(items: any[], opts?: vim.ui.select.Opts, on_choice: vim.ui.select.on_choice)
 
 ---@class snacks.picker.ui_select.Opts: vim.ui.select.Opts
----@field format_item? fun(item: any, is_snacks: boolean):(string|snacks.picker.Highlight[])
----@field picker? snacks.picker.Config
+---@field format_item? fun(item: any, supports_chunks: boolean):(string|snacks.picker.Highlight[])
+---@field snacks? snacks.picker.Config
 
 ---@generic T
 ---@param items T[] Arbitrary items
@@ -17,9 +23,8 @@ function M.select(items, opts, on_choice)
   local title = opts.prompt or "Select"
   title = title:gsub("^%s*", ""):gsub("[%s:]*$", "")
   local completed = false
-  opts.kind = opts.kind or (opts.picker and "snacks") or opts.kind
 
-  ---@type snacks.picker.Config
+  ---@type snacks.picker.select.Config
   local picker_opts = {
     source = "select",
     finder = function()
@@ -29,7 +34,6 @@ function M.select(items, opts, on_choice)
         local text = (opts.format_item or tostring)(item)
         ---@type snacks.picker.finder.Item
         local it = type(item) == "table" and setmetatable({}, { __index = item }) or {}
-        it.formatted = text
         it.text = idx .. " " .. text
         it.item = item
         it.idx = idx
@@ -69,9 +73,21 @@ function M.select(items, opts, on_choice)
       vim.schedule(on_choice)
     end,
   }
-  if opts.picker then
-    picker_opts = Snacks.config.merge({}, vim.deepcopy(picker_opts), opts.picker)
+
+  -- merge custom picker options
+  if opts.snacks then
+    picker_opts = Snacks.config.merge({}, vim.deepcopy(picker_opts), opts.snacks)
   end
+
+  -- get full picker config
+  picker_opts = Snacks.picker.config.get(picker_opts)
+
+  -- merge kind options
+  local kind_opts = picker_opts.kinds and picker_opts.kinds[opts.kind]
+  if kind_opts then
+    picker_opts = Snacks.config.merge({}, picker_opts, kind_opts)
+  end
+
   return Snacks.picker.pick(picker_opts)
 end
 

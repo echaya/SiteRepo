@@ -132,17 +132,17 @@ end
 ---@param cb fun(client:vim.lsp.Client, result:table, params:table)
 ---@async
 function R:request(buf, method, params, cb)
-  local clients = type(buf) == "number" and M.get_clients(buf, method) or {
-    wrap(buf --[[@as vim.lsp.Client]]),
-  }
-  if vim.tbl_isempty(clients) then
-    return self.async:resume()
-  end
-
   vim.schedule(function()
+    local clients = type(buf) == "number" and M.get_clients(buf, method)
+      or {
+        wrap(buf --[[@as vim.lsp.Client]]),
+      }
     for _, client in ipairs(clients) do
       local p = params(client)
       local status, request_id = client:request(method, p, function(_, result)
+        if self.async._aborted then
+          return
+        end
         if result then
           cb(client, result, p)
         end

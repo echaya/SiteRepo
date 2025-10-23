@@ -79,7 +79,7 @@ local history_opts = {
 }
 
 Snacks.config.style("notification", {
-  border = "rounded",
+  border = true,
   zindex = 100,
   ft = "markdown",
   wo = {
@@ -92,7 +92,7 @@ Snacks.config.style("notification", {
 })
 
 Snacks.config.style("notification_history", {
-  border = "rounded",
+  border = true,
   zindex = 100,
   width = 0.6,
   height = 0.6,
@@ -116,6 +116,7 @@ local defaults = {
   -- editor margin to keep free. tabline and statusline are taken into account automatically
   margin = { top = 0, right = 1, bottom = 0 },
   padding = true, -- add 1 cell of left/right padding to the notification window
+  gap = 0, -- gap between notifications
   sort = { "level", "added" }, -- sort by level and time
   -- minimum log level to display. TRACE is the lowest
   -- all notifications are stored in history
@@ -694,7 +695,7 @@ function N:layout()
       end
       notif.layout.top = layout.find(notif.layout.height, notif.layout.top)
       if notif.layout.top then
-        layout.mark(notif.layout.top, notif.layout.height, false)
+        layout.mark(notif.layout.top, notif.layout.height + (self.opts.gap or 0), false)
         if not vim.deep_equal(prev_layout, notif.layout) then
           if notif.win:win_valid() then
             wins_updated = wins_updated + 1

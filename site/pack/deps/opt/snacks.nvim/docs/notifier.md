@@ -128,6 +128,7 @@ vim.api.nvim_create_autocmd("LspProgress", {
   -- editor margin to keep free. tabline and statusline are taken into account automatically
   margin = { top = 0, right = 1, bottom = 0 },
   padding = true, -- add 1 cell of left/right padding to the notification window
+  gap = 0, -- gap between notifications
   sort = { "level", "added" }, -- sort by level and time
   -- minimum log level to display. TRACE is the lowest
   -- all notifications are stored in history
@@ -164,7 +165,7 @@ docs for more information on how to customize these styles
 
 ```lua
 {
-  border = "rounded",
+  border = true,
   zindex = 100,
   ft = "markdown",
   wo = {
@@ -181,7 +182,7 @@ docs for more information on how to customize these styles
 
 ```lua
 {
-  border = "rounded",
+  border = true,
   zindex = 100,
   width = 0.6,
   height = 0.6,

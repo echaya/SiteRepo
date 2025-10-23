@@ -591,6 +591,10 @@ end
 --- A file system entry data is a table with the following fields:
 --- __minifiles_fs_entry_data_fields
 ---
+--- `content.highlight` describes how file system entry name should be highlighted.
+--- Takes file system entry data as input and returns a highlight group name.
+--- Uses |MiniFiles.default_highlight()| by default.
+---
 --- `content.prefix` describes what text (prefix) to show to the left of file
 --- system entry name (if any) and how to highlight it. It also takes file
 --- system entry data as input and returns tuple of text and highlight group
@@ -661,9 +665,11 @@ MiniFiles.config = {
   content = {
     -- Predicate for which file system entries to show
     filter = nil,
-    -- What prefix to show to the left of file system entry
+    -- Highlight group to use for a file system entry
+    highlight = nil,
+    -- Prefix text and highlight to show to the left of file system entry
     prefix = nil,
-    -- In which order to show file system entries
+    -- Order in which to show file system entries
     sort = nil,
   },
 
@@ -1223,6 +1229,18 @@ MiniFiles.default_sort = function(fs_entries)
   return vim.tbl_map(function(x) return { name = x.name, fs_type = x.fs_type, path = x.path } end, res)
 end
 
+--- Default file system entry highlight
+---
+--- Returns `'MiniFilesDirectory'` for directory and `'MiniFilesFile'` otherwise.
+---
+---@param fs_entry table Table with the following fields:
+--- __minifiles_fs_entry_data_fields
+---
+---@return string Highlight group name.
+MiniFiles.default_highlight = function(fs_entry)
+  return fs_entry.fs_type == 'directory' and 'MiniFilesDirectory' or 'MiniFilesFile'
+end
+
 -- Helper data ================================================================
 -- Module default config
 H.default_config = vim.deepcopy(MiniFiles.config)
@@ -1270,6 +1288,7 @@ H.setup_config = function(config)
 
   H.check_type('content', config.content, 'table')
   H.check_type('content.filter', config.content.filter, 'function', true)
+  H.check_type('content.highlight', config.content.highlight, 'function', true)
   H.check_type('content.prefix', config.content.prefix, 'function', true)
   H.check_type('content.sort', config.content.sort, 'function', true)
 
@@ -1348,6 +1367,7 @@ end
 H.normalize_opts = function(explorer_opts, opts)
   opts = vim.tbl_deep_extend('force', H.get_config(), explorer_opts or {}, opts or {})
   opts.content.filter = opts.content.filter or MiniFiles.default_filter
+  opts.content.highlight = opts.content.highlight or MiniFiles.default_highlight
   opts.content.prefix = opts.content.prefix or MiniFiles.default_prefix
   opts.content.sort = opts.content.sort or MiniFiles.default_sort
 
@@ -2241,7 +2261,8 @@ H.buffer_update_directory = function(buf_id, path, opts, is_preview)
 
   -- Compute lines
   local lines, icon_hl, name_hl = {}, {}, {}
-  local prefix_fun, n_computed_prefixes = opts.content.prefix, is_preview and vim.o.lines or math.huge
+  local prefix_fun, hl_fun = opts.content.prefix, opts.content.highlight
+  local n_computed_prefixes = is_preview and vim.o.lines or math.huge
   for i, entry in ipairs(fs_entries) do
     local prefix, hl, name
     -- Compute prefix only in visible preview (for performance).
@@ -2253,7 +2274,7 @@ H.buffer_update_directory = function(buf_id, path, opts, is_preview)
     prefix, hl, name = prefix or '', hl or '', H.sanitize_string(entry.name)
     table.insert(lines, string.format(line_format, H.path_index[entry.path], prefix, name))
     table.insert(icon_hl, hl)
-    table.insert(name_hl, entry.fs_type == 'directory' and 'MiniFilesDirectory' or 'MiniFilesFile')
+    table.insert(name_hl, hl_fun(entry) or 'MiniFilesNormal')
   end
 
   -- Set lines

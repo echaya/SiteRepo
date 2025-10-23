@@ -1,4 +1,4 @@
-*snacks-picker*        For Neovim        Last change: 2025 October 22
+*snacks-picker*        For Neovim        Last change: 2025 October 23
 
 ==============================================================================
 Table of Contents                       *snacks.nvim-picker-table-of-contents*
@@ -73,10 +73,12 @@ Table of Contents                       *snacks.nvim-picker-table-of-contents*
   - recent                                 |snacks.nvim-picker-sources-recent|
   - registers                           |snacks.nvim-picker-sources-registers|
   - resume                                 |snacks.nvim-picker-sources-resume|
+  - scratch                               |snacks.nvim-picker-sources-scratch|
   - search_history                 |snacks.nvim-picker-sources-search_history|
   - select                                 |snacks.nvim-picker-sources-select|
   - smart                                   |snacks.nvim-picker-sources-smart|
   - spelling                             |snacks.nvim-picker-sources-spelling|
+  - tags                                     |snacks.nvim-picker-sources-tags|
   - treesitter                         |snacks.nvim-picker-sources-treesitter|
   - undo                                     |snacks.nvim-picker-sources-undo|
   - zoxide                                 |snacks.nvim-picker-sources-zoxide|
@@ -1344,7 +1346,8 @@ GIT_DIFF                                 *snacks.nvim-picker-sources-git_diff*
 <
 
 >lua
-    ---@type snacks.picker.git.Config
+    ---@class snacks.picker.git.diff.Config: snacks.picker.git.Config
+    ---@field base? string base commit/branch/tag to diff against (default: HEAD)
     {
       finder = "git_diff",
       format = "file",
@@ -2297,6 +2300,31 @@ Special picker that resumes the last picker
 <
 
 
+SCRATCH                                   *snacks.nvim-picker-sources-scratch*
+
+>vim
+    :lua Snacks.picker.scratch(opts?)
+<
+
+Open or create scratch buffers
+
+>lua
+    {
+      finder = "scratch",
+      format = "scratch_format",
+      confirm = "scratch_open",
+      win = {
+        input = {
+          keys = {
+            ["<c-x>"] = { "scratch_delete", mode = { "n", "i" } },
+            ["<c-n>"] = { "scratch_new", mode = { "n", "i" } },
+          },
+        },
+      },
+    }
+<
+
+
 SEARCH_HISTORY                     *snacks.nvim-picker-sources-search_history*
 
 >vim
@@ -2329,6 +2357,8 @@ SELECT                                     *snacks.nvim-picker-sources-select*
 Config used by `vim.ui.select`. Not meant to be used directly.
 
 >lua
+    ---@class snacks.picker.select.Config: snacks.picker.Config
+    ---@field kinds? table<string, snacks.picker.Config|{}> custom snacks picker configs for specific `vim.ui.select` kinds
     {
       items = {}, -- these are set dynamically
       main = { current = true },
@@ -2373,6 +2403,24 @@ SPELLING                                 *snacks.nvim-picker-sources-spelling*
       main = { current = true },
       layout = { preset = "vscode" },
       confirm = "item_action",
+    }
+<
+
+
+TAGS                                         *snacks.nvim-picker-sources-tags*
+
+>vim
+    :lua Snacks.picker.tags(opts?)
+<
+
+Search tags file
+
+>lua
+    ---@class snacks.picker.tags.Config: snacks.picker.Config
+    {
+      workspace = true, -- search tags in the workspace
+      finder = "vim_tags",
+      format = "lsp_symbol",
     }
 <
 
@@ -2493,12 +2541,12 @@ DEFAULT                                   *snacks.nvim-picker-layouts-default*
         height = 0.8,
         {
           box = "vertical",
-          border = "rounded",
+          border = true,
           title = "{title} {live} {flags}",
           { win = "input", height = 1, border = "bottom" },
           { win = "list", border = "none" },
         },
-        { win = "preview", title = "{preview}", border = "rounded", width = 0.5 },
+        { win = "preview", title = "{preview}", border = true, width = 0.5 },
       },
     }
 <
@@ -2516,10 +2564,10 @@ DROPDOWN                                 *snacks.nvim-picker-layouts-dropdown*
         height = 0.8,
         border = "none",
         box = "vertical",
-        { win = "preview", title = "{preview}", height = 0.4, border = "rounded" },
+        { win = "preview", title = "{preview}", height = 0.4, border = true },
         {
           box = "vertical",
-          border = "rounded",
+          border = true,
           title = "{title} {live} {flags}",
           title_pos = "center",
           { win = "input", height = 1, border = "bottom" },
@@ -2605,7 +2653,7 @@ SELECT                                     *snacks.nvim-picker-layouts-select*
         height = 0.4,
         min_height = 3,
         box = "vertical",
-        border = "rounded",
+        border = true,
         title = "{title}",
         title_pos = "center",
         { win = "input", height = 1, border = "bottom" },
@@ -2632,7 +2680,7 @@ SIDEBAR                                   *snacks.nvim-picker-layouts-sidebar*
         {
           win = "input",
           height = 1,
-          border = "rounded",
+          border = true,
           title = "{title} {live} {flags}",
           title_pos = "center",
         },
@@ -2656,14 +2704,14 @@ TELESCOPE                               *snacks.nvim-picker-layouts-telescope*
         border = "none",
         {
           box = "vertical",
-          { win = "list", title = " Results ", title_pos = "center", border = "rounded" },
-          { win = "input", height = 1, border = "rounded", title = "{title} {live} {flags}", title_pos = "center" },
+          { win = "list", title = " Results ", title_pos = "center", border = true },
+          { win = "input", height = 1, border = true, title = "{title} {live} {flags}", title_pos = "center" },
         },
         {
           win = "preview",
           title = "{preview:Preview}",
           width = 0.45,
-          border = "rounded",
+          border = true,
           title_pos = "center",
         },
       },
@@ -2689,7 +2737,7 @@ VERTICAL                                 *snacks.nvim-picker-layouts-vertical*
         height = 0.8,
         min_height = 30,
         box = "vertical",
-        border = "rounded",
+        border = true,
         title = "{title} {live} {flags}",
         title_pos = "center",
         { win = "input", height = 1, border = "bottom" },
@@ -2713,9 +2761,9 @@ VSCODE                                     *snacks.nvim-picker-layouts-vscode*
         height = 0.4,
         border = "none",
         box = "vertical",
-        { win = "input", height = 1, border = "rounded", title = "{title} {live} {flags}", title_pos = "center" },
+        { win = "input", height = 1, border = true, title = "{title} {live} {flags}", title_pos = "center" },
         { win = "list", border = "hpad" },
-        { win = "preview", title = "{preview}", border = "rounded" },
+        { win = "preview", title = "{preview}", border = true },
       },
     }
 <

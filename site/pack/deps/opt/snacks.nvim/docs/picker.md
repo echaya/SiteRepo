@@ -640,6 +640,14 @@ Snacks.picker.pick({source = "files", ...})
 ```
 
 ```lua
+---@alias snacks.Picker.ref (fun():snacks.Picker?)|{value?: snacks.Picker}
+```
+
+```lua
+---@alias snacks.picker.history.Record {pattern: string, search: string, live?: boolean}
+```
+
+```lua
 ---@alias snacks.picker.format.resolve fun(max_width:number):snacks.picker.Highlight[]
 ---@alias snacks.picker.Extmark vim.api.keyset.set_extmark|{col:number, row?:number, field?:string}
 ---@alias snacks.picker.Text {[1]:string, [2]:string?, virtual?:boolean, field?:string, resolve?:snacks.picker.format.resolve}
@@ -718,14 +726,6 @@ It's a previewer that shows a preview based on the item data.
 ---@field input? snacks.win.Config|{} input window config
 ---@field list? snacks.win.Config|{} result list window config
 ---@field preview? snacks.win.Config|{} preview window config
-```
-
-```lua
----@alias snacks.Picker.ref (fun():snacks.Picker?)|{value?: snacks.Picker}
-```
-
-```lua
----@alias snacks.picker.history.Record {pattern: string, search: string, live?: boolean}
 ```
 
 ## 📦 Module
@@ -1126,7 +1126,8 @@ Neovim commands
 ```
 
 ```lua
----@type snacks.picker.git.Config
+---@class snacks.picker.git.diff.Config: snacks.picker.git.Config
+---@field base? string base commit/branch/tag to diff against (default: HEAD)
 {
   finder = "git_diff",
   format = "file",
@@ -2037,6 +2038,30 @@ Special picker that resumes the last picker
 {}
 ```
 
+### `scratch`
+
+```vim
+:lua Snacks.picker.scratch(opts?)
+```
+
+Open or create scratch buffers
+
+```lua
+{
+  finder = "scratch",
+  format = "scratch_format",
+  confirm = "scratch_open",
+  win = {
+    input = {
+      keys = {
+        ["<c-x>"] = { "scratch_delete", mode = { "n", "i" } },
+        ["<c-n>"] = { "scratch_new", mode = { "n", "i" } },
+      },
+    },
+  },
+}
+```
+
 ### `search_history`
 
 ```vim
@@ -2069,6 +2094,8 @@ Config used by `vim.ui.select`.
 Not meant to be used directly.
 
 ```lua
+---@class snacks.picker.select.Config: snacks.picker.Config
+---@field kinds? table<string, snacks.picker.Config|{}> custom snacks picker configs for specific `vim.ui.select` kinds
 {
   items = {}, -- these are set dynamically
   main = { current = true },
@@ -2111,6 +2138,23 @@ Not meant to be used directly.
   main = { current = true },
   layout = { preset = "vscode" },
   confirm = "item_action",
+}
+```
+
+### `tags`
+
+```vim
+:lua Snacks.picker.tags(opts?)
+```
+
+Search tags file
+
+```lua
+---@class snacks.picker.tags.Config: snacks.picker.Config
+{
+  workspace = true, -- search tags in the workspace
+  finder = "vim_tags",
+  format = "lsp_symbol",
 }
 ```
 
@@ -2224,12 +2268,12 @@ Open a project from zoxide
     height = 0.8,
     {
       box = "vertical",
-      border = "rounded",
+      border = true,
       title = "{title} {live} {flags}",
       { win = "input", height = 1, border = "bottom" },
       { win = "list", border = "none" },
     },
-    { win = "preview", title = "{preview}", border = "rounded", width = 0.5 },
+    { win = "preview", title = "{preview}", border = true, width = 0.5 },
   },
 }
 ```
@@ -2246,10 +2290,10 @@ Open a project from zoxide
     height = 0.8,
     border = "none",
     box = "vertical",
-    { win = "preview", title = "{preview}", height = 0.4, border = "rounded" },
+    { win = "preview", title = "{preview}", height = 0.4, border = true },
     {
       box = "vertical",
-      border = "rounded",
+      border = true,
       title = "{title} {live} {flags}",
       title_pos = "center",
       { win = "input", height = 1, border = "bottom" },
@@ -2330,7 +2374,7 @@ M.sidebar
     height = 0.4,
     min_height = 3,
     box = "vertical",
-    border = "rounded",
+    border = true,
     title = "{title}",
     title_pos = "center",
     { win = "input", height = 1, border = "bottom" },
@@ -2356,7 +2400,7 @@ M.sidebar
     {
       win = "input",
       height = 1,
-      border = "rounded",
+      border = true,
       title = "{title} {live} {flags}",
       title_pos = "center",
     },
@@ -2379,14 +2423,14 @@ M.sidebar
     border = "none",
     {
       box = "vertical",
-      { win = "list", title = " Results ", title_pos = "center", border = "rounded" },
-      { win = "input", height = 1, border = "rounded", title = "{title} {live} {flags}", title_pos = "center" },
+      { win = "list", title = " Results ", title_pos = "center", border = true },
+      { win = "input", height = 1, border = true, title = "{title} {live} {flags}", title_pos = "center" },
     },
     {
       win = "preview",
       title = "{preview:Preview}",
       width = 0.45,
-      border = "rounded",
+      border = true,
       title_pos = "center",
     },
   },
@@ -2410,7 +2454,7 @@ M.sidebar
     height = 0.8,
     min_height = 30,
     box = "vertical",
-    border = "rounded",
+    border = true,
     title = "{title} {live} {flags}",
     title_pos = "center",
     { win = "input", height = 1, border = "bottom" },
@@ -2433,9 +2477,9 @@ M.sidebar
     height = 0.4,
     border = "none",
     box = "vertical",
-    { win = "input", height = 1, border = "rounded", title = "{title} {live} {flags}", title_pos = "center" },
+    { win = "input", height = 1, border = true, title = "{title} {live} {flags}", title_pos = "center" },
     { win = "list", border = "hpad" },
-    { win = "preview", title = "{preview}", border = "rounded" },
+    { win = "preview", title = "{preview}", border = true },
   },
 }
 ```
@@ -2838,8 +2882,6 @@ Snacks.picker.actions.toggle_preview(picker)
 Snacks.picker.actions.yank(picker, item, action)
 ```
 
-
-
 ## 📦 `snacks.picker.core.picker`
 
 ```lua
@@ -3094,3 +3136,5 @@ Get the word under the cursor or the current visual selection
 ```lua
 picker:word()
 ```
+
+

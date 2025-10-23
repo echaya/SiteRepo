@@ -39,7 +39,7 @@ Snacks.util.set_hl({
 Snacks.config.style("input", {
   backdrop = false,
   position = "float",
-  border = "rounded",
+  border = true,
   title_pos = "center",
   height = 1,
   width = 60,

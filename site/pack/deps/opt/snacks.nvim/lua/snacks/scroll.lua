@@ -87,13 +87,10 @@ local function get_state(win)
   local changedtick = vim.api.nvim_buf_get_changedtick(buf)
   local view = vim.api.nvim_win_call(win, vim.fn.winsaveview) ---@type vim.fn.winsaveview.ret
   if not (states[win] and states[win].buf == buf and states[win].changedtick == changedtick) then
-    -- go to target if we're still animating and resetting due to a change
-    if states[win] and states[win].anim and not states[win].anim.done and states[win].buf == buf then
+    -- new buffer, or buffer changed: cancel existing animation and reset state
+    if states[win] and states[win].anim then
       states[win].anim:stop()
       states[win].anim = nil
-      vim.api.nvim_win_call(win, function()
-        vim.fn.winrestview(states[win].target)
-      end)
       wo(win) -- restore window options
     end
     ---@diagnostic disable-next-line: missing-fields
@@ -305,11 +302,22 @@ function M.check(win)
     or (state.target.topline == state.current.topline and state.target.topfill < state.current.topfill)
 
   local scrolled = 0
+  local changedtick = state.changedtick
+  local buf = vim.api.nvim_win_get_buf(win)
 
   state.anim = Snacks.animate(0, scrolls, function(value, ctx)
     if not vim.api.nvim_win_is_valid(win) then
       return
     end
+
+    if not vim.api.nvim_buf_is_valid(buf) or buf ~= vim.api.nvim_win_get_buf(win) then
+      return
+    end
+
+    if vim.b[state.buf].changedtick ~= changedtick then
+      return
+    end
+
     vim.api.nvim_win_call(win, function()
       if ctx.done then
         vim.fn.winrestview(state.target)

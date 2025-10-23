@@ -567,9 +567,11 @@ Defaults ~
     content = {
       -- Predicate for which file system entries to show
       filter = nil,
-      -- What prefix to show to the left of file system entry
+      -- Highlight group to use for a file system entry
+      highlight = nil,
+      -- Prefix text and highlight to show to the left of file system entry
       prefix = nil,
-      -- In which order to show file system entries
+      -- Order in which to show file system entries
       sort = nil,
     },
 
@@ -624,6 +626,10 @@ A file system entry data is a table with the following fields:
   - <fs_type> `(string)` - one of "file" or "directory".
   - <name> `(string)` - basename of an entry (including extension).
   - <path> `(string)` - full path of an entry.
+
+`content.highlight` describes how file system entry name should be highlighted.
+Takes file system entry data as input and returns a highlight group name.
+Uses |MiniFiles.default_highlight()| by default.
 
 `content.prefix` describes what text (prefix) to show to the left of file
 system entry name (if any) and how to highlight it. It also takes file
@@ -967,6 +973,22 @@ Parameters ~
 
 Return ~
 `(table)` Sorted array of file system entries.
+
+------------------------------------------------------------------------------
+                                                 *MiniFiles.default_highlight()*
+                   `MiniFiles.default_highlight`({fs_entry})
+Default file system entry highlight
+
+Returns `'MiniFilesDirectory'` for directory and `'MiniFilesFile'` otherwise.
+
+Parameters ~
+{fs_entry} `(table)` Table with the following fields:
+  - <fs_type> `(string)` - one of "file" or "directory".
+  - <name> `(string)` - basename of an entry (including extension).
+  - <path> `(string)` - full path of an entry.
+
+Return ~
+`(string)` Highlight group name.
 
 
  vim:tw=78:ts=8:noet:ft=help:norl:

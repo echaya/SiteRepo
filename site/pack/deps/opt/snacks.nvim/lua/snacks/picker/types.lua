@@ -12,7 +12,7 @@
 ---@field explorer fun(opts?: snacks.picker.explorer.Config|{}): snacks.Picker
 ---@field files fun(opts?: snacks.picker.files.Config|{}): snacks.Picker
 ---@field git_branches fun(opts?: snacks.picker.git.branches.Config|{}): snacks.Picker
----@field git_diff fun(opts?: snacks.picker.git.Config|{}): snacks.Picker
+---@field git_diff fun(opts?: snacks.picker.git.diff.Config|{}): snacks.Picker
 ---@field git_files fun(opts?: snacks.picker.git.files.Config|{}): snacks.Picker
 ---@field git_grep fun(opts?: snacks.picker.git.grep.Config|{}): snacks.Picker
 ---@field git_log fun(opts?: snacks.picker.git.log.Config|{}): snacks.Picker
@@ -54,9 +54,11 @@
 ---@field recent fun(opts?: snacks.picker.recent.Config|{}): snacks.Picker
 ---@field registers fun(opts?: snacks.picker.Config|{}): snacks.Picker
 ---@field resume fun(): snacks.Picker
+---@field scratch fun(opts?: snacks.picker.Config|{}): snacks.Picker
 ---@field search_history fun(opts?: snacks.picker.history.Config|{}): snacks.Picker
 ---@field smart fun(opts?: snacks.picker.smart.Config|{}): snacks.Picker
 ---@field spelling fun(opts?: snacks.picker.Config|{}): snacks.Picker
+---@field tags fun(opts?: snacks.picker.tags.Config|{}): snacks.Picker
 ---@field treesitter fun(opts?: snacks.picker.treesitter.Config|{}): snacks.Picker
 ---@field undo fun(opts?: snacks.picker.undo.Config|{}): snacks.Picker
 ---@field zoxide fun(opts?: snacks.picker.Config|{}): snacks.Picker

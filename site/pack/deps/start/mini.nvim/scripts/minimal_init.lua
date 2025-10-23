@@ -4,7 +4,7 @@ vim.cmd([[let &rtp.=','.getcwd()]])
 
 -- Ensure persistent color scheme (matters after new default in Neovim 0.10)
 vim.o.background = 'dark'
-require('mini.hues').setup({ background = '#11262d', foreground = '#c0c8cc' })
+require('mini.hues').setup({ background = '#11262d', foreground = '#c0c8cc', autoadjust = false })
 vim.g.colors_name = 'minitest-scheme'
 
 -- - Make screenshot tests more robust across Neovim versions

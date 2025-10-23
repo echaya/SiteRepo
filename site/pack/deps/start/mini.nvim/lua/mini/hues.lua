@@ -194,6 +194,11 @@ end
 --- - |hl-MsgSeparator| is adjusted based on `msgsep` flag in |'fillchars'|.
 ---   If it is whitespace - highlight background, otherwise - foreground.
 ---
+--- - |hl-Pmenu| is adjusted based on |'pumborder'| value (on Neovim>=0.12).
+---   If it results in a border - same as floating window (but with no accent
+---   foreground in border), otherwise - same as |hl-CursorLine|. This design
+---   makes |ins-completion-menu| stand out from regular floating windows.
+---
 --- # Examples ~
 --- *MiniHues-examples*
 ---
@@ -516,7 +521,8 @@ MiniHues.apply_palette = function(palette, plugins, opts)
   hi('NormalFloat',    { fg=p.fg,      bg=p.bg_edge })
   hi('NormalNC',       { link='Normal' })
   hi('OkMsg',          { fg=p.green,   bg=nil })
-  hi('Pmenu',          { fg=p.fg,      bg=p.bg_mid })
+  hi('Pmenu',          H.attr_pmenu(p, autoadjust))
+  hi('PmenuBorder',    { link='Pmenu' })
   hi('PmenuExtra',     { link='Pmenu' })
   hi('PmenuExtraSel',  { link='PmenuSel' })
   hi('PmenuKind',      { link='Pmenu' })
@@ -1950,6 +1956,7 @@ H.setup_autoadjust = function(palette)
   local adjust = function(ev)
     local adjust_all = ev.event == 'VimEnter'
     if adjust_all or ev.match == 'fillchars' then hi('MsgSeparator', H.attr_msgseparator(palette, true)) end
+    if adjust_all or ev.match == 'pumborder' then hi('Pmenu', H.attr_pmenu(palette, true)) end
   end
 
   -- Use single autocommand without pattern for performance (skips Neovim doing
@@ -1962,6 +1969,11 @@ end
 H.attr_msgseparator = function(p, autoadjust)
   if not autoadjust then return { fg = p.accent, bg = p.bg_mid } end
   return vim.o.fillchars:find('msgsep:%S') ~= nil and { fg = p.accent } or { bg = p.bg_mid }
+end
+
+H.attr_pmenu = function(p, autoadjust)
+  local is_pumborder = vim.fn.exists('+pumborder') == 1 and not (vim.o.pumborder == '' or vim.o.pumborder == 'none')
+  return (autoadjust and is_pumborder) and { link = 'NormalFloat' } or { fg = p.fg, bg = p.bg_mid }
 end
 
 -- Utilities ------------------------------------------------------------------
