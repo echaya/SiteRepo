@@ -82,6 +82,7 @@
 ---@field image snacks.image
 ---@field indent snacks.indent
 ---@field input snacks.input
+---@field keymap snacks.keymap
 ---@field layout snacks.layout
 ---@field lazygit snacks.lazygit
 ---@field meta snacks.meta

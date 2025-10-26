@@ -1,4 +1,4 @@
-*snacks-util*         For Neovim         Last change: 2025 October 23
+*snacks-util*         For Neovim         Last change: 2025 October 25
 
 ==============================================================================
 Table of Contents                         *snacks.nvim-util-table-of-contents*
@@ -41,6 +41,13 @@ Table of Contents                         *snacks.nvim-util-table-of-contents*
 
 ==============================================================================
 2. Module                                            *snacks.nvim-util-module*
+
+>lua
+    ---@class snacks.util
+    ---@field spawn snacks.spawn
+    ---@field lsp snacks.lsp
+    Snacks.util = {}
+<
 
 
 `Snacks.util.blend()`                                    *Snacks.util.blend()*

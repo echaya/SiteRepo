@@ -1,5 +1,15 @@
 ---@class snacks.util
-local M = {}
+---@field spawn snacks.spawn
+---@field lsp snacks.lsp
+local M = setmetatable({}, {
+  ---@param M snacks.util
+  __index = function(M, k)
+    if vim.tbl_contains({ "spawn", "lsp" }, k) then
+      M[k] = require("snacks.util." .. k)
+    end
+    return rawget(M, k)
+  end,
+})
 
 M.meta = {
   desc = "Utility functions for Snacks _(library)_",

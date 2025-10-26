@@ -20,6 +20,7 @@ A collection of small QoL plugins for Neovim.
 | [image](https://github.com/folke/snacks.nvim/blob/main/docs/image.md) | Image viewer using Kitty Graphics Protocol, supported by `kitty`, `wezterm` and `ghostty` | ‼️ |
 | [indent](https://github.com/folke/snacks.nvim/blob/main/docs/indent.md) | Indent guides and scopes |  |
 | [input](https://github.com/folke/snacks.nvim/blob/main/docs/input.md) | Better `vim.ui.input` | ‼️ |
+| [keymap](https://github.com/folke/snacks.nvim/blob/main/docs/keymap.md) | Better `vim.keymap` with support for filetypes and LSP clients |  |
 | [layout](https://github.com/folke/snacks.nvim/blob/main/docs/layout.md) | Window layouts |  |
 | [lazygit](https://github.com/folke/snacks.nvim/blob/main/docs/lazygit.md) | Open LazyGit in a float, auto-configure colorscheme and integration with Neovim |  |
 | [notifier](https://github.com/folke/snacks.nvim/blob/main/docs/notifier.md) | Pretty `vim.notify` | ‼️ |

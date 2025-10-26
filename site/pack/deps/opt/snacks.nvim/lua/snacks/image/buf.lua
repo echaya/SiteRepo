@@ -4,6 +4,7 @@ local M = {}
 ---@param buf number
 ---@param opts? snacks.image.Opts|{src?: string}
 function M._attach(buf, opts)
+  Snacks.image.placement.clean(buf)
   opts = opts or {}
   local file = opts.src or vim.api.nvim_buf_get_name(buf)
   if not Snacks.image.supports(file) then

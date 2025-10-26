@@ -82,7 +82,7 @@ function M.get(opts)
   if opts.cwd == true or opts.cwd == "" then
     opts.cwd = nil
   elseif opts.cwd then
-    opts.cwd = svim.fs.normalize(vim.fn.fnamemodify(opts.cwd, ":p"))
+    opts.cwd = svim.fs.normalize(vim.fn.fnamemodify(opts.cwd:gsub("[\\/]?$", "/"), ":p"))
   end
   for _, t in ipairs(todo) do
     if t.config then

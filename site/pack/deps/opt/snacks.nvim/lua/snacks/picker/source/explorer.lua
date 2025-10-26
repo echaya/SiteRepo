@@ -50,7 +50,9 @@ function State.new(picker)
   if opts.watch then
     local on_close = picker.opts.on_close
     picker.opts.on_close = function(p)
-      require("snacks.explorer.watch").abort()
+      vim.schedule(function()
+        require("snacks.explorer.watch").watch()
+      end)
       if on_close then
         on_close(p)
       end
@@ -61,6 +63,13 @@ function State.new(picker)
     local p = ref()
     if p then
       Tree:refresh(ev.file)
+      Actions.update(p)
+    end
+  end)
+
+  picker.list.win:on("TabEnter", function(_, ev)
+    local p = ref()
+    if p and p:on_current_tab() then
       Actions.update(p)
     end
   end)
@@ -137,7 +146,7 @@ end
 function State:setup(ctx)
   local opts = ctx.picker.opts --[[@as snacks.picker.explorer.Config]]
   if opts.watch then
-    require("snacks.explorer.watch").watch(ctx.filter.cwd)
+    require("snacks.explorer.watch").watch()
   end
   return not ctx.filter:is_empty()
 end

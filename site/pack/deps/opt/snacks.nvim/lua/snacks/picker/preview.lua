@@ -287,24 +287,22 @@ end
 
 ---@param ctx snacks.picker.preview.ctx
 local function git(ctx, ...)
+  local builtin = ctx.picker.opts.previewers.git.builtin
   local ret = { "git", "-c", "delta." .. vim.o.background .. "=true" }
+  vim.list_extend(ret, builtin and { "--no-pager" } or {})
   vim.list_extend(ret, ctx.picker.opts.previewers.git.args or {})
   vim.list_extend(ret, { ... })
-  return ret
+  return ret, builtin
 end
 
 ---@param ctx snacks.picker.preview.ctx
 function M.git_show(ctx)
-  local builtin = ctx.picker.opts.previewers.git.builtin
-  local cmd = git(ctx, "show", ctx.item.commit)
+  local cmd, builtin = git(ctx, "show", ctx.item.commit)
   local pathspec = ctx.item.files or ctx.item.file
   pathspec = type(pathspec) == "table" and pathspec or { pathspec }
   if #pathspec > 0 then
     cmd[#cmd + 1] = "--"
     vim.list_extend(cmd, pathspec)
-  end
-  if builtin then
-    table.insert(cmd, 2, "--no-pager")
   end
   M.cmd(cmd, ctx, { ft = builtin and "git" or nil })
 end
@@ -366,24 +364,16 @@ end
 
 ---@param ctx snacks.picker.preview.ctx
 function M.git_diff(ctx)
-  local builtin = ctx.picker.opts.previewers.git.builtin
-  local cmd = git(ctx, "diff", "HEAD")
+  local cmd, builtin = git(ctx, "diff", "HEAD")
   if ctx.item.file then
     vim.list_extend(cmd, { "--", ctx.item.file })
-  end
-  if builtin then
-    table.insert(cmd, 2, "--no-pager")
   end
   M.cmd(cmd, ctx, { ft = builtin and "diff" or nil })
 end
 
 ---@param ctx snacks.picker.preview.ctx
 function M.git_stash(ctx)
-  local builtin = ctx.picker.opts.previewers.git.builtin
-  local cmd = git(ctx, "stash", "show", "--patch", ctx.item.stash)
-  if builtin then
-    table.insert(cmd, 2, "--no-pager")
-  end
+  local cmd, builtin = git(ctx, "stash", "show", "--patch", ctx.item.stash)
   M.cmd(cmd, ctx, { ft = builtin and "diff" or nil })
 end
 

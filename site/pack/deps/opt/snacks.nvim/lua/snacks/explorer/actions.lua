@@ -9,6 +9,55 @@ local uv = vim.uv or vim.loop
 
 local M = {}
 
+---@param path string
+function M.get_trash_cmds(path)
+  ---@type string[][]
+  local ret = {
+    { "trash", path }, -- trash-cli (Python or Node.js)
+    { "gio", "trash", path }, -- Most universally available on modern Linux
+    { "kioclient5", "move", path, "trash:/" }, -- KDE Plasma 5
+    { "kioclient", "move", path, "trash:/" }, -- KDE Plasma 6
+  }
+  if vim.fn.has("win32") == 1 then
+    ret[#ret + 1] = {
+      "powershell",
+      "-NoProfile",
+      "-Command",
+      (
+        "Add-Type -AssemblyName Microsoft.VisualBasic; "
+        .. "[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile('%s','OnlyErrorDialogs', 'SendToRecycleBin')"
+      ):format(path:gsub("\\", "\\\\"):gsub("'", "''")),
+    }
+  end
+  return ret
+end
+
+---@param path string
+function M.trash(path)
+  if Snacks.explorer.config.trash then
+    for _, cmd in ipairs(M.get_trash_cmds(path)) do
+      if vim.fn.executable(cmd[1]) == 1 then
+        local ok, ret = pcall(vim.fn.system, cmd)
+        if not ok or vim.v.shell_error ~= 0 then
+          return false,
+            ("- cmd: `%s`\n- error: %s"):format(
+              table.concat(cmd, " "),
+              type(ret) == "string" and ret or "Unknown error"
+            )
+        end
+        return true
+      end
+    end
+  end
+
+  -- Fallback to delete
+  local ok, ret = pcall(vim.fn.delete, path, "rf")
+  if not ok or ret ~= 0 then
+    return false, type(ret) == "string" and ret or "Unknown error"
+  end
+  return true
+end
+
 ---@param picker snacks.Picker
 ---@param path string
 function M.reveal(picker, path)
@@ -260,11 +309,11 @@ function M.actions.explorer_del(picker)
   local what = #paths == 1 and vim.fn.fnamemodify(paths[1], ":p:~:.") or #paths .. " files"
   M.confirm("Delete " .. what .. "?", function()
     for _, path in ipairs(paths) do
-      local ok, err = pcall(vim.fn.delete, path, "rf")
+      local ok, err = M.trash(path)
       if ok then
         Snacks.bufdelete({ file = path, force = true })
       else
-        Snacks.notify.error("Failed to delete `" .. path .. "`:\n- " .. err)
+        Snacks.notify.error("Failed to delete `" .. path .. "`:\n" .. err)
       end
       Tree:refresh(vim.fs.dirname(path))
     end

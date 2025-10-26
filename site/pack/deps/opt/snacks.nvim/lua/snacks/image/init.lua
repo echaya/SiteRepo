@@ -300,6 +300,13 @@ end
 
 ---@private
 function M.health()
+  local detected = false
+  require("snacks.image.terminal").detect(function()
+    detected = true
+  end)
+  vim.wait(1500, function()
+    return detected
+  end, 10)
   Snacks.health.have_tool({ "kitty", "wezterm", "ghostty" })
   local is_win = jit.os:find("Windows")
   if not Snacks.health.have_tool({ "magick", not is_win and "convert" or nil }) then

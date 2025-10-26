@@ -1,4 +1,4 @@
-*snacks-win*          For Neovim         Last change: 2025 October 23
+*snacks-win*          For Neovim         Last change: 2025 October 25
 
 ==============================================================================
 Table of Contents                          *snacks.nvim-win-table-of-contents*
@@ -139,7 +139,7 @@ Easily create and manage floating windows or splits
       position = "float",
       minimal = true,
       wo = {
-        winhighlight = "Normal:SnacksNormal,NormalNC:SnacksNormalNC,WinBar:SnacksWinBar,WinBarNC:SnacksWinBarNC,FloatTitle:SnacksTitle,FloatFooter:SnacksFooter",
+        winhighlight = "Normal:SnacksNormal,NormalNC:SnacksNormalNC,WinBar:SnacksWinBar,WinBarNC:SnacksWinBarNC,FloatTitle:SnacksTitle,FloatFooter:SnacksFooter,WinSeparator:SnacksWinSeparator",
       },
       bo = {},
       title_pos = "center",

@@ -57,19 +57,6 @@ Similar plugins:
 ---@alias snacks.scroll.View {topline:number, lnum:number}
 ```
 
-```lua
----@class snacks.scroll.State
----@field anim? snacks.animate.Animation
----@field win number
----@field buf number
----@field view vim.fn.winsaveview.ret
----@field current vim.fn.winsaveview.ret
----@field target vim.fn.winsaveview.ret
----@field scrolloff number
----@field changedtick number
----@field last number vim.uv.hrtime of last scroll
-```
-
 ## 📦 Module
 
 ### `Snacks.scroll.disable()`

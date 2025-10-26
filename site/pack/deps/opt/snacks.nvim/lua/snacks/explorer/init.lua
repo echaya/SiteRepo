@@ -16,13 +16,15 @@ M.meta = {
 ---@class snacks.explorer.Config
 local defaults = {
   replace_netrw = true, -- Replace netrw with the snacks explorer
+  trash = true, -- Use the system trash when deleting files
 }
+
+M.config = Snacks.config.get("explorer", defaults)
 
 ---@private
 ---@param event? vim.api.keyset.create_autocmd.callback_args
 function M.setup(event)
-  local opts = Snacks.config.get("explorer", defaults)
-  if opts.replace_netrw then
+  if M.config.replace_netrw then
     -- Disable netrw
     pcall(vim.api.nvim_del_augroup_by_name, "FileExplorer")
 
@@ -94,6 +96,23 @@ function M.reveal(opts)
   Tree:open(file)
   Actions.update(explorer, { target = file, refresh = true })
   return explorer
+end
+
+function M.health()
+  local cmds = require("snacks.explorer.actions").get_trash_cmds("test")
+
+  if M.config.trash == false then
+    Snacks.health.ok("System trash disabled in config")
+  else
+    local tools = vim.tbl_map(function(cmd)
+      return cmd[1]
+    end, cmds)
+    if Snacks.health.have_tool(tools) then
+      Snacks.health.ok("System trash command found")
+    else
+      Snacks.health.warn("No system trash command found; deleting files will be permanent")
+    end
+  end
 end
 
 return M

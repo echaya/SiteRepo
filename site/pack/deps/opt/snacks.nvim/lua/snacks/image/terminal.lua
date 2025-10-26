@@ -230,6 +230,18 @@ function M.detect(cb)
     M.transform = function(data)
       return ("\027Ptmux;" .. data:gsub("\027", "\027\027")) .. "\027\\"
     end
+    -- NOTE: When tmux has extended-keys enabled, Neovim's TermResponse autocmd doesn't fire.
+    -- Terminal response sequences leak as literal text instead of being captured.
+    -- Workaround: Query tmux directly for the terminal name instead of sending escape sequences.
+    -- See: https://github.com/folke/snacks.nvim/issues/2332
+    local ok, out = pcall(vim.fn.system, { "tmux", "show", "-g", "extended-keys" })
+    if ok and vim.trim(out):find(" on$") then
+      ok, out = pcall(vim.fn.system, { "tmux", "display-message", "-p", "#{client_termname}" })
+      if ok then
+        ret.terminal = vim.trim(out):gsub("^xterm%-", "")
+        return vim.schedule(on_done)
+      end
+    end
   end
 
   local id = vim.api.nvim_create_autocmd("TermResponse", {
@@ -247,7 +259,7 @@ function M.detect(cb)
     end,
   })
 
-  timer:start(200, 0, function()
+  timer:start(1000, 0, function()
     vim.schedule(function()
       pcall(vim.api.nvim_del_autocmd, id)
     end)

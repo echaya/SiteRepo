@@ -1,4 +1,4 @@
-*snacks-picker*        For Neovim        Last change: 2025 October 23
+*snacks-picker*        For Neovim        Last change: 2025 October 25
 
 ==============================================================================
 Table of Contents                       *snacks.nvim-picker-table-of-contents*
@@ -349,7 +349,7 @@ below.
           --- * right: truncate the end of the path
           ---@type "left"|"center"|"right"
           truncate = "center",
-          min_width = 20, -- minimum length of the truncated path
+          min_width = 40, -- minimum length of the truncated path
           filename_only = false, -- only show the filename
           icon_width = 2, -- width of the icon (in characters)
           git_status_hl = true, -- use the git status highlight group for the filename

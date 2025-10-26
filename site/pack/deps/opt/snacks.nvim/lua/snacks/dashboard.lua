@@ -551,7 +551,7 @@ end
 ---@param cb fun()
 ---@param group? string|integer
 function D.on(event, cb, group)
-  vim.api.nvim_create_autocmd("User", { pattern = "SnacksDashboard" .. event, callback = cb, group = group })
+  return vim.api.nvim_create_autocmd("User", { pattern = "SnacksDashboard" .. event, callback = cb, group = group })
 end
 
 ---@param pos {[1]:number, [2]:number}
@@ -951,6 +951,12 @@ end
 function M.sections.terminal(opts)
   return function(self)
     local cmd = opts.cmd or 'echo "No `cmd` provided"'
+    if type(cmd) == "string" and vim.fn.has("linux") == 1 then
+      -- work-around for https://github.com/folke/snacks.nvim/issues/1706
+      -- jobstart+pty sometimes doesn't flush the full output before exiting
+      cmd = cmd .. "; sleep .1"
+    end
+
     local ttl = opts.ttl or 3600
     local height = opts.height or 10
     local width = opts.width
@@ -972,6 +978,9 @@ function M.sections.terminal(opts)
     local chan = vim.api.nvim_open_term(buf, {})
 
     local function send(data, refresh)
+      if not vim.api.nvim_buf_is_valid(buf) then
+        return
+      end
       vim.api.nvim_chan_send(chan, data)
       if refresh then
         -- HACK: this forces a refresh of the terminal buffer and prevents flickering
@@ -1026,7 +1035,7 @@ function M.sections.terminal(opts)
           end
           if first and has_cache then -- clear the screen if cache was expired
             first = false
-            data = "\27[2J\27[H" .. data -- clear screen
+            send("\27c") -- clear screen
           end
           pcall(send, data)
         end,

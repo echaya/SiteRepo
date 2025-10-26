@@ -92,7 +92,7 @@ local defaults = {
   position = "float",
   minimal = true,
   wo = {
-    winhighlight = "Normal:SnacksNormal,NormalNC:SnacksNormalNC,WinBar:SnacksWinBar,WinBarNC:SnacksWinBarNC,FloatTitle:SnacksTitle,FloatFooter:SnacksFooter",
+    winhighlight = "Normal:SnacksNormal,NormalNC:SnacksNormalNC,WinBar:SnacksWinBar,WinBarNC:SnacksWinBarNC,FloatTitle:SnacksTitle,FloatFooter:SnacksFooter,WinSeparator:SnacksWinSeparator",
   },
   bo = {},
   title_pos = "center",
@@ -209,6 +209,7 @@ Snacks.util.set_hl({
   WinKey = "Keyword",
   WinKeySep = "NonText",
   WinKeyDesc = "Function",
+  WinSeparator = "WinSeparator",
 }, { prefix = "Snacks", default = true })
 
 local id = 0
@@ -733,9 +734,9 @@ function M:open_win()
     end
     local cmd = split_commands[relative][position]
     local size = vertical and opts.width or opts.height
+    local resize = ("%sresize %s"):format(vertical and "vertical " or "", size)
     vim.api.nvim_win_call(parent, function()
-      vim.cmd("silent noswapfile " .. cmd .. " " .. size .. "split")
-      vim.api.nvim_win_set_buf(0, self.buf)
+      vim.cmd("silent noswapfile " .. cmd .. " sbuffer " .. self.buf .. " | " .. resize)
       self.win = vim.api.nvim_get_current_win()
     end)
     if enter then

@@ -87,6 +87,7 @@ function M.filename(item, picker)
 
   if picker.opts.formatters.file.filename_only then
     path = vim.fn.fnamemodify(item.file, ":t")
+    path = path == "" and item.file or path
     ret[#ret + 1] = { path, base_hl, field = "file" }
   else
     ret[#ret + 1] = {

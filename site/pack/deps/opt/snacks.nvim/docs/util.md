@@ -10,6 +10,13 @@
 
 ## 📦 Module
 
+```lua
+---@class snacks.util
+---@field spawn snacks.spawn
+---@field lsp snacks.lsp
+Snacks.util = {}
+```
+
 ### `Snacks.util.blend()`
 
 ```lua

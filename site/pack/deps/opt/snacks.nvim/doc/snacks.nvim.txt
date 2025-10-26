@@ -1,4 +1,4 @@
-*snacks*            For Neovim           Last change: 2025 October 23
+*snacks*            For Neovim           Last change: 2025 October 25
 
 ==============================================================================
 Table of Contents                              *snacks.nvim-table-of-contents*
@@ -54,7 +54,10 @@ FEATURES                                    *snacks.nvim-snacks.nvim-features*
 
   input            Better vim.ui.input                   
 
-  layout           Windowlayouts                         
+  keymap           Bettervim.keymap with support for     
+                   filetypes and LSP clients             
+
+  layout           Window layouts                        
 
   lazygit          Open LazyGit in a float,              
                    auto-configure colorscheme and        

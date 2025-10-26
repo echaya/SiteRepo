@@ -6,6 +6,7 @@ local Async = require("snacks.picker.util.async")
 local M = {}
 
 ---@alias lsp.Symbol lsp.SymbolInformation|lsp.DocumentSymbol
+---@alias lsp.Loc lsp.LocationLink|lsp.Location
 
 ---@class snacks.picker.lsp.Loc: lsp.Location
 ---@field encoding string
@@ -99,6 +100,7 @@ end
 ---@field async snacks.picker.Async
 ---@field requests {client_id:number, request_id:number}[]
 ---@field completed number
+---@field pending integer
 local R = {}
 R.__index = R
 
@@ -106,6 +108,7 @@ function R.new()
   local self = setmetatable({}, R)
   self.async = Async.running()
   self.requests = {}
+  self.pending = 0
   self.completed = 0
   self.async:on(
     "abort",
@@ -132,6 +135,7 @@ end
 ---@param cb fun(client:vim.lsp.Client, result:table, params:table)
 ---@async
 function R:request(buf, method, params, cb)
+  self.pending = self.pending + 1
   vim.schedule(function()
     local clients = type(buf) == "number" and M.get_clients(buf, method)
       or {
@@ -139,11 +143,8 @@ function R:request(buf, method, params, cb)
       }
     for _, client in ipairs(clients) do
       local p = params(client)
-      local status, request_id = client:request(method, p, function(_, result)
-        if self.async._aborted then
-          return
-        end
-        if result then
+      local status, request_id = client:request(method, p, function(err, result)
+        if not err and result and not self.async._aborted then
           cb(client, result, p)
         end
         self.completed = self.completed + 1
@@ -153,14 +154,14 @@ function R:request(buf, method, params, cb)
         table.insert(self.requests, { client_id = client.id, request_id = request_id })
       end
     end
+    self.pending = self.pending - 1
     self.async:resume()
   end)
-  self.async:suspend()
   return self
 end
 
 function R:wait()
-  while self.completed < #self.requests do
+  while self.pending > 0 or self.completed < #self.requests do
     self.async:suspend()
   end
 end
