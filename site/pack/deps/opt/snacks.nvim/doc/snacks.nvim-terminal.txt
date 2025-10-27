@@ -1,4 +1,4 @@
-*snacks-terminal*       For Neovim       Last change: 2025 October 25
+*snacks-terminal*                           snacks terminal docs
 
 ==============================================================================
 Table of Contents                     *snacks.nvim-terminal-table-of-contents*

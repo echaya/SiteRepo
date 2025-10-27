@@ -12,7 +12,7 @@ M.meta = {
 
 ---@class snacks.debug.cmd
 ---@field cmd string|string[]
----@field level? snacks.notifier.level
+---@field level? snacks.notifier.level|vim.log.levels
 ---@field title? string
 ---@field args? string[]
 ---@field cwd? string

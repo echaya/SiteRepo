@@ -58,6 +58,9 @@ function M.filename(item, picker)
     local icon, hl = Snacks.util.icon(name, cat, {
       fallback = picker.opts.icons.files,
     })
+    if item.buftype == "terminal" then
+      icon, hl = " ", "Special"
+    end
     if item.dir and item.open then
       icon = picker.opts.icons.files.dir_open
     end
@@ -178,19 +181,8 @@ function M.file(item, picker)
   return ret
 end
 
-function M.git_log(item, picker)
-  local a = Snacks.picker.util.align
+function M.commit_message(item, picker)
   local ret = {} ---@type snacks.picker.Highlight[]
-  ret[#ret + 1] = { picker.opts.icons.git.commit, "SnacksPickerGitCommit" }
-  local c = item.commit or item.branch or "HEAD"
-  ret[#ret + 1] = { a(c, 8, { truncate = true }), "SnacksPickerGitCommit" }
-
-  ret[#ret + 1] = { " " }
-  if item.date then
-    ret[#ret + 1] = { a(item.date, 16), "SnacksPickerGitDate" }
-  end
-  ret[#ret + 1] = { " " }
-
   local msg = item.msg ---@type string
   local type, scope, breaking, body = msg:match("^(%S+)%s*(%(.-%))(!?):%s*(.*)$")
   if not type then
@@ -213,13 +205,34 @@ function M.git_log(item, picker)
     msg = body
   end
   ret[#ret + 1] = { msg, msg_hl }
-  if item.author then
-    ret[#ret + 1] = { " <" .. item.author .. ">", "SnacksPickerGitAuthor" }
-  end
   Snacks.picker.highlight.markdown(ret)
   Snacks.picker.highlight.highlight(ret, {
     ["#%d+"] = "SnacksPickerGitIssue",
   })
+  return ret
+end
+
+function M.git_log(item, picker)
+  local a = Snacks.picker.util.align
+  local ret = {} ---@type snacks.picker.Highlight[]
+  ret[#ret + 1] = { picker.opts.icons.git.commit, "SnacksPickerGitCommit" }
+  local c = item.commit or item.branch or "HEAD"
+  ret[#ret + 1] = { a(c, 8, { truncate = true }), "SnacksPickerGitCommit" }
+  ret[#ret + 1] = { " " }
+
+  if item.date then
+    ret[#ret + 1] = { a(item.date, 16), "SnacksPickerGitDate" }
+  end
+  ret[#ret + 1] = { " " }
+
+  local offset = Snacks.picker.highlight.offset(ret)
+  local cm = M.commit_message(item, picker)
+  Snacks.picker.highlight.fix_offset(cm, offset)
+  vim.list_extend(ret, cm)
+
+  if item.author then
+    ret[#ret + 1] = { " <" .. item.author .. ">", "SnacksPickerGitAuthor" }
+  end
   return ret
 end
 
@@ -637,7 +650,27 @@ function M.buffer(item, picker)
   ret[#ret + 1] = { " " }
   ret[#ret + 1] = { Snacks.picker.util.align(item.flags, 2, { align = "right" }), "SnacksPickerBufFlags" }
   ret[#ret + 1] = { " " }
+
   vim.list_extend(ret, M.filename(item, picker))
+
+  if item.buftype ~= "" then
+    ret[#ret + 1] = { " " }
+    vim.list_extend(ret, {
+      { "[", "SnacksPickerDelim" },
+      { item.buftype, "SnacksPickerBufType" },
+      { "]", "SnacksPickerDelim" },
+    })
+  end
+
+  if item.name == "" and item.filetype ~= "" then
+    ret[#ret + 1] = { " " }
+    vim.list_extend(ret, {
+      { "[", "SnacksPickerDelim" },
+      { item.filetype, "SnacksPickerFileType" },
+      { "]", "SnacksPickerDelim" },
+    })
+  end
+
   return ret
 end
 

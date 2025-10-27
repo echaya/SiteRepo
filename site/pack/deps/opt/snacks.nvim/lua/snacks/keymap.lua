@@ -9,6 +9,7 @@ M.meta = {
 ---@class snacks.keymap.set.Opts: vim.keymap.set.Opts
 ---@field ft? string|string[] Filetype(s) to set the keymap for.
 ---@field lsp? vim.lsp.get_clients.Filter Set for buffers with LSP clients matching this filter.
+---@field enabled? boolean|fun(buf?:number): boolean condition to enable the keymap.
 
 ---@class snacks.keymap.del.Opts: vim.keymap.del.Opts
 ---@field buffer? boolean|number If true or 0, use the current buffer.
@@ -20,6 +21,7 @@ M.meta = {
 ---@field lhs string           Left-hand side |{lhs}| of the mapping.
 ---@field rhs string|function  Right-hand side |{rhs}| of the mapping, can be a Lua function.
 ---@field opts? snacks.keymap.set.Opts
+---@field enabled fun(buf?:number): boolean
 
 local by_ft = {} ---@type table<string, table<string,snacks.Keymap>>
 local by_lsp = {} ---@type table<string, table<string,snacks.Keymap>>
@@ -42,7 +44,9 @@ local did_setup = false
 local function on_ft(buf)
   local ft = vim.bo[buf].filetype
   for _, map in pairs(by_ft[ft] or {}) do
-    vim.keymap.set(map.mode, map.lhs, map.rhs, Snacks.config.merge(map.opts or {}, { buffer = buf }))
+    if map.enabled(buf) then
+      vim.keymap.set(map.mode, map.lhs, map.rhs, Snacks.config.merge(map.opts or {}, { buffer = buf }))
+    end
   end
 end
 
@@ -66,7 +70,7 @@ end
 
 ---@generic T: snacks.keymap.set.Opts|snacks.keymap.del.Opts
 ---@param ... T
----@return T opts, string[]? fts, vim.lsp.get_clients.Filter? lsp
+---@return T opts, string[]? fts, vim.lsp.get_clients.Filter? lsp, fun(buf?:number) enabled
 local function get_opts(...)
   ---@type snacks.keymap.set.Opts|snacks.keymap.del.Opts
   local opts = Snacks.config.merge(...)
@@ -80,7 +84,13 @@ local function get_opts(...)
       ret[k] = nil
     end
   end
-  return ret, fts, lsp
+  local enabled = function(buf)
+    if type(opts.enabled) == "function" then
+      return opts.enabled(buf)
+    end
+    return opts.enabled ~= false
+  end
+  return ret, fts, lsp, enabled
 end
 
 ---@param mode string|string[] Mode "short-name" (see |nvim_set_keymap()|), or a list thereof.
@@ -95,10 +105,10 @@ function M.set(mode, lhs, rhs, opts)
     return
   end
 
-  local _opts, fts, lsp = get_opts(opts)
+  local _opts, fts, lsp, enabled = get_opts(opts)
 
   ---@type snacks.Keymap
-  local km = { mode = mode, lhs = lhs, rhs = rhs, opts = _opts }
+  local km = { mode = mode, lhs = lhs, rhs = rhs, opts = _opts, enabled = enabled }
   local key = ("%s:%s"):format(mode, lhs)
 
   if lsp then
@@ -107,7 +117,9 @@ function M.set(mode, lhs, rhs, opts)
       by_lsp[lkey] = {}
       Snacks.util.lsp.on(lsp, function(buf)
         for _, map in pairs(by_lsp[lkey]) do
-          vim.keymap.set(map.mode, map.lhs, map.rhs, Snacks.config.merge(map.opts or {}, { buffer = buf }))
+          if map.enabled(buf) then
+            vim.keymap.set(map.mode, map.lhs, map.rhs, Snacks.config.merge(map.opts or {}, { buffer = buf }))
+          end
         end
       end)
     end
@@ -124,7 +136,11 @@ function M.set(mode, lhs, rhs, opts)
       end
     end
   else
-    vim.keymap.set(mode, lhs, rhs, _opts)
+    if
+      enabled(_opts and _opts.buffer or nil --[[@as integer?]])
+    then
+      vim.keymap.set(mode, lhs, rhs, _opts)
+    end
   end
 end
 

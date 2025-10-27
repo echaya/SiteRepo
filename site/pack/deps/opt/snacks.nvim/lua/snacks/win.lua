@@ -534,7 +534,9 @@ function M:close(opts)
   self:on_close()
 
   self.win = nil
-  self.scratch_buf = nil
+  if scratch_buf then
+    self.scratch_buf = nil
+  end
   if buf then
     self.buf = nil
   end

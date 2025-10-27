@@ -1,4 +1,4 @@
-*snacks-toggle*        For Neovim        Last change: 2025 October 25
+*snacks-toggle*                               snacks toggle docs
 
 ==============================================================================
 Table of Contents                       *snacks.nvim-toggle-table-of-contents*

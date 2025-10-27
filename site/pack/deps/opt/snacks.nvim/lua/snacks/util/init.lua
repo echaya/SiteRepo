@@ -70,7 +70,7 @@ function M.color(group, prop)
   group = type(group) == "table" and group or { group }
   ---@cast group string[]
   for _, g in ipairs(group) do
-    local hl = vim.api.nvim_get_hl(0, { name = g, link = false })
+    local hl = vim.api.nvim_get_hl(0, { name = g, link = false, create = false })
     if hl[prop] then
       return string.format("#%06x", hl[prop])
     end

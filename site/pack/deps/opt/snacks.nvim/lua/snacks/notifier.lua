@@ -244,6 +244,7 @@ N.levels = {
   [vim.log.levels.ERROR] = "error",
 }
 N.level_names = vim.tbl_values(N.levels) ---@type snacks.notifier.level[]
+local MAX_SKIPPED = 10
 
 ---@param level number|string
 ---@return snacks.notifier.level
@@ -675,9 +676,10 @@ function N:layout()
   local layout = self:new_layout()
   local wins_updated = 0
   local wins_created = 0
+  local wins_skipped = 0
   local update = {} ---@type snacks.win[]
   for _, notif in ipairs(assert(self.sorted)) do
-    if layout.free < (self.opts.height.min + 2) then -- not enough space
+    if layout.free < (self.opts.height.min + 2) or wins_skipped > MAX_SKIPPED then -- not enough space
       if notif.win then
         notif.shown = nil
         notif.win:hide()
@@ -709,6 +711,7 @@ function N:layout()
           notif.win:show()
         end
       elseif notif.win then
+        wins_skipped = wins_skipped + 1
         notif.shown = nil
         notif.win:hide()
       end

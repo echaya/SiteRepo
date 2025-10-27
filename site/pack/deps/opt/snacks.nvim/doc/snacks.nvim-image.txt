@@ -1,4 +1,4 @@
-*snacks-image*         For Neovim        Last change: 2025 October 25
+*snacks-image*                                 snacks image docs
 
 ==============================================================================
 Table of Contents                        *snacks.nvim-image-table-of-contents*

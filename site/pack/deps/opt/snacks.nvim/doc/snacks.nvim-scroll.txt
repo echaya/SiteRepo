@@ -1,4 +1,4 @@
-*snacks-scroll*        For Neovim        Last change: 2025 October 25
+*snacks-scroll*                               snacks scroll docs
 
 ==============================================================================
 Table of Contents                       *snacks.nvim-scroll-table-of-contents*

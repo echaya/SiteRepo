@@ -72,16 +72,6 @@ function M.reveal(picker, path)
   end
 end
 
----@param prompt string
----@param fn fun()
-function M.confirm(prompt, fn)
-  Snacks.picker.select({ "No", "Yes" }, { prompt = prompt }, function(_, idx)
-    if idx == 2 then
-      fn()
-    end
-  end)
-end
-
 ---@param picker snacks.Picker
 ---@param opts? {target?: boolean|string, refresh?: boolean}
 function M.update(picker, opts)
@@ -254,7 +244,7 @@ function M.actions.explorer_move(picker)
   local what = #paths == 1 and vim.fn.fnamemodify(paths[1], ":p:~:.") or #paths .. " files"
   local t = vim.fn.fnamemodify(target, ":p:~:.")
 
-  M.confirm("Move " .. what .. " to " .. t .. "?", function()
+  Snacks.picker.util.confirm("Move " .. what .. " to " .. t .. "?", function()
     for _, from in ipairs(paths) do
       local to = target .. "/" .. vim.fn.fnamemodify(from, ":t")
       Snacks.rename.rename_file({ from = from, to = to })
@@ -307,7 +297,7 @@ function M.actions.explorer_del(picker)
     return
   end
   local what = #paths == 1 and vim.fn.fnamemodify(paths[1], ":p:~:.") or #paths .. " files"
-  M.confirm("Delete " .. what .. "?", function()
+  Snacks.picker.util.confirm("Delete " .. what .. "?", function()
     for _, path in ipairs(paths) do
       local ok, err = M.trash(path)
       if ok then

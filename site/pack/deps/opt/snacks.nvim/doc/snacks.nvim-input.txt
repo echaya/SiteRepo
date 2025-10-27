@@ -1,4 +1,4 @@
-*snacks-input*         For Neovim        Last change: 2025 October 25
+*snacks-input*                                 snacks input docs
 
 ==============================================================================
 Table of Contents                        *snacks.nvim-input-table-of-contents*

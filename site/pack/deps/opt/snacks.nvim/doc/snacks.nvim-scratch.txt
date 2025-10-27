@@ -1,4 +1,4 @@
-*snacks-scratch*        For Neovim       Last change: 2025 October 25
+*snacks-scratch*                             snacks scratch docs
 
 ==============================================================================
 Table of Contents                      *snacks.nvim-scratch-table-of-contents*

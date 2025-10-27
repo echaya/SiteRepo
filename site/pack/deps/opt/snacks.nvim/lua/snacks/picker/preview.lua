@@ -82,6 +82,10 @@ function M.file(ctx)
     ctx.preview:notify("Buffer no longer exists", "error")
     return
   end
+  if ctx.item.buf and not vim.api.nvim_buf_is_valid(ctx.item.buf) and (ctx.item.file or ""):sub(1, 1) == "[" then
+    ctx.preview:notify("Buffer no longer exists", "error")
+    return
+  end
 
   -- used by some LSP servers that load buffers with custom URIs
   if ctx.item.buf and vim.uri_from_bufnr(ctx.item.buf):sub(1, 4) ~= "file" then
@@ -171,118 +175,33 @@ end
 
 ---@param cmd string[]
 ---@param ctx snacks.picker.preview.ctx
----@param opts? {add?:fun(text:string, row:number), env?:table<string, string>, pty?:boolean, ft?:string, input?:string}
+---@param opts? snacks.job.Opts|{ft?: string}
 function M.cmd(cmd, ctx, opts)
   opts = opts or {}
+  local Job = require("snacks.util.job")
   local buf = ctx.preview:scratch()
   vim.bo[buf].buftype = "nofile"
-  local pty = opts.pty ~= false and not opts.ft
-  local killed = false
-  local chan = pty and vim.api.nvim_open_term(buf, {}) or nil
-  local output = {} ---@type string[]
-  local line ---@type string?
-  local l = 0
 
-  if ctx.picker.opts.debug.proc then
-    local args = vim.deepcopy(cmd)
-    table.remove(args, 1)
-    vim.schedule(function()
-      Snacks.debug.cmd({ cmd = cmd[1], args = args, cwd = ctx.item.cwd, group = true })
-    end)
-  end
+  local job = Job.new(
+    buf,
+    cmd,
+    Snacks.config.merge(opts, {
+      debug = ctx.picker.opts.debug.proc,
+      term = opts.term ~= false and not opts.ft and opts.pty ~= false,
+      width = vim.api.nvim_win_get_width(ctx.win),
+      height = vim.api.nvim_win_get_height(ctx.win),
+      cwd = ctx.item.cwd or ctx.picker.opts.cwd,
+      env = {
+        PAGER = "cat",
+        DELTA_PAGER = "cat",
+      },
+    })
+  )
 
-  ---@param text string
-  local function add_line(text)
-    l = l + 1
-    vim.bo[buf].modifiable = true
-    if opts.add then
-      opts.add(text, l)
-    else
-      vim.api.nvim_buf_set_lines(buf, l - 1, l, false, { text })
-    end
-    vim.bo[buf].modifiable = false
-  end
-
-  ---@param data string
-  local function add(data)
-    output[#output + 1] = data
-    if chan then
-      if pcall(vim.api.nvim_chan_send, chan, data) then
-        vim.api.nvim_buf_call(buf, function()
-          vim.cmd("norm! gg")
-        end)
-      end
-    else
-      line = (line or "") .. data
-      local lines = vim.split(line, "\r?\n")
-      line = table.remove(lines)
-      for _, text in ipairs(lines) do
-        add_line(text)
-      end
-    end
-  end
-
-  local jid = vim.fn.jobstart(cmd, {
-    height = pty and vim.api.nvim_win_get_height(ctx.win) or nil,
-    width = pty and vim.api.nvim_win_get_width(ctx.win) or nil,
-    -- a bit weird, but we need to set `pty` to `nil` when `opts.input` is set
-    -- otherwise the job never receives the input.
-    -- Probably won't work with all commands
-    pty = not opts.input and pty or nil,
-    cwd = ctx.item.cwd or ctx.picker.opts.cwd,
-    env = vim.tbl_extend("force", {
-      PAGER = "cat",
-      DELTA_PAGER = "cat",
-    }, opts.env or {}),
-    on_stdout = function(_, data)
-      if not vim.api.nvim_buf_is_valid(buf) then
-        return
-      end
-      add(table.concat(data, "\n"))
-    end,
-    on_exit = function(_, code)
-      if not killed and line and line ~= "" and vim.api.nvim_buf_is_valid(buf) then
-        add_line(line)
-      end
-      if not killed and code ~= 0 then
-        Snacks.notify.error(
-          ("Terminal **cmd** `%s` failed with code `%d`:\n- `vim.o.shell = %q`\n\nOutput:\n%s"):format(
-            type(cmd) == "table" and table.concat(cmd, " ") or cmd,
-            code,
-            vim.o.shell,
-            vim.trim(table.concat(output, ""))
-          )
-        )
-      end
-    end,
-    sync = true,
-  })
-  if jid <= 0 then
-    Snacks.notify.error(("Failed to start terminal **cmd** `%s`"):format(cmd))
-    if chan then
-      vim.fn.chanclose(chan)
-    end
-    return
-  end
-
-  if opts.input then
-    vim.fn.chansend(jid, opts.input .. "\n")
-    vim.fn.chanclose(jid, "stdin")
-  end
   if opts.ft then
     ctx.preview:highlight({ ft = opts.ft })
   end
-  vim.api.nvim_create_autocmd("BufWipeout", {
-    buffer = buf,
-    callback = function()
-      killed = true
-      vim.fn.jobstop(jid)
-      if chan then
-        vim.fn.chanclose(chan)
-      end
-    end,
-  })
-  return jid
+  return job
 end
 
 ---@param ctx snacks.picker.preview.ctx
@@ -326,7 +245,7 @@ function M.git_log(ctx)
   M.cmd(cmd, ctx, {
     ft = "git",
     ---@param text string
-    add = function(text)
+    on_line = function(_, text)
       local commit, msg, date, author = text:match("^(%S+) (.*) %((.*)%) <(.*)>$")
       if commit then
         row = row + 1
@@ -357,7 +276,6 @@ function M.diff(ctx)
     table.insert(cmd, 2, "--" .. vim.o.background)
   end
   M.cmd(cmd, ctx, {
-    pty = true,
     input = ctx.item.diff,
   })
 end

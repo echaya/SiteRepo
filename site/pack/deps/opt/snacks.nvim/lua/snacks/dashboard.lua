@@ -951,118 +951,113 @@ end
 function M.sections.terminal(opts)
   return function(self)
     local cmd = opts.cmd or 'echo "No `cmd` provided"'
-    if type(cmd) == "string" and vim.fn.has("linux") == 1 then
+    if type(cmd) == "string" and vim.fn.has("linux") == 1 and not vim.o.shell:find("nu") then
       -- work-around for https://github.com/folke/snacks.nvim/issues/1706
       -- jobstart+pty sometimes doesn't flush the full output before exiting
       cmd = cmd .. "; sleep .1"
     end
 
     local ttl = opts.ttl or 3600
-    local height = opts.height or 10
-    local width = opts.width
-    if not width then
-      width = self.opts.width - (opts.indent or 0)
-    end
+    local height, width = opts.height or 10, opts.width or (self.opts.width - (opts.indent or 0))
+    local hl = opts.hl and hl_groups[opts.hl] or opts.hl or "SnacksDashboardTerminal"
+    local cache_buf, term_buf, win ---@type integer?, integer?, integer?
+    local term_ready = false
 
     local cache_parts = {
       table.concat(type(cmd) == "table" and cmd or { cmd }, " "),
       uv.cwd(),
       opts.random and math.random(1, opts.random) or "",
     }
-    local hashed_cache_key = vim.fn.sha256(table.concat(cache_parts, "."))
-
     local cache_dir = vim.fn.stdpath("cache") .. "/snacks"
-    local cache_file = cache_dir .. "/" .. hashed_cache_key .. ".txt"
+    local cache_file = ("%s/%s.txt"):format(cache_dir, vim.fn.sha256(table.concat(cache_parts, ".")))
     local stat = uv.fs_stat(cache_file)
-    local buf = vim.api.nvim_create_buf(false, true)
-    local chan = vim.api.nvim_open_term(buf, {})
-
-    local function send(data, refresh)
-      if not vim.api.nvim_buf_is_valid(buf) then
-        return
-      end
-      vim.api.nvim_chan_send(chan, data)
-      if refresh then
-        -- HACK: this forces a refresh of the terminal buffer and prevents flickering
-        vim.bo[buf].scrollback = 9999
-        vim.bo[buf].scrollback = 9998
-      end
-    end
-
-    local jid, stopped ---@type number?, boolean?
     local has_cache = stat and stat.type == "file" and stat.size > 0
     local is_expired = has_cache and stat and os.time() - stat.mtime.sec >= ttl
-    if has_cache and stat then
+
+    if has_cache and not cache_buf and stat then
+      cache_buf = vim.api.nvim_create_buf(false, true)
+      vim.bo[cache_buf].buftype = "nofile"
       local fin = assert(uv.fs_open(cache_file, "r", 438))
-      send(uv.fs_read(fin, stat.size, 0) or "", true)
+      vim.api.nvim_chan_send(vim.api.nvim_open_term(cache_buf, {}), uv.fs_read(fin, stat.size, 0) or "")
       uv.fs_close(fin)
+      -- -- HACK: without this, some lines may not show up in the terminal buffer
+      vim.bo[cache_buf].scrollback = 9999
+      vim.bo[cache_buf].scrollback = 9998
     end
-    if not has_cache or is_expired then
-      local output, recording = {}, assert(uv.new_timer())
-      -- record output for max 5 seconds. otherwise assume its streaming
-      recording:start(5000, 0, function()
-        output = {}
-      end)
-      local first = true
-      jid = vim.fn.jobstart(cmd, {
-        height = height,
-        width = width,
-        pty = true,
-        on_stdout = function(_, data)
-          data = table.concat(data, "\n")
 
-          local termenv = {
-            ["\27%]11;%?\27\\"] = function() -- OSC 11
-              local rgb = (vim.o.background == "light") and "ffff/ffff/ffff" or "0000/0000/0000"
-              return "\x1b]11;rgb:" .. rgb .. "\x1b\\"
-            end,
-            ["\27%[6n"] = function() -- CSI 6 n
-              return "\x1b[1;" .. tostring(width) .. "R"
-            end,
-          }
-          for seq, repl in pairs(termenv) do
-            if data:find(seq) then
-              pcall(vim.fn.chansend, jid, repl())
-              data = data:gsub(seq, "")
-            end
-          end
-          if data == "" then
-            return
-          end
+    local function get_buf()
+      return assert(term_ready and term_buf or cache_buf, "No terminal or cache buffer available")
+    end
 
-          if recording:is_active() then
-            table.insert(output, data)
-          end
-          if first and has_cache then -- clear the screen if cache was expired
-            first = false
-            send("\27c") -- clear screen
-          end
-          pcall(send, data)
-        end,
-        on_exit = function(_, code)
-          if not recording:is_active() or stopped then
-            return
-          end
-          if code ~= 0 then
-            Snacks.notify.error(
-              ("Terminal **cmd** `%s` failed with code `%d`:\n- `vim.o.shell = %q`\n\nOutput:\n%s"):format(
-                cmd,
-                code,
-                vim.o.shell,
-                vim.trim(table.concat(output, ""))
-              )
-            )
-          elseif ttl > 0 then -- save the output
-            vim.fn.mkdir(cache_dir, "p")
-            local fout = assert(uv.fs_open(cache_file, "w", 438))
-            uv.fs_write(fout, table.concat(output, ""))
-            uv.fs_close(fout)
-          end
-        end,
-      })
-      if jid <= 0 then
-        Snacks.notify.error(("Failed to start terminal **cmd** `%s`"):format(cmd))
+    local function set_buf()
+      if win and vim.api.nvim_win_is_valid(win) then
+        local buf = assert(term_ready and term_buf or cache_buf, "No terminal or cache buffer available")
+        vim.api.nvim_win_set_buf(win, buf)
+        Snacks.util.wo(win, { winhighlight = "TermCursorNC:" .. hl .. ",NormalFloat:" .. hl })
+        Snacks.util.bo(buf, { filetype = Snacks.config.styles.dashboard.bo.filetype })
       end
+    end
+
+    local job ---@type snacks.Job?
+    if not has_cache or is_expired then
+      term_ready, term_buf = not has_cache, vim.api.nvim_create_buf(false, true)
+      local output = {} ---@type string[]
+      local timer = assert(uv.new_timer())
+
+      ---@param force boolean?
+      local function show(force)
+        if
+          not force
+          and vim.api.nvim_buf_is_valid(term_buf)
+          and #vim.tbl_filter(function(line)
+              return line:match("%S")
+            end, vim.api.nvim_buf_get_lines(term_buf, 0, -1, false))
+            < 3
+        then
+          return
+        end
+        if timer:is_active() then
+          timer:stop()
+          timer:close()
+        end
+        term_ready = true
+        set_buf()
+      end
+      timer:start(30, 30, vim.schedule_wrap(show))
+
+      local recording = vim.defer_fn(function()
+        output = {}
+        show(true)
+      end, 5000) --[[@as uv.uv_timer_t]]
+
+      local Job = require("snacks.util.job")
+      job = Job.new(
+        term_buf,
+        cmd,
+        Snacks.config.merge({}, {
+          term = true,
+          width = width,
+          height = height,
+          on_stdout = function(_, data)
+            if recording:is_active() then
+              table.insert(output, table.concat(data, "\n"))
+            end
+          end,
+          on_exit = function(_, code)
+            if job and job.killed then
+              return
+            end
+            show(true)
+            if recording:is_active() and code == 0 and ttl > 0 then -- save the output
+              vim.fn.mkdir(cache_dir, "p")
+              local fout = assert(uv.fs_open(cache_file, "w", 438))
+              local data = table.concat(output, "")
+              uv.fs_write(fout, data, 0)
+              uv.fs_close(fout)
+            end
+          end,
+        })
+      )
     end
     return {
       action = not opts.title and opts.action or nil,
@@ -1070,7 +1065,7 @@ function M.sections.terminal(opts)
       label = not opts.title and opts.label or nil,
       render = function(_, pos)
         self:trace("terminal.render")
-        local win = vim.api.nvim_open_win(buf, false, {
+        win = vim.api.nvim_open_win(get_buf(), false, {
           bufpos = { pos[1] - 1, pos[2] + 1 },
           col = opts.indent or 0,
           focusable = false,
@@ -1084,14 +1079,14 @@ function M.sections.terminal(opts)
           win = self.win,
           border = "none",
         })
-        local hl = opts.hl and hl_groups[opts.hl] or opts.hl or "SnacksDashboardTerminal"
-        Snacks.util.wo(win, { winhighlight = "TermCursorNC:" .. hl .. ",NormalFloat:" .. hl })
-        Snacks.util.bo(buf, { filetype = Snacks.config.styles.dashboard.bo.filetype })
+        set_buf()
         local close = vim.schedule_wrap(function()
-          stopped = true
+          if job then
+            job:stop()
+          end
           pcall(vim.api.nvim_win_close, win, true)
-          pcall(vim.api.nvim_buf_delete, buf, { force = true })
-          pcall(vim.fn.jobstop, jid)
+          pcall(vim.api.nvim_buf_delete, cache_buf, { force = true })
+          pcall(vim.api.nvim_buf_delete, term_buf, { force = true })
           return true
         end)
         self.on("UpdatePre", close, self.augroup)

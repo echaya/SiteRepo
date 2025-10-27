@@ -1,4 +1,4 @@
-*snacks-debug*         For Neovim        Last change: 2025 October 25
+*snacks-debug*                                 snacks debug docs
 
 ==============================================================================
 Table of Contents                        *snacks.nvim-debug-table-of-contents*
@@ -54,7 +54,7 @@ What this does:
 >lua
     ---@class snacks.debug.cmd
     ---@field cmd string|string[]
-    ---@field level? snacks.notifier.level
+    ---@field level? snacks.notifier.level|vim.log.levels
     ---@field title? string
     ---@field args? string[]
     ---@field cwd? string

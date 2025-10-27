@@ -1,4 +1,4 @@
-*snacks-statuscolumn*     For Neovim     Last change: 2025 October 25
+*snacks-statuscolumn*                   snacks statuscolumn docs
 
 ==============================================================================
 Table of Contents                 *snacks.nvim-statuscolumn-table-of-contents*

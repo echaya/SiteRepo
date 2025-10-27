@@ -1,4 +1,4 @@
-*snacks-dashboard*       For Neovim      Last change: 2025 October 25
+*snacks-dashboard*                         snacks dashboard docs
 
 ==============================================================================
 Table of Contents                    *snacks.nvim-dashboard-table-of-contents*

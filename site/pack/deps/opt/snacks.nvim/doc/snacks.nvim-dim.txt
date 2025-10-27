@@ -1,4 +1,4 @@
-*snacks-dim*          For Neovim         Last change: 2025 October 25
+*snacks-dim*                                     snacks dim docs
 
 ==============================================================================
 Table of Contents                          *snacks.nvim-dim-table-of-contents*

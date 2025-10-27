@@ -3,6 +3,7 @@
 ---@field totals string
 ---@field picker snacks.Picker
 ---@field filter snacks.picker.Filter
+---@field paused? boolean
 local M = {}
 M.__index = M
 
@@ -142,7 +143,7 @@ function M:update()
     Snacks.util.wo(self.win.win, { statuscolumn = sc })
   end
   local line = {} ---@type snacks.picker.Highlight[]
-  if self.picker:is_active() then
+  if self.picker:is_active() and self.spinner ~= false then
     line[#line + 1] = { Snacks.util.spinner(), "SnacksPickerSpinner" }
     line[#line + 1] = { " " }
   end
@@ -169,6 +170,14 @@ end
 
 function M:get()
   return self.win:line()
+end
+
+function M:pause(ms)
+  self.paused = true
+  vim.defer_fn(function()
+    self.paused = false
+    self:update()
+  end, ms or 100)
 end
 
 ---@param pattern? string

@@ -421,7 +421,7 @@ function M:update_titles()
           text = text:gsub("{flags}", "")
           has_flags = true
         end
-        text = vim.trim(Snacks.picker.util.tpl(text, data)):gsub("%s+", " ")
+        text = vim.trim(Snacks.picker.util.tpl(text, data)):gsub("([%w%p])%s+", "%1 ")
         if text ~= "" then
           -- HACK: add extra space when last char is non word like an icon
           text = text:sub(-1):match("[%w%p]") and text or text .. " "
@@ -744,11 +744,11 @@ function M:update(opts)
   end
 
   if self.shown then
-    if not self:is_active() then
+    if not self:is_active() or list_count > 3 then
       self.list:unpause()
     end
     -- update list and input
-    if not self.list.paused then
+    if not self.input.paused then
       self.input:update()
     end
     self.list:update(opts)
@@ -819,7 +819,7 @@ function M:find(opts)
     self:update_titles()
     if self:count() > 0 then
       -- pause rapid list updates to prevent flickering
-      self.list:pause(60)
+      self.list:pause(2000)
     end
     self.finder:run(self)
   end
@@ -834,6 +834,9 @@ function M:find(opts)
         opts.on_done()
       end
     end
+
+    self.input:pause(60)
+
     self:progress()
   end
 end

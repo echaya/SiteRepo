@@ -1,4 +1,4 @@
-*snacks-indent*        For Neovim        Last change: 2025 October 25
+*snacks-indent*                               snacks indent docs
 
 ==============================================================================
 Table of Contents                       *snacks.nvim-indent-table-of-contents*

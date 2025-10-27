@@ -44,6 +44,8 @@ Snacks.util.set_hl({
   KeymapNowait = "@variable.builtin",
   BufNr = "Number",
   BufFlags = "NonText",
+  BufType = "Function",
+  FileType = "DiagnosticHint",
   KeymapRhs = "NonText",
   Time = "Special",
   UndoAdded = "Added",

@@ -1,4 +1,4 @@
-*snacks-quickfile*       For Neovim      Last change: 2025 October 25
+*snacks-quickfile*                         snacks quickfile docs
 
 ==============================================================================
 Table of Contents                    *snacks.nvim-quickfile-table-of-contents*

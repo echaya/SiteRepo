@@ -1,4 +1,4 @@
-*snacks-meta*         For Neovim         Last change: 2025 October 25
+*snacks-meta*                                   snacks meta docs
 
 ==============================================================================
 Table of Contents                         *snacks.nvim-meta-table-of-contents*

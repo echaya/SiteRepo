@@ -1,4 +1,4 @@
-*snacks-gitbrowse*       For Neovim      Last change: 2025 October 25
+*snacks-gitbrowse*                         snacks gitbrowse docs
 
 ==============================================================================
 Table of Contents                    *snacks.nvim-gitbrowse-table-of-contents*

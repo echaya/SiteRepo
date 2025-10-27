@@ -1,4 +1,4 @@
-*snacks-profiler*       For Neovim       Last change: 2025 October 25
+*snacks-profiler*                           snacks profiler docs
 
 ==============================================================================
 Table of Contents                     *snacks.nvim-profiler-table-of-contents*
