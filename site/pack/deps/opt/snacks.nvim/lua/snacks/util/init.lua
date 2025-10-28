@@ -468,6 +468,16 @@ function M.parse(parser, range, on_parse)
   end
 end
 
+---@param handle? uv.uv_handle_t|uv.uv_timer_t
+function M.stop(handle)
+  if handle and not handle:is_closing() then
+    if handle.stop then
+      handle:stop()
+    end
+    handle:close()
+  end
+end
+
 --- Better validation to check if path is a dir or a file
 ---@param path string
 ---@return "directory"|"file"

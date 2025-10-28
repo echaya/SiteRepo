@@ -27,7 +27,7 @@ State.__index = State
 ---@field animate_repeat snacks.animate.Config|{}|{delay:number}
 local defaults = {
   animate = {
-    duration = { step = 15, total = 250 },
+    duration = { step = 10, total = 200 },
     easing = "linear",
   },
   -- faster animation when repeating scroll after delay
@@ -295,22 +295,20 @@ function M.check(win)
   -- new target
   stats.targets = stats.targets + 1
   state.target = vim.deepcopy(state.view)
+  state:stop() -- stop any ongoing animation
   state:wo({ virtualedit = "all", scrolloff = 0 })
 
   local now = uv.hrtime()
   local repeat_delta = (now - state.last) / 1e6
   state.last = now
 
+  local is_repeat = repeat_delta <= config.animate_repeat.delay
   ---@type snacks.animate.Opts
-  local opts = vim.tbl_extend(
-    "force",
-    vim.deepcopy(repeat_delta <= config.animate_repeat.delay and config.animate_repeat or config.animate),
-    {
-      int = false,
-      id = ("scroll_%d"):format(win),
-      buf = state.buf,
-    }
-  )
+  local opts = vim.tbl_extend("force", vim.deepcopy(is_repeat and config.animate_repeat or config.animate), {
+    int = true,
+    id = ("scroll%s%d"):format(is_repeat and "_repeat_" or "_", win),
+    buf = state.buf,
+  })
 
   local scrolls = 0
   local col_from, col_to = 0, 0
@@ -346,30 +344,34 @@ function M.check(win)
       end
 
       local count = vim.v.count -- backup count
+      local commands = {} ---@type string[]
 
       -- scroll
       local scroll_target = math.floor(value)
       local scroll = scroll_target - scrolled --[[@as number]]
       if scroll > 0 then
         scrolled = scrolled + scroll
-        vim.cmd(("keepjumps normal! %d%s"):format(scroll, down and SCROLL_DOWN or SCROLL_UP))
+        commands[#commands + 1] = ("%d%s"):format(scroll, down and SCROLL_DOWN or SCROLL_UP)
       end
 
       -- move the cursor vertically
       local move = math.floor(value * math.abs(move_to - move_from) / scrolls) -- delta to move this step
       local move_target = move_from + ((move_to < move_from) and -1 or 1) * move -- target line
-      vim.cmd(("keepjumps normal! %dH"):format(move_target))
-
-      -- fix count
-      if vim.v.count ~= count then
-        vim.cmd(("keepjumps normal! %dzh"):format(count))
-      end
+      commands[#commands + 1] = ("%dH"):format(move_target)
 
       -- move the cursor horizontally
-      local lnum = vim.api.nvim_win_get_cursor(win)[1]
-      local virtcol = math.floor(col_from + (col_to - col_from) * value / scrolls + 0.5)
-      local col = virtcol == 0 and 0 or vim.fn.virtcol2col(state.win, lnum, virtcol)
-      vim.fn.winrestview({ col = col, coladd = math.max(virtcol - col, 0) })
+      local virtcol = math.floor(col_from + (col_to - col_from) * value / scrolls)
+      commands[#commands + 1] = ("%d|"):format(virtcol + 1)
+
+      -- execute all commands in one go
+      vim.cmd(("keepjumps normal! %s"):format(table.concat(commands, "")))
+
+      -- restore count (see #1024)
+      if vim.v.count ~= count then
+        local cursor = vim.api.nvim_win_get_cursor(win)
+        vim.cmd(("keepjumps normal! %dzh"):format(count))
+        vim.api.nvim_win_set_cursor(win, cursor)
+      end
 
       state:update()
     end)

@@ -11,6 +11,7 @@
 ---@field title? string
 ---@field split_layout? boolean
 ---@field opts? snacks.picker.previewers.Config
+---@field _spinner? snacks.util.Spinner
 local M = {}
 M.__index = M
 
@@ -164,6 +165,7 @@ function M:show(picker, opts)
   self.item = item
   self.filter = picker:filter()
   self.pos = item and item.pos or nil
+  self:spinner(false)
   if item then
     local buf = self.win.buf
     local ok, err = pcall(
@@ -232,6 +234,7 @@ function M:reset()
   end
   vim.api.nvim_buf_clear_namespace(self.win.buf, -1, 0, -1)
   self:set_title()
+  self:spinner(false)
   vim.treesitter.stop(self.win.buf)
   vim.bo[self.win.buf].modifiable = true
   self:set_lines({})
@@ -281,9 +284,16 @@ function M:highlight(opts)
   end
   self:check_big()
   local lang = Snacks.util.get_lang(opts.lang or ft)
+  if lang == "markdown" then
+    return self:markdown()
+  end
   if not (lang and pcall(vim.treesitter.start, self.win.buf, lang)) and ft then
     vim.bo[self.win.buf].syntax = ft
   end
+end
+
+function M:ns()
+  return ns
 end
 
 -- show the item location
@@ -380,10 +390,11 @@ function M:is_big()
 end
 
 ---@param lines string[]
-function M:set_lines(lines)
+---@param offset? number
+function M:set_lines(lines, offset)
   lines = vim.split(table.concat(lines, "\n"), "\n", { plain = true })
   vim.bo[self.win.buf].modifiable = true
-  vim.api.nvim_buf_set_lines(self.win.buf, 0, -1, false, lines)
+  vim.api.nvim_buf_set_lines(self.win.buf, offset or 0, -1, false, lines)
   vim.bo[self.win.buf].modifiable = false
 end
 
@@ -409,6 +420,39 @@ function M:notify(msg, level, opts)
     end_row = msg_len,
   })
   self:highlight({ lang = "lua" })
+end
+
+function M:markdown()
+  if not self.win:valid() then
+    return
+  end
+  local buf, win = self.win.buf, self.win.win ---@type number, number
+
+  vim.bo[buf].filetype = "markdown"
+  Snacks.image.doc.attach(buf)
+
+  if package.loaded["render-markdown"] then
+    require("render-markdown.core.ui").update(buf, win, "Snacks", true)
+  elseif package.loaded["markview"] then
+    local strict = package.loaded["markview"].strict_render
+    if strict then
+      strict:render(buf)
+    end
+  end
+end
+
+function M:spinner(enable)
+  if enable == false then
+    if self._spinner then
+      self._spinner:stop()
+      self._spinner = nil
+    end
+    return
+  end
+  assert(self.win:buf_valid(), "invalid buffer")
+  local ret = Snacks.picker.util.spinner(self.win.buf)
+  self._spinner = ret
+  return ret
 end
 
 return M

@@ -105,28 +105,44 @@ function Job:setup()
   end
   self.opts.on_stdout = wrap(on_output, self.opts.on_stdout)
   self.opts.on_stderr = wrap(on_output, self.opts.on_stderr)
-  self.opts.on_exit = wrap(function(job_id, code)
-    if not self:buf_valid() then
-      return
-    end
-    self:emit()
-    if self.opts.on_lines then
-      self.opts.on_lines(job_id, self.lines)
-    end
-    if self.opts.term then
-      self:hide_process_exited()
-    end
-    if not self.killed and code ~= 0 then
-      self:error(
-        ("Job exited with code `%s`"):format(code),
-        ("\n- `vim.o.shell = %q`\n\nOutput:\n%s"):format(vim.o.shell, vim.trim(table.concat(self.lines, "\n")))
-      )
-    end
+  self.opts.on_exit = wrap(function(_, code)
+    self:on_exit(code)
   end, self.opts.on_exit)
   if not self.opts.term and not self.opts.ansi then
     self.opts.on_line = self.opts.on_line or function(_, text, line)
       self:on_line(text, line)
     end
+  end
+end
+
+function Job:on_exit(code)
+  if not self:buf_valid() then
+    return
+  end
+  self:emit()
+  if self.opts.on_lines then
+    self.opts.on_lines(self.id, self.lines)
+  end
+  if self.opts.term then
+    self:hide_process_exited()
+  end
+
+  self:set_cursor()
+
+  if not self.killed and code ~= 0 then
+    self:error(
+      ("Job exited with code `%s`"):format(code),
+      ("\n- `vim.o.shell = %q`\n\nOutput:\n%s"):format(vim.o.shell, vim.trim(table.concat(self.lines, "\n")))
+    )
+  end
+end
+
+function Job:set_cursor()
+  if not self:buf_valid() then
+    return
+  end
+  for _, win in ipairs(vim.fn.win_findbuf(self.buf)) do
+    vim.api.nvim_win_set_cursor(win, { 1, 0 })
   end
 end
 

@@ -118,7 +118,7 @@ Snacks.picker.pick({source = "files", ...})
   prompt = " ",
   sources = {},
   focus = "input",
-  show_delay = 1000,
+  show_delay = 5000,
   limit_live = 10000,
   layout = {
     cycle = true,
@@ -1127,8 +1127,10 @@ Neovim commands
 
 ```lua
 ---@class snacks.picker.git.diff.Config: snacks.picker.git.Config
+---@field group? boolean group changes by file (when false, show individual hunks)
 ---@field base? string base commit/branch/tag to diff against (default: HEAD)
 {
+  group = false,
   finder = "git_diff",
   format = "file",
   preview = "diff",

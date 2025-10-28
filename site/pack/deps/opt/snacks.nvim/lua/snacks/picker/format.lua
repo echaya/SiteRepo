@@ -225,10 +225,7 @@ function M.git_log(item, picker)
   end
   ret[#ret + 1] = { " " }
 
-  local offset = Snacks.picker.highlight.offset(ret)
-  local cm = M.commit_message(item, picker)
-  Snacks.picker.highlight.fix_offset(cm, offset)
-  vim.list_extend(ret, cm)
+  Snacks.picker.highlight.extend(ret, M.commit_message(item, picker))
 
   if item.author then
     ret[#ret + 1] = { " <" .. item.author .. ">", "SnacksPickerGitAuthor" }
@@ -250,10 +247,7 @@ function M.git_branch(item, picker)
     ret[#ret + 1] = { a(item.branch, 30, { truncate = true }), "SnacksPickerGitBranch" }
   end
   ret[#ret + 1] = { " " }
-  local offset = Snacks.picker.highlight.offset(ret)
-  local log = M.git_log(item, picker)
-  Snacks.picker.highlight.fix_offset(log, offset)
-  vim.list_extend(ret, log)
+  Snacks.picker.highlight.extend(ret, M.git_log(item, picker))
   return ret
 end
 
@@ -264,10 +258,7 @@ function M.git_stash(item, picker)
   ret[#ret + 1] = { " " }
   ret[#ret + 1] = { a(item.branch, 10, { truncate = true }), "SnacksPickerGitBranch" }
   ret[#ret + 1] = { " " }
-  local offset = Snacks.picker.highlight.offset(ret)
-  local log = M.git_log(item, picker)
-  Snacks.picker.highlight.fix_offset(log, offset)
-  vim.list_extend(ret, log)
+  Snacks.picker.highlight.extend(ret, M.git_log(item, picker))
   return ret
 end
 

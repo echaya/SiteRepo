@@ -211,6 +211,13 @@ Snacks.util.set_hl(groups, opts)
 Snacks.util.spinner()
 ```
 
+### `Snacks.util.stop()`
+
+```lua
+---@param handle? uv.uv_handle_t|uv.uv_timer_t
+Snacks.util.stop(handle)
+```
+
 ### `Snacks.util.throttle()`
 
 ```lua

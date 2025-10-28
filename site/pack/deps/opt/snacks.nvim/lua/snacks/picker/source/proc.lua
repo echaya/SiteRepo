@@ -16,23 +16,12 @@ M.USE_QUEUE = true
 ---@field transform? snacks.picker.transform
 ---@field raw? boolean Return raw output without processing
 
----@param opts snacks.picker.proc.Config|{[1]: snacks.picker.Config, [2]: snacks.picker.proc.Config}
-local function get_opts(opts)
-  if svim.islist(opts) then
-    local transform = opts[2].transform
-    opts = Snacks.config.merge(unpack(vim.deepcopy(opts))) --[[@as snacks.picker.proc.Config]]
-    opts.transform = transform
-  end
-  ---@cast opts snacks.picker.proc.Config
-  return opts
-end
-
----@param opts snacks.picker.proc.Config|{[1]: snacks.picker.Config, [2]: snacks.picker.proc.Config}
+---@param opts snacks.picker.proc.Config
 ---@type snacks.picker.finder
 function M.proc(opts, ctx)
-  opts = get_opts(opts)
   ---@cast opts snacks.picker.proc.Config
   assert(opts.cmd, "`opts.cmd` is required")
+
   ---@async
   return function(cb)
     if opts.transform then
@@ -48,7 +37,8 @@ function M.proc(opts, ctx)
 
     if ctx.picker.opts.debug.proc then
       vim.schedule(function()
-        Snacks.debug.cmd(Snacks.config.merge(opts, { group = true }))
+        ---@diagnostic disable-next-line: param-type-mismatch
+        Snacks.debug.cmd(ctx:opts({ group = true }))
       end)
     end
 

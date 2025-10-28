@@ -148,6 +148,10 @@ function Proc:run()
   end
 end
 
+function Proc:json()
+  return vim.json.decode(self:out())
+end
+
 function Proc:out()
   return table.concat(self.data[self.stdout] or {})
 end

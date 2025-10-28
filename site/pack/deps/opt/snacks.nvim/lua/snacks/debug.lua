@@ -20,7 +20,7 @@ M.meta = {
 ---@field notify? boolean
 ---@field footer? string
 ---@field header? string
----@field props? table<string, string>
+---@field props? table<string, string|boolean|number|nil>
 
 local uv = vim.uv or vim.loop
 

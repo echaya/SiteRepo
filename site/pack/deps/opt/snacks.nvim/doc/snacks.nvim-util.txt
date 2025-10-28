@@ -26,6 +26,7 @@ Table of Contents                         *snacks.nvim-util-table-of-contents*
   - Snacks.util.ref()              |snacks.nvim-util-module-snacks.util.ref()|
   - Snacks.util.set_hl()        |snacks.nvim-util-module-snacks.util.set_hl()|
   - Snacks.util.spinner()      |snacks.nvim-util-module-snacks.util.spinner()|
+  - Snacks.util.stop()            |snacks.nvim-util-module-snacks.util.stop()|
   - Snacks.util.throttle()    |snacks.nvim-util-module-snacks.util.throttle()|
   - Snacks.util.var()              |snacks.nvim-util-module-snacks.util.var()|
   - Snacks.util.winhl()          |snacks.nvim-util-module-snacks.util.winhl()|
@@ -260,6 +261,14 @@ Ensures the hl groups are always set, even after a colorscheme change.
 
 >lua
     Snacks.util.spinner()
+<
+
+
+`Snacks.util.stop()`                                      *Snacks.util.stop()*
+
+>lua
+    ---@param handle? uv.uv_handle_t|uv.uv_timer_t
+    Snacks.util.stop(handle)
 <
 
 

@@ -35,8 +35,9 @@ local function _handle(filter)
     local clients = vim.lsp.get_clients(f)
     for _, client in ipairs(clients) do
       for buf in pairs(client.attached_buffers) do
-        if not state.done[buf] then
-          state.done[buf] = true
+        local key = ("%d:%d"):format(client.id, buf)
+        if not state.done[key] then
+          state.done[key] = true
           local ok, err = pcall(state.cb, buf, client)
           if not ok then
             vim.schedule(function()

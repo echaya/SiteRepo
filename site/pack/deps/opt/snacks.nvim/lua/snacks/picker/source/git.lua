@@ -40,13 +40,12 @@ function M.files(opts, ctx)
     table.insert(args, "--recurse-submodules")
   end
   if not opts.cwd then
-    opts.cwd = Snacks.git.get_root() or uv.cwd() or "."
+    opts.cwd = ctx:git_root()
     ctx.picker:set_cwd(opts.cwd)
   end
   local cwd = svim.fs.normalize(opts.cwd) or nil
-  return require("snacks.picker.source.proc").proc({
-    opts,
-    {
+  return require("snacks.picker.source.proc").proc(
+    ctx:opts({
       cmd = "git",
       args = args,
       ---@param item snacks.picker.finder.Item
@@ -54,8 +53,9 @@ function M.files(opts, ctx)
         item.cwd = cwd
         item.file = item.text
       end,
-    },
-  }, ctx)
+    }),
+    ctx
+  )
 end
 
 ---@param opts snacks.picker.git.grep.Config
@@ -85,13 +85,12 @@ function M.grep(opts, ctx)
   vim.list_extend(args, pathspec)
 
   if not opts.cwd then
-    opts.cwd = Snacks.git.get_root() or uv.cwd() or "."
+    opts.cwd = ctx:git_root()
     ctx.picker:set_cwd(opts.cwd)
   end
   local cwd = svim.fs.normalize(opts.cwd) or nil
-  return require("snacks.picker.source.proc").proc({
-    opts,
-    {
+  return require("snacks.picker.source.proc").proc(
+    ctx:opts({
       cmd = "git",
       args = args,
       notify = false,
@@ -110,8 +109,9 @@ function M.grep(opts, ctx)
           item.pos = { tonumber(line), tonumber(col) - 1 }
         end
       end,
-    },
-  }, ctx)
+    }),
+    ctx
+  )
 end
 
 ---@param opts snacks.picker.git.log.Config
@@ -190,9 +190,8 @@ function M.log(opts, ctx)
       end)
     end
 
-    Proc.proc({
-      opts,
-      {
+    Proc.proc(
+      ctx:opts({
         cwd = cwd,
         cmd = "git",
         args = args,
@@ -211,8 +210,9 @@ function M.log(opts, ctx)
           item.file = file
           item.files = renames
         end,
-      },
-    }, ctx)(cb)
+      }),
+      ctx
+    )(cb)
   end
 end
 
@@ -224,12 +224,10 @@ function M.status(opts, ctx)
     table.insert(args, "--ignored=matching")
   end
 
-  local cwd = svim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
-  cwd = Snacks.git.get_root(cwd)
+  local cwd = ctx:git_root()
   local prev ---@type snacks.picker.finder.Item?
-  return require("snacks.picker.source.proc").proc({
-    opts,
-    {
+  return require("snacks.picker.source.proc").proc(
+    ctx:opts({
       sep = "\0",
       cwd = cwd,
       cmd = "git",
@@ -249,70 +247,27 @@ function M.status(opts, ctx)
           return false
         end
       end,
-    },
-  }, ctx)
+    }),
+    ctx
+  )
 end
 
 ---@param opts snacks.picker.git.diff.Config
 ---@type snacks.picker.finder
 function M.diff(opts, ctx)
-  local args =
-    M.git("diff", "--no-color", "--no-ext-diff", { args = { "-c", "diff.noprefix=false", "--no-pager" } }, opts)
+  opts = opts or {}
+  local args = M.git("diff", "--no-color", "--no-ext-diff", "--default-prefix", { args = { "--no-pager" } }, opts)
   if opts.base then
     vim.list_extend(args, { "--merge-base", opts.base })
   end
-  local file, line ---@type string?, number?
-  local header, hunk = {}, {} ---@type string[], string[]
-  local header_len = 4
-
-  local cwd = svim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
-  cwd = Snacks.git.get_root(cwd) or cwd
-
-  local finder = require("snacks.picker.source.proc").proc({
-    opts,
-    { cmd = "git", args = args, cwd = cwd },
-  }, ctx)
-  return function(cb)
-    local function add()
-      if file and line and #hunk > 0 then
-        local diff = table.concat(header, "\n") .. "\n" .. table.concat(hunk, "\n")
-        cb({
-          text = file .. ":" .. line,
-          diff = diff,
-          file = file,
-          cwd = cwd,
-          pos = { line, 0 },
-          preview = { text = diff, ft = "diff", loc = false },
-        })
-      end
-      hunk = {}
-    end
-    finder(function(proc_item)
-      local text = proc_item.text
-      if text:find("diff", 1, true) == 1 then
-        add()
-        file = text:match("^diff .* a/(.*) b/.*$")
-        header = { text }
-        header_len = 4
-      elseif file and #header < header_len then
-        if text:find("^deleted file") then
-          header_len = 5
-        end
-        header[#header + 1] = text
-      elseif text:find("@", 1, true) == 1 then
-        add()
-        -- Hunk header
-        -- @example "@@ -157,20 +157,6 @@ some content"
-        line = tonumber(string.match(text, "@@ %-.*,.* %+(.*),.* @@"))
-        hunk = { text }
-      elseif #hunk > 0 then
-        hunk[#hunk + 1] = text
-      else
-        error("unexpected line: " .. text)
-      end
-    end)
-    add()
-  end
+  return require("snacks.picker.source.diff").diff(
+    ctx:opts({
+      cmd = "git",
+      args = args,
+      cwd = ctx:git_root(),
+    }),
+    ctx
+  )
 end
 
 ---@param opts snacks.picker.git.branches.Config
@@ -322,8 +277,7 @@ function M.branches(opts, ctx)
   if opts.all then
     table.insert(args, "--all")
   end
-  local cwd = svim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
-  cwd = Snacks.git.get_root(cwd)
+  local cwd = ctx:git_root()
 
   local patterns = {
     -- stylua: ignore start
@@ -334,9 +288,8 @@ function M.branches(opts, ctx)
     -- stylua: ignore end
   } ---@type string[]
 
-  return require("snacks.picker.source.proc").proc({
-    opts,
-    {
+  return require("snacks.picker.source.proc").proc(
+    ctx:opts({
       cwd = cwd,
       cmd = "git",
       args = args,
@@ -361,20 +314,19 @@ function M.branches(opts, ctx)
         Snacks.notify.warn("failed to parse branch: " .. item.text)
         return false -- skip items we could not parse
       end,
-    },
-  }, ctx)
+    }),
+    ctx
+  )
 end
 
 ---@param opts snacks.picker.git.Config
 ---@type snacks.picker.finder
 function M.stash(opts, ctx)
   local args = M.git("stash", "list", { args = { "--no-pager" } }, opts)
-  local cwd = svim.fs.normalize(opts and opts.cwd or uv.cwd() or ".") or nil
-  cwd = Snacks.git.get_root(cwd)
+  local cwd = ctx:git_root()
 
-  return require("snacks.picker.source.proc").proc({
-    opts,
-    {
+  return require("snacks.picker.source.proc").proc(
+    ctx:opts({
       cwd = cwd,
       cmd = "git",
       args = args,
@@ -396,8 +348,9 @@ function M.stash(opts, ctx)
         Snacks.notify.warn("failed to parse stash:\n```git\n" .. item.text .. "\n```")
         return false -- skip items we could not parse
       end,
-    },
-  }, ctx)
+    }),
+    ctx
+  )
 end
 
 ---@class snacks.picker.git.Status

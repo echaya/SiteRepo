@@ -268,7 +268,7 @@ end
 function M.diff(ctx)
   local builtin = ctx.picker.opts.previewers.diff.builtin
   if builtin then
-    ctx.item.preview = { text = ctx.item.diff, ft = "diff" }
+    ctx.item.preview = { text = ctx.item.diff, ft = "diff", loc = false }
     return M.preview(ctx)
   end
   local cmd = vim.deepcopy(ctx.picker.opts.previewers.diff.cmd)

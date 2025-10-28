@@ -112,9 +112,8 @@ function M.grep(opts, ctx)
   if opts.debug.grep then
     Snacks.notify.info("grep: " .. cmd .. " " .. table.concat(args, " "))
   end
-  return require("snacks.picker.source.proc").proc({
-    opts,
-    {
+  return require("snacks.picker.source.proc").proc(
+    ctx:opts({
       notify = false, -- never notify on grep errors, since it's impossible to know if the error is due to the search pattern
       cmd = cmd,
       args = args,
@@ -170,8 +169,9 @@ function M.grep(opts, ctx)
 
         item.file = file
       end,
-    },
-  }, ctx)
+    }),
+    ctx
+  )
 end
 
 return M

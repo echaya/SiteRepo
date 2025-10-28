@@ -646,4 +646,9 @@ function M.globber(globs)
   end
 end
 
+---@param buf number
+function M.spinner(buf)
+  return require("snacks.picker.util.spinner").new(buf)
+end
+
 return M

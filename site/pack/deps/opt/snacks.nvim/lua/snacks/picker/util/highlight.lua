@@ -327,6 +327,14 @@ function M.fix_offset(hl, offset, start_idx)
   end
 end
 
+---@param dst snacks.picker.Highlight[]
+---@param src snacks.picker.Highlight[]
+function M.extend(dst, src)
+  local offset = M.offset(dst)
+  M.fix_offset(src, offset)
+  return vim.list_extend(dst, src)
+end
+
 ---@param buf number
 ---@param ns number
 ---@param row number
@@ -336,7 +344,10 @@ function M.set(buf, ns, row, hl)
     table.remove(hl)
   end
   local line_text, extmarks = Snacks.picker.highlight.to_text(hl)
+  local modifiable = vim.bo[buf].modifiable
+  vim.bo[buf].modifiable = true
   vim.api.nvim_buf_set_lines(buf, row - 1, row, false, { line_text })
+  vim.bo[buf].modifiable = modifiable
   for _, extmark in ipairs(extmarks) do
     local col = extmark.col
     extmark.col = nil
