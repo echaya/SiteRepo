@@ -13,6 +13,7 @@ M.actions = {
   scratch_delete = function(picker, item)
     local current = item.file
     os.remove(current)
+    os.remove(current .. ".meta")
     picker.list:set_selected()
     picker.list:set_target()
     picker:find()

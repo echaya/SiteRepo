@@ -573,6 +573,7 @@ function M.git_status(item, picker)
     ["?"] = "SnacksPickerGitStatusUntracked",
   }
   local hl = hls[s] or "SnacksPickerGitStatus"
+  hl = item.status:sub(1, 1) == "M" and "SnacksPickerGitStatusStaged" or hl
   ret[#ret + 1] = { a(item.status, 2, { align = "right" }), hl }
   ret[#ret + 1] = { " " }
   if item.rename then

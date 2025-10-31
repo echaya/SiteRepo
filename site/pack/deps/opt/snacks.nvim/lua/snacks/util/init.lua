@@ -129,7 +129,7 @@ end
 
 --- Get an icon from `mini.icons` or `nvim-web-devicons`.
 ---@param name string
----@param cat? string defaults to "file"
+---@param cat? string "file"|"filetype"|"extension"|"directory"
 ---@param opts? { fallback?: {dir?:string, file?:string} }
 ---@return string, string?
 function M.icon(name, cat, opts)

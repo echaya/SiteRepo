@@ -3,6 +3,8 @@ local M = {}
 
 local uv = vim.uv or vim.loop
 
+local str_byteindex_new = pcall(vim.str_byteindex, "aa", "utf-8", 1)
+
 ---@param item snacks.picker.Item
 ---@return string?
 function M.path(item)
@@ -81,10 +83,12 @@ function M.confirm(prompt, fn)
   end)
 end
 
+---@alias snacks.picker.util.cmd.Opts {env?: table<string, string>, cwd?: string, input?: string}
 ---@param cmd string|string[]
 ---@param cb fun(output: string[], code: number)
----@param opts? {env?: table<string, string>, cwd?: string}
+---@param opts? snacks.picker.util.cmd.Opts
 function M.cmd(cmd, cb, opts)
+  opts = opts or {}
   local output = {} ---@type string[]
   local id = vim.fn.jobstart(
     cmd,
@@ -112,6 +116,9 @@ function M.cmd(cmd, cb, opts)
   )
   if id <= 0 then
     Snacks.notify.error(("Failed to start job `%s`"):format(cmd))
+  elseif opts.input then
+    vim.fn.chansend(id, opts.input .. "\n")
+    vim.fn.chanclose(id, "stdin")
   end
   return id > 0 and id or nil
 end
@@ -324,13 +331,17 @@ end
 ---@param s string
 ---@param index number
 ---@param encoding string
-function M.str_byteindex(s, index, encoding)
-  if vim.lsp.util._str_byteindex_enc then
-    return vim.lsp.util._str_byteindex_enc(s, index, encoding)
-  elseif vim._str_byteindex then
-    return vim._str_byteindex(s, index, encoding == "utf-16")
+---@param strict_indexing? boolean
+function M.str_byteindex(s, index, encoding, strict_indexing)
+  if str_byteindex_new then
+    return vim.str_byteindex(s, encoding, index, strict_indexing)
+  elseif vim.str_byteindex then
+    ---@diagnostic disable-next-line: param-type-mismatch
+    return vim.str_byteindex(s, index, encoding == "utf-16")
+  elseif vim.lsp.util._str_byteindex then
+    return vim.lsp.util._str_byteindex(s, index, encoding)
   end
-  return vim.str_byteindex(s, index, encoding == "utf-16")
+  error("No str_byteindex function available")
 end
 
 --- Resolves the location of an item to byte positions
@@ -389,6 +400,9 @@ function M.reltime(time)
       local value = math.floor(delta / v[1] + 0.5)
       return value == 1 and v[3] or v[4]:format(value)
     end
+  end
+  if os.date("%Y", time) == os.date("%Y") then
+    return os.date("%b %d", time) ---@type string
   end
   return os.date("%b %d, %Y", time) ---@type string
 end

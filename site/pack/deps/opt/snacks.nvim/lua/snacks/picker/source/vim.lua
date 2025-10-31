@@ -242,9 +242,15 @@ function M.keymaps(opts)
       }
       if km.callback then
         local info = debug.getinfo(km.callback, "S")
+        item.info = info
         if info.what == "Lua" then
-          item.file = info.source:sub(2)
-          item.pos = { info.linedefined, 0 }
+          local source = info.source:sub(2)
+          item.file = source:gsub("^vim/", vim.env.VIMRUNTIME .. "/lua/vim/")
+          if source:find("^vim/") and info.linedefined == 0 then
+            item.search = "/vim\\.keymap\\.set.*['\"]" .. km.lhs
+          else
+            item.pos = { info.linedefined, 0 }
+          end
           item.preview = "file"
         end
       end

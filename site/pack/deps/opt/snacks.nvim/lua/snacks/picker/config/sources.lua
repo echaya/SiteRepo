@@ -335,12 +335,22 @@ M.git_status = {
 
 ---@class snacks.picker.git.diff.Config: snacks.picker.git.Config
 ---@field group? boolean group changes by file (when false, show individual hunks)
+---@field staged? boolean show staged changes
 ---@field base? string base commit/branch/tag to diff against (default: HEAD)
 M.git_diff = {
   group = false,
   finder = "git_diff",
-  format = "file",
+  format = "git_status",
   preview = "diff",
+  matcher = { sort_empty = true },
+  win = {
+    input = {
+      keys = {
+        ["<Tab>"] = { "git_stage", mode = { "n", "i" } },
+        ["<c-r>"] = { "git_restore", mode = { "n", "i" } },
+      },
+    },
+  },
 }
 
 ---@class snacks.picker.grep.Config: snacks.picker.proc.Config
