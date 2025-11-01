@@ -136,9 +136,18 @@ M.props = {
       end
       local workflows = {} ---@type table<string, string>
       for _, check in ipairs(item.statusCheckRollup or {}) do
-        local status = check.status == "COMPLETED" and check.conclusion or "pending"
-        status = Snacks.picker.util.title(status:lower())
-        workflows[check.workflowName .. ":" .. check.name] = status
+        local status, name = nil, nil ---@type string, string
+        if check.__typename == "CheckRun" then
+          name = check.workflowName .. ":" .. check.name
+          status = check.status == "COMPLETED" and (check.conclusion or "pending") or check.status
+        elseif check.__typename == "StatusContext" then
+          name = check.context
+          status = check.state
+        end
+        if name and status then
+          status = Snacks.picker.util.title(status:lower())
+          workflows[name] = status
+        end
       end
       local stats = {} ---@type table<string, number>
       for _, status in pairs(workflows) do

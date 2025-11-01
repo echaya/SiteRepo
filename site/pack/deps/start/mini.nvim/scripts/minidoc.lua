@@ -48,18 +48,8 @@ local modules = {
   'visits',
 }
 
-local hooks = vim.deepcopy(MiniDoc.default_hooks)
-
-hooks.write_pre = function(lines)
-  -- Remove first two lines with `======` and `------` delimiters to comply
-  -- with `:h local-additions` template
-  table.remove(lines, 1)
-  table.remove(lines, 1)
-  return lines
-end
-
-MiniDoc.generate({ 'lua/mini/init.lua' }, 'doc/mini-nvim.txt', { hooks = hooks })
+MiniDoc.generate({ 'lua/mini/init.lua' }, 'doc/mini-nvim.txt')
 
 for _, m in ipairs(modules) do
-  MiniDoc.generate({ 'lua/mini/' .. m .. '.lua' }, 'doc/mini-' .. m .. '.txt', { hooks = hooks })
+  MiniDoc.generate({ 'lua/mini/' .. m .. '.lua' }, 'doc/mini-' .. m .. '.txt')
 end

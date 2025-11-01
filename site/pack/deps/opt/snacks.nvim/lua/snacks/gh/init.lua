@@ -13,7 +13,7 @@ local M = setmetatable({}, {
 
 M.meta = {
   desc = "GitHub CLI integration",
-  needs_setup = true,
+  needs_setup = false,
 }
 
 ---@alias snacks.gh.Keymap.fn fun(item:snacks.picker.gh.Item, buf:snacks.gh.Buf)
@@ -145,6 +145,17 @@ Snacks.util.set_hl({
 M._config = nil ---@type snacks.gh.Config?
 local did_setup = false
 
+---@param opts? snacks.picker.gh.issue.Config
+function M.issue(opts)
+  return Snacks.picker.gh_issue(opts)
+end
+
+---@param opts? snacks.picker.gh.pr.Config
+function M.pr(opts)
+  return Snacks.picker.gh_pr(opts)
+end
+
+---@private
 function M.config()
   M._config = M._config or Snacks.config.get("gh", defaults)
   return M._config
