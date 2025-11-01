@@ -40,6 +40,8 @@ FEATURES                                    *snacks.nvim-snacks.nvim-features*
 
   explorer         A file explorer (picker in disguise)  
 
+  gh               GitHubCLI integration                 
+
   git              Gitutilities                          
 
   gitbrowse        Open the current file, branch,        
@@ -178,6 +180,7 @@ Default Options ~
     ---@field dashboard? snacks.dashboard.Config
     ---@field dim? snacks.dim.Config
     ---@field explorer? snacks.explorer.Config
+    ---@field gh? snacks.gh.Config
     ---@field gitbrowse? snacks.gitbrowse.Config
     ---@field image? snacks.image.Config
     ---@field indent? snacks.indent.Config

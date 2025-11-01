@@ -115,6 +115,7 @@ function M.list()
 end
 
 --- Migrate old scratch files to the new format.
+---@private
 function M.migrate()
   if M.version_checked then
     return
@@ -236,6 +237,7 @@ function M.open(opts)
 end
 
 ---@param opts? snacks.scratch.Config
+---@private
 function M.get(opts)
   opts = Snacks.config.get("scratch", defaults, opts)
 

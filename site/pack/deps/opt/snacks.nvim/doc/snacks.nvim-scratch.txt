@@ -11,9 +11,7 @@ Table of Contents                      *snacks.nvim-scratch-table-of-contents*
 5. Types                                           |snacks.nvim-scratch-types|
 6. Module                                         |snacks.nvim-scratch-module|
   - Snacks.scratch()             |snacks.nvim-scratch-module-snacks.scratch()|
-  - Snacks.scratch.get()     |snacks.nvim-scratch-module-snacks.scratch.get()|
   - Snacks.scratch.list()   |snacks.nvim-scratch-module-snacks.scratch.list()|
-  - Snacks.scratch.migrate()|snacks.nvim-scratch-module-snacks.scratch.migrate()|
   - Snacks.scratch.open()   |snacks.nvim-scratch-module-snacks.scratch.open()|
   - Snacks.scratch.select()|snacks.nvim-scratch-module-snacks.scratch.select()|
 7. Links                                           |snacks.nvim-scratch-links|
@@ -172,14 +170,6 @@ SCRATCH                                   *snacks.nvim-scratch-styles-scratch*
 <
 
 
-`Snacks.scratch.get()`                                  *Snacks.scratch.get()*
-
->lua
-    ---@param opts? snacks.scratch.Config
-    Snacks.scratch.get(opts)
-<
-
-
 `Snacks.scratch.list()`                                *Snacks.scratch.list()*
 
 Return a list of scratch buffers sorted by mtime.
@@ -187,15 +177,6 @@ Return a list of scratch buffers sorted by mtime.
 >lua
     ---@return snacks.scratch.File[]
     Snacks.scratch.list()
-<
-
-
-`Snacks.scratch.migrate()`                          *Snacks.scratch.migrate()*
-
-Migrate old scratch files to the new format.
-
->lua
-    Snacks.scratch.migrate()
 <
 
 

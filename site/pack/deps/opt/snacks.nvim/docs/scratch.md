@@ -144,13 +144,6 @@ docs for more information on how to customize these styles
 Snacks.scratch()
 ```
 
-### `Snacks.scratch.get()`
-
-```lua
----@param opts? snacks.scratch.Config
-Snacks.scratch.get(opts)
-```
-
 ### `Snacks.scratch.list()`
 
 Return a list of scratch buffers sorted by mtime.
@@ -158,14 +151,6 @@ Return a list of scratch buffers sorted by mtime.
 ```lua
 ---@return snacks.scratch.File[]
 Snacks.scratch.list()
-```
-
-### `Snacks.scratch.migrate()`
-
-Migrate old scratch files to the new format.
-
-```lua
-Snacks.scratch.migrate()
 ```
 
 ### `Snacks.scratch.open()`

@@ -264,7 +264,7 @@ Snacks.picker.pick({source = "files", ...})
         ["gg"] = "list_top",
         ["j"] = "list_down",
         ["k"] = "list_up",
-        ["q"] = "close",
+        ["q"] = "cancel",
       },
       b = {
         minipairs_disable = true,
@@ -313,7 +313,7 @@ Snacks.picker.pick({source = "files", ...})
         ["i"] = "focus_input",
         ["j"] = "list_down",
         ["k"] = "list_up",
-        ["q"] = "close",
+        ["q"] = "cancel",
         ["zb"] = "list_scroll_bottom",
         ["zt"] = "list_scroll_top",
         ["zz"] = "list_scroll_center",
@@ -327,7 +327,7 @@ Snacks.picker.pick({source = "files", ...})
     preview = {
       keys = {
         ["<Esc>"] = "cancel",
-        ["q"] = "close",
+        ["q"] = "cancel",
         ["i"] = "focus_input",
         ["<a-w>"] = "cycle_win",
       },
@@ -1081,6 +1081,138 @@ Neovim commands
   ignored = false,
   follow = false,
   supports_live = true,
+}
+```
+
+### `gh_diff`
+
+```vim
+:lua Snacks.picker.gh_diff(opts?)
+```
+
+```lua
+---@class snacks.picker.gh.diff.Config: snacks.picker.Config
+---@field group? boolean group changes by file (when false, show individual hunks)
+---@field pr number number PR number to diff against
+---@field repo? string GitHub repository (owner/repo). Defaults to current git repo
+{
+  title = "  Pull Request Diff",
+  group = true,
+  finder = "gh_diff",
+  format = "file",
+  preview = "diff",
+}
+```
+
+### `gh_issue`
+
+```vim
+:lua Snacks.picker.gh_issue(opts?)
+```
+
+```lua
+---@class snacks.picker.gh.issue.Config: snacks.picker.gh.Config
+---@field state "open" | "closed" | "all"
+---@field mention? string filter by mention
+---@field milestone? string filter by milestone
+{
+  title = "  Issues",
+  finder = "gh_issue",
+  format = "gh_format",
+  preview = "gh_preview",
+  sort = { fields = { "score:desc", "idx" } },
+  supports_live = true,
+  live = true,
+  confirm = "gh_actions",
+  win = {
+    input = {
+      keys = {
+        ["<a-b>"] = { "gh_browse", mode = { "n", "i" } },
+        ["<c-y>"] = { "gh_yank", mode = { "n", "i" } },
+      },
+    },
+    list = {
+      keys = {
+        ["y"] = { "gh_yank", mode = { "n", "x" } },
+      },
+    },
+  },
+}
+```
+
+### `gh_labels`
+
+```vim
+:lua Snacks.picker.gh_labels(opts?)
+```
+
+```lua
+---@class snacks.picker.gh.labels.Config: snacks.picker.Config
+---@field number number issue or PR number
+---@field repo string GitHub repository (owner/repo). Defaults to current git repo
+{
+  layout = { preset = "select", layout = { max_width = 50 } },
+  title = "  Labels",
+  main = { current = true },
+  group = true,
+  finder = "gh_labels",
+  format = "gh_format_label",
+}
+```
+
+### `gh_pr`
+
+```vim
+:lua Snacks.picker.gh_pr(opts?)
+```
+
+```lua
+---@class snacks.picker.gh.pr.Config: snacks.picker.gh.Config
+---@field state "open" | "closed" | "merged" | "all"
+---@field draft? boolean filter draft PRs
+---@field base? string filter by base branch
+{
+  title = "  Pull Requests",
+  finder = "gh_pr",
+  format = "gh_format",
+  preview = "gh_preview",
+  sort = { fields = { "score:desc", "idx" } },
+  supports_live = true,
+  live = true,
+  confirm = "gh_actions",
+  win = {
+    input = {
+      keys = {
+        ["<a-b>"] = { "gh_browse", mode = { "n", "i" } },
+        ["<c-y>"] = { "gh_yank", mode = { "n", "i" } },
+      },
+    },
+    list = {
+      keys = {
+        ["y"] = { "gh_yank", mode = { "n", "x" } },
+      },
+    },
+  },
+}
+```
+
+### `gh_reactions`
+
+```vim
+:lua Snacks.picker.gh_reactions(opts?)
+```
+
+```lua
+---@class snacks.picker.gh.reactions.Config: snacks.picker.Config
+---@field number number issue or PR number
+---@field repo string GitHub repository (owner/repo). Defaults to current git repo
+{
+  layout = { preset = "select", layout = { max_width = 50 } },
+  title = "  Reactions",
+  main = { current = true },
+  group = true,
+  finder = "gh_reactions",
+  format = "gh_format_reaction",
 }
 ```
 
@@ -2384,6 +2516,7 @@ M.sidebar
     backdrop = false,
     width = 0.5,
     min_width = 80,
+    max_width = 100,
     height = 0.4,
     min_height = 3,
     box = "vertical",
@@ -3089,6 +3222,15 @@ picker:on_current_tab()
 ```lua
 ---@return snacks.Picker.ref
 picker:ref()
+```
+
+### `picker:refresh()`
+
+Clears the selection, set the target to the current item,
+and refresh the finder and matcher.
+
+```lua
+picker:refresh()
 ```
 
 ### `picker:resolve()`

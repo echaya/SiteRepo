@@ -18,7 +18,7 @@ local M = {}
 
 ---@enum (key) snacks.picker.EditCmd
 local edit_cmd = {
-  edit = "buffer!",
+  edit = "buffer",
   split = "sbuffer",
   vsplit = "vert sbuffer",
   tab = "tab sbuffer",
@@ -113,11 +113,11 @@ function M.jump(picker, _, action)
   -- use an existing window if reuse_win or drop
   if is_drop then
     if find_win() or cmd == "drop" then
-      cmd = "buffer!"
+      cmd = "buffer"
     else
       cmd = "tab sbuffer"
     end
-  elseif cmd == "buffer!" and #items == 1 and picker.opts.jump.reuse_win then
+  elseif cmd == "buffer" and #items == 1 and picker.opts.jump.reuse_win then
     find_win(true)
   end
 
@@ -175,8 +175,7 @@ end
 
 function M.cancel(picker)
   picker:norm(function()
-    local main = require("snacks.picker.core.main").new({ float = false, file = false })
-    vim.api.nvim_set_current_win(main:get())
+    picker.main = picker:filter().current_win
     picker:close()
   end)
 end
@@ -335,9 +334,7 @@ function M.bufdelete(picker)
   if non_buf_delete_requested then
     Snacks.notify.warn("Only open buffers can be deleted", { title = "Snacks Picker" })
   end
-  picker.list:set_selected()
-  picker.list:set_target()
-  picker:find()
+  picker:refresh()
 end
 
 function M.git_stage(picker)
@@ -354,9 +351,7 @@ function M.git_stage(picker)
     Snacks.picker.util.cmd(cmd, function()
       done = done + 1
       if done == #items then
-        picker.list:set_selected()
-        picker.list:set_target()
-        picker:find()
+        picker:refresh()
       end
     end, opts)
   end
@@ -395,9 +390,7 @@ function M.git_restore(picker)
         done = done + 1
         if done == #items then
           vim.schedule(function()
-            picker.list:set_selected()
-            picker.list:set_target()
-            picker:find()
+            picker:refresh()
             vim.cmd.startinsert()
             vim.cmd.checktime()
           end)
@@ -481,9 +474,7 @@ function M.git_branch_del(picker, item)
       Snacks.picker.util.cmd({ "git", "branch", "-D", branch }, function(_, code)
         Snacks.notify("Deleted Branch `" .. branch .. "`", { title = "Snacks Picker" })
         vim.cmd.checktime()
-        picker.list:set_selected()
-        picker.list:set_target()
-        picker:find()
+        picker:refresh()
       end, { cwd = picker:cwd() })
     end)
   end, { cwd = picker:cwd() })

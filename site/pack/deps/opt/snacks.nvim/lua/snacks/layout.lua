@@ -33,6 +33,7 @@ M.meta = {
 ---@field hidden? string[] list of windows that will be excluded from the layout (but can be toggled)
 ---@field on_update? fun(layout: snacks.layout)
 ---@field on_update_pre? fun(layout: snacks.layout)
+---@field on_close? fun(layout: snacks.layout)
 local defaults = {
   layout = {
     width = 0.6,
@@ -51,11 +52,8 @@ function M.new(opts)
 
   local zindex = self.opts.layout.zindex or 50
   for _, win in ipairs(vim.api.nvim_list_wins()) do
-    if vim.w[win].snacks_layout then
-      local winc = vim.api.nvim_win_get_config(win)
-      if winc.zindex and winc.zindex >= zindex then
-        zindex = winc.zindex + 1
-      end
+    if vim.w[win].snacks_win or vim.w[win].snacks_layout then
+      zindex = math.max(zindex, (vim.api.nvim_win_get_config(win).zindex or 0) + 1)
     end
   end
   self.opts.layout.zindex = zindex + 2
@@ -523,6 +521,9 @@ function M:close(opts)
     win:destroy()
   end
   vim.schedule(function()
+    if self.opts.on_close then
+      self.opts.on_close(self)
+    end
     self.opts = nil
     self.root = nil
     self.wins = nil

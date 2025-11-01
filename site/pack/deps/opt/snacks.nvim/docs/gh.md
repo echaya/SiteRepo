@@ -1,0 +1,126 @@
+# 🍿 gh
+
+<!-- docgen -->
+
+## 📦 Setup
+
+```lua
+-- lazy.nvim
+{
+  "folke/snacks.nvim",
+  ---@type snacks.Config
+  opts = {
+    gh = {
+      -- your gh configuration comes here
+      -- or leave it empty to use the default settings
+      -- refer to the configuration section below
+    }
+  }
+}
+```
+
+## ⚙️ Config
+
+```lua
+---@class snacks.gh.Config
+{
+  --- Keymaps for GitHub buffers
+  ---@type table<string, snacks.gh.Keymap|false>?
+  keys = {
+    select  = { "<cr>", "gh_actions", desc = "Select Action" },
+    edit    = { "i"   , "gh_edit"   , desc = "Edit" },
+    comment = { "a"   , "gh_comment", desc = "Add Comment" },
+    close   = { "c"   , "gh_close"  , desc = "Close" },
+    reopen  = { "o"   , "gh_reopen" , desc = "Reopen" },
+  },
+  ---@type vim.wo|{}
+  wo = {
+    breakindent = true,
+    wrap = true,
+    showbreak = "",
+    linebreak = true,
+    number = false,
+    relativenumber = false,
+    foldexpr = "v:lua.vim.treesitter.foldexpr()",
+    foldmethod = "expr",
+    concealcursor = "n",
+    conceallevel = 2,
+    winhighlight = Snacks.util.winhl({
+      Normal = "SnacksGhNormal",
+      NormalFloat = "SnacksGhNormalFloat",
+      FloatBorder = "SnacksGhBorder",
+      FloatTitle = "SnacksGhTitle",
+      FloatFooter = "SnacksGhFooter",
+    }),
+  },
+  ---@type vim.bo|{}
+  bo = {},
+  icons = {
+    logo = " ",
+    user= " ",
+    checkmark = " ",
+    crossmark = " ",
+    block = "■",
+    file = " ",
+    checks = {
+      pending = " ",
+      success = " ",
+      failure = "",
+      skipped = " ",
+    },
+    issue = {
+      open      = " ",
+      completed = " ",
+      other     = " "
+    },
+    pr = {
+      open   = " ",
+      closed = " ",
+      merged = " ",
+      draft  = " ",
+      other  = " ",
+    },
+    merge_status = {
+      clean    = " ",
+      dirty    = " ",
+      blocked  = " ",
+      unstable = " "
+    },
+    reactions = {
+      thumbs_up   = "👍",
+      thumbs_down = "👎",
+      eyes        = "👀",
+      confused    = "😕",
+      heart       = "❤️",
+      hooray      = "🎉",
+      laugh       = "😄",
+      rocket      = "🚀",
+    },
+  },
+}
+```
+
+## 📚 Types
+
+```lua
+---@alias snacks.gh.Keymap.fn fun(item:snacks.picker.gh.Item, buf:snacks.gh.Buf)
+---@class snacks.gh.Keymap: vim.keymap.set.Opts
+---@field [1] string lhs
+---@field [2] string|snacks.gh.Keymap.fn rhs
+---@field mode? string|string[] defaults to `n`
+```
+
+## 📦 Module
+
+```lua
+---@class snacks.gh
+---@field api snacks.gh.api
+---@field item snacks.picker.gh.Item
+Snacks.gh = {}
+```
+
+### `Snacks.gh.config()`
+
+```lua
+Snacks.gh.config()
+```
