@@ -1,5 +1,5 @@
+local Actions = require("snacks.gh.actions")
 local Api = require("snacks.gh.api")
-local Actions = require("snacks.gh.actions").actions
 
 local M = {}
 
@@ -8,15 +8,15 @@ M.actions = setmetatable({}, {
     if type(k) ~= "string" then
       return
     end
-    if not Actions[k] then
+    if not Actions.actions[k] then
       return nil
     end
     ---@type snacks.picker.Action
     local action = {
-      desc = Actions[k].desc,
+      desc = Actions.actions[k].desc,
       action = function(picker, item, action)
         ---@diagnostic disable-next-line: param-type-mismatch
-        return Actions[k].action(item, {
+        return Actions.actions[k].action(item, {
           picker = picker,
           items = picker:selected({ fallback = true }),
           action = action,
@@ -44,7 +44,7 @@ function M.gh(opts, ctx)
   end
 end
 
----@param opts snacks.picker.Config
+---@param opts snacks.picker.gh.issue.Config
 ---@type snacks.picker.finder
 function M.issue(opts, ctx)
   return M.gh(
@@ -55,7 +55,7 @@ function M.issue(opts, ctx)
   )
 end
 
----@param opts snacks.picker.Config
+---@param opts snacks.picker.gh.pr.Config
 ---@type snacks.picker.finder
 function M.pr(opts, ctx)
   return M.gh(
@@ -64,6 +64,81 @@ function M.pr(opts, ctx)
     }, opts),
     ctx
   )
+end
+
+---@param opts snacks.picker.gh.actions.Config
+---@type snacks.picker.finder
+function M.get_actions(opts, ctx)
+  opts = opts or {}
+  local proc ---@type snacks.spawn.Proc?
+  if not opts.item and not opts.number then
+    proc = Api.current_pr(function(pr)
+      opts.item = pr
+    end)
+  end
+  ---@async
+  return function(cb)
+    if proc then
+      proc:wait()
+    end
+    local item = opts.item
+
+    if not item then
+      local required = { "type", "repo", "number" }
+      local missing = vim.tbl_filter(function(field)
+        return opts[field] == nil
+      end, required) ---@type string[]
+      if #missing > 0 then
+        Snacks.notify.error({
+          "Missing required options for `Snacks.picker.gh_actions()`:",
+          "- `" .. table.concat(missing, ", ") .. "`",
+          "",
+          "Either provide the fields, or run in a git repo with a **current PR**.",
+        }, { title = "Snacks Picker GH Actions" })
+        return
+      end
+      item = Api.get({ type = opts.type or "pr", repo = opts.repo, number = opts.number })
+      proc = Api.view(function(it)
+        item = it
+      end, item)
+
+      if proc then
+        proc:wait()
+      end
+      if not item then
+        Snacks.notify.error("snacks.picker.gh.get_actions: Failed to get item")
+        return
+      end
+    end
+
+    local actions = Actions.get_actions(item)
+    actions.gh_actions = nil -- remove this action
+    actions.gh_perform_action = nil -- remove this action
+    local items = {} ---@type snacks.picker.finder.Item[]
+    for name, action in pairs(actions) do
+      ---@class snacks.picker.gh.Action: snacks.picker.finder.Item
+      items[#items + 1] = {
+        text = Snacks.picker.util.text(action, { "name", "desc" }),
+        file = item.uri,
+        name = name,
+        item = item,
+        desc = action.desc or name,
+        action = action,
+      }
+    end
+    table.sort(items, function(a, b)
+      local pa = a.action.priority or 0
+      local pb = b.action.priority or 0
+      if pa ~= pb then
+        return pa > pb
+      end
+      return a.desc < b.desc
+    end)
+    for i, it in ipairs(items) do
+      it.text = ("%d. %s"):format(i, it.text)
+      cb(it)
+    end
+  end
 end
 
 ---@param opts snacks.picker.gh.diff.Config

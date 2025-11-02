@@ -105,8 +105,20 @@ function Proc:debug(opts)
   return Snacks.debug.cmd(opts)
 end
 
+function Proc:setup_async()
+  self.async = Async.running()
+  if self.async then
+    self.async:on("abort", function()
+      if self:running() then
+        self:kill()
+      end
+    end)
+  end
+end
+
 ---@async
 function Proc:wait()
+  self:setup_async()
   assert(self.async, "Not in an async context")
   assert(self.async == Async.running(), "Not in the current async context")
   while not self.did_exit or self:running() do
@@ -120,14 +132,7 @@ function Proc:run()
     return self:on_exit()
   end
 
-  self.async = Async.running()
-  if self.async then
-    self.async:on("abort", function()
-      if self:running() then
-        self:kill()
-      end
-    end)
-  end
+  self:setup_async()
 
   self.stdout = assert(uv.new_pipe())
   self.stderr = assert(uv.new_pipe())

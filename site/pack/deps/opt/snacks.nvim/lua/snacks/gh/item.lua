@@ -2,12 +2,33 @@
 ---@field opts snacks.gh.api.Config
 local M = {}
 
+local time_fields = {
+  created = "createdAt",
+  updated = "updatedAt",
+  closed = "closedAt",
+  merged = "mergedAt",
+  submitted = "submittedAt",
+}
+
 ---@param s? string
 local function ts(s)
   return (s and vim.fn.strptime("%Y-%m-%dT%H:%M:%SZ", s)) or nil
 end
 
-local time_fields = { created = "createdAt", updated = "updatedAt", closed = "closedAt", merged = "mergedAt" }
+---@generic T: table
+---@param obj T
+---@return T
+local function wrap_ts(obj)
+  return setmetatable(obj, {
+    __index = function(tbl, key)
+      if time_fields[key] then
+        local field = time_fields[key]
+        local value = tbl[field] or tbl[field:gsub("At", "_at")]
+        return ts(value)
+      end
+    end,
+  })
+end
 
 ---@param item snacks.gh.Item
 ---@param opts snacks.gh.api.Config
@@ -95,14 +116,17 @@ function M:update(data, fields)
   self.body = item.body and item.body:gsub("\r\n", "\n") or nil
   for _, comment in ipairs(item.comments or {}) do
     comment.body = comment.body and comment.body:gsub("\r\n", "\n") or nil
-    setmetatable(comment, {
-      __index = function(tbl, key)
-        if time_fields[key] then
-          return ts(tbl[time_fields[key]])
-        end
-      end,
-    })
+    wrap_ts(comment)
   end
+  for _, review in ipairs(item.reviews or {}) do
+    review.body = review.body and review.body:gsub("\r\n", "\n") or nil
+    wrap_ts(review)
+    for _, comment in ipairs(review.comments or {}) do
+      comment.body = comment.body and comment.body:gsub("\r\n", "\n") or nil
+      wrap_ts(comment)
+    end
+  end
+
   if item.reactionGroups then
     self.reactions = {}
     for _, reaction in ipairs(item.reactionGroups) do

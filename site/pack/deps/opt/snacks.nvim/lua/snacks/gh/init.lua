@@ -46,6 +46,7 @@ local defaults = {
     foldmethod = "expr",
     concealcursor = "n",
     conceallevel = 2,
+    list = false,
     winhighlight = Snacks.util.winhl({
       Normal = "SnacksGhNormal",
       NormalFloat = "SnacksGhNormalFloat",
@@ -56,6 +57,10 @@ local defaults = {
   },
   ---@type vim.bo|{}
   bo = {},
+  diff = {
+    min = 4, -- minimum number of lines changed to show diff
+    wrap = 80, -- wrap diff lines at this length
+  },
   -- stylua: ignore
   icons = {
     logo = " ",
@@ -82,6 +87,13 @@ local defaults = {
       draft  = " ",
       other  = " ",
     },
+    review = {
+      approved           = " ",
+      changes_requested  = " ",
+      commented          = " ",
+      dismissed          = " ",
+      pending            = " ",
+    },
     merge_status = {
       clean    = " ",
       dirty    = " ",
@@ -100,6 +112,16 @@ local defaults = {
     },
   },
 }
+
+local function diff_linenr(hl)
+  local fg = Snacks.util.color({ hl, "SnacksGhNormalFloat", "Normal" })
+  local bg = Snacks.util.color({ hl, "SnacksGhNormalFloat", "Normal" }, "bg")
+  bg = bg or vim.o.background == "dark" and "#1e1e1e" or "#f5f5f5"
+  return {
+    fg = fg,
+    bg = Snacks.util.blend(fg, bg, 0.1),
+  }
+end
 
 Snacks.util.set_hl({
   Normal = "NormalFloat",
@@ -139,6 +161,18 @@ Snacks.util.set_hl({
   CheckSuccess = "SnacksGhGreen",
   CheckFailure = "SnacksGhRed",
   CheckSkipped = "SnacksGhStat",
+  ReviewApproved = "SnacksGhGreen",
+  ReviewChangesRequested = "DiagnosticError",
+  ReviewCommented = {},
+  ReviewPending = "DiagnosticWarn",
+  CommentAction = "@property",
+  DiffHeader = "DiagnosticVirtualTextInfo",
+  DiffAdd = "DiffAdd",
+  DiffDelete = "DiffDelete",
+  DiffContext = "DiffChange",
+  DiffAddLineNr = diff_linenr("DiffAdd"),
+  DiffDeleteLineNr = diff_linenr("DiffDelete"),
+  DiffContextLineNr = diff_linenr("DiffChange"),
   Stat = { fg = Snacks.util.color("SignColumn") },
 }, { default = true, prefix = "SnacksGh" })
 

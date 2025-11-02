@@ -181,6 +181,7 @@ See the [config section](#%EF%B8%8F-config) to customize these keymaps.
     foldmethod = "expr",
     concealcursor = "n",
     conceallevel = 2,
+    list = false,
     winhighlight = Snacks.util.winhl({
       Normal = "SnacksGhNormal",
       NormalFloat = "SnacksGhNormalFloat",
@@ -191,6 +192,10 @@ See the [config section](#%EF%B8%8F-config) to customize these keymaps.
   },
   ---@type vim.bo|{}
   bo = {},
+  diff = {
+    min = 4, -- minimum number of lines changed to show diff
+    wrap = 80, -- wrap diff lines at this length
+  },
   icons = {
     logo = " ",
     user= " ",
@@ -215,6 +220,13 @@ See the [config section](#%EF%B8%8F-config) to customize these keymaps.
       merged = " ",
       draft  = " ",
       other  = " ",
+    },
+    review = {
+      approved           = " ",
+      changes_requested  = " ",
+      commented          = " ",
+      dismissed          = " ",
+      pending            = " ",
     },
     merge_status = {
       clean    = " ",

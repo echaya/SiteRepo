@@ -11,6 +11,7 @@
 ---@field diagnostics_buffer fun(opts?: snacks.picker.diagnostics.Config|{}): snacks.Picker
 ---@field explorer fun(opts?: snacks.picker.explorer.Config|{}): snacks.Picker
 ---@field files fun(opts?: snacks.picker.files.Config|{}): snacks.Picker
+---@field gh_actions fun(opts?: snacks.picker.gh.actions.Config|{}): snacks.Picker
 ---@field gh_diff fun(opts?: snacks.picker.gh.diff.Config|{}): snacks.Picker
 ---@field gh_issue fun(opts?: snacks.picker.gh.issue.Config|{}): snacks.Picker
 ---@field gh_labels fun(opts?: snacks.picker.gh.labels.Config|{}): snacks.Picker

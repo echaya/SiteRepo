@@ -30,6 +30,7 @@ Table of Contents                       *snacks.nvim-picker-table-of-contents*
   - diagnostics_buffer         |snacks.nvim-picker-sources-diagnostics_buffer|
   - explorer                             |snacks.nvim-picker-sources-explorer|
   - files                                   |snacks.nvim-picker-sources-files|
+  - gh_actions                         |snacks.nvim-picker-sources-gh_actions|
   - gh_diff                               |snacks.nvim-picker-sources-gh_diff|
   - gh_issue                             |snacks.nvim-picker-sources-gh_issue|
   - gh_labels                           |snacks.nvim-picker-sources-gh_labels|
@@ -853,7 +854,7 @@ TROUBLE                                  *snacks.nvim-picker-examples-trouble*
 >lua
     ---@alias snacks.picker.format.resolve fun(max_width:number):snacks.picker.Highlight[]
     ---@alias snacks.picker.Extmark vim.api.keyset.set_extmark|{col:number, row?:number, field?:string}
-    ---@alias snacks.picker.Text {[1]:string, [2]:string?, virtual?:boolean, field?:string, resolve?:snacks.picker.format.resolve}
+    ---@alias snacks.picker.Text {[1]:string, [2]:(string|string[])?, virtual?:boolean, field?:string, resolve?:snacks.picker.format.resolve}
     ---@alias snacks.picker.Highlight snacks.picker.Text|snacks.picker.Extmark
     ---@alias snacks.picker.format fun(item:snacks.picker.Item, picker:snacks.Picker):snacks.picker.Highlight[]
     ---@alias snacks.picker.preview fun(ctx: snacks.picker.preview.ctx):boolean?
@@ -1310,6 +1311,29 @@ FILES                                       *snacks.nvim-picker-sources-files*
       ignored = false,
       follow = false,
       supports_live = true,
+    }
+<
+
+
+GH_ACTIONS                             *snacks.nvim-picker-sources-gh_actions*
+
+>vim
+    :lua Snacks.picker.gh_actions(opts?)
+<
+
+>lua
+    ---@class snacks.picker.gh.actions.Config: snacks.picker.Config
+    ---@field number number issue or PR number
+    ---@field repo string GitHub repository (owner/repo). Defaults to current git repo
+    ---@field type "issue" | "pr"
+    ---@field item? snacks.picker.gh.Item
+    {
+      layout = { preset = "select", layout = { max_width = 50 } },
+      title = "  Actions",
+      main = { current = true },
+      finder = "gh_get_actions",
+      format = "gh_format_action",
+      confirm = "gh_perform_action",
     }
 <
 

@@ -26,7 +26,8 @@
 ---@class snacks.gh.api.Api
 ---@field endpoint string
 ---@field cache? string cache the response, e.g. "3600s", "1h"
----@field fields? table<string, string|number|boolean>
+---@field fields? table<string, string|number|boolean> raw fields (--raw-field)
+---@field params? table<string, string|number|boolean> typed fields (--field)
 ---@field header? table<string, string|number|boolean>
 ---@field jq? string
 ---@field input? string
@@ -35,6 +36,10 @@
 ---@field silent? boolean
 ---@field slurp? boolean
 ---@field on_error? fun(proc: snacks.spawn.Proc, err: string)
+
+---@class snacks.gh.api.GraphQL: snacks.gh.api.Api
+---@field endpoint? nil -- should be "/graphql"
+---@field query string
 
 ---@alias snacks.gh.Field {arg:string, prop:string, name:string}
 
@@ -73,7 +78,7 @@
 ---@field is_bot? boolean
 
 ---@class snacks.gh.Check
----@field __typename string
+---@field __typename "CheckRun" | "StatusContext"
 ---@field completedAt? string
 ---@field conclusion? "SUCCESS" | "FAILURE" | "SKIPPED"
 ---@field detailsUrl? string
@@ -81,6 +86,22 @@
 ---@field startedAt? string
 ---@field status "PENDING" | "COMPLETED"
 ---@field workflowName string
+---@field context? string
+---@field state? "SUCCESS" | "FAILURE" | "PENDING"
+
+---@class snacks.gh.Review
+---@field id string
+---@field author snacks.gh.User
+---@field authorAssociation string
+---@field body string
+---@field submittedAt string
+---@field submitted number
+---@field reactionGroups? snacks.gh.Reaction[]
+---@field state "APPROVED" | "CHANGES_REQUESTED" | "COMMENTED" | "DISMISSED" | "PENDING"
+---@field commit? {oid: string}
+---@field comments? snacks.gh.Comment[]
+
+---@alias snacks.gh.Thread snacks.gh.Comment|snacks.gh.Review|{created: number}
 
 ---@class snacks.gh.Item
 ---@field number number
@@ -105,6 +126,7 @@
 ---@field baseRefName? string
 ---@field headRefName? string
 ---@field isDraft? boolean
+---@field reviews? snacks.gh.Review[]
 
 ---@class snacks.gh.Commit
 ---@field oid string
@@ -119,13 +141,20 @@
 ---@field url string
 ---@field author { login: string }
 ---@field authorAssociation? string
----@field includesCreatedEdit boolean
----@field viewerDidAuthor boolean
----@field isMinimized boolean
----@field minimizedReason string
+---@field includesCreatedEdit? boolean
+---@field viewerDidAuthor? boolean
+---@field isMinimized? boolean
+---@field minimizedReason? string
 ---@field body string
 ---@field createdAt string
 ---@field reactionGroups? snacks.gh.Reaction[]
+---@field created? number
+---@field replyTo? {id: string}
+---@field path? string
+---@field diffHunk? string
+---@field line? number
+---@field originalLine? number
+---@field originalStartLine? number
 
 ---@class snacks.picker.gh.Item: snacks.picker.Item,snacks.gh.Item,snacks.picker.finder.Item
 ---@field type "issue" | "pr"
@@ -146,3 +175,11 @@
 ---@field closed? number
 ---@field merged? number
 ---@field draft? boolean
+
+---@class snacks.gh.api.Branch
+---@field url string URL of the remote branch
+---@field author string owner of the remote branch
+---@field repo string owner/name format
+---@field branch string local branch name
+---@field base string branch we want to merge into
+---@field head string branch we want to merge from

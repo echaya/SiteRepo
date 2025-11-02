@@ -80,12 +80,11 @@ M.actions.gh_actions = {
       return Snacks.picker.actions.jump(ctx.picker, item, ctx.action)
     end
     local actions = M.get_actions(item)
-    actions.gh_actions = nil -- remove self to avoid recursion
-    Snacks.picker.pick({
-      source = "gh_actions",
+    actions.gh_actions = nil -- remove this action
+    actions.gh_perform_action = nil -- remove this action
+    Snacks.picker.gh_actions({
+      item = item,
       layout = {
-        preset = "select",
-        layout = { max_width = 80 },
         config = function(layout)
           -- Fit list height to number of items, up to 10
           for _, box in ipairs(layout.layout) do
@@ -95,35 +94,6 @@ M.actions.gh_actions = {
           end
         end,
       },
-      main = { current = true },
-      title = ("Actions for %s #%d"):format(item.type, item.number),
-      finder = function()
-        local items = {} ---@type snacks.picker.finder.Item[]
-        for name, action in pairs(actions) do
-          ---@class snacks.picker.gh.Action: snacks.picker.finder.Item
-          items[#items + 1] = {
-            text = Snacks.picker.util.text(action, { "name", "desc" }),
-            file = item.uri,
-            name = name,
-            item = item,
-            desc = action.desc or name,
-            action = action,
-          }
-        end
-        table.sort(items, function(a, b)
-          local pa = a.action.priority or 0
-          local pb = b.action.priority or 0
-          if pa ~= pb then
-            return pa > pb
-          end
-          return a.desc < b.desc
-        end)
-        for i, it in ipairs(items) do
-          it.text = ("%d. %s"):format(i, it.text)
-        end
-        return items
-      end,
-      format = "gh_format_action",
       ---@param it snacks.picker.gh.Action
       confirm = function(picker, it, action)
         if not it then
@@ -137,6 +107,16 @@ M.actions.gh_actions = {
         picker:close()
       end,
     })
+  end,
+}
+
+M.actions.gh_perform_action = {
+  action = function(item, ctx)
+    if not item then
+      return
+    end
+    item.action.action(item.item, ctx)
+    ctx.picker:close()
   end,
 }
 

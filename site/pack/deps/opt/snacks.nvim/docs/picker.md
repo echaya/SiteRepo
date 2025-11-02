@@ -648,7 +648,7 @@ Snacks.picker.pick({source = "files", ...})
 ```lua
 ---@alias snacks.picker.format.resolve fun(max_width:number):snacks.picker.Highlight[]
 ---@alias snacks.picker.Extmark vim.api.keyset.set_extmark|{col:number, row?:number, field?:string}
----@alias snacks.picker.Text {[1]:string, [2]:string?, virtual?:boolean, field?:string, resolve?:snacks.picker.format.resolve}
+---@alias snacks.picker.Text {[1]:string, [2]:(string|string[])?, virtual?:boolean, field?:string, resolve?:snacks.picker.format.resolve}
 ---@alias snacks.picker.Highlight snacks.picker.Text|snacks.picker.Extmark
 ---@alias snacks.picker.format fun(item:snacks.picker.Item, picker:snacks.Picker):snacks.picker.Highlight[]
 ---@alias snacks.picker.preview fun(ctx: snacks.picker.preview.ctx):boolean?
@@ -1086,6 +1086,28 @@ Neovim commands
   ignored = false,
   follow = false,
   supports_live = true,
+}
+```
+
+### `gh_actions`
+
+```vim
+:lua Snacks.picker.gh_actions(opts?)
+```
+
+```lua
+---@class snacks.picker.gh.actions.Config: snacks.picker.Config
+---@field number number issue or PR number
+---@field repo string GitHub repository (owner/repo). Defaults to current git repo
+---@field type "issue" | "pr"
+---@field item? snacks.picker.gh.Item
+{
+  layout = { preset = "select", layout = { max_width = 50 } },
+  title = "  Actions",
+  main = { current = true },
+  finder = "gh_get_actions",
+  format = "gh_format_action",
+  confirm = "gh_perform_action",
 }
 ```
 

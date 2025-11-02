@@ -106,6 +106,71 @@ function M.get_highlights(opts)
   return ret
 end
 
+---@param source string|number
+---@param opts? {ft:string, bg?: string}
+---@return snacks.picker.Text[]
+function M.get_virtual_lines(source, opts)
+  opts = opts or {}
+
+  local lines = type(source) == "number" and vim.api.nvim_buf_get_lines(source, 0, -1, false)
+    or vim.split(source --[[@as string]], "\n")
+
+  local extmarks = M.get_highlights({
+    buf = type(source) == "number" and source or nil,
+    code = type(source) == "string" and source or nil,
+    ft = opts.ft,
+    lang = nil,
+  })
+  if not extmarks then
+    return vim.tbl_map(function(line)
+      return { { line } }
+    end, lines)
+  end
+
+  local index = {} ---@type table<number, table<number, string>>
+  for row, exts in pairs(extmarks) do
+    for _, e in ipairs(exts) do
+      if e.hl_group and e.end_col then
+        index[row] = index[row] or {}
+        for i = e.col + 1, e.end_col do
+          index[row][i] = e.hl_group
+        end
+      end
+    end
+  end
+
+  local ret = {} ---@type snacks.picker.Text[]
+  for i = 1, #lines do
+    local line = lines[i]
+    local from = 0
+    local hl_group = nil ---@type string?
+
+    ---@param to number
+    local function add(to)
+      if to >= from then
+        ret[i] = ret[i] or {}
+        local text = line:sub(from, to)
+        local hl = opts.bg and { hl_group or "Normal", opts.bg } or hl_group
+        if #text > 0 then
+          table.insert(ret[i], { text, hl })
+        end
+      end
+      from = to + 1
+      hl_group = nil
+    end
+
+    for col = 1, #line do
+      local hl = index[i] and index[i][col]
+      if hl ~= hl_group then
+        add(col - 1)
+        hl_group = hl
+      end
+    end
+    add(#line)
+  end
+  return ret
+end
+
 ---@param line snacks.picker.Highlight[]
 ---@param opts? {char_idx?:boolean}
 function M.offset(line, opts)
@@ -120,6 +185,8 @@ function M.offset(line, opts)
       else
         offset = offset + #t[1]
       end
+    elseif t.virt_text_pos == "inline" and t.virt_text then
+      offset = offset + M.offset(t.virt_text) + (t.col or 0)
     end
   end
   return offset
@@ -325,6 +392,7 @@ function M.fix_offset(hl, offset, start_idx)
       end
     end
   end
+  return hl
 end
 
 ---@param dst snacks.picker.Highlight[]

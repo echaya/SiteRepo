@@ -98,7 +98,7 @@ function M:render(opts)
   self:wo()
 
   local spinner ---@type snacks.util.Spinner?
-  local proc = Api.view(self.item, function(it, updated)
+  local proc = Api.view(function(it, updated)
     vim.schedule(function()
       if not self:valid() then
         return
@@ -112,7 +112,7 @@ function M:render(opts)
         self:keys()
       end
     end)
-  end, { force = opts.force })
+  end, self.item, { force = opts.force })
 
   -- initial render (is partial if proc is running)
   if Item.is(self.item) then
