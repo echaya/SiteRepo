@@ -302,36 +302,39 @@ end
 ---@param line snacks.picker.Highlight[]
 ---@param max_width number
 function M.resolve(line, max_width)
-  local ret = {} ---@type snacks.picker.Highlight[]
   local offset = 0
   local width = 0
   local resolve ---@type number?
 
-  for t, text in ipairs(line) do
-    local w = M.offset({ text }, { char_idx = true })
-    if not resolve and type(text) == "table" and text.resolve then
-      ---@cast text snacks.picker.Text
-      resolve = t
-    elseif resolve then
-      width = width + w
+  while true do
+    for t, text in ipairs(line) do
+      local w = M.offset({ text }, { char_idx = true })
+      if not resolve and type(text) == "table" and text.resolve then
+        ---@cast text snacks.picker.Text
+        resolve = t
+      elseif resolve then
+        width = width + w
+      else
+        width = width + w
+        offset = offset + w
+      end
+    end
+
+    if resolve then
+      local ret = {} ---@type snacks.picker.Highlight[]
+      vim.list_extend(ret, line, 1, resolve - 1)
+      offset = M.offset(ret)
+      vim.list_extend(ret, line[resolve].resolve(max_width - width))
+      local diff = M.offset(ret) - offset
+      vim.list_extend(ret, line, resolve + 1)
+      M.fix_offset(ret, diff, resolve + 1)
+      line = ret
+      ret = {}
+      resolve = nil
     else
-      width = width + w
-      offset = offset + w
+      return line
     end
   end
-
-  if resolve then
-    vim.list_extend(ret, line, 1, resolve - 1)
-    offset = M.offset(ret)
-    vim.list_extend(ret, line[resolve].resolve(max_width - width))
-    local diff = M.offset(ret) - offset
-    vim.list_extend(ret, line, resolve + 1)
-    M.fix_offset(ret, diff, resolve + 1)
-  else
-    return line
-  end
-
-  return ret
 end
 
 ---@param line snacks.picker.Highlight[]

@@ -256,7 +256,7 @@ end
 ---@type snacks.picker.finder
 function M.diff(opts, ctx)
   opts = opts or {}
-  local args = M.git("diff", "--no-color", "--no-ext-diff", { args = { "--no-pager" } }, opts)
+  local args = M.git("diff", "--no-color", "--no-ext-diff", "--diff-filter=u", { args = { "--no-pager" } }, opts)
   if opts.base then
     vim.list_extend(args, { "--merge-base", opts.base })
   end
@@ -290,11 +290,6 @@ function M.diff(opts, ctx)
       finder(function(item)
         if not opts.base then
           item.staged = opts.staged or f == 2
-          if item.staged then
-            item.status = "M "
-          else
-            item.status = " M"
-          end
         end
         items[#items + 1] = item
       end)

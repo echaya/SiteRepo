@@ -455,7 +455,7 @@ M.cli_actions = {
     enabled = function(item)
       return item.state == "open"
     end,
-  }
+  },
 }
 
 ---@param opts snacks.gh.cli.Action

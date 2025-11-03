@@ -281,7 +281,7 @@ M.gh_diff = {
   title = "  Pull Request Diff",
   group = true,
   finder = "gh_diff",
-  format = "file",
+  format = "git_status",
   preview = "diff",
 }
 
