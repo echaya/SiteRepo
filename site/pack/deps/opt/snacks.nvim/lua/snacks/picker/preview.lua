@@ -115,7 +115,7 @@ function M.file(ctx)
       return
     end
 
-    if Snacks.image.supports_file(path) then
+    if Snacks.image.supports_file(path) and Snacks.image.config.enabled ~= false then
       return M.image(ctx)
     end
 

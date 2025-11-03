@@ -89,7 +89,7 @@ function M:update(data, fields)
     self.fields[field] = true
   end
   if not self.repo and item.url then
-    local repo = item.url:match("github%.com/([^/]+/[^/]+)/")
+    local repo = M.get_repo(item.url)
     if repo then
       self.repo = repo
     end
@@ -148,6 +148,12 @@ function M.to_uri(item)
     return item.uri
   end
   return ("gh://%s/%s/%s"):format(item.repo or "", assert(item.type), tostring(assert(item.number)))
+end
+
+---@param url string
+function M.get_repo(url)
+  local path = url:find("^http") and url:gsub("^https?://[^/]+/", "") or url:gsub("^[^/]+/", "")
+  return path:match("([^/]+/[^/]+)") --[[@as string?]]
 end
 
 return M

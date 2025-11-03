@@ -288,11 +288,13 @@ function M.diff(opts, ctx)
     local items = {} ---@type snacks.picker.finder.Item[]
     for f, finder in ipairs(finders) do
       finder(function(item)
-        item.staged = opts.staged or f == 2
-        if item.staged then
-          item.status = "M "
-        else
-          item.status = " M"
+        if not opts.base then
+          item.staged = opts.staged or f == 2
+          if item.staged then
+            item.status = "M "
+          else
+            item.status = " M"
+          end
         end
         items[#items + 1] = item
       end)

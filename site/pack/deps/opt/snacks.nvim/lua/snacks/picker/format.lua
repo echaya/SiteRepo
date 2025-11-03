@@ -561,6 +561,9 @@ function M.keymap(item, picker)
 end
 
 function M.git_status(item, picker)
+  if not item.status then
+    return M.filename(item, picker)
+  end
   local ret = {} ---@type snacks.picker.Highlight[]
   local a = Snacks.picker.util.align
   local s = vim.trim(item.status):sub(1, 1)

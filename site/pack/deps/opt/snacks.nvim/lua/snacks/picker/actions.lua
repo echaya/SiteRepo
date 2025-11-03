@@ -339,6 +339,11 @@ end
 
 function M.git_stage(picker)
   local items = picker:selected({ fallback = true })
+  if items[1] and not items[1].status then
+    Snacks.notify.warn("Can't stage/unstage this change", { title = "Snacks Picker" })
+    return
+  end
+
   local done = 0
   for _, item in ipairs(items) do
     local opts = { cwd = item.cwd } ---@type snacks.picker.util.cmd.Opts
@@ -360,6 +365,11 @@ end
 function M.git_restore(picker)
   local items = picker:selected({ fallback = true })
   if #items == 0 then
+    return
+  end
+
+  if items[1] and not items[1].status then
+    Snacks.notify.warn("Can't restore this change", { title = "Snacks Picker" })
     return
   end
 
