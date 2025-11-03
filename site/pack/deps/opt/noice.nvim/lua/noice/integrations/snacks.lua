@@ -49,6 +49,7 @@ M.source = {
   finder = M.find,
   format = M.format,
   preview = M.preview,
+  confirm = { "yank", "close" },
 }
 
 ---@param opts? snacks.picker.Config|{}

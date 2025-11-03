@@ -207,7 +207,7 @@ M.actions.gh_label = {
           api = {
             endpoint = "/repos/{repo}/issues/{number}/labels",
             method = "PUT",
-            input = vim.fn.json_encode({ labels = vim.tbl_keys(labels) }),
+            input = { labels = vim.tbl_keys(labels) },
           },
         }, ctx)
         picker:close()

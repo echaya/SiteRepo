@@ -564,7 +564,7 @@ function M.git_status(item, picker)
   local status = item.status
   if not status and item.block then
     local block = item.block ---@type snacks.picker.diff.Block
-    status = ({ new = "A", delete = "D", rename = "R", copy = "C" })[block.type] or "M"
+    status = block.new and "A" or block.delete and "D" or block.rename and "R" or block.copy and "C" or "M"
     status = block.unmerged and (status .. status) or item.staged and (status .. " ") or (" " .. status)
   elseif not status then
     return M.filename(item, picker)
