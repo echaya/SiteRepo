@@ -542,7 +542,7 @@ function M.review(review, level, ctx)
     return not ctx.comment_skip[c.id]
   end, review.comments or {})
 
-  if #comments == 0 and (not review.body or review.body:match("^%s*$")) then
+  if #comments == 0 and review.state == "COMMENTED" and (not review.body or review.body:match("^%s*$")) then
     return ret
   end
 

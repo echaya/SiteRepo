@@ -182,11 +182,12 @@ local defaults = {
       -- terminal: external command (git's pager for git commands, `cmd` for other diffs)
       style = "fancy", ---@type "fancy"|"syntax"|"terminal"
       cmd = { "delta" }, -- example for using `delta` as the external diff command
-      ---@type vim.wo?|{} window options for the diff preview window
+      ---@type vim.wo?|{} window options for the fancy diff preview window
       wo = {
         breakindent = true,
         wrap = true,
         linebreak = true,
+        showbreak = "",
       },
     },
     git = {

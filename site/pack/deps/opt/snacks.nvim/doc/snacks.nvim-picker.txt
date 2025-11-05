@@ -138,6 +138,7 @@ Table of Contents                       *snacks.nvim-picker-table-of-contents*
   - Snacks.picker.actions.list_up()|snacks.nvim-picker-snacks.picker.actions-snacks.picker.actions.list_up()|
   - Snacks.picker.actions.load_session()|snacks.nvim-picker-snacks.picker.actions-snacks.picker.actions.load_session()|
   - Snacks.picker.actions.loclist()|snacks.nvim-picker-snacks.picker.actions-snacks.picker.actions.loclist()|
+  - Snacks.picker.actions.mark_delete()|snacks.nvim-picker-snacks.picker.actions-snacks.picker.actions.mark_delete()|
   - Snacks.picker.actions.paste()|snacks.nvim-picker-snacks.picker.actions-snacks.picker.actions.paste()|
   - Snacks.picker.actions.pick_win()|snacks.nvim-picker-snacks.picker.actions-snacks.picker.actions.pick_win()|
   - Snacks.picker.actions.picker()|snacks.nvim-picker-snacks.picker.actions-snacks.picker.actions.picker()|
@@ -381,11 +382,12 @@ below.
           -- terminal: external command (git's pager for git commands, `cmd` for other diffs)
           style = "fancy", ---@type "fancy"|"syntax"|"terminal"
           cmd = { "delta" }, -- example for using `delta` as the external diff command
-          ---@type vim.wo?|{} window options for the diff preview window
+          ---@type vim.wo?|{} window options for the fancy diff preview window
           wo = {
             breakindent = true,
             wrap = true,
             linebreak = true,
+            showbreak = "",
           },
         },
         git = {
@@ -1767,6 +1769,7 @@ GREP_WORD                               *snacks.nvim-picker-sources-grep_word*
     {
       finder = "grep",
       regex = false,
+      args = { "--word-regexp" },
       format = "file",
       search = function(picker)
         return picker:word()
@@ -2256,6 +2259,13 @@ MARKS                                       *snacks.nvim-picker-sources-marks*
       format = "file",
       global = true,
       ["local"] = true,
+      win = {
+        input = {
+          keys = {
+            ["<c-x>"] = { "mark_delete", mode = { "n", "i" } },
+          },
+        },
+      },
     }
 <
 
@@ -3219,6 +3229,13 @@ Send selected or all items to the location list.
 
 >lua
     Snacks.picker.actions.loclist(picker)
+<
+
+
+SNACKS.PICKER.ACTIONS.MARK_DELETE()*snacks.nvim-picker-snacks.picker.actions-snacks.picker.actions.mark_delete()*
+
+>lua
+    Snacks.picker.actions.mark_delete(picker)
 <
 
 

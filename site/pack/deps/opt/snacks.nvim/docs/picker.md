@@ -183,11 +183,12 @@ Snacks.picker.pick({source = "files", ...})
       -- terminal: external command (git's pager for git commands, `cmd` for other diffs)
       style = "fancy", ---@type "fancy"|"syntax"|"terminal"
       cmd = { "delta" }, -- example for using `delta` as the external diff command
-      ---@type vim.wo?|{} window options for the diff preview window
+      ---@type vim.wo?|{} window options for the fancy diff preview window
       wo = {
         breakindent = true,
         wrap = true,
         linebreak = true,
+        showbreak = "",
       },
     },
     git = {
@@ -1524,6 +1525,7 @@ Git log
 {
   finder = "grep",
   regex = false,
+  args = { "--word-regexp" },
   format = "file",
   search = function(picker)
     return picker:word()
@@ -1993,6 +1995,13 @@ vim.tbl_extend("force", {}, M.lsp_symbols, {
   format = "file",
   global = true,
   ["local"] = true,
+  win = {
+    input = {
+      keys = {
+        ["<c-x>"] = { "mark_delete", mode = { "n", "i" } },
+      },
+    },
+  },
 }
 ```
 
@@ -2886,6 +2895,12 @@ Send selected or all items to the location list.
 
 ```lua
 Snacks.picker.actions.loclist(picker)
+```
+
+### `Snacks.picker.actions.mark_delete()`
+
+```lua
+Snacks.picker.actions.mark_delete(picker)
 ```
 
 ### `Snacks.picker.actions.paste()`
