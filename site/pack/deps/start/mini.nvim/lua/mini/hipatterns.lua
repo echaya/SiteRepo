@@ -273,6 +273,13 @@ end
 ---   If array:
 ---     - Each element is matched and highlighted with the same highlight group.
 ---
+---     Note: matching does not result in overlapping (sub)matches (similarly
+---     to how |cpo-c| works). For example, with line `xxxxxxx`:
+---     - Pattern `xxx` matches columns 1-3, 4-6.
+---     - Pattern `()xx()x` matches columns 1-2, 3-4, 5-6.
+---     - Pattern `x()xx()` matches columns 2-3, 5-6.
+---     - Pattern `x()x()x` matches columns 2-2, 4-4, 6-6.
+---
 --- - <group> `(string|function)` - name of highlight group to use. Can be either
 ---   string or callable returning the string.
 ---   If callable:
@@ -938,7 +945,7 @@ H.apply_highlighter_pattern = vim.schedule_wrap(function(pattern, hi, buf_id, ns
       -- `init` is more than 1
       if pattern_has_line_start then break end
 
-      from, to, sub_from, sub_to = line:find(pattern, to + 1)
+      from, to, sub_from, sub_to = line:find(pattern, sub_to + 1)
     end
   end
 end)

@@ -1,27 +1,30 @@
 local Markdown = require("snacks.picker.util.markdown")
 
 local M = {}
-local extend = Snacks.picker.highlight.extend
+local H = Snacks.picker.highlight
+local U = Snacks.picker.util
 
 -- tracking comment_skip is needed because review comments can appear both:
 -- 1. As top-level review.comments
 -- 2. As replies in the thread tree
 ---@class snacks.gh.render.ctx
----@field buf number
 ---@field item snacks.picker.gh.Item
 ---@field opts snacks.gh.Config
 ---@field comment_skip table<string, boolean>
 ---@field is_review? boolean
+---@field diff? boolean render diffs (defaults to true)
+---@field markdown? boolean render in a markdown buffer (defaults to true)
+---@field annotations? snacks.diff.Annotation[]
 
 ---@param field string
 local function time_prop(field)
   return {
-    name = Snacks.picker.util.title(field),
+    name = U.title(field),
     hl = function(item)
       if not item[field] then
         return
       end
-      return { { Snacks.picker.util.reltime(item[field]), "SnacksPickerGitDate" } }
+      return { { U.reltime(item[field]), "SnacksPickerGitDate" } }
     end,
   }
 end
@@ -37,9 +40,9 @@ M.props = {
       local ret = {} ---@type snacks.picker.Highlight[]
       if status then
         local icon = icons[status]
-        local hl = "SnacksGh" .. Snacks.picker.util.title(item.type) .. Snacks.picker.util.title(status)
-        local text = icon .. Snacks.picker.util.title(item.status or "other")
-        extend(ret, Snacks.picker.highlight.badge(text, { bg = Snacks.util.color(hl), fg = "#ffffff" }))
+        local hl = "SnacksGh" .. U.title(item.type) .. U.title(status)
+        local text = icon .. U.title(item.status or "other")
+        H.extend(ret, H.badge(text, { bg = Snacks.util.color(hl), fg = "#ffffff" }))
       end
       if item.baseRefName and item.headRefName then
         ret[#ret + 1] = { " " }
@@ -61,7 +64,7 @@ M.props = {
   {
     name = "Author",
     hl = function(item, opts)
-      return Snacks.picker.highlight.badge(opts.icons.user .. " " .. item.author, "SnacksGhUserBadge")
+      return H.badge(opts.icons.user .. " " .. item.author, "SnacksGhUserBadge")
     end,
   },
   time_prop("created"),
@@ -77,10 +80,7 @@ M.props = {
           return a.count > b.count
         end)
         for _, r in pairs(item.reactions) do
-          local badge = Snacks.picker.highlight.badge(
-            opts.icons.reactions[r.content] .. " " .. tostring(r.count),
-            "SnacksGhReactionBadge"
-          )
+          local badge = H.badge(opts.icons.reactions[r.content] .. " " .. tostring(r.count), "SnacksGhReactionBadge")
           vim.list_extend(ret, badge)
           ret[#ret + 1] = { " " }
         end
@@ -94,8 +94,8 @@ M.props = {
       local ret = {} ---@type snacks.picker.Highlight[]
       for _, label in ipairs(item.item.labels or {}) do
         local color = label.color or "888888"
-        local badge = Snacks.picker.highlight.badge(label.name, "#" .. color)
-        extend(ret, badge)
+        local badge = H.badge(label.name, "#" .. color)
+        H.extend(ret, badge)
         ret[#ret + 1] = { " " }
       end
       return ret
@@ -106,7 +106,7 @@ M.props = {
     hl = function(item)
       local ret = {} ---@type snacks.picker.Highlight[]
       for _, u in ipairs(item.item.assignees or {}) do
-        local badge = Snacks.picker.highlight.badge(u.login, "Identifier")
+        local badge = H.badge(u.login, "Identifier")
         vim.list_extend(ret, badge)
         ret[#ret + 1] = { " " }
       end
@@ -117,7 +117,7 @@ M.props = {
     name = "Milestone",
     hl = function(item)
       if item.item.milestone then
-        return Snacks.picker.highlight.badge(item.item.milestone.title, "Title")
+        return H.badge(item.item.milestone.title, "Title")
       end
     end,
   },
@@ -130,7 +130,7 @@ M.props = {
       local status = item.mergeStateStatus:lower()
       status = opts.icons.merge_status[status] and status or "dirty"
       local icon = opts.icons.merge_status[status]
-      status = Snacks.picker.util.title(status)
+      status = U.title(status)
       local hl = "SnacksGhPr" .. status
       return { { icon .. " " .. status, hl } }
     end,
@@ -155,7 +155,7 @@ M.props = {
           status = check.state
         end
         if name and status then
-          status = Snacks.picker.util.title(status:lower())
+          status = U.title(status:lower())
           workflows[name] = status
         end
       end
@@ -169,7 +169,7 @@ M.props = {
         local count = stats[status]
         if count then
           local icon = opts.icons.checks[status:lower()] or opts.icons.checks["pending"]
-          local badge = Snacks.picker.highlight.badge(icon .. " " .. tostring(count), "SnacksGhCheck" .. status)
+          local badge = H.badge(icon .. " " .. tostring(count), "SnacksGhCheck" .. status)
           vim.list_extend(ret, badge)
           ret[#ret + 1] = { " " }
         end
@@ -207,7 +207,7 @@ M.props = {
       local ret = {} ---@type snacks.picker.Highlight[]
 
       if item.changedFiles then
-        ret = Snacks.picker.highlight.badge(opts.icons.file .. item.changedFiles, "SnacksGhStatBadge")
+        ret = H.badge(opts.icons.file .. item.changedFiles, "SnacksGhStatBadge")
         ret[#ret + 1] = { " " }
       end
 
@@ -251,7 +251,6 @@ function M.render(buf, item, opts)
 
   ---@type snacks.gh.render.ctx
   local ctx = {
-    buf = buf,
     item = item,
     opts = opts,
     comment_skip = {},
@@ -272,7 +271,7 @@ function M.render(buf, item, opts)
       line[#line + 1] = { prop.name, "SnacksGhLabel" }
       line[#line + 1] = { ":", "SnacksGhDelim" }
       line[#line + 1] = { " " }
-      extend(line, value)
+      H.extend(line, value)
       lines[#lines + 1] = line
     end
   end
@@ -302,14 +301,13 @@ function M.render(buf, item, opts)
     for _, thread in ipairs(threads) do
       local c = #lines
 
-      if thread.submitted then
+      ctx.is_review = thread.state ~= nil
+      if ctx.is_review then
         ---@cast thread snacks.gh.Review
-        ctx.is_review = true
-        vim.list_extend(lines, M.review(thread, 1, ctx))
+        vim.list_extend(lines, M.review(thread, ctx))
       else
         ---@cast thread snacks.gh.Comment
-        ctx.is_review = false
-        vim.list_extend(lines, M.comment(thread, 1, ctx))
+        vim.list_extend(lines, M.comment(thread, ctx))
       end
 
       if #lines > c then -- only add separator if there were comments added
@@ -318,20 +316,10 @@ function M.render(buf, item, opts)
     end
   end
 
-  local comments = {} ---@type {line:number, id:number}[]
-  for l, line in ipairs(lines) do
-    for _, segment in ipairs(line) do
-      if segment.meta and segment.meta.reply then
-        comments[#comments + 1] = { line = l, id = segment.meta.reply }
-      end
-    end
-  end
-
-  vim.b[buf].snacks_gh_comments = comments
-  local changed = Snacks.picker.highlight.render(buf, ns, lines)
+  local changed = H.render(buf, ns, lines)
 
   if changed then
-    Markdown.render(buf)
+    Markdown.render(buf, { bullets = false })
   end
 
   vim.schedule(function()
@@ -349,12 +337,7 @@ end
 function M.get_threads(item)
   local ret = {} ---@type snacks.gh.Thread[]
   vim.list_extend(ret, item.comments or {})
-  for _, review in ipairs(item.reviews or {}) do
-    local thread = setmetatable({
-      created = review.submitted,
-    }, { __index = review }) --[[@as snacks.gh.Thread]]
-    ret[#ret + 1] = thread
-  end
+  vim.list_extend(ret, item.reviews or {})
   table.sort(ret, function(a, b)
     return a.created < b.created
   end)
@@ -367,28 +350,28 @@ end
 function M.comment_header(comment, opts, ctx)
   opts = opts or {}
   local ret = {} ---@type snacks.picker.Highlight[]
-  local is_bot = comment.author.login == "github-actions"
-  local badge ---@type snacks.picker.Highlight[]
-  if is_bot then
-    badge = Snacks.picker.highlight.badge(ctx.opts.icons.logo .. " " .. comment.author.login, "SnacksGhBotBadge")
-  else
-    badge = Snacks.picker.highlight.badge(ctx.opts.icons.user .. " " .. comment.author.login, "SnacksGhUserBadge")
-  end
-  extend(ret, badge)
+  local is_bot = comment.author.login == "github-actions" or comment.author.login:find("copilot")
+  H.extend(
+    ret,
+    H.badge(
+      ("%s %s"):format(is_bot and ctx.opts.icons.logo or ctx.opts.icons.user, comment.author.login),
+      is_bot and "SnacksGhBotBadge" or "SnacksGhUserBadge"
+    )
+  )
 
   if opts.text then
     ret[#ret + 1] = { opts.text, "SnacksGhCommentAction" }
     ret[#ret + 1] = { " " }
   end
-  ret[#ret + 1] = { Snacks.picker.util.reltime(comment.created), "SnacksPickerGitDate" }
+  ret[#ret + 1] = { U.reltime(comment.created), "SnacksPickerGitDate" }
   local assoc = comment.authorAssociation
-  assoc = assoc and assoc ~= "NONE" and Snacks.picker.util.title(assoc:lower()) or nil
+  assoc = assoc and assoc ~= "NONE" and U.title(assoc:lower()) or nil
   assoc = comment.author.login == ctx.item.author and "Author" or assoc
   if assoc then
     ret[#ret + 1] = { " " }
-    extend(
+    H.extend(
       ret,
-      Snacks.picker.highlight.badge(
+      H.badge(
         assoc,
         assoc == "Author" and "SnacksGhAuthorBadge" or assoc == "Owner" and "SnacksGhOwnerBadge" or "SnacksGhAssocBadge"
       )
@@ -396,32 +379,40 @@ function M.comment_header(comment, opts, ctx)
   end
   for _, r in ipairs(comment.reactionGroups or {}) do
     ret[#ret + 1] = { " " }
-    local badge = Snacks.picker.highlight.badge(
+    local badge = H.badge(
       ctx.opts.icons.reactions[r.content:lower()] .. " " .. tostring(r.users.totalCount),
       "SnacksGhReactionBadge"
     )
-    extend(ret, badge)
+    H.extend(ret, badge)
   end
   return ret
 end
 
----@param body string
+---@param item snacks.gh.Comment|snacks.gh.Review
 ---@param ctx snacks.gh.render.ctx
-function M.comment_body(body, ctx)
+function M.comment_body(item, ctx)
+  local body = item.body or ""
   if body:match("^%s*$") then
     return {}
   end
   local ret = {} ---@type snacks.picker.Highlight[][]
   for _, l in ipairs(vim.split(body, "\n", { plain = true })) do
+    if l:find("^```suggestion$") then
+      local ft = item.path and vim.filetype.match({ filename = item.path }) or ""
+      l = "```" .. ft
+      ret[#ret + 1] = H.badge("Suggested change", "SnacksGhSuggestionBadge")
+    end
     ret[#ret + 1] = { { l } }
   end
   return ret
 end
 
 ---@param lines snacks.picker.Highlight[][]
-function M.indent(lines)
+---@param ctx snacks.gh.render.ctx
+function M.indent(lines, ctx)
+  -- indent guides for lines after the first
   local indent = {} ---@type snacks.picker.Highlight[]
-  -- virtual overlay showing indent guides
+  indent[#indent + 1] = { "   ", "Normal" }
   indent[#indent + 1] = {
     col = 0,
     virt_text = {
@@ -433,33 +424,33 @@ function M.indent(lines)
     hl_mode = "combine",
     virt_text_repeat_linebreak = true,
   }
-  -- actual indent space
-  local first = vim.deepcopy(indent)
-  first = {
-    {
-      col = 0,
-      end_col = 3,
-      conceal = "",
-      priority = 1000,
-    },
-    { " * ", "Normal" },
-  }
-  local other = vim.deepcopy(indent)
-  table.insert(other, 1, { "   ", "Normal" })
+
+  --- first indent. In a markdown buffer, we need proper structure,
+  --- so we conceal the list marker
+  ---@type snacks.picker.Highlight[]
+  local first = ctx.markdown == false and {}
+    or {
+      {
+        col = 0,
+        end_col = 3,
+        conceal = "",
+        priority = 1000,
+      },
+      { " * ", "Normal" },
+    }
 
   local ret = {} ---@type snacks.picker.Highlight[][]
   for l, line in ipairs(lines) do
-    local new = vim.deepcopy(l == 1 and first or other)
-    extend(new, line)
+    local new = vim.deepcopy(l == 1 and first or indent)
+    H.extend(new, line)
     ret[l] = new
   end
   return ret
 end
 
 ---@param comment snacks.gh.Comment
----@param level number
 ---@param ctx snacks.gh.render.ctx
-function M.comment_diff(comment, level, ctx)
+function M.comment_diff(comment, ctx)
   if not comment.path or not comment.diffHunk then
     return {}
   end
@@ -469,6 +460,7 @@ function M.comment_diff(comment, level, ctx)
     count = originalLine - comment.originalStartLine + 1
   end
   count = math.max(ctx.opts.diff.min, math.abs(count))
+
   local Diff = require("snacks.picker.util.diff")
   local diff = ("diff --git a/%s b/%s\n%s"):format(comment.path, comment.path, comment.diffHunk)
   local ret = Diff.format(diff, {
@@ -481,40 +473,74 @@ function M.comment_diff(comment, level, ctx)
 end
 
 ---@param comment snacks.gh.Comment
----@param level number
 ---@param ctx snacks.gh.render.ctx
-function M.comment(comment, level, ctx)
+function M.annotate(comment, ctx)
+  if not comment.path or not comment.diffHunk then
+    return
+  end
+  local side = "right"
+  for _, thread in ipairs(ctx.item.reviewThreads or {}) do
+    for _, c in ipairs(thread.comments or {}) do
+      if c.id == comment.id then
+        side = (thread.diffSide or "RIGHT"):lower()
+        break
+      end
+    end
+  end
+  ---@type snacks.diff.Annotation
+  local ret = {
+    side = side,
+    file = comment.path,
+    line = comment.line or comment.originalLine or 1,
+    text = {},
+  }
+  ctx.annotations = ctx.annotations or {}
+  table.insert(ctx.annotations, ret)
+  return ret
+end
+
+---@param comment snacks.gh.Comment
+---@param ctx snacks.gh.render.ctx
+function M.comment(comment, ctx)
   local ret = {} ---@type snacks.picker.Highlight[][]
 
   local header = {} ---@type snacks.picker.Highlight[]
-  extend(header, M.comment_header(comment, {}, ctx))
+  H.extend(header, M.comment_header(comment, {}, ctx))
   ret[#ret + 1] = header
 
+  local annotation ---@type snacks.diff.Annotation?
   if not comment.replyTo then
-    -- add diff hunk for top-level comments
-    local diff = M.comment_diff(comment, level, ctx)
-    if #diff > 0 then
-      vim.list_extend(ret, diff)
-      ret[#ret + 1] = {} -- empty line between diff and body
+    annotation = M.annotate(comment, ctx)
+    if ctx.diff ~= false then
+      -- add diff hunk for top-level comments
+      local diff = M.comment_diff(comment, ctx)
+      if #diff > 0 then
+        vim.list_extend(ret, diff)
+        ret[#ret + 1] = {} -- empty line between diff and body
+      end
     end
   end
 
-  vim.list_extend(ret, M.comment_body(comment.body or "", ctx))
+  vim.list_extend(ret, M.comment_body(comment, ctx))
   local replies = M.find_reply(comment.id, ctx)
   for _, reply in ipairs(replies) do
     ret[#ret + 1] = {} -- empty line between comment and reply
-    vim.list_extend(ret, M.comment(reply, level, ctx))
+    vim.list_extend(ret, M.comment(reply, ctx))
     ctx.comment_skip[reply.id] = true
   end
   if ctx.is_review then
     for _, line in ipairs(ret) do
       local reply_id = comment.replyTo and comment.replyTo.databaseId or comment.databaseId
       if reply_id then
-        line[#line + 1] = { "", meta = { reply = reply_id } }
+        line[#line + 1] = { "", meta = { comment_id = reply_id } }
       end
     end
   end
-  return M.indent(ret)
+  ret = M.indent(ret, ctx)
+  if annotation then
+    annotation.text = vim.deepcopy(ret)
+  end
+  return ret
 end
 
 ---@param id string
@@ -532,9 +558,8 @@ function M.find_reply(id, ctx)
 end
 
 ---@param review snacks.gh.Review
----@param level number
 ---@param ctx snacks.gh.render.ctx
-function M.review(review, level, ctx)
+function M.review(review, ctx)
   local ret = {} ---@type snacks.picker.Highlight[][]
 
   ---@type snacks.gh.Comment[]
@@ -542,19 +567,13 @@ function M.review(review, level, ctx)
     return not ctx.comment_skip[c.id]
   end, review.comments or {})
 
-  if #comments == 0 and review.state == "COMMENTED" and (not review.body or review.body:match("^%s*$")) then
+  if #comments == 0 and review.state == "COMMENTED" and ((review.body or ""):match("^%s*$")) then
     return ret
   end
 
   local header = {} ---@type snacks.picker.Highlight[]
   local state_icon = ctx.opts.icons.review[review.state:lower()] or ctx.opts.icons.pr.open
-  extend(
-    header,
-    Snacks.picker.highlight.badge(
-      state_icon,
-      "SnacksGhReview" .. Snacks.picker.util.title(review.state:lower()):gsub(" ", "")
-    )
-  )
+  H.extend(header, H.badge(state_icon, "SnacksGhReview" .. U.title(review.state:lower()):gsub(" ", "")))
   header[#header + 1] = { " " }
   local texts = {
     ["CHANGES_REQUESTED"] = "requested changes",
@@ -562,14 +581,31 @@ function M.review(review, level, ctx)
   }
 
   local text = texts[review.state] or review.state:lower():gsub("_", " ")
-  extend(header, M.comment_header(review, { text = text }, ctx))
+  H.extend(header, M.comment_header(review, { text = text }, ctx))
   ret[#ret + 1] = header
-  vim.list_extend(ret, M.comment_body(review.body or "", ctx))
+  vim.list_extend(ret, M.comment_body(review, ctx))
   for _, comment in ipairs(comments) do
     ret[#ret + 1] = {} -- empty line between review and comments
-    vim.list_extend(ret, M.comment(comment, level + 1, ctx))
+    vim.list_extend(ret, M.comment(comment, ctx))
   end
-  return M.indent(ret)
+  return M.indent(ret, ctx)
+end
+
+---@param pr snacks.picker.gh.Item
+function M.annotations(pr)
+  ---@type snacks.gh.render.ctx
+  local ctx = {
+    item = pr,
+    opts = Snacks.gh.config(),
+    comment_skip = {},
+    is_review = true,
+    diff = false,
+    markdown = false,
+  }
+  for _, review in ipairs(pr.reviews or {}) do
+    M.review(review, ctx)
+  end
+  return ctx.annotations
 end
 
 return M

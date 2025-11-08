@@ -430,7 +430,7 @@ function M:markdown()
   end
   local buf, win = self.win.buf, self.win.win ---@type number, number
 
-  require("snacks.picker.util.markdown").render(buf, { win = win })
+  require("snacks.picker.util.markdown").render(buf)
 end
 
 function M:spinner(enable)

@@ -304,8 +304,19 @@ function M.new(opts)
       table.insert(self.keys, spec)
     end
   end
+  -- last defined mapping is found first, so for `nowait` to work,
+  -- we need to sort in reverse order
+  table.sort(self.keys, function(a, b)
+    return (a[1] or "") > (b[1] or "")
+  end)
 
   self:on("WinClosed", self.on_close, { win = true })
+  self:on("WinResized", function()
+    if self.backdrop and not self:is_floating() then
+      self.backdrop:close()
+      self.backdrop = nil
+    end
+  end)
 
   -- update window size when resizing
   self:on("VimResized", self.on_resize)
@@ -1308,6 +1319,28 @@ function M:dim(parent)
   ret.col = pos(self.opts.col, ret.width, parent.width, border.left, border.right)
 
   return ret
+end
+
+--- Calculate the next available zindex for snacks windows.
+--- New windows open on top of existing ones.
+---@param opts? { zindex?: number, tab?: number|boolean, all?: boolean, max?: number }
+---@overload fun(zindex: number): number
+function M.zindex(opts)
+  opts = opts or {}
+  opts = type(opts) == "number" and { zindex = opts } or opts
+  local zindex = opts.zindex or 50
+  local max = opts.max or 100
+  local wins = opts.tab == false and vim.api.nvim_list_wins() or vim.api.nvim_tabpage_list_wins(tonumber(opts.tab) or 0)
+  for _, win in ipairs(wins) do
+    if opts.all ~= false or vim.w[win].snacks_win then
+      local other = (vim.api.nvim_win_get_config(win).zindex or 0)
+      -- ignore very high zindex windows, like notifications, completion, etc
+      if other > zindex and other < max then
+        zindex = math.max(zindex, other + 2) --[[@as number]]
+      end
+    end
+  end
+  return zindex
 end
 
 return M

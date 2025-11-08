@@ -657,8 +657,9 @@ Snacks.picker.pick({source = "files", ...})
 ```lua
 ---@alias snacks.picker.format.resolve fun(max_width:number):snacks.picker.Highlight[]
 ---@alias snacks.picker.Extmark vim.api.keyset.set_extmark|{col:number, row?:number, field?:string}
----@alias snacks.picker.Text {[1]:string, [2]:(string|string[])?, virtual?:boolean, field?:string, resolve?:snacks.picker.format.resolve, meta?:table<string, any>, inline?:boolean}
----@alias snacks.picker.Highlight snacks.picker.Text|snacks.picker.Extmark
+---@alias snacks.picker.Meta {[string]:any}
+---@alias snacks.picker.Text {[1]:string, [2]:(string|string[])?, virtual?:boolean, field?:string, resolve?:snacks.picker.format.resolve, inline?:boolean}
+---@alias snacks.picker.Highlight snacks.picker.Text|snacks.picker.Extmark|{meta?:snacks.picker.Meta}
 ---@alias snacks.picker.format fun(item:snacks.picker.Item, picker:snacks.Picker):snacks.picker.Highlight[]
 ---@alias snacks.picker.preview fun(ctx: snacks.picker.preview.ctx):boolean?
 ---@alias snacks.picker.sort fun(a:snacks.picker.Item, b:snacks.picker.Item):boolean
@@ -1136,7 +1137,15 @@ Neovim commands
   group = true,
   finder = "gh_diff",
   format = "git_status",
-  preview = "diff",
+  preview = "gh_preview_diff",
+  win = {
+    preview = {
+      keys = {
+        ["a"] = { "gh_comment", mode = { "n", "x" } },
+        ["<cr>"] = { "gh_actions", mode = { "n", "x" } },
+      },
+    },
+  },
 }
 ```
 
@@ -1309,7 +1318,7 @@ Neovim commands
     input = {
       keys = {
         ["<Tab>"] = { "git_stage", mode = { "n", "i" } },
-        ["<c-r>"] = { "git_restore", mode = { "n", "i" } },
+        ["<c-r>"] = { "git_restore", mode = { "n", "i" }, nowait = true },
       },
     },
   },
@@ -1458,7 +1467,7 @@ Git log
     input = {
       keys = {
         ["<Tab>"] = { "git_stage", mode = { "n", "i" } },
-        ["<c-r>"] = { "git_restore", mode = { "n", "i" } },
+        ["<c-r>"] = { "git_restore", mode = { "n", "i" }, nowait = true },
       },
     },
   },
@@ -1580,9 +1589,14 @@ Neovim help tags
 
 ```lua
 ---@class snacks.picker.icons.Config: snacks.picker.Config
----@field icon_sources? string[]
+---@field icon_sources? string[] list of sources to use
+--- Custom icon sources can be added here. The key is the source name,
+--- and the value is the file path or URL to load icons from.
+--- The file should be a JSON array of:
+--- `{[1]:string, [2]:string}|{icon:string, name:string, category:string}`
+--- The format is compatible with https://github.com/nvim-telescope/telescope-symbols.nvim
+---@field custom_sources? table<string,string> additional icon sources `table<source,file|url>`
 {
-  icon_sources = { "nerd_fonts", "emoji" },
   main = { current = true },
   finder = "icons",
   format = "icon",
@@ -2140,7 +2154,7 @@ Open recent projects
         ["<c-e>"] = { { "tcd", "picker_explorer" }, mode = { "n", "i" } },
         ["<c-f>"] = { { "tcd", "picker_files" }, mode = { "n", "i" } },
         ["<c-g>"] = { { "tcd", "picker_grep" }, mode = { "n", "i" } },
-        ["<c-r>"] = { { "tcd", "picker_recent" }, mode = { "n", "i" } },
+        ["<c-r>"] = { { "tcd", "picker_recent" }, mode = { "n", "i" }, nowait = true },
         ["<c-w>"] = { { "tcd" }, mode = { "n", "i" } },
         ["<c-t>"] = {
           function(picker)
@@ -2562,7 +2576,7 @@ M.sidebar
     min_width = 80,
     max_width = 100,
     height = 0.4,
-    min_height = 3,
+    min_height = 2,
     box = "vertical",
     border = true,
     title = "{title}",

@@ -282,7 +282,15 @@ M.gh_diff = {
   group = true,
   finder = "gh_diff",
   format = "git_status",
-  preview = "diff",
+  preview = "gh_preview_diff",
+  win = {
+    preview = {
+      keys = {
+        ["a"] = { "gh_comment", mode = { "n", "x" } },
+        ["<cr>"] = { "gh_actions", mode = { "n", "x" } },
+      },
+    },
+  },
 }
 
 ---@class snacks.picker.gh.reactions.Config: snacks.picker.Config
@@ -442,7 +450,7 @@ M.git_status = {
     input = {
       keys = {
         ["<Tab>"] = { "git_stage", mode = { "n", "i" } },
-        ["<c-r>"] = { "git_restore", mode = { "n", "i" } },
+        ["<c-r>"] = { "git_restore", mode = { "n", "i" }, nowait = true },
       },
     },
   },
@@ -462,7 +470,7 @@ M.git_diff = {
     input = {
       keys = {
         ["<Tab>"] = { "git_stage", mode = { "n", "i" } },
-        ["<c-r>"] = { "git_restore", mode = { "n", "i" } },
+        ["<c-r>"] = { "git_restore", mode = { "n", "i" }, nowait = true },
       },
     },
   },
@@ -535,9 +543,14 @@ M.highlights = {
 }
 
 ---@class snacks.picker.icons.Config: snacks.picker.Config
----@field icon_sources? string[]
+---@field icon_sources? string[] list of sources to use
+--- Custom icon sources can be added here. The key is the source name,
+--- and the value is the file path or URL to load icons from.
+--- The file should be a JSON array of:
+--- `{[1]:string, [2]:string}|{icon:string, name:string, category:string}`
+--- The format is compatible with https://github.com/nvim-telescope/telescope-symbols.nvim
+---@field custom_sources? table<string,string> additional icon sources `table<source,file|url>`
 M.icons = {
-  icon_sources = { "nerd_fonts", "emoji" },
   main = { current = true },
   finder = "icons",
   format = "icon",
@@ -892,7 +905,7 @@ M.projects = {
         ["<c-e>"] = { { "tcd", "picker_explorer" }, mode = { "n", "i" } },
         ["<c-f>"] = { { "tcd", "picker_files" }, mode = { "n", "i" } },
         ["<c-g>"] = { { "tcd", "picker_grep" }, mode = { "n", "i" } },
-        ["<c-r>"] = { { "tcd", "picker_recent" }, mode = { "n", "i" } },
+        ["<c-r>"] = { { "tcd", "picker_recent" }, mode = { "n", "i" }, nowait = true },
         ["<c-w>"] = { { "tcd" }, mode = { "n", "i" } },
         ["<c-t>"] = {
           function(picker)
