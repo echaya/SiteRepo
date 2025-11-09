@@ -547,7 +547,7 @@ MiniOperators.make_mappings = function(operator_name, lhs_tbl)
   -- Make mappings
   local operator_desc = operator_name:sub(1, 1):upper() .. operator_name:sub(2)
 
-  local expr_opts = { expr = true, replace_keycodes = false, desc = operator_desc .. ' operator' }
+  local expr_opts = { expr = true, replace_keycodes = false, desc = operator_desc }
   H.map('n', lhs_tbl.textobject, string.format('v:lua.MiniOperators.%s()', operator_name), expr_opts)
 
   local rhs = lhs_tbl.textobject .. '_'
