@@ -873,7 +873,63 @@ function M.edit(ctx)
     template = table.concat(fm, "\n") .. template
   end
 
-  local height = config.scratch.height or 20
+  local preview = ctx.picker and ctx.picker.preview and ctx.picker.preview.win:valid() and ctx.picker.preview.win or nil
+  local actions = preview and preview.opts.actions or {}
+  local parent = ctx.main or preview and preview.win or vim.api.nvim_get_current_win()
+
+  local height = config.scratch.height or 15
+  local opts = Snacks.win.resolve({
+    relative = "win",
+    width = 0,
+    backdrop = false,
+    height = height,
+    actions = {
+      cycle_win = actions.cycle_win,
+      preview_scroll_up = actions.preview_scroll_up,
+      preview_scroll_down = actions.preview_scroll_down,
+    },
+    win = parent,
+    wo = { winhighlight = "NormalFloat:Normal,FloatTitle:SnacksGhScratchTitle,FloatBorder:SnacksGhScratchBorder" },
+    border = "top_bottom",
+    row = function(win)
+      local border = win:border_size()
+      return win:parent_size().height - height - border.top - border.bottom
+    end,
+    on_win = function(win)
+      if vim.api.nvim_win_is_valid(parent) then
+        local parent_row = vim.api.nvim_win_call(parent, vim.fn.winline) ---@type number
+        parent_row = parent_row + vim.wo[parent].scrolloff -- adjust for scrolloff
+        local row = vim.api.nvim_win_get_height(parent) - win:size().height
+        if parent_row > row then
+          vim.api.nvim_win_call(parent, function()
+            vim.cmd(("normal! %d%s"):format(parent_row - row, Snacks.util.keycode("<C-e>")))
+          end)
+        end
+      end
+      vim.g.snacks_picker_cycle_win = win.win
+      vim.schedule(function()
+        vim.cmd.startinsert()
+      end)
+    end,
+    footer_keys = { "<c-s>", "R" },
+    keys = {
+      submit = {
+        "<c-s>",
+        function(win)
+          ctx.scratch = win
+          M.submit(ctx)
+        end,
+        desc = "Submit",
+        mode = { "n", "i" },
+      },
+    },
+  }, preview and {
+    keys = {
+      ["<a-w>"] = { "cycle_win", mode = { "i", "n" } },
+      ["<c-b>"] = { "preview_scroll_up", mode = { "i", "n" } },
+      ["<c-f>"] = { "preview_scroll_down", mode = { "i", "n" } },
+    },
+  } or nil)
   Snacks.scratch({
     ft = "markdown",
     icon = config.icons.logo,
@@ -885,35 +941,7 @@ function M.edit(ctx)
       count = false,
       id = tpl("{repo}/{type}/{cmd}"),
     },
-    win = {
-      relative = "win",
-      width = 0,
-      backdrop = false,
-      height = height,
-      win = ctx.main or vim.api.nvim_get_current_win(),
-      wo = { winhighlight = "NormalFloat:Normal,FloatTitle:SnacksGhScratchTitle,FloatBorder:SnacksGhScratchBorder" },
-      border = "top",
-      row = function(win)
-        local border = win:border_size()
-        return win:parent_size().height - height - border.top - border.bottom
-      end,
-      on_win = function()
-        vim.schedule(function()
-          vim.cmd.startinsert()
-        end)
-      end,
-      keys = {
-        submit = {
-          "<c-s>",
-          function(win)
-            ctx.scratch = win
-            M.submit(ctx)
-          end,
-          desc = "Submit",
-          mode = { "n", "i" },
-        },
-      },
-    },
+    win = opts,
   })
 end
 

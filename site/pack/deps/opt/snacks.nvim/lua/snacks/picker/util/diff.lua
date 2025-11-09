@@ -470,6 +470,13 @@ function M.format_annotation(annotation, ctx)
     end
     local al = vim.deepcopy(ctx.indent)
     local vl = H.indent({}, ctx.indent_width + 2, ctx.hl)
+    vl[#vl + 1] = { -- repeat indent for the space before box
+      col = ctx.indent_width,
+      virt_text = { { "  ", ctx.hl } },
+      virt_text_pos = "overlay",
+      hl_mode = "replace",
+      virt_text_repeat_linebreak = true,
+    }
     H.extend(al, vl)
     H.extend(al, vim.deepcopy(line))
     H.add_eol(al, ctx.hl, width + ctx.indent_width + 6)
@@ -499,6 +506,7 @@ function M.format_box(lines, border_hl)
       virt_text_pos = "overlay",
       virt_text_win_col = col,
       virt_text = text,
+      virt_text_repeat_linebreak = true,
     }
   end
 
@@ -511,8 +519,11 @@ function M.format_box(lines, border_hl)
   }
   for _, line in ipairs(lines) do
     ret[#ret + 1] = {
-      { "│", border_hl, virtual = true },
-      { " " },
+      vt({
+        { "│", border_hl },
+        { " " },
+      }),
+      { "  " },
     }
     H.extend(ret[#ret], vim.deepcopy(line))
     table.insert(ret[#ret], vt({ { "│", border_hl } }, width + 3))

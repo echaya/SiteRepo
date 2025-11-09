@@ -396,13 +396,25 @@ function M.comment_body(item, ctx)
     return {}
   end
   local ret = {} ---@type snacks.picker.Highlight[][]
-  for _, l in ipairs(vim.split(body, "\n", { plain = true })) do
-    if l:find("^```suggestion$") then
+  local md = {} ---@type string[]
+  for _, line in ipairs(vim.split(body, "\n", { plain = true })) do
+    if line:find("^```suggestion$") then
       local ft = item.path and vim.filetype.match({ filename = item.path }) or ""
-      l = "```" .. ft
+      line = "```" .. ft
       ret[#ret + 1] = H.badge("Suggested change", "SnacksGhSuggestionBadge")
+      md[#md + 1] = ""
     end
-    ret[#ret + 1] = { { l } }
+    md[#md + 1] = line
+    ret[#ret + 1] = { { line } }
+  end
+
+  if not ctx.markdown then
+    -- if the filetype of the buffer is not markdown,
+    -- we need to add proper highlights for the markdown content
+    local extmarks = H.get_highlights({ code = table.concat(md, "\n"), ft = "markdown" })
+    for l, line in pairs(extmarks) do
+      vim.list_extend(ret[l], line)
+    end
   end
   return ret
 end

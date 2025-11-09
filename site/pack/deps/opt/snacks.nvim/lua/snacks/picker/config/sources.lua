@@ -466,6 +466,7 @@ M.git_diff = {
   format = "git_status",
   preview = "diff",
   matcher = { sort_empty = true },
+  sort = { fields = { "score:desc", "file", "idx" } },
   win = {
     input = {
       keys = {
