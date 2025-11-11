@@ -408,12 +408,12 @@ function M.comment_body(item, ctx)
     ret[#ret + 1] = { { line } }
   end
 
-  if not ctx.markdown then
+  if ctx.markdown == false then
     -- if the filetype of the buffer is not markdown,
     -- we need to add proper highlights for the markdown content
     local extmarks = H.get_highlights({ code = table.concat(md, "\n"), ft = "markdown" })
     for l, line in pairs(extmarks) do
-      vim.list_extend(ret[l], line)
+      vim.list_extend(ret[l] or {}, line)
     end
   end
   return ret
