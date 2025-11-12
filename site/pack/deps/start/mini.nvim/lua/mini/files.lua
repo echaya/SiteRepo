@@ -1935,7 +1935,7 @@ H.explorer_show_help = function(explorer, explorer_buf_id, explorer_win_id)
   config.height = #lines
   config.title = " 'mini.files' help "
   config.zindex = config.zindex + 1
-  local default_border = (vim.fn.exists('+winborder') == 1 and vim.o.winborder ~= '') and vim.o.winborder or 'single'
+  local default_border = (vim.fn.exists('+winborder') == 0 or vim.o.winborder == '') and 'single' or nil
   config.border = config.border or default_border
   config.style = 'minimal'
 
@@ -2411,7 +2411,7 @@ end
 H.window_open = function(buf_id, config)
   -- Add always the same extra data
   config.anchor = 'NW'
-  config.border = (vim.fn.exists('+winborder') == 1 and vim.o.winborder ~= '') and vim.o.winborder or 'single'
+  config.border = (vim.fn.exists('+winborder') == 0 or vim.o.winborder == '') and 'single' or nil
   config.focusable = true
   config.relative = 'editor'
   config.style = 'minimal'

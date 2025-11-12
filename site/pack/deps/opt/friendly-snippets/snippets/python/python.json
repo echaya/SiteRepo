@@ -221,10 +221,14 @@
         ],
         "description": "try/except/else/finally blocks"
     },
-    "Jupyter cell": {
-        "prefix": "~",
-        "body": "###",
-        "description": "Add a new cell"
+    "comment": {
+        "prefix": "~comment",
+        "body": [
+            "'''",
+            "\t$0",
+            "'''"
+        ],
+        "description": "add a long comment block"
     },
     "reload package": {
     "prefix": "reimport",
