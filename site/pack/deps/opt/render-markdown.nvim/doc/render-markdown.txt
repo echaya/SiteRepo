@@ -1,4 +1,4 @@
-*render-markdown.txt*      For NVIM v0.11.5      Last change: 2025 November 12
+*render-markdown.txt*      For NVIM v0.11.5      Last change: 2025 November 14
 
 ==============================================================================
 Table of Contents                          *render-markdown-table-of-contents*
@@ -354,7 +354,7 @@ Default Configuration ~
             -- Additional modes to render latex.
             render_modes = false,
             -- Executable used to convert latex formula to rendered unicode.
-            -- If a list is provided the first command available on the system is used.
+            -- If a list is provided the commands run in order until the first success.
             converter = { 'utftex', 'latex2text' },
             -- Highlight for latex blocks.
             highlight = 'RenderMarkdownMath',
