@@ -30,10 +30,11 @@ end
 -- Detects whether the provided line contains current (%) or alternate (#, #n) filename
 -- or vim expression (<cfile>, <abuf>, ...) with optional modifiers: :h, :p:h
 ---@param line string
+---@param completion_type string
 ---@return boolean
-function utils.contains_filename_modifiers(line)
+function utils.contains_filename_modifiers(line, completion_type)
   local pat = [[\v(\s+|'|")((\%|#\d*|\<\w+\>)(:(h|p|t|r|e|s|S|gs|\~|\.)?)*)\<?(\s+|'|"|$)]]
-  return vim.regex(pat):match_str(line) ~= nil
+  return completion_type ~= 'help' and vim.regex(pat):match_str(line) ~= nil
 end
 
 -- Detects whether the provided line contains wildcard, see :h wildcard
@@ -58,7 +59,7 @@ function utils.smart_split(line, is_path_completion)
       local arg = tokens[i]
       -- Escape argument if it contains unescaped spaces
       -- Some commands may expect escaped paths (:edit), others may not (:view)
-      if arg and arg ~= '' and not arg:find('\\ ') then arg = fnameescape(arg) end
+      if arg and arg ~= '' and arg ~= '|' and not arg:find('\\ ') then arg = fnameescape(arg) end
       table.insert(args, arg)
     end
     return line, { cmd, unpack(args) }

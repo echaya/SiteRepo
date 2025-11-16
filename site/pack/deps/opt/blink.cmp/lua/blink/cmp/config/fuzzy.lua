@@ -11,7 +11,7 @@
 --- @class (exact) blink.cmp.FuzzyFrecencyConfig
 --- @field enabled boolean Whether to enable the frecency feature
 --- @field path string Location of the frecency database
---- @field unsafe_no_lock boolean UNSAFE!! When enabled, disables the lock and fsync when writing to the frecency database. This should only be used on unsupported platforms (i.e. alpine termux).
+--- @field unsafe_no_lock boolean UNSAFE!! When enabled, disables the lock and fsync when writing to the frecency database. This should only be used on unsupported platforms (e.g. alpine, termux).
 
 --- @class (exact) blink.cmp.PrebuiltBinariesConfig
 --- @field download boolean Whenther or not to automatically download a prebuilt binary from github. If this is set to `false`, you will need to manually build the fuzzy binary dependencies by running `cargo build --release`. Disabled by default when `fuzzy.implementation = 'lua'`
@@ -88,6 +88,8 @@ function fuzzy.validate(config)
     sorts = {
       config.sorts,
       function(sorts)
+        if type(sorts) == 'function' then return true end
+        if type(sorts) ~= 'table' then return false end
         for _, sort in ipairs(sorts) do
           if
             not vim.tbl_contains({ 'label', 'sort_text', 'kind', 'score', 'exact' }, sort)

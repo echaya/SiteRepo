@@ -31,7 +31,7 @@ vim.b.completion = false
 
 ### Disable completion in *only* shell command mode
 
-When inside of git bash or WSL on windows, you may experience a hang with shell commands. The following disables cmdline completions only when running shell commands (i.e. `[':!' , ':%!']`), but still allows completion in other command modes (i.e. `[':' , ':help', '/' , '?', ...]`).
+When inside of git bash or WSL on windows, you may experience a hang with shell commands. The following disables cmdline completions only when running shell commands (e.g. `[':!' , ':%!']`), but still allows completion in other command modes (e.g. `[':' , ':help', '/' , '?']`).
 
 ```lua
 sources = {
@@ -279,7 +279,7 @@ sources = {
 
 ### Buffer completion from all open buffers
 
-The default behavior is to only show completions from **visible** "normal" buffers (i.e. it wouldn't include neo-tree). This will instead show completions from all buffers, even if they're not visible on screen. Note that the performance impact of this has not been tested.
+The default behavior is to only show completions from **visible** "normal" buffers (e.g. it wouldn't include neo-tree). This will instead show completions from all buffers, even if they're not visible on screen. Note that the performance impact of this has not been tested.
 
 ```lua
 sources = {
@@ -473,6 +473,8 @@ completion = {
 
 ### `mini.icons` + `lspkind`
 
+Uses [mini.icons](https://github.com/echasnovski/mini.icons) to display icons for filetypes and [lspkind](https://github.com/onsails/lspkind-nvim) for LSP kinds.
+
 ```lua
 completion = {
   menu = {
@@ -480,34 +482,28 @@ completion = {
       components = {
         kind_icon = {
           text = function(ctx)
-            if vim.tbl_contains({ "Path" }, ctx.source_name) then
-                local mini_icon, _ = require("mini.icons").get_icon(ctx.item.data.type, ctx.label)
-                if mini_icon then return mini_icon .. ctx.icon_gap end
+            if ctx.source_name ~= "Path" then
+              return require("lspkind").symbolic(ctx.kind, { mode = "symbol" }) .. ctx.icon_gap
             end
 
-            local icon = require("lspkind").symbolic(ctx.kind, { mode = "symbol" })
-            return icon .. ctx.icon_gap
+            local is_unknown_type = vim.tbl_contains({ "link", "socket", "fifo", "char", "block", "unknown" }, ctx.item.data.type)
+            local mini_icon, _ = require("mini.icons").get(
+              is_unknown_type and "os" or ctx.item.data.type,
+              is_unknown_type and "" or ctx.label
+            )
+
+            return (mini_icon or ctx.kind_icon) .. ctx.icon_gap
           end,
 
-          -- Optionally, use the highlight groups from mini.icons
-          -- You can also add the same function for `kind.highlight` if you want to
-          -- keep the highlight groups in sync with the icons.
           highlight = function(ctx)
-            if vim.tbl_contains({ "Path" }, ctx.source_name) then
-              local mini_icon, mini_hl = require("mini.icons").get_icon(ctx.item.data.type, ctx.label)
-              if mini_icon then return mini_hl end
-            end
-            return ctx.kind_hl
-          end,
-        },
-        kind = {
-          -- Optional, use highlights from mini.icons
-          highlight = function(ctx)
-            if vim.tbl_contains({ "Path" }, ctx.source_name) then
-              local mini_icon, mini_hl = require("mini.icons").get_icon(ctx.item.data.type, ctx.label)
-              if mini_icon then return mini_hl end
-            end
-            return ctx.kind_hl
+            if ctx.source_name ~= "Path" then return ctx.kind_hl end
+
+            local is_unknown_type = vim.tbl_contains({ "link", "socket", "fifo", "char", "block", "unknown" }, ctx.item.data.type)
+            local mini_icon, mini_hl = require("mini.icons").get(
+              is_unknown_type and "os" or ctx.item.data.type,
+              is_unknown_type and "" or ctx.label
+            )
+            return mini_icon ~= nil and mini_hl or ctx.kind_hl
           end,
         }
       }

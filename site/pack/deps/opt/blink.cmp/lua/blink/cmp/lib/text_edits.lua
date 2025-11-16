@@ -219,13 +219,16 @@ end
 --- Clamps the range to the bounds of their respective lines
 --- @param range lsp.Range
 --- @return lsp.Range
---- TODO: clamp start and end lines
 function text_edits.clamp_range_to_bounds(range)
   range = vim.deepcopy(range)
 
+  local line_count = vim.api.nvim_buf_line_count(0)
+
+  range.start.line = math.min(math.max(range.start.line, 0), line_count - 1)
   local start_line = context.get_line(range.start.line)
   range.start.character = math.min(math.max(range.start.character, 0), #start_line)
 
+  range['end'].line = math.min(math.max(range['end'].line, 0), line_count - 1)
   local end_line = context.get_line(range['end'].line)
   range['end'].character = math.min(
     math.max(range['end'].character, range.start.line == range['end'].line and range.start.character or 0),
@@ -304,7 +307,7 @@ end
 
 --- Other plugins may use feedkeys to switch modes, with `i` set. This would
 --- cause neovim to run those feedkeys first, potentially causing our <C-x><C-z> to run
---- in the wrong mode. I.e. if the plugin runs `<Esc>v` (luasnip)
+--- in the wrong mode, e.g. if the plugin runs `<Esc>v` (luasnip)
 ---
 --- In normal and visual mode, these keys cause neovim to go to the background
 --- so we create our own mapping that only runs `<C-x><C-z>` if we're in insert mode
