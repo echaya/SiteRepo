@@ -1,4 +1,4 @@
--- 'Minicyan' color scheme
+-- Color scheme 'minicyan'
 -- Derived from base16 (https://github.com/chriskempson/base16) and
 -- mini_palette palette generator
 local use_cterm, palette
