@@ -192,7 +192,7 @@ M.style = function()
   highlight(0, "Normal", { bg = bg, fg = white })
 
   -- Color of mode text, -- INSERT --
-  highlight(0, "ModeMsg", { fg = cadet_blue })
+  highlight(0, "ModeMsg", { link = "NightflyCadetBlue" })
 
   -- Comments
   if g.nightflyItalics then
@@ -301,6 +301,7 @@ M.style = function()
   -- Completions
   highlight(0, "ComplHint", { link = "NightflySteelBlue" })
   highlight(0, "ComplHintMore", { link = "NightflyMalibu" })
+  highlight(0, "ComplMatchIns", { link = "NightflyCadetBlue" })
   if g.nightflyNormalPmenu then
     highlight(0, "Pmenu", { bg = bg, fg = cadet_blue })
     highlight(0, "PmenuBorder", { bg = bg, fg = slate_blue })
@@ -768,6 +769,27 @@ M.style = function()
   highlight(0, "BlinkCmpMenuBorder", { link = "FloatBorder" })
   highlight(0, "BlinkCmpMenuSelection", { link = "NightflyVisual" })
 
+  -- blink.indent plugin
+  --   base highlights
+  highlight(0, "BlinkIndent", { link = "IblIndent" })
+  highlight(0, "BlinkIndentScope", { link = "IblScope" })
+  --   colored indents
+  highlight(0, "BlinkIndentRed", { link = "NightflyRed" })
+  highlight(0, "BlinkIndentOrange", { link = "NightflyOrange" })
+  highlight(0, "BlinkIndentYellow", { link = "NightflyYellow" })
+  highlight(0, "BlinkIndentGreen", { link = "NightflyGreen" })
+  highlight(0, "BlinkIndentCyan", { link = "NightflyTurquoise" })
+  highlight(0, "BlinkIndentBlue", { link = "NightflyBlue" })
+  highlight(0, "BlinkIndentViolet", { link = "NightflyViolet" })
+  --   colored underlines
+  highlight(0, "BlinkIndentRedUnderline", { sp = red, underline = true })
+  highlight(0, "BlinkIndentOrangeUnderline", { sp = orange, underline = true })
+  highlight(0, "BlinkIndentYellowUnderline", { sp = yellow, underline = true })
+  highlight(0, "BlinkIndentGreenUnderline", { sp = green, underline = true })
+  highlight(0, "BlinkIndentCyanUnderline", { sp = turquoise, underline = true })
+  highlight(0, "BlinkIndentBlueUnderline", { sp = blue, underline = true })
+  highlight(0, "BlinkIndentVioletUnderline", { sp = violet, underline = true })
+
   -- Bufferline plugin
   highlight(0, "BufferLineTabSelected", { fg = blue })
   highlight(0, "BufferLineIndicatorSelected", { fg = blue })
@@ -778,7 +800,7 @@ M.style = function()
   highlight(0, "DashboardHeader", { link = "NightflyBlue" })
   highlight(0, "DashboardShortCut", { link = "NightflyTurquoise" })
 
-  -- fzf-lua
+  -- fzf-lua plugin
   highlight(0, "FzfLuaBorder", { link = "FloatBorderTransparent" })
   highlight(0, "FzfLuaBufFlagAlt", { link = "NightflyTurquoise" })
   highlight(0, "FzfLuaBufFlagCur", { link = "NightflyOrange" })
@@ -1206,7 +1228,7 @@ M.style = function()
   highlight(0, "RainbowDelimiterViolet", { link = "NightflyViolet" })
   highlight(0, "RainbowDelimiterCyan", { link = "NightflyTurquoise" })
 
-  -- sidekick.nvim
+  -- sidekick.nvim plugin
   highlight(0, "SidekickDiffAdd", { link = "DiffAdd" })
   highlight(0, "SidekickDiffContext", { link = "DiffChange" })
   highlight(0, "SidekickDiffDelete", { link = "DiffDelete" })
@@ -1214,7 +1236,7 @@ M.style = function()
   highlight(0, "SidekickSignChange", { link = "GitSignsChange" })
   highlight(0, "SidekickSignDelete", { link = "GitSignsDelete" })
 
-  -- snacks.nvim
+  -- snacks.nvim plugin
   --   misc
   highlight(0, "SnacksWinBar", { link = "NightflyBlue" })
   highlight(0, "SnacksScratchKey", { link = "DiagnosticInfo" })

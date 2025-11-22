@@ -82,29 +82,28 @@ function! s:ToggleSyntax() "{{{2
     hi! link TableSeparator Delimiter
     hi! link TableColumnAlign Type
 
-    syntax match redCell '|\@<= *r:[^|]*' contained
+		syntax match redCell '|\zs *r:[^|]*' contained
     hi redCell ctermfg=9 ctermbg=1
 
-    syntax match greenCell '|\@<= *g:[^|]*' contained
+		syntax match greenCell '|\zs *g:[^|]*' contained
     hi greenCell ctermfg=10 ctermbg=2
 
-    syntax match yellowCell '|\@<= *y:[^|]*' contained
+		syntax match yellowCell '|\zs *y:[^|]*' contained
     hi yellowCell ctermfg=11 ctermbg=3
 
-    syntax match blueCell '|\@<= *b:[^|]*' contained
+		syntax match blueCell  '|\zs *b:[^|]*' contained
     hi blueCell ctermfg=12 ctermbg=4
 
-    syntax match whiteCell '|\@<= *w:[^|]*' contained
+		syntax match whiteCell '|\zs *w:[^|]*' contained
     hi whiteCell ctermfg=0 ctermbg=15
 
-    syntax match darkCell '|\@<= *d:[^|]*' contained
+		syntax match darkCell '|\zs *d:[^|]*' contained
     hi darkCell ctermfg=15 ctermbg=0
 
     if exists("g:table_mode_color_cells") && g:table_mode_color_cells
-      syntax match yesCell '|\@<= *yes[^|]*' contained
-      syntax match noCell '|\@<= *no\A[^|]*' contained " \A to exclude words like notes
-      syntax match maybeCell '|\@<= *?[^|]*' contained
-      " '|\@<=' : Match previous characters, excluding them from the group
+      syntax match yesCell '|\zs *yes[^|]*' contained
+      syntax match noCell '|\zs *no\A[^|]*' contained " \A to exclude words like notes
+      syntax match maybeCell '|\zs *?[^|]*' contained
     endif
 
   else
