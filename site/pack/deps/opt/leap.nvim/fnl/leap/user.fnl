@@ -45,7 +45,8 @@
 ; Deprecated.
 (fn set-default-mappings []
   (local msg (.. "leap.nvim: `set_default_mappings()` is deprecated. "
-                 "See `:help leap-mappings` to update your config."))
+                 "See `:help leap-mappings` to update your config "
+                 "(\"Default\" snippet)."))
   (vim.notify msg vim.log.levels.WARN)
   (each [_ [modes lhs rhs desc]
          (ipairs
@@ -65,7 +66,8 @@
 ; Deprecated.
 (fn create-default-mappings []
   (local msg (.. "leap.nvim: `create_default_mappings()` is deprecated. "
-                 "See `:help leap-mappings` to update your config."))
+                 "See `:help leap-mappings` to update your config "
+                 "(\"Sneak-style\" snippet)."))
   (vim.notify msg vim.log.levels.WARN)
   (each [_ [modes lhs rhs desc]
          (ipairs
@@ -86,7 +88,8 @@
 ; Deprecated.
 (fn add-default-mappings [force?]
   (local msg (.. "leap.nvim: `add_default_mappings()` is deprecated. "
-                 "See `:help leap-mappings` to update your config."))
+                 "See `:help leap-mappings` to update your config "
+                 "(\"Sneak-style\" & \"exclusive pair\" snippets)."))
   (vim.notify msg vim.log.levels.WARN)
   (each [_ [modes lhs rhs desc]
          (ipairs

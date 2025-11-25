@@ -72,7 +72,7 @@ local function set_repeat_keys(fwd_key, bwd_key, opts_2a)
   return vim.keymap.set(modes, bwd_key, _13_, {silent = true, desc = _14_})
 end
 local function set_default_mappings()
-  local msg = ("leap.nvim: `set_default_mappings()` is deprecated. " .. "See `:help leap-mappings` to update your config.")
+  local msg = ("leap.nvim: `set_default_mappings()` is deprecated. " .. "See `:help leap-mappings` to update your config " .. "(\"Default\" snippet).")
   vim.notify(msg, vim.log.levels.WARN)
   for _, _16_ in ipairs({{{"n", "x", "o"}, "s", "<Plug>(leap)", "Leap"}, {{"n"}, "S", "<Plug>(leap-from-window)", "Leap from window"}}) do
     local modes = _16_[1]
@@ -95,7 +95,7 @@ local function set_default_mappings()
   return nil
 end
 local function create_default_mappings()
-  local msg = ("leap.nvim: `create_default_mappings()` is deprecated. " .. "See `:help leap-mappings` to update your config.")
+  local msg = ("leap.nvim: `create_default_mappings()` is deprecated. " .. "See `:help leap-mappings` to update your config " .. "(\"Sneak-style\" snippet).")
   vim.notify(msg, vim.log.levels.WARN)
   for _, _19_ in ipairs({{{"n", "x", "o"}, "s", "<Plug>(leap-forward)", "Leap forward"}, {{"n", "x", "o"}, "S", "<Plug>(leap-backward)", "Leap backward"}, {{"n", "x", "o"}, "gs", "<Plug>(leap-from-window)", "Leap from window"}}) do
     local modes = _19_[1]
@@ -118,7 +118,7 @@ local function create_default_mappings()
   return nil
 end
 local function add_default_mappings(force_3f)
-  local msg = ("leap.nvim: `add_default_mappings()` is deprecated. " .. "See `:help leap-mappings` to update your config.")
+  local msg = ("leap.nvim: `add_default_mappings()` is deprecated. " .. "See `:help leap-mappings` to update your config " .. "(\"Sneak-style\" & \"exclusive pair\" snippets).")
   vim.notify(msg, vim.log.levels.WARN)
   for _, _22_ in ipairs({{{"n", "x", "o"}, "s", "<Plug>(leap-forward)", "Leap forward"}, {{"n", "x", "o"}, "S", "<Plug>(leap-backward)", "Leap backward"}, {{"x", "o"}, "x", "<Plug>(leap-forward-till)", "Leap forward till"}, {{"x", "o"}, "X", "<Plug>(leap-backward-till)", "Leap backward till"}, {{"n", "x", "o"}, "gs", "<Plug>(leap-from-window)", "Leap from window"}}) do
     local modes = _22_[1]
