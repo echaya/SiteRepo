@@ -230,6 +230,7 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
     status_result = status_result, -- Store initial status result
     on_file_select = nil,  -- Will be set below
     current_file_path = nil,  -- Track currently selected file
+    is_hidden = false,  -- Track visibility state
   }
 
   -- File selection callback - manages its own lifecycle
@@ -522,8 +523,8 @@ function M.setup_auto_refresh(explorer, tabpage)
     
     -- Schedule new refresh
     refresh_timer = vim.fn.timer_start(debounce_ms, function()
-      -- Only refresh if tabpage still exists
-      if vim.api.nvim_tabpage_is_valid(tabpage) then
+      -- Only refresh if tabpage still exists and explorer is visible
+      if vim.api.nvim_tabpage_is_valid(tabpage) and not explorer.is_hidden then
         M.refresh(explorer)
       end
       refresh_timer = nil
@@ -570,6 +571,16 @@ end
 -- Refresh explorer with updated git status
 function M.refresh(explorer)
   local git = require('vscode-diff.git')
+  
+  -- Skip refresh if explorer is hidden
+  if explorer.is_hidden then
+    return
+  end
+  
+  -- Verify window is still valid before accessing
+  if not vim.api.nvim_win_is_valid(explorer.winid) then
+    return
+  end
   
   -- Get current selection to restore it after refresh
   local current_node = explorer.tree:get_node()
@@ -730,6 +741,50 @@ function M.navigate_prev(explorer)
   
   -- Trigger file select
   explorer.on_file_select(prev_file.data)
+end
+
+-- Toggle explorer visibility (hide/show)
+function M.toggle_visibility(explorer)
+  if not explorer or not explorer.split then
+    return
+  end
+
+  -- Track visibility state on the explorer object
+  if explorer.is_hidden then
+    explorer.split:show()
+    explorer.is_hidden = false
+    
+    -- Update winid after show() creates a new window
+    -- NUI creates a new window with a new winid when showing
+    explorer.winid = explorer.split.winid
+    
+    -- Equalize diff windows after showing explorer
+    -- When explorer shows, the remaining space should be split equally between diff windows
+    vim.schedule(function()
+      -- Find diff windows (exclude explorer window)
+      local all_wins = vim.api.nvim_tabpage_list_wins(0)
+      local diff_wins = {}
+      
+      for _, win in ipairs(all_wins) do
+        if vim.api.nvim_win_is_valid(win) and win ~= explorer.split.winid then
+          table.insert(diff_wins, win)
+        end
+      end
+      
+      -- Equalize the diff windows (typically 2 windows)
+      if #diff_wins >= 2 then
+        vim.cmd('wincmd =')
+      end
+    end)
+  else
+    explorer.split:hide()
+    explorer.is_hidden = true
+    
+    -- Equalize diff windows after hiding explorer
+    vim.schedule(function()
+      vim.cmd('wincmd =')
+    end)
+  end
 end
 
 return M
