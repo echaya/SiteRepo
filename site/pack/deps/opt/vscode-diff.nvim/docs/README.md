@@ -3,6 +3,7 @@
 ## User Documentation
 
 - **[BUILD.md](BUILD.md)** - Build system guide (CMake, Makefile, standalone scripts)
+- **[dependency-distribution.md](dependency-distribution.md)** - Dependency distribution (libgomp/OpenMP)
 - **[performance.md](performance.md)** - Performance tuning and timeout control
 
 ## Developer Documentation

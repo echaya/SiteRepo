@@ -25,15 +25,15 @@ end
 -- Detect architecture
 local function detect_arch()
   local ffi = require("ffi")
-  
+
   -- Windows-specific detection using environment variables
   if ffi.os == "Windows" then
     local processor_arch = vim.fn.getenv("PROCESSOR_ARCHITECTURE")
     local processor_arch_w6432 = vim.fn.getenv("PROCESSOR_ARCHITEW6432")
-    
+
     -- PROCESSOR_ARCHITEW6432 is set when running 32-bit process on 64-bit Windows
     local arch = processor_arch_w6432 ~= vim.NIL and processor_arch_w6432 or processor_arch
-    
+
     if arch then
       arch = arch:lower()
       if arch:match("amd64") or arch:match("x64") then
@@ -43,18 +43,18 @@ local function detect_arch()
       end
     end
   end
-  
+
   -- Unix-like systems: use uname
   local uname = vim.loop.os_uname()
   local machine = uname.machine:lower()
-  
+
   -- Handle different naming conventions
   if machine:match("x86_64") or machine:match("amd64") or machine:match("x64") then
     return "x64"
   elseif machine:match("aarch64") or machine:match("arm64") then
     return "arm64"
   end
-  
+
   -- If we still can't detect, return error
   return nil, "Unsupported architecture: " .. (machine or "unknown")
 end
@@ -94,16 +94,16 @@ local function get_installed_version()
   local ext = get_lib_ext()
   -- Escape the dot in the extension for pattern matching
   local pattern = "libvscode_diff_(.+)%." .. ext
-  
+
   local versions = {}
-  
+
   -- List files in plugin root and find all versioned libraries
   local handle = vim.loop.fs_scandir(plugin_root)
   if handle then
     while true do
       local name, type = vim.loop.fs_scandir_next(handle)
       if not name then break end
-      
+
       if type == "file" then
         local version = name:match(pattern)
         if version then
@@ -112,14 +112,14 @@ local function get_installed_version()
       end
     end
   end
-  
+
   -- Return the latest version if any found
   if #versions > 0 then
     table.sort(versions, function(a, b)
       -- Parse semantic versions (e.g., "0.11.1")
       local a_parts = vim.split(a, "%.")
       local b_parts = vim.split(b, "%.")
-      
+
       for i = 1, math.max(#a_parts, #b_parts) do
         local a_num = tonumber(a_parts[i]) or 0
         local b_num = tonumber(b_parts[i]) or 0
@@ -131,7 +131,7 @@ local function get_installed_version()
     end)
     return versions[1]
   end
-  
+
   return nil
 end
 
@@ -140,19 +140,19 @@ local function build_download_url(os, arch, version)
   if not version or version == "" then
     return nil, nil, "VERSION is not available"
   end
-  
+
   local ext = get_lib_ext()
   -- Download filename from GitHub (includes platform info)
   local download_filename = string.format("libvscode_diff_%s_%s_%s.%s", os, arch, version, ext)
   -- Local filename (only includes version)
   local local_filename = get_lib_filename(version)
-  
+
   local url = string.format(
     "https://github.com/esmuellert/vscode-diff.nvim/releases/download/v%s/%s",
     version,
     download_filename
   )
-  
+
   return url, local_filename, nil
 end
 
@@ -179,11 +179,29 @@ local function command_exists(cmd)
   end
 end
 
+-- Check if libgomp is available on the system
+local function check_system_libgomp()
+  local os_name = detect_os()
+
+  -- Only check on Linux (macOS and Windows don't use libgomp)
+  if os_name ~= "linux" then
+    return true
+  end
+
+  -- Try to load libgomp using FFI
+  local ffi = require("ffi")
+  local ok = pcall(function()
+    local _ = ffi.load("libgomp.so.1")
+  end)
+
+  return ok
+end
+
 -- Download file using curl, wget, or PowerShell
 local function download_file(url, dest_path)
   local ffi = require("ffi")
   local cmd_args
-  
+
   -- Try curl first (most common, best error handling)
   if command_exists("curl") then
     cmd_args = { "curl", "-fsSL", "-o", dest_path, url }
@@ -200,7 +218,7 @@ local function download_file(url, dest_path)
   else
     return false, "No download tool found. Please install curl or wget."
   end
-  
+
   -- Use vim.system if available (Neovim 0.10+), fallback to os.execute
   if vim.system then
     local result = vim.system(cmd_args, { text = true }):wait()
@@ -228,23 +246,115 @@ local function download_file(url, dest_path)
   end
 end
 
--- Install the library
-function M.install(opts)
-  opts = opts or {}
-  local force = opts.force or false
-  
+-- Install libgomp if needed
+local function install_libgomp_if_needed(opts)
+  local os_name = detect_os()
+
+  -- Only needed on Linux
+  if os_name ~= "linux" then
+    return true
+  end
+
   local plugin_root = get_plugin_root()
+  local libgomp_path = plugin_root .. "/libgomp.so.1"
+
+  -- Check if already bundled
+  if vim.fn.filereadable(libgomp_path) == 1 then
+    if not opts.silent then
+      vim.notify("libgomp.so.1 already bundled", vim.log.levels.DEBUG)
+    end
+    return true
+  end
+
+  -- Check if system has libgomp
+  if check_system_libgomp() then
+    if not opts.silent then
+      vim.notify("System libgomp.so.1 found, no need to bundle", vim.log.levels.DEBUG)
+    end
+    return true
+  end
+
+  -- Need to download libgomp
+  if not opts.silent then
+    vim.notify("System libgomp.so.1 not found, downloading...", vim.log.levels.INFO)
+  end
+
+  local arch, arch_err = detect_arch()
+  if not arch then
+    local msg = "Failed to detect architecture: " .. (arch_err or "unknown error")
+    vim.notify(msg, vim.log.levels.ERROR)
+    return false, msg
+  end
+
   local current_version = get_current_version()
-  
   if not current_version then
     local msg = "Failed to read VERSION"
     vim.notify(msg, vim.log.levels.ERROR)
     return false, msg
   end
-  
+
+  -- Build libgomp download URL
+  local libgomp_filename = string.format("libgomp_linux_%s_%s.so.1", arch, current_version)
+  local url = string.format(
+    "https://github.com/esmuellert/vscode-diff.nvim/releases/download/v%s/%s",
+    current_version,
+    libgomp_filename
+  )
+
+  if not opts.silent then
+    vim.notify("Downloading libgomp from: " .. url, vim.log.levels.INFO)
+  end
+
+  -- Download to temporary location
+  local temp_path = plugin_root .. "/libgomp.so.1.tmp"
+  local success, err = download_file(url, temp_path)
+
+  if not success then
+    local msg = "Failed to download libgomp: " .. (err or "unknown error")
+    vim.notify(msg, vim.log.levels.WARN)
+    vim.notify("Plugin may not work without libgomp installed on your system", vim.log.levels.WARN)
+    os.remove(temp_path)
+    -- Don't fail the installation, just warn
+    return true
+  end
+
+  -- Move to final location
+  if vim.fn.filereadable(libgomp_path) == 1 then
+    os.remove(libgomp_path)
+  end
+
+  local ok = os.rename(temp_path, libgomp_path)
+  if not ok then
+    local msg = "Failed to move libgomp to final location"
+    vim.notify(msg, vim.log.levels.WARN)
+    os.remove(temp_path)
+    return true -- Don't fail installation
+  end
+
+  if not opts.silent then
+    vim.notify("Successfully downloaded libgomp.so.1", vim.log.levels.INFO)
+  end
+
+  return true
+end
+
+-- Install the library
+function M.install(opts)
+  opts = opts or {}
+  local force = opts.force or false
+
+  local plugin_root = get_plugin_root()
+  local current_version = get_current_version()
+
+  if not current_version then
+    local msg = "Failed to read VERSION"
+    vim.notify(msg, vim.log.levels.ERROR)
+    return false, msg
+  end
+
   local lib_filename = get_lib_filename(current_version)
   local lib_path = plugin_root .. "/" .. lib_filename
-  
+
   -- Check if library already exists and is up-to-date
   if not force then
     -- Check for unversioned library (manual build) first
@@ -258,7 +368,7 @@ function M.install(opts)
     end
 
     local installed_version = get_installed_version()
-    
+
     if installed_version and installed_version == current_version then
       if vim.fn.filereadable(lib_path) == 1 then
         if not opts.silent then
@@ -272,7 +382,7 @@ function M.install(opts)
         installed_version,
         current_version
       ), vim.log.levels.INFO)
-      
+
       -- Remove old version files
       local old_lib_filename = get_lib_filename(installed_version)
       local old_lib_path = plugin_root .. "/" .. old_lib_filename
@@ -281,41 +391,41 @@ function M.install(opts)
       end
     end
   end
-  
+
   -- Detect platform
   local os_name = detect_os()
   local arch, arch_err = detect_arch()
-  
+
   if not arch then
     local msg = "Failed to detect architecture: " .. (arch_err or "unknown error")
     vim.notify(msg, vim.log.levels.ERROR)
     return false, msg
   end
-  
+
   if not opts.silent then
     vim.notify(
       string.format("Installing libvscode-diff v%s for %s %s...", current_version, os_name, arch),
       vim.log.levels.INFO
     )
   end
-  
+
   -- Build download URL
   local url, local_filename, url_err = build_download_url(os_name, arch, current_version)
-  
+
   if not url then
     local msg = "Failed to build download URL: " .. (url_err or "unknown error")
     vim.notify(msg, vim.log.levels.ERROR)
     return false, msg
   end
-  
+
   if not opts.silent then
     vim.notify("Downloading from: " .. url, vim.log.levels.INFO)
   end
-  
+
   -- Download to temporary location first
   local temp_path = plugin_root .. "/" .. local_filename .. ".tmp"
   local success, err = download_file(url, temp_path)
-  
+
   if not success then
     local msg = "Failed to download library: " .. (err or "unknown error")
     vim.notify(msg, vim.log.levels.ERROR)
@@ -323,13 +433,13 @@ function M.install(opts)
     os.remove(temp_path)
     return false, msg
   end
-  
+
   -- Move to final location
   -- On Windows, os.rename fails if destination exists, so remove it first
   if vim.fn.filereadable(lib_path) == 1 then
     os.remove(lib_path)
   end
-  
+
   local ok = os.rename(temp_path, lib_path)
   if not ok then
     local msg = "Failed to move library to final location: " .. lib_path
@@ -337,18 +447,21 @@ function M.install(opts)
     os.remove(temp_path)
     return false, msg
   end
-  
+
   if not opts.silent then
     vim.notify("Successfully installed libvscode-diff!", vim.log.levels.INFO)
   end
-  
+
+  -- Also check and install libgomp if needed
+  install_libgomp_if_needed(opts)
+
   return true
 end
 
 -- Check if library is installed
 function M.is_installed()
   local plugin_root = get_plugin_root()
-  
+
   -- Check unversioned first (manual build)
   local unversioned_lib = get_unversioned_lib_filename()
   if vim.fn.filereadable(plugin_root .. "/" .. unversioned_lib) == 1 then
@@ -359,7 +472,7 @@ function M.is_installed()
   if not current_version then
     return false
   end
-  
+
   local lib_path = plugin_root .. "/" .. get_lib_filename(current_version)
   return vim.fn.filereadable(lib_path) == 1
 end
@@ -367,7 +480,7 @@ end
 -- Get library path
 function M.get_lib_path()
   local plugin_root = get_plugin_root()
-  
+
   -- Check unversioned first (manual build)
   local unversioned_lib = get_unversioned_lib_filename()
   local unversioned_path = plugin_root .. "/" .. unversioned_lib
@@ -379,7 +492,7 @@ function M.get_lib_path()
   if not current_version then
     return nil
   end
-  
+
   return plugin_root .. "/" .. get_lib_filename(current_version)
 end
 
@@ -391,7 +504,7 @@ end
 -- Check if library needs update
 function M.needs_update()
   local plugin_root = get_plugin_root()
-  
+
   -- Check unversioned first - assume manual build is always up to date
   local unversioned_lib = get_unversioned_lib_filename()
   if vim.fn.filereadable(plugin_root .. "/" .. unversioned_lib) == 1 then
@@ -402,13 +515,13 @@ function M.needs_update()
   if not current_version then
     return true
   end
-  
+
   local installed_version = get_installed_version()
-  
+
   if not installed_version then
     return true
   end
-  
+
   return current_version ~= installed_version
 end
 

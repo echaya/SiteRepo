@@ -252,14 +252,26 @@ if [ "$SORT_MODE" = "size" ]; then
     # Sort by file size - get all files at BASE_REF and sort by size
     # Format: mode type hash size path/to/file
     # We need everything from field 5 onwards (the full path)
+    # Filter out files with less than 5 revisions, keep going until we have NUM_TOP_FILES
     TOP_FILES=($(git -C "$TARGET_REPO_ROOT" ls-tree -r -l "$BASE_REF" | \
-        sort -k4 -rn | head -$NUM_TOP_FILES | awk '{for(i=5;i<=NF;i++) printf "%s%s", $i, (i<NF?" ":"\n")}'))
+        sort -k4 -rn | awk '{for(i=5;i<=NF;i++) printf "%s%s", $i, (i<NF?" ":"\n")}' | \
+        while read file; do
+            count=$(git -C "$TARGET_REPO_ROOT" log "$BASE_REF" --oneline -- "$file" | wc -l)
+            if [ $count -ge 5 ]; then
+                echo "$file"
+            fi
+        done | head -$NUM_TOP_FILES))
 else
-    # Sort by revision frequency (default)
-    # Note: Can't use --follow here as it requires a single pathspec
-    # We'll use --follow when counting individual file revisions
-    TOP_FILES=($(git -C "$TARGET_REPO_ROOT" log "$BASE_REF" --pretty=format: --name-only | \
-        grep -v '^$' | sort | uniq -c | sort -rn | head -$NUM_TOP_FILES | awk '{print $2}'))
+    # Sort by revision frequency (default) - only count files that exist at BASE_REF
+    # Get list of files at BASE_REF, then count their revisions
+    # Filter out files with less than 5 revisions, keep going until we have NUM_TOP_FILES
+    TOP_FILES=($(git -C "$TARGET_REPO_ROOT" ls-tree -r --name-only "$BASE_REF" | \
+        while read file; do
+            count=$(git -C "$TARGET_REPO_ROOT" log "$BASE_REF" --oneline -- "$file" | wc -l)
+            if [ $count -ge 5 ]; then
+                echo "$count $file"
+            fi
+        done | sort -rn | head -$NUM_TOP_FILES | awk '{print $2}'))
 fi
 
 # Check if we need to regenerate example files
@@ -304,9 +316,8 @@ if [ $VERBOSITY -ge 2 ]; then
     echo ""
 fi
 
-# Collect version files for each top file (skip files with 0 versions)
+# Collect version files for each top file
 declare -a FILE_GROUPS
-declare -a VALID_TOP_FILES
 declare -A FILE_METRICS  # Store file metrics (lines, size)
 for TOP_FILE in "${TOP_FILES[@]}"; do
     BASENAME=$(basename "$TOP_FILE")
@@ -315,7 +326,6 @@ for TOP_FILE in "${TOP_FILES[@]}"; do
     if [ ${#FILES[@]} -gt 0 ]; then
         FILE_GROUPS+=("${#FILES[@]}")
         eval "FILES_${BASENAME//[^a-zA-Z0-9]/_}=(${FILES[@]})"
-        VALID_TOP_FILES+=("$TOP_FILE")
         
         # Get metrics from the latest version (last file in chronological order)
         LATEST_FILE="${FILES[-1]}"
@@ -332,9 +342,6 @@ done
 if [ $VERBOSITY -ge 2 ]; then
     echo ""
 fi
-
-# Update TOP_FILES to only include files with versions
-TOP_FILES=("${VALID_TOP_FILES[@]}")
 
 TOTAL_TESTS=0
 MISMATCHES=0

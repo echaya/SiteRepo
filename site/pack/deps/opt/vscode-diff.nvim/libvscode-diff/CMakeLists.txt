@@ -133,6 +133,14 @@ if(USE_OPENMP)
     target_compile_options(vscode_diff PRIVATE ${OpenMP_C_FLAGS})
     target_link_libraries(vscode_diff PRIVATE OpenMP::OpenMP_C)
     target_compile_definitions(vscode_diff PRIVATE USE_OPENMP)
+    
+    # Set RPATH to find bundled libgomp.so.1 in the same directory
+    if(UNIX AND NOT APPLE)
+        set_target_properties(vscode_diff PROPERTIES
+            BUILD_WITH_INSTALL_RPATH TRUE
+            INSTALL_RPATH "$ORIGIN"
+        )
+    endif()
 endif()
 
 if(USE_BUNDLED_UTF8PROC)
@@ -371,10 +379,8 @@ configure_file(
 
 # Make build.sh executable on Unix-like systems
 if(UNIX)
-    file(CHMOD ${SCRIPT_OUTPUT_DIR}/build.sh
-        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
-                    GROUP_READ GROUP_EXECUTE
-                    WORLD_READ WORLD_EXECUTE)
+    # Use execute_process instead of file(CHMOD) for CMake 3.15 compatibility
+    execute_process(COMMAND chmod +x ${SCRIPT_OUTPUT_DIR}/build.sh)
 endif()
 message(STATUS "✓ Generated: ../build.sh")
 

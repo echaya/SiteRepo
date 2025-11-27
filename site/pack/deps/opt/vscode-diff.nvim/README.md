@@ -146,7 +146,7 @@ The plugin requires a C library binary in the plugin root directory. The plugin 
 
 **Option A: Download from GitHub releases** (recommended)
 
-Download the appropriate binary from the [GitHub releases page](https://github.com/esmuellert/vscode-diff.nvim/releases) and place it in the plugin root directory. Rename it to match the expected format: `libvscode_diff.so`/`.dylib`/`.dll` or `libvscode_diff_<version>.so`/`.dylib`/`.dll`.
+Download the appropriate binary from the [GitHub releases page](https://github.com/esmuellert/vscode-diff.nvim/releases) and place it in the plugin root directory. Rename it to match the expected format: `libvscode_diff.so`/`.dylib`/`.dll` or `libvscode_diff_<version>.so`/`.dylib`/`.dll`. **Linux users**: If your system lacks OpenMP, also download `libgomp_linux_{arch}_{version}.so.1` and rename it to `libgomp.so.1` in the same directory.
 
 **Option B: Build from source**
 

@@ -236,3 +236,7 @@ For automated releases:
     tag_name: v${{ env.VERSION }}
     release_name: Release v${{ env.VERSION }}
 ```
+
+## See Also
+
+- **[dependency-distribution.md](dependency-distribution.md)** - How dependencies (libgomp) are bundled and distributed with releases

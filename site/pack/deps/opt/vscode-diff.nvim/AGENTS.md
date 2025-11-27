@@ -24,6 +24,8 @@
 
 4. **Trailing Spaces**: NEVER add trailing spaces to any line in any file. Always ensure lines end cleanly without whitespace.
 
+5. **Pull Requests**: When asked to create a PR, push the branch, create PR with comprehensive description (summary, changes, benefits, testing), and enable auto-merge.
+
 ## Path-Specific Instructions
 
 Path-specific instructions are defined in `.github/copilot-instructions.md` files within respective directories.
