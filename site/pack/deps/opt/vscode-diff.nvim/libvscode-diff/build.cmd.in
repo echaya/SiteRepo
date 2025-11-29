@@ -61,19 +61,51 @@ exit /b 1
 
 :build_msvc
 echo Using MSVC compiler...
-cl.exe /LD /O2 /W3 /std:c11 /DUTF8PROC_STATIC /DBUILDING_DLL /Iinclude /Ibuild\include /Ivendor /Fobuild\ /Fdbuild\ /Fe:build\libvscode_diff.dll %SOURCES% /link /DLL /DEF:libvscode_diff.def
+REM Check for OpenMP support (MSVC has built-in support)
+set OMP_FLAGS=
+set OMP_LINK=
+cl.exe /? 2>&1 | findstr /C:"/openmp" >nul
+if !errorlevel! == 0 (
+    echo OpenMP: enabled
+    set OMP_FLAGS=/openmp /DUSE_OPENMP
+) else (
+    echo OpenMP: disabled
+)
+cl.exe /LD /O2 /W3 /std:c11 /DUTF8PROC_STATIC /DBUILDING_DLL !OMP_FLAGS! /Iinclude /Ibuild\include /Ivendor /Fobuild\ /Fdbuild\ /Fe:build\libvscode_diff.dll %SOURCES% /link /DLL /DEF:libvscode_diff.def
 goto :build_done
 
 :build_clang
 echo Using Clang compiler...
 if not exist build mkdir build
-clang.exe -shared -Wall -Wextra -std=c11 -O2 -DUTF8PROC_STATIC -Iinclude -Ibuild\include -Ivendor -o build\libvscode_diff.dll %SOURCES%
+REM Check for OpenMP support with Clang
+set OMP_FLAGS=
+echo int main() { return 0; } > %TEMP%\omp_test.c
+clang.exe -fopenmp %TEMP%\omp_test.c -o %TEMP%\omp_test.exe 2>nul
+if !errorlevel! == 0 (
+    echo OpenMP: enabled
+    set OMP_FLAGS=-fopenmp -DUSE_OPENMP
+) else (
+    echo OpenMP: disabled
+)
+del /q %TEMP%\omp_test.c %TEMP%\omp_test.exe 2>nul
+clang.exe -shared -Wall -Wextra -std=c11 -O2 -DUTF8PROC_STATIC !OMP_FLAGS! -Iinclude -Ibuild\include -Ivendor -o build\libvscode_diff.dll %SOURCES%
 goto :build_done
 
 :build_gcc
 echo Using MinGW GCC compiler...
 if not exist build mkdir build
-gcc.exe -shared -Wall -Wextra -std=c11 -O2 -DUTF8PROC_STATIC -Iinclude -Ibuild\include -Ivendor -o build\libvscode_diff.dll %SOURCES%
+REM Check for OpenMP support with GCC
+set OMP_FLAGS=
+echo int main() { return 0; } > %TEMP%\omp_test.c
+gcc.exe -fopenmp %TEMP%\omp_test.c -o %TEMP%\omp_test.exe 2>nul
+if !errorlevel! == 0 (
+    echo OpenMP: enabled
+    set OMP_FLAGS=-fopenmp -DUSE_OPENMP
+) else (
+    echo OpenMP: disabled
+)
+del /q %TEMP%\omp_test.c %TEMP%\omp_test.exe 2>nul
+gcc.exe -shared -Wall -Wextra -std=c11 -O2 -DUTF8PROC_STATIC !OMP_FLAGS! -Iinclude -Ibuild\include -Ivendor -o build\libvscode_diff.dll %SOURCES%
 goto :build_done
 
 :build_done

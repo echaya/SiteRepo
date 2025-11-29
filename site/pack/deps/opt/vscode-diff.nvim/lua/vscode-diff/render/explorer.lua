@@ -230,6 +230,7 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
     status_result = status_result, -- Store initial status result
     on_file_select = nil,  -- Will be set below
     current_file_path = nil,  -- Track currently selected file
+    current_file_group = nil, -- Track currently selected file's group (staged/unstaged)
     is_hidden = false,  -- Track visibility state
   }
 
@@ -355,6 +356,7 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
   -- Wrap on_file_select to track current file and group
   explorer.on_file_select = function(file_data)
     explorer.current_file_path = file_data.path
+    explorer.current_file_group = file_data.group
     selected_path = file_data.path
     selected_group = file_data.group
     tree:render()
@@ -661,8 +663,9 @@ function M.navigate_next(explorer)
     return
   end
   
-  -- Use tracked current file path
+  -- Use tracked current file path and group
   local current_path = explorer.current_file_path
+  local current_group = explorer.current_file_group
   
   -- If no current path, select first file
   if not current_path then
@@ -671,10 +674,10 @@ function M.navigate_next(explorer)
     return
   end
   
-  -- Find current index
+  -- Find current index (match both path AND group for files in both staged/unstaged)
   local current_index = 0
   for i, file in ipairs(all_files) do
-    if file.data.path == current_path then
+    if file.data.path == current_path and file.data.group == current_group then
       current_index = i
       break
     end
@@ -704,8 +707,9 @@ function M.navigate_prev(explorer)
     return
   end
   
-  -- Use tracked current file path
+  -- Use tracked current file path and group
   local current_path = explorer.current_file_path
+  local current_group = explorer.current_file_group
   
   -- If no current path, select last file
   if not current_path then
@@ -714,10 +718,10 @@ function M.navigate_prev(explorer)
     return
   end
   
-  -- Find current index
+  -- Find current index (match both path AND group for files in both staged/unstaged)
   local current_index = 0
   for i, file in ipairs(all_files) do
-    if file.data.path == current_path then
+    if file.data.path == current_path and file.data.group == current_group then
       current_index = i
       break
     end

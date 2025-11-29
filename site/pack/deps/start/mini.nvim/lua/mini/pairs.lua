@@ -289,6 +289,8 @@ MiniPairs.open = function(pair, neigh_pattern)
   -- This can happen in a big file with tree-sitter highlighting enabled.
   H.with_temp_option('lazyredraw', true)
 
+  -- NOTE: Do not ensure no wildmenu because by the time arrow is executed
+  -- wildmenu should already (usually) be hidden due to inserting `pair`
   return pair .. H.get_arrow_key('left')
 end
 
@@ -309,7 +311,7 @@ end
 MiniPairs.close = function(pair, neigh_pattern)
   local close = H.get_close_char(pair)
   local move_right = not H.is_disabled() and H.neigh_match(neigh_pattern) and H.get_neigh('right') == close
-  return move_right and H.get_arrow_key('right') or close
+  return move_right and H.get_arrow_key('right', true) or close
 end
 
 --- Process "closeopen" symbols
@@ -327,7 +329,7 @@ end
 ---@return string Keys performing "closeopen" action.
 MiniPairs.closeopen = function(pair, neigh_pattern)
   local move_right = not H.is_disabled() and H.get_neigh('right') == H.get_close_char(pair)
-  return move_right and H.get_arrow_key('right') or MiniPairs.open(pair, neigh_pattern)
+  return move_right and H.get_arrow_key('right', true) or MiniPairs.open(pair, neigh_pattern)
 end
 
 --- Process |<BS>|
@@ -416,7 +418,7 @@ H.keys = {
   bs         = escape('<BS>'),
   cr         = escape('<CR>'),
   del        = escape('<Del>'),
-  keep_undo  = escape('<C-g>U'),
+  ctrl_y     = escape('<C-y>'),
   -- Using left/right keys in insert mode breaks undo sequence and, more
   -- importantly, dot-repeat. To avoid this, use 'i_CTRL-G_U' mapping.
   -- Use `H.get_arrow_key()` for keys instead of direct from this table.
@@ -611,9 +613,13 @@ H.neigh_match = function(pattern) return H.get_neigh('whole'):find(pattern or ''
 H.get_open_char = function(x) return vim.fn.strcharpart(x, 0, 1) end
 H.get_close_char = function(x) return vim.fn.strcharpart(x, 1, 1) end
 
-H.get_arrow_key = function(key)
-  return vim.fn.mode() == 'i' and (key == 'right' and H.keys.right_undo or H.keys.left_undo)
-    or (key == 'right' and H.keys.right or H.keys.left)
+H.get_arrow_key = function(key, ensure_no_wildmenu)
+  if vim.fn.mode() == 'i' then return key == 'right' and H.keys.right_undo or H.keys.left_undo end
+  local prefix = ''
+  -- In Command-line mode <Left> / <Right> act like <C-p> / <C-n> if wildmenu
+  -- is shown. Make sure that arrow key moves cursor.
+  if vim.fn.mode() == 'c' and ensure_no_wildmenu then prefix = vim.fn.wildmenumode() == 1 and H.keys.ctrl_y or '' end
+  return prefix .. (key == 'right' and H.keys.right or H.keys.left)
 end
 
 H.map = function(mode, lhs, rhs, opts)

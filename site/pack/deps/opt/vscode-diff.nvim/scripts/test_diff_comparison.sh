@@ -26,6 +26,8 @@ BASE_REF="origin/main"
 VERBOSITY=1
 # Sort mode: frequency (default) or size
 SORT_MODE="frequency"
+# OpenMP: enabled by default
+ENABLE_OPENMP=ON
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -42,6 +44,10 @@ while [[ $# -gt 0 ]]; do
             SORT_MODE="size"
             shift
             ;;
+        --no-openmp)
+            ENABLE_OPENMP=OFF
+            shift
+            ;;
         -h|--help)
             echo "Usage: $0 [OPTIONS] [REPO_PATH]"
             echo ""
@@ -51,6 +57,7 @@ while [[ $# -gt 0 ]]; do
             echo "  (no options)     Normal mode: show progress and summary"
             echo "  -v, --verbose    Verbose mode: show all details and performance"
             echo "  -s, --size       Sort files by size (default: sort by revision frequency)"
+            echo "  --no-openmp      Disable OpenMP (build with sequential diff)"
             echo "  -h, --help       Show this help message"
             echo ""
             echo "Arguments:"
@@ -98,14 +105,17 @@ mkdir -p "$TEMP_DIR"
 
 # Always rebuild C diff binary to ensure latest changes
 if [ $VERBOSITY -ge 1 ]; then
-    echo "Building C diff binary with clean build..."
+    if [ "$ENABLE_OPENMP" = "OFF" ]; then
+        echo "Building C diff binary with clean build (OpenMP disabled)..."
+    else
+        echo "Building C diff binary with clean build..."
+    fi
 fi
 cd "$TOOL_REPO_ROOT"
-# Remove old binary and object files to force rebuild
-rm -f build/libvscode-diff/diff
-find build/libvscode-diff/CMakeFiles/diff.dir -name "*.o" -delete 2>/dev/null || true
-# Reconfigure if needed and build
-cmake -B build > /dev/null 2>&1
+# Clean build directory to ensure OpenMP setting takes effect
+make clean > /dev/null 2>&1
+# Configure and build
+cmake -B build -DENABLE_OPENMP=$ENABLE_OPENMP > /dev/null 2>&1
 cmake --build build --target diff > /dev/null 2>&1
 if [ ! -f "$C_DIFF" ]; then
     echo "Error: Failed to build C diff binary" >&2
@@ -139,8 +149,12 @@ generate_example_files() {
     # Create example directory
     mkdir -p "$EXAMPLE_DIR"
 
+    # Calculate minimum versions needed for TESTS_PER_FILE tests
+    # We diff the most recent version against progressively older ones
+    # So we need TESTS_PER_FILE + 1 versions (1 recent + TESTS_PER_FILE older)
+    local MAX_VERSIONS=$((TESTS_PER_FILE + 1))
     
-    # For each top file, save all its git history versions up to BASE_REF
+    # For each top file, save a limited number of its git history versions up to BASE_REF
     for file in "${files[@]}"; do
         if [ $VERBOSITY -ge 2 ]; then
             echo "Processing $file..."
@@ -156,10 +170,9 @@ generate_example_files() {
         
         local basename=$(basename "$file")
         
-        # Get all commits that modified this file up to BASE_REF
-        # Note: --reverse doesn't work with --follow, so we get them in reverse-chronological order
-        # and then reverse the array
-        local commits_reverse=($(git -C "$TARGET_REPO_ROOT" log "$BASE_REF" --follow --format=%H -- "$file"))
+        # Get commits that modified this file - limit to MAX_VERSIONS most recent
+        # This is much faster than getting all commits for highly-revised files
+        local commits_reverse=($(git -C "$TARGET_REPO_ROOT" log "$BASE_REF" -n $MAX_VERSIONS --format=%H -- "$file"))
         
         # Reverse the array to get chronological order
         local commits=()
@@ -168,33 +181,8 @@ generate_example_files() {
         done
         
         if [ $VERBOSITY -ge 2 ]; then
-            echo "  Found ${#commits[@]} commits (saving in chronological order)"
+            echo "  Found ${#commits[@]} commits (limited to $MAX_VERSIONS)"
         fi
-        
-        # Build a map of commit -> filepath by walking through rename history
-        # Start with the current filename and walk backwards through renames
-        declare -A commit_paths
-        local current_path="$file"
-        
-        # Get all renames in chronological order
-        local rename_info=$(git -C "$TARGET_REPO_ROOT" log "$BASE_REF" --follow --format='%H' --name-status --diff-filter=R -- "$file")
-        
-        # Parse rename information to build a timeline
-        local last_commit=""
-        while IFS= read -r line; do
-            if [[ $line =~ ^[0-9a-f]{40}$ ]]; then
-                last_commit="$line"
-            elif [[ $line =~ ^R[0-9]*[[:space:]]+(.*)[[:space:]]+(.*)\$ ]]; then
-                # Format: R100 old_path new_path
-                local old_path=$(echo "$line" | awk '{print $2}')
-                local new_path=$(echo "$line" | awk '{print $3}')
-                # At this commit, file was renamed from old_path to new_path
-                # So commits before this used old_path, commits after use new_path
-                if [ -n "$last_commit" ]; then
-                    echo "DEBUG: Rename at $last_commit: $old_path -> $new_path" >&2
-                fi
-            fi
-        done <<< "$rename_info"
         
         # Save each version with sequence number and commit hash for ordering
         local count=0
@@ -204,25 +192,11 @@ generate_example_files() {
             local seq=$(printf "%03d" $idx)
             local output_file="$EXAMPLE_DIR/${basename}_${seq}_${commit}"
             
-            # Try to extract with current filename first
+            # Extract file content - skip if extraction fails (don't do expensive fallback)
             if git -C "$TARGET_REPO_ROOT" show "$commit:$file" > "$output_file" 2>/dev/null; then
                 count=$((count + 1))
             else
-                # If that fails, try to find the file by basename in the commit
-                local found=false
-                while IFS= read -r potential_path; do
-                    if [[ "$(basename "$potential_path")" == "$basename" ]]; then
-                        if git -C "$TARGET_REPO_ROOT" show "$commit:$potential_path" > "$output_file" 2>/dev/null; then
-                            count=$((count + 1))
-                            found=true
-                            break
-                        fi
-                    fi
-                done < <(git -C "$TARGET_REPO_ROOT" ls-tree -r --name-only "$commit")
-                
-                if [ "$found" = false ]; then
-                    rm -f "$output_file"
-                fi
+                rm -f "$output_file"
             fi
         done
         
@@ -248,30 +222,24 @@ if [ $VERBOSITY -ge 1 ]; then
     fi
 fi
 
+# Pre-compute revision counts in a single git log pass (much faster than per-file queries)
+REVISION_COUNTS_FILE="$TEMP_DIR/revision_counts.txt"
+git -C "$TARGET_REPO_ROOT" log "$BASE_REF" --name-only --format="" | sort | uniq -c | awk '$1 >= 5 {print $1, $2}' > "$REVISION_COUNTS_FILE"
+
 if [ "$SORT_MODE" = "size" ]; then
-    # Sort by file size - get all files at BASE_REF and sort by size
-    # Format: mode type hash size path/to/file
-    # We need everything from field 5 onwards (the full path)
-    # Filter out files with less than 5 revisions, keep going until we have NUM_TOP_FILES
-    TOP_FILES=($(git -C "$TARGET_REPO_ROOT" ls-tree -r -l "$BASE_REF" | \
-        sort -k4 -rn | awk '{for(i=5;i<=NF;i++) printf "%s%s", $i, (i<NF?" ":"\n")}' | \
-        while read file; do
-            count=$(git -C "$TARGET_REPO_ROOT" log "$BASE_REF" --oneline -- "$file" | wc -l)
-            if [ $count -ge 5 ]; then
-                echo "$file"
-            fi
-        done | head -$NUM_TOP_FILES))
+    # Sort by file size - get files at BASE_REF with size, join with revision counts
+    SIZE_FILE="$TEMP_DIR/file_sizes.txt"
+    git -C "$TARGET_REPO_ROOT" ls-tree -r -l "$BASE_REF" | awk '{size=$4; path=""; for(i=5;i<=NF;i++) path=path (i>5?" ":"") $i; print path "\t" size}' | sort > "$SIZE_FILE"
+    
+    # Join size info with revision counts (only files with 5+ revisions), sort by size
+    TOP_FILES=($(awk '{print $2}' "$REVISION_COUNTS_FILE" | sort | join -t$'\t' - "$SIZE_FILE" | sort -t$'\t' -k2 -rn | head -$NUM_TOP_FILES | cut -f1))
 else
-    # Sort by revision frequency (default) - only count files that exist at BASE_REF
-    # Get list of files at BASE_REF, then count their revisions
-    # Filter out files with less than 5 revisions, keep going until we have NUM_TOP_FILES
-    TOP_FILES=($(git -C "$TARGET_REPO_ROOT" ls-tree -r --name-only "$BASE_REF" | \
-        while read file; do
-            count=$(git -C "$TARGET_REPO_ROOT" log "$BASE_REF" --oneline -- "$file" | wc -l)
-            if [ $count -ge 5 ]; then
-                echo "$count $file"
-            fi
-        done | sort -rn | head -$NUM_TOP_FILES | awk '{print $2}'))
+    # Sort by revision frequency (default) - filter to files that exist at BASE_REF
+    EXISTING_FILES_FILE="$TEMP_DIR/existing_files.txt"
+    git -C "$TARGET_REPO_ROOT" ls-tree -r --name-only "$BASE_REF" | sort > "$EXISTING_FILES_FILE"
+    
+    # Join with existing files to filter, already sorted by revision count
+    TOP_FILES=($(awk '{print $2, $1}' "$REVISION_COUNTS_FILE" | sort | join - "$EXISTING_FILES_FILE" | sort -k2 -rn | head -$NUM_TOP_FILES | awk '{print $1}'))
 fi
 
 # Check if we need to regenerate example files
@@ -417,19 +385,20 @@ for FILE_IDX in "${!TOP_FILES[@]}"; do
     if [ $VERBOSITY -ge 1 ]; then
         echo "Testing $BASENAME versions (target: $TESTS_PER_FILE tests)..."
         if [ $VERBOSITY -ge 2 ]; then
-            echo "  Strategy: consecutive commits first, then increasing distances"
+            echo "  Strategy: diff most recent against progressively older versions"
         fi
     fi
     TESTS_BEFORE=$TOTAL_TESTS
     
-    # Test with increasing commit distances: 1, 2, 3, 4, 5, ...
-    # This simulates real-world usage where users typically diff nearby commits
+    # Diff most recent version against progressively older versions
+    # This simulates real-world usage: comparing current code with history
+    # FILE_ARRAY is in chronological order, so last element is most recent
+    LATEST_IDX=$((NUM_FILES - 1))
     for ((distance=1; distance<$NUM_FILES && (TOTAL_TESTS - TESTS_BEFORE)<$TESTS_PER_FILE; distance++)); do
-        # For each distance, test all consecutive pairs with that distance
-        for ((i=0; i+distance<$NUM_FILES && (TOTAL_TESTS - TESTS_BEFORE)<$TESTS_PER_FILE; i++)); do
-            j=$((i + distance))
-            test_pair "${FILE_ARRAY[$i]}" "${FILE_ARRAY[$j]}" "${BASENAME//[^a-zA-Z0-9]/_}_d${distance}_${i}_${j}" "$BASENAME"
-        done
+        OLD_IDX=$((LATEST_IDX - distance))
+        if [ $OLD_IDX -ge 0 ]; then
+            test_pair "${FILE_ARRAY[$OLD_IDX]}" "${FILE_ARRAY[$LATEST_IDX]}" "${BASENAME//[^a-zA-Z0-9]/_}_d${distance}" "$BASENAME"
+        fi
     done
     if [ $VERBOSITY -ge 1 ]; then
         echo ""

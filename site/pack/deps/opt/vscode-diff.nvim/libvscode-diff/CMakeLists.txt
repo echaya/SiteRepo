@@ -55,8 +55,43 @@ if(NOT WIN32)
     add_definitions(-D_POSIX_C_SOURCE=200809L)
 endif()
 
+# Option to disable OpenMP (for testing or compatibility)
+option(ENABLE_OPENMP "Enable OpenMP for parallel character-level diff" ON)
+
 # Find OpenMP for parallelization
-find_package(OpenMP)
+if(ENABLE_OPENMP)
+    find_package(OpenMP)
+endif()
+
+# On macOS, CMake's FindOpenMP doesn't detect Homebrew's libomp
+# Try to find it manually if standard detection fails
+if(ENABLE_OPENMP AND NOT OpenMP_C_FOUND AND APPLE)
+    # Try to find Homebrew's libomp
+    execute_process(
+        COMMAND brew --prefix libomp
+        OUTPUT_VARIABLE HOMEBREW_LIBOMP_PREFIX
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE BREW_RESULT
+    )
+    
+    if(BREW_RESULT EQUAL 0 AND EXISTS "${HOMEBREW_LIBOMP_PREFIX}")
+        message(STATUS "Found Homebrew libomp at: ${HOMEBREW_LIBOMP_PREFIX}")
+        
+        # Set OpenMP flags for Clang on macOS (as a list, not a string)
+        set(OpenMP_C_FLAGS "-Xpreprocessor" "-fopenmp")
+        set(OpenMP_C_LIB_NAMES "omp")
+        set(OpenMP_omp_LIBRARY "${HOMEBREW_LIBOMP_PREFIX}/lib/libomp.dylib")
+        set(HOMEBREW_LIBOMP_INCLUDE "${HOMEBREW_LIBOMP_PREFIX}/include")
+        
+        # Verify the library and header exist
+        if(EXISTS "${OpenMP_omp_LIBRARY}" AND EXISTS "${HOMEBREW_LIBOMP_INCLUDE}/omp.h")
+            set(OpenMP_C_FOUND TRUE)
+            set(HOMEBREW_OPENMP TRUE)
+        endif()
+    endif()
+endif()
+
 if(OpenMP_C_FOUND)
     set(USE_OPENMP TRUE)
     message(STATUS "OpenMP found: Character-level diff will use multi-core parallelization")
@@ -130,16 +165,25 @@ endif()
 
 # Enable OpenMP if available
 if(USE_OPENMP)
-    target_compile_options(vscode_diff PRIVATE ${OpenMP_C_FLAGS})
-    target_link_libraries(vscode_diff PRIVATE OpenMP::OpenMP_C)
     target_compile_definitions(vscode_diff PRIVATE USE_OPENMP)
     
-    # Set RPATH to find bundled libgomp.so.1 in the same directory
-    if(UNIX AND NOT APPLE)
-        set_target_properties(vscode_diff PROPERTIES
-            BUILD_WITH_INSTALL_RPATH TRUE
-            INSTALL_RPATH "$ORIGIN"
-        )
+    if(HOMEBREW_OPENMP)
+        # Homebrew OpenMP on macOS - manual configuration
+        target_compile_options(vscode_diff PRIVATE ${OpenMP_C_FLAGS})
+        target_include_directories(vscode_diff PRIVATE ${HOMEBREW_LIBOMP_INCLUDE})
+        target_link_libraries(vscode_diff PRIVATE ${OpenMP_omp_LIBRARY})
+    else()
+        # Standard OpenMP via find_package
+        target_compile_options(vscode_diff PRIVATE ${OpenMP_C_FLAGS})
+        target_link_libraries(vscode_diff PRIVATE OpenMP::OpenMP_C)
+        
+        # Set RPATH to find bundled libgomp.so.1 in the same directory (Linux)
+        if(UNIX AND NOT APPLE)
+            set_target_properties(vscode_diff PROPERTIES
+                BUILD_WITH_INSTALL_RPATH TRUE
+                INSTALL_RPATH "$ORIGIN"
+            )
+        endif()
     endif()
 endif()
 
@@ -250,9 +294,14 @@ function(add_diff_test test_name)
     
     # Enable OpenMP for tests too
     if(USE_OPENMP)
-        target_compile_options(${test_name} PRIVATE ${OpenMP_C_FLAGS})
-        target_link_libraries(${test_name} PRIVATE OpenMP::OpenMP_C)
         target_compile_definitions(${test_name} PRIVATE USE_OPENMP)
+        target_compile_options(${test_name} PRIVATE ${OpenMP_C_FLAGS})
+        if(HOMEBREW_OPENMP)
+            target_include_directories(${test_name} PRIVATE ${HOMEBREW_LIBOMP_INCLUDE})
+            target_link_libraries(${test_name} PRIVATE ${OpenMP_omp_LIBRARY})
+        else()
+            target_link_libraries(${test_name} PRIVATE OpenMP::OpenMP_C)
+        endif()
     endif()
     
     add_test(NAME ${test_name} COMMAND ${test_name})
@@ -330,9 +379,14 @@ endif()
 
 # Enable OpenMP for diff tool
 if(USE_OPENMP)
-    target_compile_options(diff PRIVATE ${OpenMP_C_FLAGS})
-    target_link_libraries(diff PRIVATE OpenMP::OpenMP_C)
     target_compile_definitions(diff PRIVATE USE_OPENMP)
+    target_compile_options(diff PRIVATE ${OpenMP_C_FLAGS})
+    if(HOMEBREW_OPENMP)
+        target_include_directories(diff PRIVATE ${HOMEBREW_LIBOMP_INCLUDE})
+        target_link_libraries(diff PRIVATE ${OpenMP_omp_LIBRARY})
+    else()
+        target_link_libraries(diff PRIVATE OpenMP::OpenMP_C)
+    endif()
 endif()
 
 # Copy diff tool to plugin root for easy access (similar to library)

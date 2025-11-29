@@ -44,6 +44,35 @@ if [[ "$PLATFORM" != "Darwin" ]]; then
     LDFLAGS="$LDFLAGS -lm"
 fi
 
+# Detect OpenMP support
+USE_OPENMP=0
+if [[ "$PLATFORM" == "Darwin" ]]; then
+    # macOS: Check for Homebrew libomp
+    if command -v brew >/dev/null 2>&1; then
+        LIBOMP_PREFIX=$(brew --prefix libomp 2>/dev/null || true)
+        if [ -n "$LIBOMP_PREFIX" ] && [ -f "$LIBOMP_PREFIX/lib/libomp.dylib" ]; then
+            USE_OPENMP=1
+            CFLAGS="$CFLAGS -Xpreprocessor -fopenmp -I$LIBOMP_PREFIX/include -DUSE_OPENMP"
+            LDFLAGS="$LDFLAGS -L$LIBOMP_PREFIX/lib -lomp"
+            echo "OpenMP: enabled (Homebrew libomp)"
+        fi
+    fi
+else
+    # Linux: Check if compiler supports OpenMP
+    echo "int main() { return 0; }" > /tmp/omp_test.c
+    if $CC -fopenmp /tmp/omp_test.c -o /tmp/omp_test 2>/dev/null; then
+        USE_OPENMP=1
+        CFLAGS="$CFLAGS -fopenmp -DUSE_OPENMP"
+        LDFLAGS="$LDFLAGS -fopenmp"
+        echo "OpenMP: enabled"
+    fi
+    rm -f /tmp/omp_test.c /tmp/omp_test
+fi
+
+if [ "$USE_OPENMP" -eq 0 ]; then
+    echo "OpenMP: disabled (not found)"
+fi
+
 # Source files (including bundled utf8proc)
 SOURCES="\
 default_lines_diff_computer.c \
