@@ -1,7 +1,7 @@
 local M = {}
 local api = vim.api
 local fn = vim.fn
-local is_win32 = vim.fn.has 'win32' == 1 and true or false
+local is_win32 = vim.fn.has 'win32' == 1
 
 ---@class yarepl.REPLMeta
 ---@field cmd string[]|string|fun(): string The command to start the REPL or a function that returns the command
@@ -177,6 +177,7 @@ local function create_repl(id, repl_name)
             opts.term = true
             return vim.fn.jobstart(cmd, opts)
         else
+            ---@diagnostic disable-next-line: deprecated
             return vim.fn.termopen(cmd, opts)
         end
     end
@@ -281,14 +282,35 @@ local function repl_win_scroll_to_bottom(repl)
     end
 end
 
--- currently only support line-wise sending in both visual and operator mode.
-local function get_lines(mode)
+-- Currently, block-wise sending is not supported.
+---@param mode "operator"|"visual"
+---@param submode string
+local function get_lines(mode, submode)
     local begin_mark = mode == 'operator' and "'[" or "'<"
     local end_mark = mode == 'operator' and "']" or "'>"
 
-    local begin_line = fn.getpos(begin_mark)[2]
-    local end_line = fn.getpos(end_mark)[2]
-    return api.nvim_buf_get_lines(0, begin_line - 1, end_line, false)
+    local begin_pos = fn.getpos(begin_mark)
+    local end_pos = fn.getpos(end_mark)
+
+    local begin_line = begin_pos[2]
+    local begin_col = begin_pos[3]
+    local end_line = end_pos[2]
+    local end_col = end_pos[3]
+
+    if submode == 'char' or submode == 'v' then
+        local lines = api.nvim_buf_get_text(0, begin_line - 1, begin_col - 1, end_line - 1, -1, {})
+        if #lines > 0 and #lines[#lines] > 0 then
+            if begin_line == end_line then
+                end_col = end_col - begin_col + 1
+            end
+            local offset = vim.str_utf_end(lines[#lines], end_col)
+            lines[#lines] = lines[#lines]:sub(1, end_col + offset)
+        end
+        return lines
+    else
+        -- Line-wise mode, or fallback to line-wise for unsupported block-wise mode.
+        return api.nvim_buf_get_lines(0, begin_line - 1, end_line, false)
+    end
 end
 
 ---Get the formatter function from either a string name or function
@@ -493,6 +515,7 @@ local function show_source_command_hint(repl, original_content, source_command)
         end
 
         if matched_line then
+            ---@diagnostic disable-next-line: need-check-nil
             local hl_group = config.hl_group
             local virt_lines_opts = {
                 virt_text = { { comment_text, hl_group } },
@@ -598,13 +621,14 @@ M._send_operator_internal = function(motion)
     if motion == nil then
         vim.go.operatorfunc = [[v:lua.require'yarepl'._send_operator_internal]]
         api.nvim_feedkeys('g@', 'ni', false)
+        return
     end
 
     local id = vim.b[0].repl_id
     local name = vim.b[0].closest_repl_name
     local current_bufnr = api.nvim_get_current_buf()
 
-    local lines = get_lines 'operator'
+    local lines = get_lines('operator', motion)
 
     if #lines == 0 then
         vim.notify 'No motion!'
@@ -619,13 +643,14 @@ M._source_operator_internal = function(motion)
     if motion == nil then
         vim.go.operatorfunc = [[v:lua.require'yarepl'._source_operator_internal]]
         api.nvim_feedkeys('g@', 'ni', false)
+        return
     end
 
     local id = vim.b[0].repl_id
     local name = vim.b[0].closest_repl_name
     local current_bufnr = api.nvim_get_current_buf()
 
-    local lines = get_lines 'operator'
+    local lines = get_lines('operator', motion)
 
     if #lines == 0 then
         vim.notify 'No motion!'
@@ -920,7 +945,7 @@ M.commands.send_visual = function(opts)
 
     api.nvim_feedkeys('\27', 'nx', false)
 
-    local lines = get_lines 'visual'
+    local lines = get_lines('visual', vim.fn.visualmode())
 
     if #lines == 0 then
         vim.notify 'No visual range!'
