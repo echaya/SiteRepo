@@ -180,6 +180,9 @@ local function command_exists(cmd)
 end
 
 -- Check if libgomp is available on the system
+-- Uses ldconfig cache which matches what the native linker actually searches.
+-- This is more reliable than ffi.load() which may find libraries via LD_LIBRARY_PATH
+-- that aren't available when our binary loads (e.g., NixOS intermittent failures).
 local function check_system_libgomp()
   local os_name = detect_os()
 
@@ -188,13 +191,25 @@ local function check_system_libgomp()
     return true
   end
 
-  -- Try to load libgomp using FFI
-  local ffi = require("ffi")
-  local ok = pcall(function()
-    local _ = ffi.load("libgomp.so.1")
-  end)
+  -- Check if already bundled in plugin directory (RPATH $ORIGIN)
+  local plugin_root = get_plugin_root()
+  if vim.fn.filereadable(plugin_root .. "/libgomp.so.1") == 1 then
+    return true
+  end
 
-  return ok
+  -- Check ldconfig cache - this is what the native linker actually uses
+  -- (excluding unreliable LD_LIBRARY_PATH which varies per session)
+  local handle = io.popen("ldconfig -p 2>/dev/null | grep -q 'libgomp\\.so\\.1' && echo 'found'")
+  if handle then
+    local result = handle:read("*a")
+    handle:close()
+    if result:match("found") then
+      return true
+    end
+  end
+
+  -- Not found in ldconfig cache or ldconfig unavailable → bundle to be safe
+  return false
 end
 
 -- Download file using curl, wget, or PowerShell

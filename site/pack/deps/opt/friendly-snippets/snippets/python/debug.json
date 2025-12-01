@@ -19,7 +19,7 @@
         "description": "Code snippet for pudb debug"
     },
     "IPython set trace": {
-        "prefix": "ipydb",
+        "prefix": "ipembed",
         "body": "from IPython import embed; embed()$0"
     },
     "Celery set trace": {
