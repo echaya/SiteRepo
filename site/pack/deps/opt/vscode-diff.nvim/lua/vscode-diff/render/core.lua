@@ -81,6 +81,25 @@ end
 -- Step 2: Character-Level Highlights
 -- ============================================================================
 
+-- Convert UTF-16 code unit offset to UTF-8 byte offset
+-- The diff algorithm returns UTF-16 positions (VSCode/JavaScript native)
+-- but Neovim expects byte positions for highlighting
+-- For ASCII text, UTF-16 index equals byte index (no change)
+-- utf16_col: 1-based UTF-16 code unit position
+-- Returns: 1-based byte position
+local function utf16_col_to_byte_col(line, utf16_col)
+  if not line or utf16_col <= 1 then
+    return utf16_col
+  end
+  -- vim.str_byteindex uses 0-based indexing, our columns are 1-based
+  local ok, byte_idx = pcall(vim.str_byteindex, line, utf16_col - 1, true)
+  if ok then
+    return byte_idx + 1
+  end
+  -- Fallback: return original column if conversion fails
+  return utf16_col
+end
+
 local function apply_char_highlight(bufnr, char_range, hl_group, lines)
   local start_line = char_range.start_line
   local start_col = char_range.start_col
@@ -95,8 +114,15 @@ local function apply_char_highlight(bufnr, char_range, hl_group, lines)
     return
   end
 
+  -- Convert UTF-16 column positions to byte positions for Neovim
+  if start_line >= 1 and start_line <= #lines then
+    local line_content = lines[start_line]
+    start_col = utf16_col_to_byte_col(line_content, start_col)
+  end
+
   if end_line >= 1 and end_line <= #lines then
     local line_content = lines[end_line]
+    end_col = utf16_col_to_byte_col(line_content, end_col)
     end_col = math.min(end_col, #line_content + 1)
   end
   

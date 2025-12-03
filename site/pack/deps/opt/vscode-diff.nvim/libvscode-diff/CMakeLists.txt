@@ -6,10 +6,16 @@ if(POLICY CMP0177)
 endif()
 
 # Read version from VERSION file (single source of truth)
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../VERSION" PROJECT_VERSION)
-string(STRIP "${PROJECT_VERSION}" PROJECT_VERSION)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../VERSION" FULL_VERSION)
+string(STRIP "${FULL_VERSION}" FULL_VERSION)
 
-project(libvscode-diff VERSION ${PROJECT_VERSION} LANGUAGES C)
+# Extract base version for CMake (handles prerelease like 2.0.0-next.1)
+string(REGEX REPLACE "^([0-9]+\\.[0-9]+\\.[0-9]+).*" "\\1" BASE_VERSION "${FULL_VERSION}")
+
+project(libvscode-diff VERSION ${BASE_VERSION} LANGUAGES C)
+
+# Store full version for display/packaging
+set(PROJECT_FULL_VERSION "${FULL_VERSION}")
 
 # Generate compile_commands.json for LSP/clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

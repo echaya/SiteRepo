@@ -507,6 +507,8 @@ require('render-markdown').setup({
         inline_right = '',
         -- Padding to add to the left & right of inline code.
         inline_pad = 0,
+        -- Priority to assign to code background highlight.
+        priority = nil,
         -- Highlight for code blocks.
         highlight = 'RenderMarkdownCode',
         -- Highlight for code info section, after the language.
@@ -816,13 +818,20 @@ require('render-markdown').setup({
         -- | highlight | optional highlight for 'icon', uses fallback highlight if empty |
         custom = {
             web = { pattern = '^http', icon = '󰖟 ' },
+            apple = { pattern = 'apple%.com', icon = ' ' },
             discord = { pattern = 'discord%.com', icon = '󰙯 ' },
             github = { pattern = 'github%.com', icon = '󰊤 ' },
             gitlab = { pattern = 'gitlab%.com', icon = '󰮠 ' },
             google = { pattern = 'google%.com', icon = '󰊭 ' },
+            hackernews = { pattern = 'ycombinator%.com', icon = ' ' },
+            linkedin = { pattern = 'linkedin%.com', icon = '󰌻 ' },
+            microsoft = { pattern = 'microsoft%.com', icon = ' ' },
             neovim = { pattern = 'neovim%.io', icon = ' ' },
             reddit = { pattern = 'reddit%.com', icon = '󰑍 ' },
+            slack = { pattern = 'slack%.com', icon = '󰒱 ' },
             stackoverflow = { pattern = 'stackoverflow%.com', icon = '󰓌 ' },
+            steam = { pattern = 'steampowered%.com', icon = ' ' },
+            twitter = { pattern = 'x%.com', icon = ' ' },
             wikipedia = { pattern = 'wikipedia%.org', icon = '󰖬 ' },
             youtube = { pattern = 'youtube%.com', icon = '󰗃 ' },
         },
@@ -1172,6 +1181,8 @@ require('render-markdown').setup({
         inline_right = '',
         -- Padding to add to the left & right of inline code.
         inline_pad = 0,
+        -- Priority to assign to code background highlight.
+        priority = nil,
         -- Highlight for code blocks.
         highlight = 'RenderMarkdownCode',
         -- Highlight for code info section, after the language.
@@ -1572,13 +1583,20 @@ require('render-markdown').setup({
         -- | highlight | optional highlight for 'icon', uses fallback highlight if empty |
         custom = {
             web = { pattern = '^http', icon = '󰖟 ' },
+            apple = { pattern = 'apple%.com', icon = ' ' },
             discord = { pattern = 'discord%.com', icon = '󰙯 ' },
             github = { pattern = 'github%.com', icon = '󰊤 ' },
             gitlab = { pattern = 'gitlab%.com', icon = '󰮠 ' },
             google = { pattern = 'google%.com', icon = '󰊭 ' },
+            hackernews = { pattern = 'ycombinator%.com', icon = ' ' },
+            linkedin = { pattern = 'linkedin%.com', icon = '󰌻 ' },
+            microsoft = { pattern = 'microsoft%.com', icon = ' ' },
             neovim = { pattern = 'neovim%.io', icon = ' ' },
             reddit = { pattern = 'reddit%.com', icon = '󰑍 ' },
+            slack = { pattern = 'slack%.com', icon = '󰒱 ' },
             stackoverflow = { pattern = 'stackoverflow%.com', icon = '󰓌 ' },
+            steam = { pattern = 'steampowered%.com', icon = ' ' },
+            twitter = { pattern = 'x%.com', icon = ' ' },
             wikipedia = { pattern = 'wikipedia%.org', icon = '󰖬 ' },
             youtube = { pattern = 'youtube%.com', icon = '󰗃 ' },
         },

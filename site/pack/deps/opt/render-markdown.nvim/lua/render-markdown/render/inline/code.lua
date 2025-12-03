@@ -23,6 +23,7 @@ end
 function Render:run()
     local highlight = self.config.highlight_inline
     self.marks:over(self.config, 'code_background', self.node, {
+        priority = self.config.priority,
         hl_group = highlight,
     })
     self:padding(highlight, true)

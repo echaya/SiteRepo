@@ -404,6 +404,7 @@ M.code = {}
 ---@field inline_left string
 ---@field inline_right string
 ---@field inline_pad integer
+---@field priority? integer
 ---@field highlight string
 ---@field highlight_info string
 ---@field highlight_language? string
@@ -510,6 +511,8 @@ M.code.default = {
     inline_right = '',
     -- Padding to add to the left & right of inline code.
     inline_pad = 0,
+    -- Priority to assign to code background highlight.
+    priority = nil,
     -- Highlight for code blocks.
     highlight = 'RenderMarkdownCode',
     -- Highlight for code info section, after the language.
@@ -559,6 +562,7 @@ function M.code.schema()
         inline_left = { type = 'string' },
         inline_right = { type = 'string' },
         inline_pad = { type = 'number' },
+        priority = { optional = true, type = 'number' },
         highlight = { type = 'string' },
         highlight_info = { type = 'string' },
         highlight_language = { optional = true, type = 'string' },
@@ -1283,13 +1287,20 @@ M.link.default = {
     -- | highlight | optional highlight for 'icon', uses fallback highlight if empty |
     custom = {
         web = { pattern = '^http', icon = '󰖟 ' },
+        apple = { pattern = 'apple%.com', icon = ' ' },
         discord = { pattern = 'discord%.com', icon = '󰙯 ' },
         github = { pattern = 'github%.com', icon = '󰊤 ' },
         gitlab = { pattern = 'gitlab%.com', icon = '󰮠 ' },
         google = { pattern = 'google%.com', icon = '󰊭 ' },
+        hackernews = { pattern = 'ycombinator%.com', icon = ' ' },
+        linkedin = { pattern = 'linkedin%.com', icon = '󰌻 ' },
+        microsoft = { pattern = 'microsoft%.com', icon = ' ' },
         neovim = { pattern = 'neovim%.io', icon = ' ' },
         reddit = { pattern = 'reddit%.com', icon = '󰑍 ' },
+        slack = { pattern = 'slack%.com', icon = '󰒱 ' },
         stackoverflow = { pattern = 'stackoverflow%.com', icon = '󰓌 ' },
+        steam = { pattern = 'steampowered%.com', icon = ' ' },
+        twitter = { pattern = 'x%.com', icon = ' ' },
         wikipedia = { pattern = 'wikipedia%.org', icon = '󰖬 ' },
         youtube = { pattern = 'youtube%.com', icon = '󰗃 ' },
     },

@@ -4,10 +4,16 @@ cmake_minimum_required(VERSION 3.15)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Read version from VERSION file (single source of truth)
-file(READ "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" PROJECT_VERSION)
-string(STRIP "${PROJECT_VERSION}" PROJECT_VERSION)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" FULL_VERSION)
+string(STRIP "${FULL_VERSION}" FULL_VERSION)
 
-project(vscode-diff-nvim VERSION ${PROJECT_VERSION})
+# Extract base version for CMake (handles prerelease like 2.0.0-next.1)
+string(REGEX REPLACE "^([0-9]+\\.[0-9]+\\.[0-9]+).*" "\\1" BASE_VERSION "${FULL_VERSION}")
+
+project(vscode-diff-nvim VERSION ${BASE_VERSION})
+
+# Store full version for display/packaging
+set(PROJECT_FULL_VERSION "${FULL_VERSION}")
 
 # This is the root CMakeLists.txt for the Neovim plugin
 # It delegates C building to libvscode-diff/
@@ -44,7 +50,7 @@ file(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/Makefile"
 # Makefile wrapper for developers (uses CMake underneath)
 # Users: Use build.sh instead (no CMake required)
 
-.PHONY: all build test test-c test-lua clean help bump-patch bump-minor bump-major
+.PHONY: all build test test-c test-lua clean help bump-patch bump-minor bump-major bump-prerelease
 
 all: build
 
@@ -74,9 +80,12 @@ bump-minor:
 bump-major:
 \t@node scripts/bump_version.mjs major
 
+bump-prerelease:
+\t@node scripts/bump_version.mjs prerelease
+
 help:
 \t@echo \"Targets: build, test, test-c, test-lua, clean, help\"
-\t@echo \"Version: bump-patch, bump-minor, bump-major\"
+\t@echo \"Version: bump-patch, bump-minor, bump-major, bump-prerelease\"
 ")
 
 # Generate Makefile.win for Windows nmake
@@ -118,9 +127,12 @@ bump-minor:
 bump-major:
 \tnode scripts/bump_version.mjs major
 
+bump-prerelease:
+\tnode scripts/bump_version.mjs prerelease
+
 help:
 \t@echo Targets: build, test, test-c, test-lua, clean, help
-\t@echo Version: bump-patch, bump-minor, bump-major
+\t@echo Version: bump-patch, bump-minor, bump-major, bump-prerelease
 ")
 
 message(STATUS "")

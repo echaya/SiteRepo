@@ -2,7 +2,7 @@
 # Makefile wrapper for developers (uses CMake underneath)
 # Users: Use build.sh instead (no CMake required)
 
-.PHONY: all build test test-c test-lua clean help bump-patch bump-minor bump-major
+.PHONY: all build test test-c test-lua clean help bump-patch bump-minor bump-major bump-prerelease
 
 all: build
 
@@ -32,6 +32,9 @@ bump-minor:
 bump-major:
 	@node scripts/bump_version.mjs major
 
+bump-prerelease:
+	@node scripts/bump_version.mjs prerelease
+
 help:
 	@echo "Targets: build, test, test-c, test-lua, clean, help"
-	@echo "Version: bump-patch, bump-minor, bump-major"
+	@echo "Version: bump-patch, bump-minor, bump-major, bump-prerelease"
