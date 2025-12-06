@@ -33,5 +33,10 @@
 		"prefix":"~print_last_row",
 		"body": ["print($1.iloc[-1].T)"],
 		"description": "print last row"
+	},
+    "to_datetime":{
+		"prefix":"~todt",
+		"body": ["$1 = pd.to_datetime($1)"],
+		"description": "to_datetime"
 	}
 }
