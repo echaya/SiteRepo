@@ -129,7 +129,6 @@ M.init = function(self, force_3f)
     if force_3f then
       return vim.api.nvim_set_hl(0, self.group.backdrop, {link = "None"})
     else
-      local user = require("leap.user")
       local function _18_()
         return apply_backdrop(get_search_ranges(), self.group.backdrop)
       end

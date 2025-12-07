@@ -145,19 +145,21 @@
     (set-label-dimmed)
     (set-concealed-label-char)
 
-    (local has-backdrop-group?
-      (not (vim.tbl_isempty (api.nvim_get_hl 0 {:name self.group.backdrop}))))
+    (local has-backdrop-group? (not
+                                 (vim.tbl_isempty
+                                   (api.nvim_get_hl
+                                     0 {:name self.group.backdrop}))))
     (when has-backdrop-group?
-      (if force? (vim.api.nvim_set_hl 0 self.group.backdrop {:link "None"})
-          (let [user (require "leap.user")]
-            ; Note: The autocommand will not be removed on a subsequent
-            ; `force?`d call (it will apply None to the areas).
-            (api.nvim_create_autocmd "User"
-              {:pattern ["LeapRedraw"]
-               :group (api.nvim_create_augroup "LeapDefault_Backdrop" {})
-               :callback (fn []
-                           (apply-backdrop
-                             (get-search-ranges) self.group.backdrop))}))))))
+      (if force?
+          (vim.api.nvim_set_hl 0 self.group.backdrop {:link "None"})
+          ; Note: The autocommand will not be removed on a subsequent
+          ; `force?`d call (it will apply None to the areas).
+          (api.nvim_create_autocmd "User"
+            {:pattern ["LeapRedraw"]
+             :group (api.nvim_create_augroup "LeapDefault_Backdrop" {})
+             :callback (fn []
+                         (apply-backdrop
+                           (get-search-ranges) self.group.backdrop))})))))
 
 
 M
