@@ -1382,7 +1382,11 @@ H.track_dir_edit = function(data)
   if vim.b.minifiles_processed_dir then
     -- Smartly delete directory buffer if already visited
     local alt_buf = vim.fn.bufnr('#')
-    if alt_buf ~= data.buf and vim.fn.buflisted(alt_buf) == 1 then vim.api.nvim_win_set_buf(0, alt_buf) end
+    -- - Setting alternative buffer is enough for the "directory buffer" to be
+    -- wiped out, as it has `bufhidden=wipe`. Forcing delete after showing alt
+    -- buffer might result in hard-to-track errors (like when opening directory
+    -- in 'mini.pick' when there is an altbuf for the buffer in target window).
+    if alt_buf ~= data.buf and vim.fn.buflisted(alt_buf) == 1 then return vim.api.nvim_win_set_buf(0, alt_buf) end
     return vim.api.nvim_buf_delete(data.buf, { force = true })
   end
 
@@ -2448,21 +2452,22 @@ H.window_open = function(buf_id, config)
 end
 
 H.window_update = function(win_id, config)
+  -- Preserve some config values
+  local win_config = vim.api.nvim_win_get_config(win_id)
+  config.border, config.title_pos = win_config.border, win_config.title_pos
+
   -- Compute helper data
   local has_tabline = vim.o.showtabline == 2 or (vim.o.showtabline == 1 and #vim.api.nvim_list_tabpages() > 1)
   local max_height = H.window_get_max_height()
+  local max_width = vim.o.columns - (config.border == 'none' and 0 or 2)
 
   -- Ensure proper fit
   config.row = has_tabline and 1 or 0
   config.height = config.height ~= nil and math.min(config.height, max_height) or nil
-  config.width = config.width ~= nil and math.min(config.width, vim.o.columns) or nil
+  config.width = config.width ~= nil and math.min(config.width, max_width) or nil
 
   -- Ensure proper title
   if type(config.title) == 'string' then config.title = H.fit_to_width(config.title, config.width) end
-
-  -- Preserve some config values
-  local win_config = vim.api.nvim_win_get_config(win_id)
-  config.border, config.title_pos = win_config.border, win_config.title_pos
 
   -- Update config
   config.relative = 'editor'

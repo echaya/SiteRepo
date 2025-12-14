@@ -331,6 +331,7 @@ MiniOperators.evaluate = function(mode)
 
   local evaluate_func = H.get_config().evaluate.func or MiniOperators.default_evaluate_func
   local data = H.get_region_data(mode)
+  if data == nil then return end
   data.reindent_linewise = true
   H.apply_content_func(evaluate_func, data)
 end
@@ -365,12 +366,14 @@ MiniOperators.exchange = function(mode)
   if not H.exchange_has_step_one() then
     -- Store data about first region
     H.cache.exchange.step_one = H.exchange_set_region_extmark(mode, true)
+    if H.cache.exchange.step_one == nil then return end
 
     -- Temporarily remap `<C-c>` to stop the exchange
     H.exchange_set_stop_mapping()
   else
     -- Store data about second region
     H.cache.exchange.step_two = H.exchange_set_region_extmark(mode, false)
+    if H.cache.exchange.step_two == nil then return end
 
     -- Do exchange
     H.exchange_do()
@@ -414,6 +417,7 @@ MiniOperators.multiply = function(mode)
 
   local count = mode == 'visual' and vim.v.count1 or H.cache.multiply.count
   local data = H.get_region_data(mode)
+  if data == nil then return end
   local mark_from, mark_to, submode = data.mark_from, data.mark_to, data.submode
 
   H.with_temp_context({ registers = { 'x', '"' } }, function()
@@ -475,6 +479,7 @@ MiniOperators.replace = function(mode)
   local count = mode == 'visual' and vim.v.count1 or H.cache.replace.count
   local register = mode == 'visual' and vim.v.register or H.cache.replace.register
   local data = H.get_region_data(mode)
+  if data == nil then return '' end
   data.count = count
   data.register = register
   data.reindent_linewise = H.get_config().replace.reindent_linewise
@@ -854,6 +859,7 @@ H.exchange_set_region_extmark = function(mode, add_highlight)
 
   -- Compute regular marks for target region
   local region_data = H.get_region_data(mode)
+  if region_data == nil then return end
   local submode = region_data.submode
   local markcoords_from, markcoords_to = H.get_mark(region_data.mark_from), H.get_mark(region_data.mark_to)
 
@@ -1111,6 +1117,7 @@ end
 
 -- General --------------------------------------------------------------------
 H.apply_content_func = function(content_func, data)
+  if data == nil then return end
   local mark_from, mark_to, submode = data.mark_from, data.mark_to, data.submode
   local reindent_linewise = data.reindent_linewise
 
@@ -1185,6 +1192,11 @@ H.get_region_data = function(mode)
 
   local mark_from = selection_is_visual and '<' or '['
   local mark_to = selection_is_visual and '>' or ']'
+
+  -- Detect empty region. NOTE: This doesn't work when cursor is on first line
+  -- and first column, but there doesn't seem to be a better way to do that.
+  local pos_from, pos_to = H.get_mark(mark_from), H.get_mark(mark_to)
+  if pos_to[1] < pos_from[1] or (pos_to[1] == pos_from[1] and pos_to[2] < pos_from[2]) then return end
 
   return { mode = mode, submode = submode, mark_from = mark_from, mark_to = mark_to }
 end

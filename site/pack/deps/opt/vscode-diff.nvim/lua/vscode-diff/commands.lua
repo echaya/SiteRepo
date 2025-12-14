@@ -125,8 +125,9 @@ local function handle_explorer(revision, revision2)
           return
         end
 
-        -- Check if there are any changes
-        if #status_result.unstaged == 0 and #status_result.staged == 0 then
+        -- Check if there are any changes (including conflicts)
+        local has_conflicts = status_result.conflicts and #status_result.conflicts > 0
+        if #status_result.unstaged == 0 and #status_result.staged == 0 and not has_conflicts then
           vim.notify("No changes to show", vim.log.levels.INFO)
           return
         end
@@ -205,6 +206,10 @@ function M.vscode_diff(opts)
   -- Check if current tab is a diff view and toggle (close) it if so
   local current_tab = vim.api.nvim_get_current_tabpage()
   if lifecycle.get_session(current_tab) then
+    -- Check for unsaved conflict files before closing
+    if not lifecycle.confirm_close_with_unsaved(current_tab) then
+      return  -- User cancelled
+    end
     vim.cmd("tabclose")
     return
   end

@@ -27,15 +27,15 @@ end
 -- Parse a vscodediff:// URL
 -- Returns: git_root, commit, filepath
 function M.parse_url(url)
-  -- Pattern accepts SHA hash (hex chars) or :0 for staged index
+  -- Pattern accepts SHA hash (hex chars) or :N: for staged index (including merge stages :1:, :2:, :3:)
   local pattern = '^vscodediff:///(.-)///([a-fA-F0-9]+)/(.+)$'
   local git_root, commit, filepath = url:match(pattern)
   if git_root and commit and filepath then
     return git_root, commit, filepath
   end
   
-  -- Try :0 pattern for staged index
-  local pattern_staged = '^vscodediff:///(.-)///(:[0-9])/(.+)$'
+  -- Try :N or :N: pattern for staged index (supports :0, :1:, :2:, :3:)
+  local pattern_staged = '^vscodediff:///(.-)///(:[0-9]:?)/(.+)$'
   git_root, commit, filepath = url:match(pattern_staged)
   return git_root, commit, filepath
 end

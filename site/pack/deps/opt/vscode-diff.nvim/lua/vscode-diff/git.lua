@@ -274,12 +274,36 @@ function M.get_file_content(revision, git_root, rel_path, callback)
   )
 end
 
+-- Check if a git status code indicates a merge conflict
+-- Git uses these status codes for conflicts:
+-- U = unmerged (both modified, added by us/them, deleted by us/them)
+-- A on both sides = both added
+-- D on both sides = both deleted
+local function is_conflict_status(index_status, worktree_status)
+  -- UU = both modified (most common)
+  -- AA = both added
+  -- DD = both deleted
+  -- AU/UA = added by us/them
+  -- DU/UD = deleted by us/them
+  if index_status == "U" or worktree_status == "U" then
+    return true
+  end
+  if index_status == "A" and worktree_status == "A" then
+    return true
+  end
+  if index_status == "D" and worktree_status == "D" then
+    return true
+  end
+  return false
+end
+
 -- Get git status for current repository (async)
 -- git_root: absolute path to git repository root
 -- callback: function(err, status_result) where status_result is:
 -- {
 --   unstaged = { { path = "file.txt", status = "M"|"A"|"D"|"??" } },
---   staged = { { path = "file.txt", status = "M"|"A"|"D" } }
+--   staged = { { path = "file.txt", status = "M"|"A"|"D" } },
+--   conflicts = { { path = "file.txt", status = "!" } }
 -- }
 function M.get_status(git_root, callback)
   run_git_async(
@@ -293,7 +317,8 @@ function M.get_status(git_root, callback)
 
       local result = {
         unstaged = {},
-        staged = {}
+        staged = {},
+        conflicts = {}
       }
 
       for line in output:gmatch("[^\r\n]+") do
@@ -307,22 +332,31 @@ function M.get_status(git_root, callback)
           local path = old_path and new_path or path_part  -- Use new_path for display if rename
           local is_rename = old_path ~= nil
 
-          -- Staged changes (index has changes)
-          if index_status ~= " " and index_status ~= "?" then
-            table.insert(result.staged, {
+          -- Check for merge conflicts first (takes priority)
+          if is_conflict_status(index_status, worktree_status) then
+            table.insert(result.conflicts, {
               path = path,
-              status = index_status,
-              old_path = is_rename and old_path or nil,  -- Store old path if rename
+              status = "!",  -- Use ! symbol for conflicts
+              conflict_type = index_status .. worktree_status,  -- Store original status (e.g., "UU", "AA")
             })
-          end
+          else
+            -- Staged changes (index has changes)
+            if index_status ~= " " and index_status ~= "?" then
+              table.insert(result.staged, {
+                path = path,
+                status = index_status,
+                old_path = is_rename and old_path or nil,  -- Store old path if rename
+              })
+            end
 
-          -- Unstaged changes (worktree has changes)
-          if worktree_status ~= " " then
-            table.insert(result.unstaged, {
-              path = path,
-              status = worktree_status == "?" and "??" or worktree_status,
-              old_path = is_rename and old_path or nil,
-            })
+            -- Unstaged changes (worktree has changes)
+            if worktree_status ~= " " then
+              table.insert(result.unstaged, {
+                path = path,
+                status = worktree_status == "?" and "??" or worktree_status,
+                old_path = is_rename and old_path or nil,
+              })
+            end
           end
         end
       end

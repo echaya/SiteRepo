@@ -614,7 +614,11 @@ H.get_open_char = function(x) return vim.fn.strcharpart(x, 0, 1) end
 H.get_close_char = function(x) return vim.fn.strcharpart(x, 1, 1) end
 
 H.get_arrow_key = function(key, ensure_no_wildmenu)
-  if vim.fn.mode() == 'i' then return key == 'right' and H.keys.right_undo or H.keys.left_undo end
+  if vim.fn.mode() == 'i' then
+    -- Take into account that `virtualedit=all` can go into inline virtual text
+    H.with_temp_option('virtualedit', 'none')
+    return key == 'right' and H.keys.right_undo or H.keys.left_undo
+  end
   local prefix = ''
   -- In Command-line mode <Left> / <Right> act like <C-p> / <C-n> if wildmenu
   -- is shown. Make sure that arrow key moves cursor.

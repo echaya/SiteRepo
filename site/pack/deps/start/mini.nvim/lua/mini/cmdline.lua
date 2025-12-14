@@ -179,6 +179,8 @@ end
 ---   the lowest string distance.
 ---   See |MiniCmdline.default_autocorrect_func()| for details.
 ---
+--- - Word that matches some Command-line |abbreviation| is not autocorrected.
+---
 --- - If current command expects only a single argument (like |:colorscheme|), then
 ---   autocorrection will happen only just before executing the command.
 ---
@@ -201,6 +203,19 @@ end
 --- The range itself is visualized by default with the statuscolumn signs.
 --- Default: 1.
 ---
+--- `autopeek.predicate` defines a condition of whether to show peek window at
+--- the current command line state. Takes a table with input data and should
+--- return `true` to peek and `false` otherwise.
+--- Will be called only if it is possible to parse range from the current command
+--- line text and it is for buffer lines (no command or |:command-addr| is `lines`)
+--- Default: |MiniCmdline.default_autopeek_predicate()|.
+---
+--- Input data fields:
+--- - <left> `(number)` - left range edge. Not necessarily smallest.
+--- - <right> `(number)` - right range edge. Same as `left` for a single line range.
+--- - <cmd> `(string)` - full command name. Can be empty string if no valid
+---   command is (yet) entered.
+---
 --- `autopeek.window` defines behavior of a peek window.
 --- `autopeek.window.config` is a table defining floating window characteristics
 --- or a callable returning such table.
@@ -210,9 +225,7 @@ end
 --- customize |'statuscolumn'| value for the peek window. Takes a table with input
 --- data and should return a string to display for line |v:lnum|.
 --- Default: |MiniCmdline.default_autopeek_statuscolumn()|.
---- Input data fields:
---- - <left> `(number)` - left range edge. Not necessarily smallest.
---- - <right> `(number)` - right range edge. Same as `left` for a single line range.
+--- Input data fields are the same as for `autopeek.predicate`.
 ---
 --- Example of showing `<` and `>` signs on range lines: >lua
 ---
@@ -271,6 +284,9 @@ MiniCmdline.config = {
 
     -- Number of lines to show above and below range lines
     n_context = 1,
+
+    -- Custom rule of when to show peek window
+    predicate = nil,
 
     -- Window options
     window = {
@@ -344,6 +360,19 @@ MiniCmdline.default_autocorrect_func = function(data, opts)
   -- Fall back to computing nearest string without allowing abbreviations
   local abbr_lens = vim.tbl_map(string.len, all)
   return H.get_nearest_abbr(data.word, all, abbr_lens)
+end
+
+--- Default autopeek predicate
+---
+---@param data table Input autopeek data. As described in |MiniCmdline.config|.
+---@param opts table|nil Options. Reserved for future use.
+---
+---@return boolean If command defines |:command-preview| - `false`, otherwise - `true`.
+---   This makes autopeek easier to use for commands like |:substitute|,
+---   especially if |'inccommand'| is set to `split`.
+MiniCmdline.default_autopeek_predicate = function(data, opts)
+  local cmd_preview_map = H.cache.cmd_preview_map or H.get_cmd_preview_map()
+  return cmd_preview_map[data.cmd] ~= true
 end
 
 --- Default autopeek statuscolumn
@@ -491,6 +520,7 @@ H.setup_config = function(config)
   H.check_type('autopeek', config.autopeek, 'table')
   H.check_type('autopeek.enable', config.autopeek.enable, 'boolean')
   H.check_type('autopeek.n_context', config.autopeek.n_context, 'number')
+  H.check_type('autopeek.predicate', config.autopeek.predicate, 'callable', true)
   H.check_type('autopeek.window', config.autopeek.window, 'table')
   local autopeek_win_config = config.autopeek.window.config
   if not (type(autopeek_win_config) == 'table' or vim.is_callable(autopeek_win_config)) then
@@ -586,6 +616,7 @@ H.on_cmdline_enter = function()
 
   H.cache = {
     buf_id = vim.api.nvim_get_current_buf(),
+    cmd_preview_map = H.get_cmd_preview_map(),
     cmd_type = vim.fn.getcmdtype(),
     config = H.get_config(),
     peek = {},
@@ -595,6 +626,7 @@ H.on_cmdline_enter = function()
   H.cache.autocomplete_predicate = H.cache.config.autocomplete.predicate or MiniCmdline.default_autocomplete_predicate
   H.cache.buf_is_cmdwin = vim.fn.getbufinfo(H.cache.buf_id)[1].command == 1
 
+  H.cache.autopeek_predicate = H.cache.config.autopeek.predicate or MiniCmdline.default_autopeek_predicate
   MiniCmdline._peek_statuscolumn = H.make_peek_statuscolumn()
   if H.cache.config.autopeek.enable then H.autopeek() end
 end
@@ -738,7 +770,7 @@ H.autocorrect = function(is_final)
   -- Compute autocorrection
   local state_to_use = is_final and state or state_prev
   local word = state_to_use.complpat
-  if word == '' then return end
+  if word == '' or vim.fn.maparg(word, 'c', true) ~= '' then return end
 
   local func = H.cache.config.autocorrect.func or MiniCmdline.default_autocorrect_func
   local new_word = func({ word = word, type = state_to_use.compltype }) or word
@@ -899,26 +931,33 @@ H.autopeek = function(force)
   local line = H.cache.state.line
   if line:find('%S') == nil then H.peek_hide() end
 
-  local range = H.parse_cmd_range(line)
+  local parsed = H.parse_cmd(line)
+  local range, cmd = parsed.range, parsed.cmd
   if range[1] == nil and range[2] == nil then return H.peek_hide() end
 
-  -- NOTE: Force peek update if command line height has changed when typing
-  local cmdheight = math.ceil((vim.fn.strdisplaywidth(line) + 1) / vim.o.columns)
-  cmdheight = math.max(cmdheight, vim.o.cmdheight)
-  force = force or cmdheight ~= H.cache.peek.cmdheight
-  local cur_range = H.cache.peek.range or {}
-  if not force and range[1] == cur_range[1] and range[2] == cur_range[2] then return end
-
-  -- Normalize and show range
+  -- Normalize range lines
   local n_lines = vim.api.nvim_buf_line_count(0)
   local left = H.clamp(range[1] or range[2], 1, n_lines)
   local right = H.clamp(range[2] or range[1], 1, n_lines)
   local from = right < left and right or left
   local to = right < left and left or right
+  local data = { left = left, right = right, cmd = parsed.cmd }
 
-  H.cache.peek.range = range
+  -- Do not peek if predicate says so
+  if not H.cache.autopeek_predicate(data) then return H.peek_hide() end
+
+  -- Force peek update if command line height has changed when typing
+  local cmdheight = math.ceil((vim.fn.strdisplaywidth(line) + 1) / vim.o.columns)
+  cmdheight = math.max(cmdheight, vim.o.cmdheight)
+  force = force or cmdheight ~= H.cache.peek.cmdheight
+
+  -- Skip peek update if command line state is the same (for performance)
+  local cur_data = H.cache.peek.data or {}
+  local is_data_same = left == cur_data.left and right == cur_data.right and cmd == cur_data.cmd
+  if not force and is_data_same then return end
+
   H.cache.peek.cmdheight = cmdheight
-  H.cache.peek.statuscolumn_data = { left = left, right = right }
+  H.cache.peek.data = data
   H.cache.peek.win_id = H.peek_show(from, to)
 end
 
@@ -1006,12 +1045,12 @@ H.peek_get_config = function(height)
   if vim.is_callable(win_config) then win_config = win_config() end
   local config = vim.tbl_deep_extend('force', default_config, win_config or {})
 
-  if type(config.title) == 'string' then config.title = H.fit_to_width(config.title, config.width) end
-
   -- Tweak config values to ensure they are proper, accounting for border
   local offset = config.border == 'none' and 0 or 2
   config.height = math.max(math.min(config.height, vim.o.lines - cmdheight - offset), 1)
   config.width = math.min(config.width, vim.o.columns - offset)
+
+  if type(config.title) == 'string' then config.title = H.fit_to_width(config.title, config.width) end
 
   return config
 end
@@ -1049,7 +1088,7 @@ end
 
 H.make_peek_statuscolumn = function()
   local statuscolumn = H.cache.config.autopeek.window.statuscolumn or MiniCmdline.default_autopeek_statuscolumn
-  return function() return statuscolumn(H.cache.peek.statuscolumn_data) or '' end
+  return function() return statuscolumn(H.cache.peek.data) or '' end
 end
 
 -- Utilities ------------------------------------------------------------------
@@ -1077,8 +1116,21 @@ H.fit_to_width = function(text, width)
   return t_width <= width and text or ('…' .. vim.fn.strcharpart(text, t_width - width + 1, width - 1))
 end
 
-H.parse_cmd_range = function(line)
+H.get_cmd_preview_map = function()
+  local res = { substitute = true, smagic = true, snomagic = true }
+  -- NOTE: Check `name` type as on Neovim<0.11 output can be `{ [true] = 6 }`
+  for name, data in pairs(vim.api.nvim_get_commands({})) do
+    if type(name) == 'string' and data.preview then res[name] = true end
+  end
+  for name, data in pairs(vim.api.nvim_buf_get_commands(0, {})) do
+    if type(name) == 'string' and data.preview then res[name] = true end
+  end
+  return res
+end
+
+H.parse_cmd = function(line)
   local ok, parsed = pcall(vim.api.nvim_parse_cmd, line, {})
+  local needs_reparse = not ok
 
   -- Try extra parsing to have a result for some edge cases
   -- - Line with only range
@@ -1095,7 +1147,9 @@ H.parse_cmd_range = function(line)
   end
 
   -- Treat `range` only as a "line range"
-  return (ok and parsed.addr == 'line') and parsed.range or {}
+  local range = (ok and parsed.addr == 'line') and parsed.range or {}
+  local cmd = needs_reparse and '' or parsed.cmd
+  return { range = range, cmd = cmd }
 end
 
 H.getcmdcomplpat = function() return vim.fn.getcmdcomplpat() end

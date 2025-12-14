@@ -12,6 +12,7 @@ local STATUS_SYMBOLS = {
   A = { symbol = "A", color = "DiagnosticOk" },
   D = { symbol = "D", color = "DiagnosticError" },
   ["??"] = { symbol = "??", color = "DiagnosticInfo" },
+  ["!"] = { symbol = "!", color = "DiagnosticError" },  -- Merge conflict
 }
 
 -- File icons (basic fallback)
@@ -53,6 +54,7 @@ end
 local function create_tree_data(status_result, git_root, base_revision)
   local unstaged_nodes = create_file_nodes(status_result.unstaged, git_root, "unstaged")
   local staged_nodes = create_file_nodes(status_result.staged, git_root, "staged")
+  local conflict_nodes = status_result.conflicts and create_file_nodes(status_result.conflicts, git_root, "conflicts") or {}
 
   if base_revision then
     -- Revision mode: single group showing all changes
@@ -63,17 +65,30 @@ local function create_tree_data(status_result, git_root, base_revision)
       }, unstaged_nodes),
     }
   else
-    -- Status mode: separate staged/unstaged groups
-    return {
-      Tree.Node({
-        text = string.format("Changes (%d)", #status_result.unstaged),
-        data = { type = "group", name = "unstaged" },
-      }, unstaged_nodes),
-      Tree.Node({
-        text = string.format("Staged Changes (%d)", #status_result.staged),
-        data = { type = "group", name = "staged" },
-      }, staged_nodes),
-    }
+    -- Status mode: separate conflicts/staged/unstaged groups
+    local tree_nodes = {}
+    
+    -- Conflicts first (most important)
+    if #conflict_nodes > 0 then
+      table.insert(tree_nodes, Tree.Node({
+        text = string.format("Merge Changes (%d)", #conflict_nodes),
+        data = { type = "group", name = "conflicts" },
+      }, conflict_nodes))
+    end
+    
+    -- Unstaged changes
+    table.insert(tree_nodes, Tree.Node({
+      text = string.format("Changes (%d)", #status_result.unstaged),
+      data = { type = "group", name = "unstaged" },
+    }, unstaged_nodes))
+    
+    -- Staged changes
+    table.insert(tree_nodes, Tree.Node({
+      text = string.format("Staged Changes (%d)", #status_result.staged),
+      data = { type = "group", name = "staged" },
+    }, staged_nodes))
+    
+    return tree_nodes
   end
 end
 
@@ -305,6 +320,21 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
           }
           view.update(tabpage, session_config, true)
         end)
+      elseif group == "conflicts" then
+        -- Merge conflict: Show incoming (:3) vs current (:2), both diffed against base (:1)
+        vim.schedule(function()
+          ---@type SessionConfig
+          local session_config = {
+            mode = "explorer",
+            git_root = git_root,
+            original_path = file_path,
+            modified_path = file_path,
+            original_revision = ":3",  -- Theirs/Incoming (left buffer)
+            modified_revision = ":2",  -- Ours/Current (right buffer)
+            conflict = true,
+          }
+          view.update(tabpage, session_config, true)
+        end)
       elseif group == "staged" then
         -- Staged changes: Compare staged (:0) vs HEAD (both virtual)
         -- For renames: old_path in HEAD, new path in staging
@@ -483,10 +513,13 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
     end, vim.tbl_extend("force", map_options, { buffer = split.bufnr }))
   end
 
-  -- Select first file by default
+  -- Select first file by default (conflicts first, then unstaged, then staged)
   local first_file = nil
   local first_file_group = nil
-  if #status_result.unstaged > 0 then
+  if status_result.conflicts and #status_result.conflicts > 0 then
+    first_file = status_result.conflicts[1]
+    first_file_group = "conflicts"
+  elseif #status_result.unstaged > 0 then
     first_file = status_result.unstaged[1]
     first_file_group = "unstaged"
   elseif #status_result.staged > 0 then

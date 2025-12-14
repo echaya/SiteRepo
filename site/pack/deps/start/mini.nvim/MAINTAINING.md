@@ -168,6 +168,15 @@ Begin the process of stopping official support for outdated Neovim version short
 
 ## Adding new module
 
+### Preparation
+
+- Create new module-related assets in https://github.com/nvim-mini/assets:
+    - Logo files. See 'logo-2/generate.lua' in the repo for more details.
+    - Demo video. Preferably under 1 minute screencast showcasing main features. Usually should also display module's config. Use config as close to bare MiniMax as possible. See other demos for reference.
+- Write release blog post for nvim-mini.org. Copy file naming and structure from previous release posts. Mention future beta-testing issue with a placeholder link.
+
+### Initial
+
 - Add Lua source code in 'lua' directory.
 - Add tests in 'tests' directory. Use 'tests/dir-xxx' name for module-specific non-test helpers.
 - Update 'lua/init.lua' to mention new module: both in initial table of contents and list of modules.
@@ -179,35 +188,68 @@ Begin the process of stopping official support for outdated Neovim version short
     - '.github/ISSUE_TEMPLATE/feature-request.yml' to be included in a dropdown menu.
     - '.github/DISCUSSION_TEMPLATE/q-a.yml' to be included in a dropdown menu.
 - Generate help files.
-- Create new logo files in https://github.com/nvim-mini/assets and push them. See 'logo-2/generate.lua' in the repo for more details.
 - Add README to 'readmes' directory following the structure of some of already existing README (preferably one of the latest). NOTE: comment out mentions of `stable` branch, as it won't work during beta-testing.
 - Update main README to mention new module in table of contents.
 - Update 'CHANGELOG.md' to mention introduction of new module.
 - Update 'CONTRIBUTING.md' to mention new highlight groups (if there are any).
-- Commit changes with message 'feat(xxx): add NEW MODULE'. NOTE: it is cleaner to synchronize standalone repositories prior to this commit.
+- Create separate release branch and commit changes with message 'feat(xxx): add NEW MODULE'. NOTE: it is cleaner to synchronize standalone repositories prior to this commit.
 - If there are new highlight groups, follow up with adding explicit support in color scheme modules.
+- Push release branch. Make sure CI is green.
+
+### Site integration
+
+- Checkout to module release branch.
+- Verify that nvim-mini.org handles new module. For that:
+    - Modify 'mini.nvim' dependency to checkout into release branch.
+    - `make sync`.
+    - Add release blog post.
+    - `quarto preview`.
+    - Verify that new content looks as expected.
+
+### Release
+
 - Make standalone plugin:
     - Create new empty GitHub repository. Disable Issues, limit PRs.
     - Clone the repo manually. Copy 'LICENSE' file to it, stage, and commit ("docs: add license"). Push.
     - Add the following GitHub tags: "lua", "neovim", "neovim-plugin", "mini-nvim".
-- Push `main` and sync dual distribution.
+- Merge release branch into `main`. Push `main` and sync dual distribution.
 - Check that standalone repo doesn't have some known issues:
     - Make sure that all tracked files are synchronized. For list of tracked files see 'scripts/dual_sync.sh'. Initially they are 'doc/mini-xxx.txt', 'lua/mini/xxx.lua', 'LICENSE', and 'readmes/mini-xxx.md' (copied to be 'README.md' in standalone repository).
     - Make sure that 'README.md' in standalone repository has appropriate relative links (see patch script).
     - If there are issues, manually adjust in the repo, amend to latest commit, and force push.
 - Create a beta-testing issue and pin it.
+- Update nvim-mini.org:
+    - `make sync` on `main` branch.
+    - Add release blog post. NOTE: update it with proper beta-testing issue link.
+    - Push.
+
+### Post release
+
+- Wait for at least several weeks of beta-testing before including new module to MiniMax.
 
 ## Making stable release
 
+### When
+
 There is no clear guidelines for when a stable (minor) release should be made. Mostly "when if feels right" but "not too often". If it has to be put in words, it is something like "After 3 new modules have finished beta-testing or 4 months, whichever is sooner". No patch releases have been made yet.
 
-Checklist:
+### Preparation
+
+- Write release blog post for nvim-mini.org. Copy file naming and structure from previous version release posts.
+
+### Initial
 
 - Check for `TODO`s about actions to be done *before* release.
+- Checkout `release-0.xx` branch.
 - Update READMEs of new modules to mention `stable` branch. Commit.
 - Bump version in 'CHANGELOG.md'. Commit.
-- Checkout to `new_release` branch and push to check in CI. **Proceed only if it is successful**.
-- Merge `new_release` to `main` and push it. Check that CI has passed.
+- Make a dummy change in 'lua/mini/init.lua' file to trigger code CI. Commit.
+- Push to check on CI. **Proceed only if it is successful**.
+- Remove dummy change commit.
+
+### Release
+
+- Merge `release-0.xx` to `main` and push it. Check that CI has passed.
 - Synchronize standalone repositories.
 - Make annotated tag: `git tag -a v0.xx.0 -m 'Version 0.xx.0'`. Push it.
 - Make GitHub release. Get description from copying entries of version's 'CHANGELOG.md' section.
@@ -218,6 +260,10 @@ Checklist:
     TAG_NAME="v0.xx.0" TAG_MESSAGE="Version 0.xx.0" make dual_release
     ```
 - Check that standalone repositories actually got updates (tag + `stable`): manually visit some of them (at least new modules) on GitHub.
+
+### Post release
+
 - Close all beta-testing issues for new plugins.
 - Use development version in 'CHANGELOG.md' ('0.xx.0.9000'). Commit.
+- Synchronize nvim-mini.org.
 - Check for `TODO`s about actions to be done *after* release.
