@@ -202,6 +202,52 @@ local function handle_explorer(revision, revision2)
   end)
 end
 
+function M.vscode_merge(opts)
+  local args = opts.fargs
+  if #args == 0 then
+    vim.notify("Usage: :CodeMerge <filename>", vim.log.levels.ERROR)
+    return
+  end
+
+  local filename = args[1]
+  -- Resolve to absolute path
+  local full_path = vim.fn.fnamemodify(filename, ":p")
+  
+  if vim.fn.filereadable(full_path) == 0 then
+    vim.notify("File not found: " .. filename, vim.log.levels.ERROR)
+    return
+  end
+
+  git.get_git_root(full_path, function(err_root, git_root)
+    if err_root then
+      vim.schedule(function()
+        vim.notify("Not a git repository: " .. err_root, vim.log.levels.ERROR)
+      end)
+      return
+    end
+
+    local relative_path = git.get_relative_path(full_path, git_root)
+    
+    vim.schedule(function()
+      -- Determine filetype (must be in scheduled callback)
+      local filetype = vim.filetype.match({ filename = full_path }) or ""
+
+      local view = require('vscode-diff.render.view')
+      ---@type SessionConfig
+      local session_config = {
+        mode = "standalone",
+        git_root = git_root,
+        original_path = relative_path,
+        modified_path = relative_path,
+        original_revision = ":3", -- Theirs (Incoming)
+        modified_revision = ":2", -- Ours (Current)
+        conflict = true,          -- Activate conflict mode
+      }
+      view.create(session_config, filetype)
+    end)
+  end)
+end
+
 function M.vscode_diff(opts)
   -- Check if current tab is a diff view and toggle (close) it if so
   local current_tab = vim.api.nvim_get_current_tabpage()
@@ -261,6 +307,10 @@ function M.vscode_diff(opts)
     else
       vim.notify("Installation failed: " .. (err or "unknown error"), vim.log.levels.ERROR)
     end
+  elseif vim.fn.filereadable(subcommand) == 1 then
+    -- :CodeDiff <filename> -> Merge Tool Mode
+    -- Treat single file argument as request to open merge view for that file
+    M.vscode_merge(opts)
   else
     -- :CodeDiff <revision> [revision2] - opens explorer mode
     if #args == 2 then

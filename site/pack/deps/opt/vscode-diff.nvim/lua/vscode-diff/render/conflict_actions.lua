@@ -8,6 +8,28 @@ local auto_refresh = require('vscode-diff.auto_refresh')
 
 local tracking_ns = vim.api.nvim_create_namespace("vscode-diff-conflict-tracking")
 
+-- State for dot-repeat
+local _pending_action = nil
+
+--- Operatorfunc callback for dot-repeat
+--- @param type string Motion type (ignored)
+function M.run_repeatable_action(type)
+  if _pending_action then
+    _pending_action()
+  end
+end
+
+--- Wrap a function to be dot-repeatable via operatorfunc
+--- @param fn function The action to perform
+--- @return function The wrapper that sets operatorfunc and returns 'g@l'
+local function make_repeatable(fn)
+  return function()
+    _pending_action = fn
+    vim.go.operatorfunc = "v:lua.require'vscode-diff.render.conflict_actions'.run_repeatable_action"
+    return "g@l"
+  end
+end
+
 --- Check if a conflict block is currently active (content matches base)
 --- @param session table The diff session
 --- @param block table The conflict block
@@ -408,6 +430,162 @@ function M.discard(tabpage)
   return true
 end
 
+--- Get the start line of a block in the current buffer
+--- @param session table Session object
+--- @param block table Conflict block
+--- @param bufnr number Current buffer number
+--- @return number|nil start_line 1-based
+local function get_block_start_line(session, block, bufnr)
+  if bufnr == session.result_bufnr then
+    -- Result buffer: use extmark
+    if block.extmark_id then
+      local mark = vim.api.nvim_buf_get_extmark_by_id(session.result_bufnr, tracking_ns, block.extmark_id, {})
+      if mark and #mark > 0 then
+        return mark[1] + 1 -- Extmarks are 0-based, return 1-based
+      end
+    end
+  elseif bufnr == session.original_bufnr then
+    -- Incoming (left): use output1_range
+    if block.output1_range then
+      return block.output1_range.start_line
+    end
+  elseif bufnr == session.modified_bufnr then
+    -- Current (right): use output2_range
+    if block.output2_range then
+      return block.output2_range.start_line
+    end
+  end
+  return nil
+end
+
+--- Navigate to next conflict
+--- @param tabpage number
+function M.navigate_next_conflict(tabpage)
+  local session = lifecycle.get_session(tabpage)
+  if not session or not session.conflict_blocks then return end
+
+  local current_buf = vim.api.nvim_get_current_buf()
+  local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+  
+  local target_block = nil
+  local target_line = nil
+  local target_index = 0
+  local total_active = 0
+  local active_indices = {}
+
+  -- Pre-calculate active conflicts
+  for i, block in ipairs(session.conflict_blocks) do
+    if is_block_active(session, block) then
+      total_active = total_active + 1
+      table.insert(active_indices, { block = block, index = i })
+    end
+  end
+
+  if total_active == 0 then
+    vim.notify("No active conflicts", vim.log.levels.INFO)
+    return
+  end
+
+  -- Find next
+  for i, item in ipairs(active_indices) do
+    local start = get_block_start_line(session, item.block, current_buf)
+    if start and start > cursor_line then
+      target_block = item.block
+      target_line = start
+      target_index = i
+      break
+    end
+  end
+
+  -- Wrap around
+  if not target_line then
+    local item = active_indices[1]
+    local start = get_block_start_line(session, item.block, current_buf)
+    if start then
+      target_block = item.block
+      target_line = start
+      target_index = 1
+    end
+    
+    if target_line and target_line < cursor_line then
+       -- Wrapped
+    else
+       -- Should not happen if total_active > 0
+       return
+    end
+  end
+
+  if target_line then
+    vim.api.nvim_win_set_cursor(0, {target_line, 0})
+    vim.cmd("normal! zz")
+    vim.api.nvim_echo({{string.format('Conflict %d of %d', target_index, total_active), 'None'}}, false, {})
+  end
+end
+
+--- Navigate to previous conflict
+--- @param tabpage number
+function M.navigate_prev_conflict(tabpage)
+  local session = lifecycle.get_session(tabpage)
+  if not session or not session.conflict_blocks then return end
+
+  local current_buf = vim.api.nvim_get_current_buf()
+  local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+  
+  local target_block = nil
+  local target_line = nil
+  local target_index = 0
+  local total_active = 0
+  local active_indices = {}
+
+  -- Pre-calculate active conflicts
+  for i, block in ipairs(session.conflict_blocks) do
+    if is_block_active(session, block) then
+      total_active = total_active + 1
+      table.insert(active_indices, { block = block, index = i })
+    end
+  end
+
+  if total_active == 0 then
+    vim.notify("No active conflicts", vim.log.levels.INFO)
+    return
+  end
+
+  -- Find previous (iterate backwards through active list)
+  for i = #active_indices, 1, -1 do
+    local item = active_indices[i]
+    local start = get_block_start_line(session, item.block, current_buf)
+    if start and start < cursor_line then
+      target_block = item.block
+      target_line = start
+      target_index = i
+      break
+    end
+  end
+
+  -- Wrap around
+  if not target_line then
+    local item = active_indices[#active_indices]
+    local start = get_block_start_line(session, item.block, current_buf)
+    if start then
+      target_block = item.block
+      target_line = start
+      target_index = #active_indices
+    end
+    
+    if target_line and target_line > cursor_line then
+       -- Wrapped
+    else
+       return
+    end
+  end
+
+  if target_line then
+    vim.api.nvim_win_set_cursor(0, {target_line, 0})
+    vim.cmd("normal! zz")
+    vim.api.nvim_echo({{string.format('Conflict %d of %d', target_index, total_active), 'None'}}, false, {})
+  end
+end
+
 --- Setup conflict keymaps for a session
 --- @param tabpage number
 function M.setup_keymaps(tabpage)
@@ -416,8 +594,8 @@ function M.setup_keymaps(tabpage)
 
   local keymaps = config.options.keymaps.conflict or {}
 
-  -- Only bind to incoming (left) and current (right) buffers
-  local buffers = { session.original_bufnr, session.modified_bufnr }
+  -- Bind to incoming (left), current (right), AND result buffers
+  local buffers = { session.original_bufnr, session.modified_bufnr, session.result_bufnr }
 
   local base_opts = { noremap = true, silent = true, nowait = true }
 
@@ -425,30 +603,43 @@ function M.setup_keymaps(tabpage)
     if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
       -- Accept incoming
       if keymaps.accept_incoming then
-        vim.keymap.set("n", keymaps.accept_incoming, function()
+        vim.keymap.set("n", keymaps.accept_incoming, make_repeatable(function()
           M.accept_incoming(tabpage)
-        end, vim.tbl_extend('force', base_opts, { buffer = bufnr, desc = "Accept incoming change" }))
+        end), vim.tbl_extend('force', base_opts, { buffer = bufnr, desc = "Accept incoming change", expr = true }))
       end
 
       -- Accept current
       if keymaps.accept_current then
-        vim.keymap.set("n", keymaps.accept_current, function()
+        vim.keymap.set("n", keymaps.accept_current, make_repeatable(function()
           M.accept_current(tabpage)
-        end, vim.tbl_extend('force', base_opts, { buffer = bufnr, desc = "Accept current change" }))
+        end), vim.tbl_extend('force', base_opts, { buffer = bufnr, desc = "Accept current change", expr = true }))
       end
 
       -- Accept both
       if keymaps.accept_both then
-        vim.keymap.set("n", keymaps.accept_both, function()
+        vim.keymap.set("n", keymaps.accept_both, make_repeatable(function()
           M.accept_both(tabpage)
-        end, vim.tbl_extend('force', base_opts, { buffer = bufnr, desc = "Accept both changes" }))
+        end), vim.tbl_extend('force', base_opts, { buffer = bufnr, desc = "Accept both changes", expr = true }))
       end
 
       -- Discard
       if keymaps.discard then
-        vim.keymap.set("n", keymaps.discard, function()
+        vim.keymap.set("n", keymaps.discard, make_repeatable(function()
           M.discard(tabpage)
-        end, vim.tbl_extend('force', base_opts, { buffer = bufnr, desc = "Discard changes (keep base)" }))
+        end), vim.tbl_extend('force', base_opts, { buffer = bufnr, desc = "Discard changes (keep base)", expr = true }))
+      end
+      
+      -- Navigation
+      if keymaps.next_conflict then
+        vim.keymap.set("n", keymaps.next_conflict, function()
+          M.navigate_next_conflict(tabpage)
+        end, vim.tbl_extend('force', base_opts, { buffer = bufnr, desc = "Next conflict" }))
+      end
+      
+      if keymaps.prev_conflict then
+        vim.keymap.set("n", keymaps.prev_conflict, function()
+          M.navigate_prev_conflict(tabpage)
+        end, vim.tbl_extend('force', base_opts, { buffer = bufnr, desc = "Previous conflict" }))
       end
     end
   end

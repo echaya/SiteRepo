@@ -46,6 +46,8 @@ M.defaults = {
       accept_current = "<leader>co",   -- Accept current (ours/right) change
       accept_both = "<leader>cb",      -- Accept both changes (incoming first)
       discard = "<leader>cx",          -- Discard both, keep base
+      next_conflict = "]x",            -- Jump to next conflict
+      prev_conflict = "[x",            -- Jump to previous conflict
     },
   },
 }

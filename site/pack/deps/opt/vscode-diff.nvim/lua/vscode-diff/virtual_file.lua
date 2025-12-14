@@ -69,6 +69,9 @@ function M.setup()
 
       git.get_file_content(commit, git_root, filepath, function(err, lines)
         vim.schedule(function()
+          -- Check if buffer is still valid (user might have closed it, or nvim is exiting)
+          if not api.nvim_buf_is_valid(buf) then return end
+
           if err then
             -- File doesn't exist in this revision (added/deleted file)
             -- Show empty buffer so diff can highlight the change

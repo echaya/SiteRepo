@@ -46,3 +46,10 @@ vim.api.nvim_create_user_command("CodeDiff", commands.vscode_diff, {
   complete = complete_codediff,
   desc = "VSCode-style diff view: :CodeDiff [<revision>] | file <revision> | file <file_a> <file_b> | install"
 })
+
+-- Register merge tool command
+vim.api.nvim_create_user_command("CodeMerge", commands.vscode_merge, {
+  nargs = 1,
+  complete = "file",
+  desc = "VSCode-style merge conflict tool: :CodeMerge <filename>"
+})
