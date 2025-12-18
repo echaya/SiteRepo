@@ -1,6 +1,9 @@
 -- Command implementations for vscode-diff
 local M = {}
 
+-- Subcommands available for :CodeDiff
+M.SUBCOMMANDS = { "merge", "file", "install" }
+
 local git = require("vscode-diff.git")
 local lifecycle = require("vscode-diff.render.lifecycle")
 
@@ -205,11 +208,14 @@ end
 function M.vscode_merge(opts)
   local args = opts.fargs
   if #args == 0 then
-    vim.notify("Usage: :CodeMerge <filename>", vim.log.levels.ERROR)
+    vim.notify("Usage: :CodeDiff merge <filename>", vim.log.levels.ERROR)
     return
   end
 
   local filename = args[1]
+  -- Strip surrounding quotes if present (from shell escaping in git mergetool)
+  filename = filename:gsub('^"(.*)"$', '%1'):gsub("^'(.*)'$", '%1')
+  
   -- Resolve to absolute path
   local full_path = vim.fn.fnamemodify(filename, ":p")
   
@@ -218,34 +224,54 @@ function M.vscode_merge(opts)
     return
   end
 
+  -- Ensure all required modules are loaded before we start vim.wait
+  -- This prevents issues with lazy-loading during the wait loop
+  local view = require('vscode-diff.render.view')
+  
+  -- For synchronous execution (required by git mergetool), we need to block
+  -- until the view is ready. Use vim.wait which processes the event loop.
+  local view_ready = false
+  local error_msg = nil
+
   git.get_git_root(full_path, function(err_root, git_root)
     if err_root then
-      vim.schedule(function()
-        vim.notify("Not a git repository: " .. err_root, vim.log.levels.ERROR)
-      end)
+      error_msg = "Not a git repository: " .. err_root
+      view_ready = true
       return
     end
 
     local relative_path = git.get_relative_path(full_path, git_root)
     
+    -- Schedule everything that needs main thread (vim.filetype.match, view.create)
     vim.schedule(function()
-      -- Determine filetype (must be in scheduled callback)
       local filetype = vim.filetype.match({ filename = full_path }) or ""
 
-      local view = require('vscode-diff.render.view')
       ---@type SessionConfig
       local session_config = {
         mode = "standalone",
         git_root = git_root,
         original_path = relative_path,
         modified_path = relative_path,
-        original_revision = ":3", -- Theirs (Incoming)
-        modified_revision = ":2", -- Ours (Current)
-        conflict = true,          -- Activate conflict mode
+        original_revision = ":3",
+        modified_revision = ":2",
+        conflict = true,
       }
-      view.create(session_config, filetype)
+      
+      view.create(session_config, filetype, function()
+        view_ready = true
+      end)
     end)
   end)
+
+  -- Block until view is ready - this allows event loop to process callbacks
+  vim.wait(10000, function() return view_ready end, 10)
+  
+  -- Force screen redraw after vim.wait to ensure all windows are visible
+  vim.cmd('redraw!')
+  
+  if error_msg then
+    vim.notify(error_msg, vim.log.levels.ERROR)
+  end
 end
 
 function M.vscode_diff(opts)
@@ -270,7 +296,14 @@ function M.vscode_diff(opts)
 
   local subcommand = args[1]
 
-  if subcommand == "file" then
+  if subcommand == "merge" then
+    -- :CodeDiff merge <filename> - Merge Tool Mode
+    if #args ~= 2 then
+      vim.notify("Usage: :CodeDiff merge <filename>", vim.log.levels.ERROR)
+      return
+    end
+    M.vscode_merge({ fargs = { args[2] } })
+  elseif subcommand == "file" then
     if #args == 2 then
       -- :CodeDiff file HEAD
       handle_git_diff(args[2])
@@ -307,10 +340,6 @@ function M.vscode_diff(opts)
     else
       vim.notify("Installation failed: " .. (err or "unknown error"), vim.log.levels.ERROR)
     end
-  elseif vim.fn.filereadable(subcommand) == 1 then
-    -- :CodeDiff <filename> -> Merge Tool Mode
-    -- Treat single file argument as request to open merge view for that file
-    M.vscode_merge(opts)
   else
     -- :CodeDiff <revision> [revision2] - opens explorer mode
     if #args == 2 then

@@ -120,6 +120,12 @@ function M.setup()
     link = "Visual",
     default = true,
   })
+
+  -- Explorer indent markers (tree view)
+  vim.api.nvim_set_hl(0, "NeoTreeIndentMarker", {
+    link = "Comment",
+    default = true,
+  })
 end
 
 return M

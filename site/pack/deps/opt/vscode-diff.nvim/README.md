@@ -1,5 +1,9 @@
 # vscode-diff.nvim
 
+[![Pre-release](https://img.shields.io/github/v/release/esmuellert/vscode-diff.nvim?include_prereleases&sort=semver&label=🚀%20pre-release&color=orange)](https://github.com/esmuellert/vscode-diff.nvim/issues/97)
+
+> **🧪 v2.0.0 Pre-release Available!** The `next` branch includes new features like **Git Merge Tool support**. [Help us test it!](https://github.com/esmuellert/vscode-diff.nvim/issues/97)
+
 A Neovim plugin that provides VSCode-style side-by-side diff rendering with two-tier highlighting.
 
 <div align="center">
@@ -64,23 +68,36 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
         -- Line-level: accepts highlight group names or hex colors (e.g., "#2ea043")
         line_insert = "DiffAdd",      -- Line-level insertions
         line_delete = "DiffDelete",   -- Line-level deletions
-        
+
         -- Character-level: accepts highlight group names or hex colors
         -- If specified, these override char_brightness calculation
         char_insert = nil,            -- Character-level insertions (nil = auto-derive)
         char_delete = nil,            -- Character-level deletions (nil = auto-derive)
-        
+
         -- Brightness multiplier (only used when char_insert/char_delete are nil)
         -- nil = auto-detect based on background (1.4 for dark, 0.92 for light)
         char_brightness = nil,        -- Auto-adjust based on your colorscheme
       },
-      
+
       -- Diff view behavior
       diff = {
         disable_inlay_hints = true,         -- Disable inlay hints in diff windows for cleaner view
         max_computation_time_ms = 5000,     -- Maximum time for diff computation (VSCode default)
+        hide_merge_artifacts = false,       -- Hide merge tool temp files (*.orig, *.BACKUP.*, *.BASE.*, *.LOCAL.*, *.REMOTE.*)
       },
-      
+
+      -- Explorer panel configuration
+      explorer = {
+        position = "left",  -- "left" or "bottom"
+        width = 40,         -- Width when position is "left" (columns)
+        height = 15,        -- Height when position is "bottom" (lines)
+        indent_markers = true,  -- Show indent markers in tree view (│, ├, └)
+        icons = {
+          folder_closed = "",  -- Nerd Font folder icon (customize as needed)
+          folder_open = "",    -- Nerd Font folder-open icon
+        },
+      },
+
       -- Keymaps in diff view
       keymaps = {
         view = {
@@ -90,11 +107,22 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
           prev_hunk = "[c",   -- Jump to previous change
           next_file = "]f",   -- Next file in explorer mode
           prev_file = "[f",   -- Previous file in explorer mode
+          diff_get = "do",    -- Get change from other buffer (like vimdiff)
+          diff_put = "dp",    -- Put change to other buffer (like vimdiff)
         },
         explorer = {
           select = "<CR>",    -- Open diff for selected file
           hover = "K",        -- Show file diff preview
           refresh = "R",      -- Refresh git status
+          toggle_view_mode = "i",  -- Toggle between 'list' and 'tree' views
+        },
+        conflict = {
+          accept_incoming = "<leader>ct",  -- Accept incoming (theirs/left) change
+          accept_current = "<leader>co",   -- Accept current (ours/right) change
+          accept_both = "<leader>cb",      -- Accept both changes (incoming first)
+          discard = "<leader>cx",          -- Discard both, keep base
+          next_conflict = "]x",            -- Jump to next conflict
+          prev_conflict = "[x",            -- Jump to previous conflict
         },
       },
     })

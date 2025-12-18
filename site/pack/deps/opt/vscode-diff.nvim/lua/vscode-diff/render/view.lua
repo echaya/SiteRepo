@@ -26,15 +26,22 @@ local function prepare_buffer(is_virtual, git_root, revision, path)
     -- Check if buffer already exists
     local existing_buf = vim.fn.bufnr(virtual_url)
     
-    if existing_buf ~= -1 then
+    -- For :0 (staged index), always force reload because index can change
+    -- when user runs git add/reset. For commits (immutable), we can cache.
+    local is_mutable_revision = revision == ":0" or revision == ":1" or revision == ":2" or revision == ":3"
+    
+    if existing_buf ~= -1 and not is_mutable_revision then
+       -- Buffer exists for immutable revision, reuse it
        return {
          bufnr = existing_buf,
          target = virtual_url,
-         needs_edit = true -- Always edit to force reload/switch
+         needs_edit = false
        }
     else
+       -- Either buffer doesn't exist, or it's a mutable revision that needs refresh
+       -- Don't delete here - let the :edit! handle it (will trigger BufReadCmd)
        return {
-         bufnr = nil,
+         bufnr = existing_buf ~= -1 and existing_buf or nil,
          target = virtual_url,
          needs_edit = true,
        }
@@ -228,6 +235,105 @@ local function setup_auto_refresh(original_buf, modified_buf, original_is_virtua
   end
 end
 
+-- Common logic: Setup conflict result window at bottom
+-- Creates the result window layout and loads the real file with BASE content
+-- @param tabpage number: Current tabpage
+-- @param session_config SessionConfig: Session configuration
+-- @param original_win number: Original (left) window
+-- @param modified_win number: Modified (right) window  
+-- @param base_lines table: BASE content lines
+-- @param conflict_diffs table: Conflict diff results
+-- @param is_update boolean: true if updating existing view (may reuse result window)
+-- @return boolean: success
+local function setup_conflict_result_window(tabpage, session_config, original_win, modified_win, base_lines, conflict_diffs, is_update)
+  local abs_path = session_config.git_root .. "/" .. session_config.original_path
+  local result_win, result_bufnr
+
+  -- Check if result window already exists (only in update mode)
+  if is_update then
+    local existing_result_bufnr, existing_result_win = lifecycle.get_result(tabpage)
+    if existing_result_win and vim.api.nvim_win_is_valid(existing_result_win) then
+      result_win = existing_result_win
+      vim.api.nvim_set_current_win(result_win)
+    end
+  end
+
+  -- Create result window if it doesn't exist
+  if not result_win then
+    if vim.api.nvim_win_is_valid(modified_win) then
+      vim.api.nvim_set_current_win(modified_win)
+    end
+    vim.cmd("belowright split")
+    result_win = vim.api.nvim_get_current_win()
+
+    -- Move original window to be a vertical split with modified
+    vim.fn.win_splitmove(original_win, modified_win, { vertical = true, rightbelow = false })
+
+    -- Set result window height (30% of available height or minimum 10 lines)
+    local total_height = vim.o.lines
+    local result_height = math.max(10, math.floor(total_height * 0.3))
+    vim.api.nvim_win_set_height(result_win, result_height)
+  end
+
+  -- Load real file buffer in result window
+  -- Use silent and swapfile handling to avoid prompts
+  local old_shortmess = vim.o.shortmess
+  vim.o.shortmess = old_shortmess .. 'A'
+  local ok, err = pcall(vim.cmd, "silent edit " .. vim.fn.fnameescape(abs_path))
+  vim.o.shortmess = old_shortmess
+
+  if not ok then
+    vim.notify("Failed to open result file: " .. tostring(err), vim.log.levels.ERROR)
+    return false
+  end
+
+  result_bufnr = vim.api.nvim_get_current_buf()
+
+  -- Reset buffer content to BASE (only if buffer has conflict markers)
+  local current_content = vim.api.nvim_buf_get_lines(result_bufnr, 0, -1, false)
+  local has_conflict_markers = false
+  for _, line in ipairs(current_content) do
+    if line:match("^<<<<<<<") or line:match("^=======") or line:match("^>>>>>>>") then
+      has_conflict_markers = true
+      break
+    end
+  end
+
+  if has_conflict_markers then
+    vim.api.nvim_buf_set_lines(result_bufnr, 0, -1, false, base_lines)
+    vim.bo[result_bufnr].modified = true
+  end
+
+  -- Set window options for result
+  vim.wo[result_win].wrap = false
+  vim.wo[result_win].cursorline = true
+  vim.wo[result_win].winbar = ""
+
+  -- Enable scrollbind for result window
+  vim.api.nvim_win_set_cursor(result_win, {1, 0})
+  vim.wo[result_win].scrollbind = true
+
+  -- Update lifecycle with result buffer/window
+  lifecycle.set_result(tabpage, result_bufnr, result_win)
+  lifecycle.set_result_base_lines(tabpage, base_lines)
+  lifecycle.set_conflict_blocks(tabpage, conflict_diffs.conflict_blocks)
+  lifecycle.track_conflict_file(tabpage, abs_path)
+
+  -- Enable auto-refresh for result buffer
+  auto_refresh.enable_for_result(result_bufnr)
+
+  -- Initialize conflict tracking (keymaps setup separately after setup_all_keymaps)
+  local conflict_actions = require('vscode-diff.render.conflict_actions')
+  conflict_actions.initialize_tracking(result_bufnr, conflict_diffs.conflict_blocks)
+
+  -- Return focus to modified window
+  if vim.api.nvim_win_is_valid(modified_win) then
+    vim.api.nvim_set_current_win(modified_win)
+  end
+
+  return true
+end
+
 -- Centralized keymap setup for all diff view keymaps
 -- This function sets up ALL keymaps in one place for better maintainability
 local function setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explorer_mode)
@@ -334,6 +440,132 @@ local function setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_exp
     explorer.toggle_visibility(explorer_obj)
   end
 
+  -- Helper: Find hunk at cursor position
+  -- Returns the hunk and its index, or nil if cursor is not in a hunk
+  local function find_hunk_at_cursor()
+    local session = lifecycle.get_session(tabpage)
+    if not session or not session.stored_diff_result then return nil, nil end
+    local diff_result = session.stored_diff_result
+    if #diff_result.changes == 0 then return nil, nil end
+
+    local current_buf = vim.api.nvim_get_current_buf()
+    local is_original = current_buf == original_bufnr
+    local cursor = vim.api.nvim_win_get_cursor(0)
+    local current_line = cursor[1]
+
+    for i, mapping in ipairs(diff_result.changes) do
+      local start_line = is_original and mapping.original.start_line or mapping.modified.start_line
+      local end_line = is_original and mapping.original.end_line or mapping.modified.end_line
+      -- Check if cursor is within this hunk (end_line is exclusive)
+      if current_line >= start_line and current_line < end_line then
+        return mapping, i
+      end
+      -- Also match if it's a deletion (empty range) and cursor is at start
+      if start_line == end_line and current_line == start_line then
+        return mapping, i
+      end
+    end
+    return nil, nil
+  end
+
+  -- Helper: Diff get - obtain change from other buffer to current buffer
+  local function diff_get()
+    local session = lifecycle.get_session(tabpage)
+    if not session then return end
+
+    local current_buf = vim.api.nvim_get_current_buf()
+    local is_original = current_buf == original_bufnr
+    local target_buf = current_buf
+    local source_buf = is_original and modified_bufnr or original_bufnr
+
+    -- Check if target buffer is modifiable
+    if not vim.bo[target_buf].modifiable then
+      vim.notify("Buffer is not modifiable", vim.log.levels.WARN)
+      return
+    end
+
+    local hunk, hunk_idx = find_hunk_at_cursor()
+    if not hunk then
+      vim.notify("No hunk at cursor position", vim.log.levels.WARN)
+      return
+    end
+
+    -- Get source and target ranges
+    local source_range = is_original and hunk.modified or hunk.original
+    local target_range = is_original and hunk.original or hunk.modified
+
+    -- Get lines from source buffer
+    local source_lines = vim.api.nvim_buf_get_lines(
+      source_buf,
+      source_range.start_line - 1,
+      source_range.end_line - 1,
+      false
+    )
+
+    -- Replace lines in target buffer
+    vim.api.nvim_buf_set_lines(
+      target_buf,
+      target_range.start_line - 1,
+      target_range.end_line - 1,
+      false,
+      source_lines
+    )
+
+    -- Trigger diff refresh to update highlights
+    auto_refresh.trigger(target_buf)
+
+    vim.api.nvim_echo({{string.format('Obtained hunk %d', hunk_idx), 'None'}}, false, {})
+  end
+
+  -- Helper: Diff put - put change from current buffer to other buffer
+  local function diff_put()
+    local session = lifecycle.get_session(tabpage)
+    if not session then return end
+
+    local current_buf = vim.api.nvim_get_current_buf()
+    local is_original = current_buf == original_bufnr
+    local source_buf = current_buf
+    local target_buf = is_original and modified_bufnr or original_bufnr
+
+    -- Check if target buffer is modifiable
+    if not vim.bo[target_buf].modifiable then
+      vim.notify("Target buffer is not modifiable", vim.log.levels.WARN)
+      return
+    end
+
+    local hunk, hunk_idx = find_hunk_at_cursor()
+    if not hunk then
+      vim.notify("No hunk at cursor position", vim.log.levels.WARN)
+      return
+    end
+
+    -- Get source and target ranges
+    local source_range = is_original and hunk.original or hunk.modified
+    local target_range = is_original and hunk.modified or hunk.original
+
+    -- Get lines from source buffer
+    local source_lines = vim.api.nvim_buf_get_lines(
+      source_buf,
+      source_range.start_line - 1,
+      source_range.end_line - 1,
+      false
+    )
+
+    -- Replace lines in target buffer
+    vim.api.nvim_buf_set_lines(
+      target_buf,
+      target_range.start_line - 1,
+      target_range.end_line - 1,
+      false,
+      source_lines
+    )
+
+    -- Trigger diff refresh to update highlights
+    auto_refresh.trigger(target_buf)
+
+    vim.api.nvim_echo({{string.format('Put hunk %d', hunk_idx), 'None'}}, false, {})
+  end
+
   -- ========================================================================
   -- Bind all keymaps using unified API (one place for all keymaps!)
   -- ========================================================================
@@ -365,12 +597,21 @@ local function setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_exp
       lifecycle.set_tab_keymap(tabpage, 'n', keymaps.prev_file, navigate_prev_file, { desc = 'Previous file in explorer' })
     end
   end
+
+  -- Diff get/put (do, dp) - like vimdiff
+  if keymaps.diff_get then
+    lifecycle.set_tab_keymap(tabpage, 'n', keymaps.diff_get, diff_get, { desc = 'Get change from other buffer' })
+  end
+  if keymaps.diff_put then
+    lifecycle.set_tab_keymap(tabpage, 'n', keymaps.diff_put, diff_put, { desc = 'Put change to other buffer' })
+  end
 end
 
 ---@param session_config SessionConfig Session configuration
 ---@param filetype? string Optional filetype for syntax highlighting
+---@param on_ready? function Optional callback when view is fully ready (for sync callers)
 ---@return table|nil Result containing diff metadata, or nil if deferred
-function M.create(session_config, filetype)
+function M.create(session_config, filetype, on_ready)
   -- Create new tab (both modes create a tab)
   vim.cmd("tabnew")
 
@@ -482,43 +723,112 @@ function M.create(session_config, filetype)
     
     -- Set up rendering after buffers are ready
     local render_everything = function()
+      -- Guard: Check if windows are still valid (they may have been closed during async wait)
+      if not vim.api.nvim_win_is_valid(original_win) or not vim.api.nvim_win_is_valid(modified_win) then
+        return
+      end
+      
+      -- Guard: Check if buffers are still valid
+      if not vim.api.nvim_buf_is_valid(original_info.bufnr) or not vim.api.nvim_buf_is_valid(modified_info.bufnr) then
+        return
+      end
+      
       -- Always read from buffers (single source of truth)
       local original_lines = vim.api.nvim_buf_get_lines(original_info.bufnr, 0, -1, false)
       local modified_lines = vim.api.nvim_buf_get_lines(modified_info.bufnr, 0, -1, false)
-      
-      local lines_diff = compute_and_render(
-        original_info.bufnr, modified_info.bufnr,
-        original_lines, modified_lines,
-        original_is_virtual, modified_is_virtual,
-        original_win, modified_win,
-        true  -- auto_scroll_to_first_hunk = true on create
-      )
 
-      if lines_diff then
-        -- Create complete lifecycle session (one step!)
-        lifecycle.create_session(
-          tabpage,
-          session_config.mode,
-          session_config.git_root,
-          session_config.original_path,
-          session_config.modified_path,
-          session_config.original_revision,
-          session_config.modified_revision,
-          original_info.bufnr,
-          modified_info.bufnr,
-          original_win,
-          modified_win,
-          lines_diff
+      if session_config.conflict then
+        -- Conflict mode: Fetch base content and render both sides against base
+        local git = require('vscode-diff.git')
+        local base_revision = ":1"
+
+        git.get_file_content(base_revision, session_config.git_root, session_config.original_path, function(err, base_lines)
+          -- For add/add conflicts (AA), there's no base version - use empty base
+          if err then
+            base_lines = {}
+          end
+
+          vim.schedule(function()
+            local conflict_diffs = compute_and_render_conflict(
+              original_info.bufnr, modified_info.bufnr,
+              base_lines, original_lines, modified_lines,
+              original_win, modified_win,
+              true  -- auto_scroll_to_first_hunk = true on create
+            )
+
+            if conflict_diffs then
+              -- Create lifecycle session for conflict mode
+              lifecycle.create_session(
+                tabpage,
+                session_config.mode,
+                session_config.git_root,
+                session_config.original_path,
+                session_config.modified_path,
+                session_config.original_revision,
+                session_config.modified_revision,
+                original_info.bufnr,
+                modified_info.bufnr,
+                original_win,
+                modified_win,
+                conflict_diffs.base_to_modified_diff
+              )
+
+              -- Setup auto-refresh for consistency (both buffers are virtual in conflict mode)
+              setup_auto_refresh(original_info.bufnr, modified_info.bufnr, true, true)
+
+              -- Setup result window and keymaps
+              local success = setup_conflict_result_window(tabpage, session_config, original_win, modified_win, base_lines, conflict_diffs, false)
+              if success then
+                setup_all_keymaps(tabpage, original_info.bufnr, modified_info.bufnr, false)
+                -- Setup conflict keymaps AFTER setup_all_keymaps to override do/dp
+                local conflict_actions = require('vscode-diff.render.conflict_actions')
+                conflict_actions.setup_keymaps(tabpage)
+              end
+              
+              -- Signal that view is ready
+              if on_ready then on_ready() end
+            end
+          end)
+        end)
+      else
+        -- Normal mode: Compute and render diff between left and right
+        local lines_diff = compute_and_render(
+          original_info.bufnr, modified_info.bufnr,
+          original_lines, modified_lines,
+          original_is_virtual, modified_is_virtual,
+          original_win, modified_win,
+          true  -- auto_scroll_to_first_hunk = true on create
         )
 
-        -- Enable auto-refresh for real file buffers only
-        setup_auto_refresh(original_info.bufnr, modified_info.bufnr, original_is_virtual, modified_is_virtual)
+        if lines_diff then
+          -- Create complete lifecycle session (one step!)
+          lifecycle.create_session(
+            tabpage,
+            session_config.mode,
+            session_config.git_root,
+            session_config.original_path,
+            session_config.modified_path,
+            session_config.original_revision,
+            session_config.modified_revision,
+            original_info.bufnr,
+            modified_info.bufnr,
+            original_win,
+            modified_win,
+            lines_diff
+          )
 
-        -- Setup all keymaps in one place (centralized)
-        setup_all_keymaps(tabpage, original_info.bufnr, modified_info.bufnr, false)
+          -- Enable auto-refresh for real file buffers only
+          setup_auto_refresh(original_info.bufnr, modified_info.bufnr, original_is_virtual, modified_is_virtual)
 
-        -- Setup auto-sync on file switch (after session is complete!)
-        lifecycle.setup_auto_sync_on_file_switch(tabpage, original_is_virtual, modified_is_virtual)
+          -- Setup all keymaps in one place (centralized)
+          setup_all_keymaps(tabpage, original_info.bufnr, modified_info.bufnr, false)
+
+          -- Setup auto-sync on file switch (after session is complete!)
+          lifecycle.setup_auto_sync_on_file_switch(tabpage, original_is_virtual, modified_is_virtual)
+          
+          -- Signal that view is ready
+          if on_ready then on_ready() end
+        end
       end
     end
 
@@ -584,27 +894,35 @@ function M.create(session_config, filetype)
 
   -- For explorer mode, create the explorer sidebar after diff windows are set up
   if session_config.mode == "explorer" and session_config.explorer_data then
-    -- Calculate explorer width: 20% of terminal width or 40 columns, whichever is smaller (matches neo-tree default)
-    local total_width = vim.o.columns
-    local explorer_width = math.min(40, math.floor(total_width * 0.2))
-    
-    -- Create explorer in left sidebar (explorer manages its own lifecycle and callbacks)
+    -- Get explorer position from config
+    local explorer_config = config.options.explorer or {}
+    local position = explorer_config.position or "left"
+
+    -- Create explorer (explorer manages its own lifecycle and callbacks)
     local explorer = require('vscode-diff.render.explorer')
     local status_result = session_config.explorer_data.status_result
-    
-    local explorer_obj = explorer.create(status_result, session_config.git_root, tabpage, explorer_width, session_config.original_revision, session_config.modified_revision)
-    
+
+    local explorer_obj = explorer.create(status_result, session_config.git_root, tabpage, nil, session_config.original_revision, session_config.modified_revision)
+
     -- Store explorer reference in lifecycle
     lifecycle.set_explorer(tabpage, explorer_obj)
-    
+
     -- Note: Keymaps will be set when first file is selected via update()
-    
-    -- After explorer is created, adjust diff window widths to be equal
-    local remaining_width = total_width - explorer_width
-    local diff_width = math.floor(remaining_width / 2)
-    
-    vim.api.nvim_win_set_width(original_win, diff_width)
-    vim.api.nvim_win_set_width(modified_win, diff_width)
+
+    -- Adjust diff window sizes based on explorer position
+    if position == "bottom" then
+      -- For bottom position, diff windows take full width, equalize them
+      vim.cmd('wincmd =')
+    else
+      -- For left position, calculate remaining width and split equally
+      local total_width = vim.o.columns
+      local explorer_width = explorer_config.width or 40
+      local remaining_width = total_width - explorer_width
+      local diff_width = math.floor(remaining_width / 2)
+
+      vim.api.nvim_win_set_width(original_win, diff_width)
+      vim.api.nvim_win_set_width(modified_win, diff_width)
+    end
   end
 
   return {
@@ -645,6 +963,10 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
   -- Clear highlights from old buffers (before they're replaced/deleted)
   lifecycle.clear_highlights(old_original_buf)
   lifecycle.clear_highlights(old_modified_buf)
+  
+  -- Clear stored_diff_result to signal that an update is in progress
+  -- This allows wait_for_session_ready to detect pending updates
+  lifecycle.update_diff_result(tabpage, nil)
 
   -- Handle result window when switching between conflict and non-conflict modes
   local old_result_bufnr, old_result_win = lifecycle.get_result(tabpage)
@@ -673,90 +995,6 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
     session_config.modified_path
   )
 
-  -- CRITICAL: If the buffer we want to load already exists and is displayed in OTHER diff window,
-  -- we need to replace that window's buffer FIRST before :edit, otherwise :edit will reuse it
-  -- This fixes the bug where same file in staged+unstaged shows same buffer in both windows
-  
-  local buffers_to_delete = {}
-  
-  -- Check if original window's target buffer is currently in modified window
-  if original_info.needs_edit then
-    local existing = vim.fn.bufnr(original_info.target)
-    if existing ~= -1 and existing == old_modified_buf then
-      -- Replace modified window with empty buffer first
-      if vim.api.nvim_win_is_valid(modified_win) then
-        vim.api.nvim_set_current_win(modified_win)
-        vim.cmd("enew")
-        table.insert(buffers_to_delete, old_modified_buf)
-        old_modified_buf = vim.api.nvim_get_current_buf()  -- Update to new empty buffer
-      end
-    end
-  end
-  
-  -- Check if modified window's target buffer is currently in original window
-  if modified_info.needs_edit then
-    local existing = vim.fn.bufnr(modified_info.target)
-    if existing ~= -1 and existing == old_original_buf then
-      -- Replace original window with empty buffer first
-      if vim.api.nvim_win_is_valid(original_win) then
-        vim.api.nvim_set_current_win(original_win)
-        vim.cmd("enew")
-        table.insert(buffers_to_delete, old_original_buf)
-        old_original_buf = vim.api.nvim_get_current_buf()  -- Update to new empty buffer
-      end
-    end
-  end
-
-  -- Now load buffers - :edit will create fresh buffers since we replaced conflicting ones
-  if vim.api.nvim_win_is_valid(original_win) then
-    vim.api.nvim_set_current_win(original_win)
-    if original_info.needs_edit then
-      -- Force reload for virtual files to ensure fresh content (fixes stale :0 index)
-      local cmd = original_is_virtual and "edit! " or "edit "
-      vim.cmd(cmd .. vim.fn.fnameescape(original_info.target))
-      original_info.bufnr = vim.api.nvim_get_current_buf()
-    else
-      vim.api.nvim_win_set_buf(original_win, original_info.bufnr)
-    end
-  end
-
-  if vim.api.nvim_win_is_valid(modified_win) then
-    vim.api.nvim_set_current_win(modified_win)
-    if modified_info.needs_edit then
-      -- Force reload for virtual files to ensure fresh content
-      local cmd = modified_is_virtual and "edit! " or "edit "
-      vim.cmd(cmd .. vim.fn.fnameescape(modified_info.target))
-      modified_info.bufnr = vim.api.nvim_get_current_buf()
-    else
-      vim.api.nvim_win_set_buf(modified_win, modified_info.bufnr)
-    end
-  end
-  
-  -- Delete the old buffers we replaced (after windows have new content)
-  for _, buf in ipairs(buffers_to_delete) do
-    pcall(vim.api.nvim_buf_delete, buf, { force = true })
-  end
-
-  -- Update lifecycle session metadata
-  lifecycle.update_paths(tabpage, session_config.original_path, session_config.modified_path)
-
-  -- Delete old virtual buffers if they were virtual AND are not reused in either new window
-  if lifecycle.is_original_virtual(tabpage) and 
-     old_original_buf ~= original_info.bufnr and 
-     old_original_buf ~= modified_info.bufnr then
-    pcall(vim.api.nvim_buf_delete, old_original_buf, { force = true })
-  end
-  
-  if lifecycle.is_modified_virtual(tabpage) and 
-     old_modified_buf ~= modified_info.bufnr and 
-     old_modified_buf ~= original_info.bufnr then
-    pcall(vim.api.nvim_buf_delete, old_modified_buf, { force = true })
-  end
-
-  -- Update session with new buffer/window IDs
-  -- Note: We need to update lifecycle to support this, or recreate session
-  -- For now, we'll update the stored diff result and metadata
-
   -- Determine if we need to wait for virtual file content
   -- Since we force reload virtual files, we always wait for the load event
   -- Use a state table to avoid closure capture issues in autocmd
@@ -766,6 +1004,16 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
   }
 
   local render_everything = function()
+    -- Guard: Check if windows are still valid (they may have been closed during async wait)
+    if not vim.api.nvim_win_is_valid(original_win) or not vim.api.nvim_win_is_valid(modified_win) then
+      return
+    end
+    
+    -- Guard: Check if buffers are still valid
+    if not vim.api.nvim_buf_is_valid(original_info.bufnr) or not vim.api.nvim_buf_is_valid(modified_info.bufnr) then
+      return
+    end
+    
     -- Always read from buffers (single source of truth)
     local original_lines = vim.api.nvim_buf_get_lines(original_info.bufnr, 0, -1, false)
     local modified_lines = vim.api.nvim_buf_get_lines(modified_info.bufnr, 0, -1, false)
@@ -795,7 +1043,6 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
 
           if conflict_diffs then
             -- Update lifecycle session with conflict diff info
-            -- Store combined diff result for lifecycle compatibility
             lifecycle.update_buffers(tabpage, original_info.bufnr, modified_info.bufnr)
             lifecycle.update_git_root(tabpage, session_config.git_root)
             lifecycle.update_revisions(tabpage, session_config.original_revision, session_config.modified_revision)
@@ -809,98 +1056,14 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
             -- Setup auto-refresh for consistency (both buffers are virtual in conflict mode)
             setup_auto_refresh(original_info.bufnr, modified_info.bufnr, true, true)
 
-            -- ============================================================
-            -- Create result window at bottom with real file reset to BASE
-            -- ============================================================
-            local abs_path = session_config.git_root .. "/" .. session_config.original_path
-
-            -- Check if result window already exists
-            local existing_result_bufnr, existing_result_win = lifecycle.get_result(tabpage)
-            local result_win, result_bufnr
-
-            if existing_result_win and vim.api.nvim_win_is_valid(existing_result_win) then
-              -- Reuse existing result window
-              result_win = existing_result_win
-              vim.api.nvim_set_current_win(result_win)
-            else
-              -- Create layout: [explorer, [[original, modified], result]]
-              -- Current layout: [explorer, original, modified]
-              -- Strategy:
-              -- 1. Create split below modified
-              -- 2. Move original to be vsplit with modified (left of it)
-              -- This reorganizes to: [explorer, [[original, modified], result]]
-              
-              if vim.api.nvim_win_is_valid(modified_win) then
-                vim.api.nvim_set_current_win(modified_win)
-              end
-              vim.cmd("belowright split")
-              result_win = vim.api.nvim_get_current_win()
-              
-              -- Move original window to be a vertical split with modified
-              vim.fn.win_splitmove(original_win, modified_win, { vertical = true, rightbelow = false })
-
-              -- Set result window height (30% of available height or minimum 10 lines)
-              local total_height = vim.o.lines
-              local result_height = math.max(10, math.floor(total_height * 0.3))
-              vim.api.nvim_win_set_height(result_win, result_height)
-            end
-
-            -- Load real file buffer in result window
-            vim.cmd("edit " .. vim.fn.fnameescape(abs_path))
-            result_bufnr = vim.api.nvim_get_current_buf()
-
-            -- Reset buffer content to BASE (only if buffer has conflict markers)
-            local current_content = vim.api.nvim_buf_get_lines(result_bufnr, 0, -1, false)
-            local has_conflict_markers = false
-            for _, line in ipairs(current_content) do
-              if line:match("^<<<<<<<") or line:match("^=======") or line:match("^>>>>>>>") then
-                has_conflict_markers = true
-                break
-              end
-            end
-
-            if has_conflict_markers then
-              -- Reset to BASE content
-              vim.api.nvim_buf_set_lines(result_bufnr, 0, -1, false, base_lines)
-              vim.bo[result_bufnr].modified = true  -- Mark as modified since we changed content
-            end
-
-            -- Set window options for result
-            vim.wo[result_win].wrap = false
-            vim.wo[result_win].cursorline = true
-            vim.wo[result_win].winbar = ""
-
-            -- Enable scrollbind for result window (sync with top two buffers)
-            vim.api.nvim_win_set_cursor(result_win, {1, 0})
-            vim.wo[result_win].scrollbind = true
-
-            -- Update lifecycle with result buffer/window
-            lifecycle.set_result(tabpage, result_bufnr, result_win)
-
-            -- Store BASE lines for result buffer diff (used on resume)
-            lifecycle.set_result_base_lines(tabpage, base_lines)
-
-            -- Store conflict blocks for accept/reject actions
-            lifecycle.set_conflict_blocks(tabpage, conflict_diffs.conflict_blocks)
-
-            -- Track this file for unsaved warning on close
-            lifecycle.track_conflict_file(tabpage, abs_path)
-
-            -- Enable auto-refresh for result buffer (diff against BASE in lifecycle)
-            auto_refresh.enable_for_result(result_bufnr)
-
-            -- Setup all keymaps (now that result buffer is registered in lifecycle)
+            -- Setup result window and keymaps
             local is_explorer_mode = session.mode == "explorer"
-            setup_all_keymaps(tabpage, original_info.bufnr, modified_info.bufnr, is_explorer_mode)
-
-            -- Setup conflict-specific keymaps
-            local conflict_actions = require('vscode-diff.render.conflict_actions')
-            conflict_actions.initialize_tracking(result_bufnr, conflict_diffs.conflict_blocks)
-            conflict_actions.setup_keymaps(tabpage)
-
-            -- Return focus to modified window (current/ours side)
-            if vim.api.nvim_win_is_valid(modified_win) then
-              vim.api.nvim_set_current_win(modified_win)
+            local success = setup_conflict_result_window(tabpage, session_config, original_win, modified_win, base_lines, conflict_diffs, true)
+            if success then
+              setup_all_keymaps(tabpage, original_info.bufnr, modified_info.bufnr, is_explorer_mode)
+              -- Setup conflict keymaps AFTER setup_all_keymaps to override do/dp
+              local conflict_actions = require('vscode-diff.render.conflict_actions')
+              conflict_actions.setup_keymaps(tabpage)
             end
           end
         end)
@@ -937,13 +1100,14 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
     end
   end
 
-  -- Choose timing based on buffer types
+  -- Set up autocmd to wait for virtual file loads BEFORE triggering any async operations
+  -- This prevents race conditions where fast systems complete before the listener is ready
+  local autocmd_group = nil
   if wait_state.original or wait_state.modified then
-    -- Virtual file(s): Wait for BufReadCmd to load content
-    local group = vim.api.nvim_create_augroup('VscodeDiffVirtualFileUpdate_' .. tabpage, { clear = true })
+    autocmd_group = vim.api.nvim_create_augroup('VscodeDiffVirtualFileUpdate_' .. tabpage, { clear = true })
 
     vim.api.nvim_create_autocmd('User', {
-      group = group,
+      group = autocmd_group,
       pattern = 'VscodeDiffVirtualFileLoaded',
       callback = function(event)
         if not event.data or not event.data.buf then return end
@@ -961,11 +1125,135 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
         -- Render once all waited buffers are ready
         if not wait_state.original and not wait_state.modified then
           vim.schedule(render_everything)
-          vim.api.nvim_del_augroup_by_id(group)
+          vim.api.nvim_del_augroup_by_id(autocmd_group)
         end
       end,
     })
-  else
+  end
+
+  -- Load buffers into windows
+  -- For existing buffers: use nvim_win_set_buf() directly (no conflicts, no temp buffers needed)
+  -- For new virtual files: use :edit! to trigger BufReadCmd for content loading
+  -- For new real files: use bufadd + bufload + nvim_win_set_buf
+  
+  if vim.api.nvim_win_is_valid(original_win) then
+    if original_info.needs_edit then
+      if original_is_virtual then
+        -- For virtual files with mutable revisions (:0, :1, :2, :3)
+        -- Check if buffer already exists and just needs content refresh
+        if original_info.bufnr and vim.api.nvim_buf_is_valid(original_info.bufnr) then
+          -- Buffer exists, just refresh its content (for mutable revisions)
+          vim.api.nvim_win_set_buf(original_win, original_info.bufnr)
+          virtual_file.refresh_buffer(original_info.bufnr)
+        else
+          -- Buffer doesn't exist, create it with :edit!
+          vim.api.nvim_set_current_win(original_win)
+          vim.cmd("edit! " .. vim.fn.fnameescape(original_info.target))
+          original_info.bufnr = vim.api.nvim_get_current_buf()
+        end
+      else
+        -- New real file: create and load buffer
+        local bufnr = vim.fn.bufadd(original_info.target)
+        vim.fn.bufload(bufnr)
+        original_info.bufnr = bufnr
+        vim.api.nvim_win_set_buf(original_win, original_info.bufnr)
+      end
+    else
+      -- Existing buffer: verify it's still valid (might have been deleted by rapid updates)
+      if vim.api.nvim_buf_is_valid(original_info.bufnr) then
+        vim.api.nvim_win_set_buf(original_win, original_info.bufnr)
+        -- For real files, reload from disk in case it changed
+        if not original_is_virtual then
+          vim.api.nvim_buf_call(original_info.bufnr, function()
+            vim.cmd("silent! edit!")
+          end)
+        end
+      else
+        -- Buffer was deleted, need to recreate
+        if original_is_virtual then
+          vim.api.nvim_set_current_win(original_win)
+          vim.cmd("edit! " .. vim.fn.fnameescape(original_info.target))
+          original_info.bufnr = vim.api.nvim_get_current_buf()
+        else
+          local bufnr = vim.fn.bufadd(original_info.target)
+          vim.fn.bufload(bufnr)
+          original_info.bufnr = bufnr
+          vim.api.nvim_win_set_buf(original_win, original_info.bufnr)
+        end
+      end
+    end
+  end
+
+  if vim.api.nvim_win_is_valid(modified_win) then
+    if modified_info.needs_edit then
+      if modified_is_virtual then
+        -- For virtual files with mutable revisions (:0, :1, :2, :3)
+        -- Check if buffer already exists and just needs content refresh
+        if modified_info.bufnr and vim.api.nvim_buf_is_valid(modified_info.bufnr) then
+          -- Buffer exists, just refresh its content (for mutable revisions)
+          vim.api.nvim_win_set_buf(modified_win, modified_info.bufnr)
+          virtual_file.refresh_buffer(modified_info.bufnr)
+        else
+          -- Buffer doesn't exist, create it with :edit!
+          vim.api.nvim_set_current_win(modified_win)
+          vim.cmd("edit! " .. vim.fn.fnameescape(modified_info.target))
+          modified_info.bufnr = vim.api.nvim_get_current_buf()
+        end
+      else
+        -- New real file: create and load buffer
+        local bufnr = vim.fn.bufadd(modified_info.target)
+        vim.fn.bufload(bufnr)
+        modified_info.bufnr = bufnr
+        vim.api.nvim_win_set_buf(modified_win, modified_info.bufnr)
+      end
+    else
+      -- Existing buffer: verify it's still valid (might have been deleted by rapid updates)
+      if vim.api.nvim_buf_is_valid(modified_info.bufnr) then
+        vim.api.nvim_win_set_buf(modified_win, modified_info.bufnr)
+        -- For real files, reload from disk in case it changed
+        if not modified_is_virtual then
+          vim.api.nvim_buf_call(modified_info.bufnr, function()
+            vim.cmd("silent! edit!")
+          end)
+        end
+      else
+        -- Buffer was deleted, need to recreate
+        if modified_is_virtual then
+          vim.api.nvim_set_current_win(modified_win)
+          vim.cmd("edit! " .. vim.fn.fnameescape(modified_info.target))
+          modified_info.bufnr = vim.api.nvim_get_current_buf()
+        else
+          local bufnr = vim.fn.bufadd(modified_info.target)
+          vim.fn.bufload(bufnr)
+          modified_info.bufnr = bufnr
+          vim.api.nvim_win_set_buf(modified_win, modified_info.bufnr)
+        end
+      end
+    end
+  end
+
+  -- Update lifecycle session metadata
+  lifecycle.update_paths(tabpage, session_config.original_path, session_config.modified_path)
+
+  -- Delete old virtual buffers if they were virtual AND are not reused in either new window
+  if lifecycle.is_original_virtual(tabpage) and 
+     old_original_buf ~= original_info.bufnr and 
+     old_original_buf ~= modified_info.bufnr then
+    pcall(vim.api.nvim_buf_delete, old_original_buf, { force = true })
+  end
+  
+  if lifecycle.is_modified_virtual(tabpage) and 
+     old_modified_buf ~= modified_info.bufnr and 
+     old_modified_buf ~= original_info.bufnr then
+    pcall(vim.api.nvim_buf_delete, old_modified_buf, { force = true })
+  end
+
+  -- Update session with new buffer/window IDs
+  -- Note: We need to update lifecycle to support this, or recreate session
+  -- For now, we'll update the stored diff result and metadata
+
+  -- If no virtual files need loading, render immediately
+  if not autocmd_group then
     -- Real files or reused virtual files: Defer until :edit completes
     vim.schedule(render_everything)
   end

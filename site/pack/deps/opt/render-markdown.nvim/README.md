@@ -833,7 +833,8 @@ require('render-markdown').setup({
             steam = { pattern = 'steampowered%.com', icon = ' ' },
             twitter = { pattern = 'x%.com', icon = ' ' },
             wikipedia = { pattern = 'wikipedia%.org', icon = '󰖬 ' },
-            youtube = { pattern = 'youtube%.com', icon = '󰗃 ' },
+            youtube = { pattern = 'youtube[^.]*%.com', icon = '󰗃 ' },
+            youtube_short = { pattern = 'youtu%.be', icon = '󰗃 ' },
         },
     },
     sign = {
@@ -1599,7 +1600,8 @@ require('render-markdown').setup({
             steam = { pattern = 'steampowered%.com', icon = ' ' },
             twitter = { pattern = 'x%.com', icon = ' ' },
             wikipedia = { pattern = 'wikipedia%.org', icon = '󰖬 ' },
-            youtube = { pattern = 'youtube%.com', icon = '󰗃 ' },
+            youtube = { pattern = 'youtube[^.]*%.com', icon = '󰗃 ' },
+            youtube_short = { pattern = 'youtu%.be', icon = '󰗃 ' },
         },
     },
 })
@@ -1793,11 +1795,11 @@ The table below shows all the highlight groups with their default link
 
 # Acknowledgments
 
-- [headlines.nvim](https://github.com/lukas-reineke/headlines.nvim): The plugin that
-  inspired me to create this one and whose implementation I used as a reference for
-  the original version
-- [crates.nvim](https://github.com/Saecki/crates.nvim): Used the in-process lsp implementation
-  as an awesome reference [lsp.lua](https://github.com/saecki/crates.nvim/blob/main/lua/crates/lsp.lua)
+- [headlines.nvim](https://github.com/lukas-reineke/headlines.nvim): The plugin
+  that inspired me to create this one and whose implementation I used as a reference
+  for the original version
+- [crates.nvim](https://github.com/Saecki/crates.nvim): Used the in-process lsp
+  implementation as an awesome reference [lsp.lua](https://github.com/saecki/crates.nvim/blob/main/lua/crates/lsp.lua)
 
 <!-- panvimdoc-ignore-start -->
 

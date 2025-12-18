@@ -23,6 +23,20 @@ M.defaults = {
   diff = {
     disable_inlay_hints = true,  -- Disable inlay hints in diff windows for cleaner view
     max_computation_time_ms = 5000,  -- Maximum time for diff computation (5 seconds, VSCode default)
+    hide_merge_artifacts = false,  -- Hide merge tool temp files (*.orig, *.BACKUP.*, *.BASE.*, *.LOCAL.*, *.REMOTE.*)
+  },
+
+  -- Explorer panel configuration
+  explorer = {
+    position = "left",  -- "left" or "bottom"
+    width = 40,         -- Width when position is "left" (columns)
+    height = 15,        -- Height when position is "bottom" (lines)
+    view_mode = "list", -- "list" (flat file list) or "tree" (directory tree)
+    indent_markers = true,  -- Show indent markers in tree view (│, ├, └)
+    icons = {
+      folder_closed = "\u{e5ff}",  -- Nerd Font: folder
+      folder_open = "\u{e5fe}",    -- Nerd Font: folder-open
+    },
   },
 
   -- Keymaps
@@ -34,11 +48,14 @@ M.defaults = {
       prev_hunk = "[c",
       next_file = "]f",
       prev_file = "[f",
+      diff_get = "do",              -- Get change from other buffer (like vimdiff)
+      diff_put = "dp",              -- Put change to other buffer (like vimdiff)
     },
     explorer = {
       select = "<CR>",
       hover = "K",
       refresh = "R",
+      toggle_view_mode = "i",       -- Toggle between 'list' and 'tree' views
     },
     -- Conflict mode keymaps (only active in merge conflict views)
     conflict = {
@@ -48,6 +65,9 @@ M.defaults = {
       discard = "<leader>cx",          -- Discard both, keep base
       next_conflict = "]x",            -- Jump to next conflict
       prev_conflict = "[x",            -- Jump to previous conflict
+      -- Vimdiff-style numbered diffget (from result buffer)
+      diffget_incoming = "2do",        -- Get hunk from incoming (left/theirs) buffer
+      diffget_current = "3do",         -- Get hunk from current (right/ours) buffer
     },
   },
 }

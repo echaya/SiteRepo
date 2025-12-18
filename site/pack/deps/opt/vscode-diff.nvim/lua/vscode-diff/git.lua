@@ -238,14 +238,19 @@ end
 -- rel_path: relative path from git root (with forward slashes)
 -- callback: function(err, lines) where lines is a table of strings
 function M.get_file_content(revision, git_root, rel_path, callback)
-  -- Check cache first
-  local cached_lines = file_content_cache:get(revision, git_root, rel_path)
-  if cached_lines then
-    callback(nil, cached_lines)
-    return
+  -- Don't cache mutable revisions (staged index can change with git add/reset)
+  local is_mutable = revision:match("^:[0-3]$")
+  
+  -- Check cache first (only for immutable revisions)
+  if not is_mutable then
+    local cached_lines = file_content_cache:get(revision, git_root, rel_path)
+    if cached_lines then
+      callback(nil, cached_lines)
+      return
+    end
   end
 
-  -- Cache miss - fetch from git
+  -- Cache miss or mutable revision - fetch from git
   local git_object = revision .. ":" .. rel_path
 
   run_git_async(
@@ -266,8 +271,10 @@ function M.get_file_content(revision, git_root, rel_path, callback)
         table.remove(lines, #lines)
       end
 
-      -- Store in cache
-      file_content_cache:put(revision, git_root, rel_path, lines)
+      -- Store in cache (only for immutable revisions)
+      if not is_mutable then
+        file_content_cache:put(revision, git_root, rel_path, lines)
+      end
 
       callback(nil, lines)
     end
@@ -463,6 +470,76 @@ function M.get_diff_revisions(rev1, rev2, git_root, callback)
       callback(nil, result)
     end
   )
+end
+
+-- Run a git command synchronously
+-- Returns output string or nil on error
+local function run_git_sync(args, opts)
+  opts = opts or {}
+  local cmd = vim.list_extend({ "git" }, args)
+
+  local result = vim.fn.systemlist(cmd)
+  if vim.v.shell_error ~= 0 then
+    return nil
+  end
+
+  return result
+end
+
+-- Get git root directory synchronously (for completion)
+-- Returns git_root or nil if not in a git repo
+function M.get_git_root_sync(file_path)
+  local dir
+  if vim.fn.isdirectory(file_path) == 1 then
+    dir = file_path
+  else
+    dir = vim.fn.fnamemodify(file_path, ":h")
+  end
+
+  local cmd = { "git", "-C", dir, "rev-parse", "--show-toplevel" }
+  local result = vim.fn.systemlist(cmd)
+
+  if vim.v.shell_error ~= 0 or #result == 0 then
+    return nil
+  end
+
+  local git_root = vim.trim(result[1])
+  git_root = git_root:gsub("\\", "/")
+  return git_root
+end
+
+-- Get revision candidates for command completion (sync)
+-- Returns list of branches, tags, remotes, and special refs
+function M.get_rev_candidates(git_root)
+  if not git_root then
+    return {}
+  end
+
+  local candidates = {}
+
+  -- Special HEAD refs
+  local head_refs = { "HEAD", "HEAD~1", "HEAD~2", "HEAD~3" }
+  vim.list_extend(candidates, head_refs)
+
+  -- Get branches, tags, and remotes
+  local refs = run_git_sync({
+    "-C", git_root,
+    "rev-parse", "--symbolic", "--branches", "--tags", "--remotes"
+  })
+  if refs then
+    vim.list_extend(candidates, refs)
+  end
+
+  -- Get stashes
+  local stashes = run_git_sync({
+    "-C", git_root,
+    "stash", "list", "--pretty=format:%gd"
+  })
+  if stashes then
+    vim.list_extend(candidates, stashes)
+  end
+
+  return candidates
 end
 
 return M

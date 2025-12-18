@@ -8,33 +8,41 @@ local core = require("vscode-diff.render.core")
 -- Throttle delay in milliseconds
 local THROTTLE_DELAY_MS = 200
 
--- Track active auto-refresh sessions
+-- Track watched buffers for auto-refresh
 -- Structure: { bufnr = { timer } }
 -- Buffer pair info is retrieved from lifecycle
-local active_sessions = {}
+local watched_buffers = {}
 
 -- Cancel pending timer for a buffer
 local function cancel_timer(bufnr)
-  local session = active_sessions[bufnr]
-  if session and session.timer then
-    vim.fn.timer_stop(session.timer)
-    session.timer = nil
+  local watcher = watched_buffers[bufnr]
+  if watcher and watcher.timer then
+    vim.fn.timer_stop(watcher.timer)
+    watcher.timer = nil
   end
 end
 
 -- Perform diff computation and update decorations
-local function do_diff_update(bufnr)
-  local session = active_sessions[bufnr]
-  if not session then
+-- @param bufnr number: Buffer to update
+-- @param skip_watcher_check boolean: If true, don't require buffer to be in watched_buffers
+local function do_diff_update(bufnr, skip_watcher_check)
+  local watcher = watched_buffers[bufnr]
+  
+  -- Check if buffer is being watched (unless skipped for manual trigger)
+  if not skip_watcher_check and not watcher then
     return
   end
 
-  -- Clear timer reference
-  session.timer = nil
+  -- Clear timer reference if watcher exists
+  if watcher then
+    watcher.timer = nil
+  end
 
   -- Validate buffers still exist
   if not vim.api.nvim_buf_is_valid(bufnr) then
-    active_sessions[bufnr] = nil
+    if watcher then
+      watched_buffers[bufnr] = nil
+    end
     return
   end
   
@@ -42,18 +50,24 @@ local function do_diff_update(bufnr)
   local lifecycle = require('vscode-diff.render.lifecycle')
   local tabpage = lifecycle.find_tabpage_by_buffer(bufnr)
   if not tabpage then
-    active_sessions[bufnr] = nil
+    if watcher then
+      watched_buffers[bufnr] = nil
+    end
     return
   end
   
   local original_bufnr, modified_bufnr = lifecycle.get_buffers(tabpage)
   if not original_bufnr or not modified_bufnr then
-    active_sessions[bufnr] = nil
+    if watcher then
+      watched_buffers[bufnr] = nil
+    end
     return
   end
   
   if not vim.api.nvim_buf_is_valid(original_bufnr) or not vim.api.nvim_buf_is_valid(modified_bufnr) then
-    active_sessions[bufnr] = nil
+    if watcher then
+      watched_buffers[bufnr] = nil
+    end
     return
   end
 
@@ -63,14 +77,11 @@ local function do_diff_update(bufnr)
 
   -- Async diff computation
   vim.schedule(function()
-    -- Check if session was cleaned up while scheduled
-    if not active_sessions[bufnr] then
-      return
-    end
-    
     -- Double-check buffer validity after schedule
     if not vim.api.nvim_buf_is_valid(original_bufnr) or not vim.api.nvim_buf_is_valid(modified_bufnr) then
-      active_sessions[bufnr] = nil
+      if watched_buffers[bufnr] then
+        watched_buffers[bufnr] = nil
+      end
       return
     end
 
@@ -83,6 +94,9 @@ local function do_diff_update(bufnr)
     if not lines_diff then
       return
     end
+
+    -- Update stored diff result in lifecycle (critical for hunk navigation and do/dp)
+    lifecycle.update_diff_result(tabpage, lines_diff)
 
     -- Update decorations on both buffers
     core.render_diff(original_bufnr, modified_bufnr, original_lines, modified_lines, lines_diff)
@@ -161,8 +175,8 @@ end
 
 -- Trigger diff update with throttling
 local function trigger_diff_update(bufnr)
-  local session = active_sessions[bufnr]
-  if not session then
+  local watcher = watched_buffers[bufnr]
+  if not watcher then
     return
   end
 
@@ -170,7 +184,7 @@ local function trigger_diff_update(bufnr)
   cancel_timer(bufnr)
 
   -- Start new timer
-  session.timer = vim.fn.timer_start(THROTTLE_DELAY_MS, function()
+  watcher.timer = vim.fn.timer_start(THROTTLE_DELAY_MS, function()
     do_diff_update(bufnr)
   end)
 end
@@ -179,8 +193,8 @@ end
 -- @param bufnr number: Buffer to watch for changes
 -- Note: Buffer pair info is retrieved from lifecycle when needed
 function M.enable(bufnr)
-  -- Store session info (just timer)
-  active_sessions[bufnr] = {
+  -- Store watcher info (just timer)
+  watched_buffers[bufnr] = {
     timer = nil,
   }
 
@@ -218,7 +232,7 @@ end
 -- Disable auto-refresh for a buffer
 function M.disable(bufnr)
   cancel_timer(bufnr)
-  active_sessions[bufnr] = nil
+  watched_buffers[bufnr] = nil
 
   -- Clear autocmd group
   pcall(vim.api.nvim_del_augroup_by_name, 'vscode_diff_auto_refresh_' .. bufnr)
@@ -341,13 +355,27 @@ function M.refresh_result_now(bufnr)
   do_result_diff_update(bufnr)
 end
 
--- Cleanup all active sessions
+-- Cleanup all watched buffers
 function M.cleanup_all()
-  for bufnr, _ in pairs(active_sessions) do
+  for bufnr, _ in pairs(watched_buffers) do
     M.disable(bufnr)
   end
   for bufnr, _ in pairs(result_timers) do
     M.disable_result(bufnr)
+  end
+end
+
+-- Manually trigger a diff refresh for a buffer (e.g., after programmatic changes)
+-- Works for any buffer in a diff session, even if auto-refresh is not enabled for it
+-- @param bufnr number: Buffer that was changed
+function M.trigger(bufnr)
+  if watched_buffers[bufnr] then
+    -- Buffer has auto-refresh enabled, use throttled update
+    trigger_diff_update(bufnr)
+  else
+    -- Buffer might not have auto-refresh enabled (e.g., virtual buffer)
+    -- Do immediate update, skipping watcher check
+    do_diff_update(bufnr, true)
   end
 end
 

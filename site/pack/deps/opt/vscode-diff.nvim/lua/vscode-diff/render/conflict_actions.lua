@@ -108,6 +108,34 @@ local function find_conflict_at_cursor(session, cursor_line, side, allow_resolve
   return nil
 end
 
+--- Find conflict block at cursor position in result buffer (using extmarks)
+--- @param session table The diff session
+--- @param cursor_line number 1-based line number in result buffer
+--- @return table|nil The conflict block containing the cursor
+local function find_conflict_at_cursor_in_result(session, cursor_line)
+  local blocks = session.conflict_blocks
+  if not blocks then return nil end
+  
+  for _, block in ipairs(blocks) do
+    if block.extmark_id then
+      local mark = vim.api.nvim_buf_get_extmark_by_id(session.result_bufnr, tracking_ns, block.extmark_id, { details = true })
+      if mark and #mark > 0 then
+        local start_row = mark[1] + 1  -- Convert to 1-based
+        local end_row = mark[3] and mark[3].end_row and (mark[3].end_row + 1) or start_row
+        
+        -- Check if cursor is within this block's range in result buffer
+        if cursor_line >= start_row and cursor_line <= end_row then
+          -- Also check if block is still active (not resolved)
+          if is_block_active(session, block) then
+            return block
+          end
+        end
+      end
+    end
+  end
+  return nil
+end
+
 --- Get lines from a buffer for a given range
 --- @param bufnr number Buffer number
 --- @param start_line number 1-based start line (inclusive)
@@ -430,6 +458,100 @@ function M.discard(tabpage)
   return true
 end
 
+--- Vimdiff-style diffget from incoming (2do): get hunk from incoming/theirs buffer to result
+--- Works from result buffer only (like vimdiff's :diffget 2)
+--- @param tabpage number
+--- @return boolean success
+function M.diffget_incoming(tabpage)
+  local session = lifecycle.get_session(tabpage)
+  if not session then
+    vim.notify("[vscode-diff] No active session", vim.log.levels.WARN)
+    return false
+  end
+
+  local current_buf = vim.api.nvim_get_current_buf()
+
+  if current_buf ~= session.result_bufnr then
+    vim.notify("[vscode-diff] 2do only works from result buffer", vim.log.levels.INFO)
+    return false
+  end
+
+  if not session.conflict_blocks or #session.conflict_blocks == 0 then
+    vim.notify("[vscode-diff] No conflicts in this session", vim.log.levels.WARN)
+    return false
+  end
+
+  -- Find conflict at cursor position in result buffer
+  local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+  local block = find_conflict_at_cursor_in_result(session, cursor_line)
+  if not block then
+    vim.notify("[vscode-diff] No active conflict at cursor position", vim.log.levels.INFO)
+    return false
+  end
+
+  -- Get incoming (left) content
+  local incoming_lines = get_lines_for_range(session.original_bufnr, block.output1_range.start_line, block.output1_range.end_line)
+
+  -- Apply to result
+  local result_bufnr = session.result_bufnr
+  local base_lines = session.result_base_lines
+  if not result_bufnr or not base_lines then
+    vim.notify("[vscode-diff] No result buffer or base lines", vim.log.levels.ERROR)
+    return false
+  end
+
+  apply_to_result(result_bufnr, block, incoming_lines, base_lines)
+  auto_refresh.refresh_result_now(result_bufnr)
+  return true
+end
+
+--- Vimdiff-style diffget from current (3do): get hunk from current/ours buffer to result
+--- Works from result buffer only (like vimdiff's :diffget 3)
+--- @param tabpage number
+--- @return boolean success
+function M.diffget_current(tabpage)
+  local session = lifecycle.get_session(tabpage)
+  if not session then
+    vim.notify("[vscode-diff] No active session", vim.log.levels.WARN)
+    return false
+  end
+
+  local current_buf = vim.api.nvim_get_current_buf()
+
+  if current_buf ~= session.result_bufnr then
+    vim.notify("[vscode-diff] 3do only works from result buffer", vim.log.levels.INFO)
+    return false
+  end
+
+  if not session.conflict_blocks or #session.conflict_blocks == 0 then
+    vim.notify("[vscode-diff] No conflicts in this session", vim.log.levels.WARN)
+    return false
+  end
+
+  -- Find conflict at cursor position in result buffer
+  local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+  local block = find_conflict_at_cursor_in_result(session, cursor_line)
+  if not block then
+    vim.notify("[vscode-diff] No active conflict at cursor position", vim.log.levels.INFO)
+    return false
+  end
+
+  -- Get current (right) content
+  local current_lines = get_lines_for_range(session.modified_bufnr, block.output2_range.start_line, block.output2_range.end_line)
+
+  -- Apply to result
+  local result_bufnr = session.result_bufnr
+  local base_lines = session.result_base_lines
+  if not result_bufnr or not base_lines then
+    vim.notify("[vscode-diff] No result buffer or base lines", vim.log.levels.ERROR)
+    return false
+  end
+
+  apply_to_result(result_bufnr, block, current_lines, base_lines)
+  auto_refresh.refresh_result_now(result_bufnr)
+  return true
+end
+
 --- Get the start line of a block in the current buffer
 --- @param session table Session object
 --- @param block table Conflict block
@@ -593,6 +715,7 @@ function M.setup_keymaps(tabpage)
   if not session then return end
 
   local keymaps = config.options.keymaps.conflict or {}
+  local view_keymaps = config.options.keymaps.view or {}
 
   -- Bind to incoming (left), current (right), AND result buffers
   local buffers = { session.original_bufnr, session.modified_bufnr, session.result_bufnr }
@@ -601,6 +724,14 @@ function M.setup_keymaps(tabpage)
 
   for _, bufnr in ipairs(buffers) do
     if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
+      -- Unbind normal mode do/dp from view keymaps (they don't apply in merge conflict mode)
+      if view_keymaps.diff_get then
+        pcall(vim.keymap.del, "n", view_keymaps.diff_get, { buffer = bufnr })
+      end
+      if view_keymaps.diff_put then
+        pcall(vim.keymap.del, "n", view_keymaps.diff_put, { buffer = bufnr })
+      end
+
       -- Accept incoming
       if keymaps.accept_incoming then
         vim.keymap.set("n", keymaps.accept_incoming, make_repeatable(function()
@@ -640,6 +771,20 @@ function M.setup_keymaps(tabpage)
         vim.keymap.set("n", keymaps.prev_conflict, function()
           M.navigate_prev_conflict(tabpage)
         end, vim.tbl_extend('force', base_opts, { buffer = bufnr, desc = "Previous conflict" }))
+      end
+
+      -- Vimdiff-style diffget from incoming (2do) - only on result buffer
+      if keymaps.diffget_incoming and bufnr == session.result_bufnr then
+        vim.keymap.set("n", keymaps.diffget_incoming, make_repeatable(function()
+          M.diffget_incoming(tabpage)
+        end), vim.tbl_extend('force', base_opts, { buffer = bufnr, desc = "Get hunk from incoming (2do)", expr = true }))
+      end
+
+      -- Vimdiff-style diffget from current (3do) - only on result buffer
+      if keymaps.diffget_current and bufnr == session.result_bufnr then
+        vim.keymap.set("n", keymaps.diffget_current, make_repeatable(function()
+          M.diffget_current(tabpage)
+        end), vim.tbl_extend('force', base_opts, { buffer = bufnr, desc = "Get hunk from current (3do)", expr = true }))
       end
     end
   end
