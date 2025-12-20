@@ -73,9 +73,10 @@ local function clear_buffer_highlights(bufnr)
     return
   end
 
-  -- Clear both highlight and filler namespaces
+  -- Clear highlight, filler, and conflict sign namespaces
   vim.api.nvim_buf_clear_namespace(bufnr, highlights.ns_highlight, 0, -1)
   vim.api.nvim_buf_clear_namespace(bufnr, highlights.ns_filler, 0, -1)
+  vim.api.nvim_buf_clear_namespace(bufnr, highlights.ns_conflict, 0, -1)
 end
 
 --- Clear highlights from a buffer (public API for update function)
@@ -498,12 +499,19 @@ local function cleanup_diff(tabpage)
     vim.w[diff.result_win].vscode_diff_restore = nil
   end
 
+  -- Clear result buffer signs (conflict mode)
+  if diff.result_bufnr and vim.api.nvim_buf_is_valid(diff.result_bufnr) then
+    local result_signs_ns = vim.api.nvim_create_namespace("vscode-diff-result-signs")
+    vim.api.nvim_buf_clear_namespace(diff.result_bufnr, result_signs_ns, 0, -1)
+  end
+
   -- Clear conflict file tracking (buffers remain, just not tracked)
   diff.conflict_files = {}
 
   -- Clear tab-specific autocmd groups
   pcall(vim.api.nvim_del_augroup_by_name, 'vscode_diff_lifecycle_tab_' .. tabpage)
   pcall(vim.api.nvim_del_augroup_by_name, 'vscode_diff_working_sync_' .. tabpage)
+  pcall(vim.api.nvim_del_augroup_by_name, 'VscodeDiffConflictSigns_' .. tabpage)
 
   -- Remove from tracking
   active_diffs[tabpage] = nil

@@ -6,6 +6,7 @@ local highlights = require('vscode-diff.render.highlights')
 -- Namespace references
 local ns_highlight = highlights.ns_highlight
 local ns_filler = highlights.ns_filler
+local ns_conflict = highlights.ns_conflict
 
 -- ============================================================================
 -- Helper Functions
@@ -445,8 +446,10 @@ function M.render_merge_view(left_bufnr, right_bufnr, base_to_left_diff, base_to
   -- Clear existing highlights and fillers
   vim.api.nvim_buf_clear_namespace(left_bufnr, ns_highlight, 0, -1)
   vim.api.nvim_buf_clear_namespace(left_bufnr, ns_filler, 0, -1)
+  vim.api.nvim_buf_clear_namespace(left_bufnr, ns_conflict, 0, -1)
   vim.api.nvim_buf_clear_namespace(right_bufnr, ns_highlight, 0, -1)
   vim.api.nvim_buf_clear_namespace(right_bufnr, ns_filler, 0, -1)
+  vim.api.nvim_buf_clear_namespace(right_bufnr, ns_conflict, 0, -1)
 
   -- Get buffer lines for character highlight calculations
   local left_lines = vim.api.nvim_buf_get_lines(left_bufnr, 0, -1, false)

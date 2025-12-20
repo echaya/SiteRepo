@@ -7,6 +7,7 @@ local config = require('vscode-diff.config')
 local auto_refresh = require('vscode-diff.auto_refresh')
 
 local tracking_ns = vim.api.nvim_create_namespace("vscode-diff-conflict-tracking")
+local result_signs_ns = vim.api.nvim_create_namespace("vscode-diff-result-signs")
 
 -- State for dot-repeat
 local _pending_action = nil
@@ -35,11 +36,12 @@ end
 --- @param block table The conflict block
 --- @return boolean is_active
 local function is_block_active(session, block)
-  if not block.extmark_id then return false end
+  if not block.extmark_id then return true end  -- Default to active if no tracking
   
   -- 1. Get current content from buffer via Extmark
   local mark = vim.api.nvim_buf_get_extmark_by_id(session.result_bufnr, tracking_ns, block.extmark_id, { details = true })
-  if not mark or #mark == 0 then return false end
+  if not mark or #mark == 0 then return true end  -- Default to active if extmark invalid
+  if not mark[3] or mark[3].end_row == nil then return true end  -- Default to active if details missing
   
   local start_row = mark[1]
   local end_row = mark[3].end_row
@@ -48,7 +50,7 @@ local function is_block_active(session, block)
   
   -- 2. Get expected base content from session
   local base_lines = session.result_base_lines
-  if not base_lines then return false end
+  if not base_lines then return true end  -- Default to active if no base lines
   
   local expected_lines = {}
   -- base_range is 1-based, inclusive-exclusive logic?
@@ -68,6 +70,74 @@ local function is_block_active(session, block)
   end
   
   return true
+end
+
+--- Determine which side was accepted for a resolved conflict block
+--- @param session table The diff session
+--- @param block table The conflict block
+--- @return string|nil "incoming", "current", "both", or nil if unresolved/unknown
+local function get_accepted_side(session, block)
+  if not block.extmark_id then return nil end
+  if is_block_active(session, block) then return nil end  -- Still unresolved
+  
+  -- Get current content from result buffer
+  local mark = vim.api.nvim_buf_get_extmark_by_id(session.result_bufnr, tracking_ns, block.extmark_id, { details = true })
+  if not mark or #mark < 3 then return nil end
+  
+  local start_row = mark[1]
+  local end_row = mark[3].end_row
+  local current_lines = vim.api.nvim_buf_get_lines(session.result_bufnr, start_row, end_row, false)
+  
+  -- Get incoming (left) content
+  local incoming_lines = {}
+  if session.original_bufnr and vim.api.nvim_buf_is_valid(session.original_bufnr) then
+    local left_start = block.output1_range.start_line
+    local left_end = block.output1_range.end_line
+    incoming_lines = vim.api.nvim_buf_get_lines(session.original_bufnr, left_start - 1, left_end - 1, false)
+  end
+  
+  -- Get current (right) content
+  local current_side_lines = {}
+  if session.modified_bufnr and vim.api.nvim_buf_is_valid(session.modified_bufnr) then
+    local right_start = block.output2_range.start_line
+    local right_end = block.output2_range.end_line
+    current_side_lines = vim.api.nvim_buf_get_lines(session.modified_bufnr, right_start - 1, right_end - 1, false)
+  end
+  
+  -- Helper to compare line arrays
+  local function lines_equal(a, b)
+    if #a ~= #b then return false end
+    for i = 1, #a do
+      if a[i] ~= b[i] then return false end
+    end
+    return true
+  end
+  
+  -- Check which side matches
+  local matches_incoming = lines_equal(current_lines, incoming_lines)
+  local matches_current = lines_equal(current_lines, current_side_lines)
+  
+  if matches_incoming and matches_current then
+    return "both"  -- Both sides are the same (shouldn't happen in conflict, but handle it)
+  elseif matches_incoming then
+    return "incoming"
+  elseif matches_current then
+    return "current"
+  else
+    -- Content doesn't match either side exactly (could be "both" concatenated or manual edit)
+    -- Check if it's both sides concatenated
+    local both_lines = {}
+    for _, line in ipairs(incoming_lines) do
+      table.insert(both_lines, line)
+    end
+    for _, line in ipairs(current_side_lines) do
+      table.insert(both_lines, line)
+    end
+    if lines_equal(current_lines, both_lines) then
+      return "both"
+    end
+    return "edited"  -- Manual edit or unknown
+  end
 end
 
 --- Find which conflict block the cursor is in
@@ -174,6 +244,180 @@ function M.initialize_tracking(result_bufnr, conflict_blocks)
     
     block.extmark_id = id
   end
+end
+
+--- Refresh all conflict signs based on current state (event-driven approach)
+--- Called on TextChanged to keep signs in sync with actual buffer content
+--- Also used for initial sign setup after initialize_tracking
+--- @param session table The diff session
+function M.refresh_all_conflict_signs(session)
+  if not session or not session.conflict_blocks then return end
+  
+  local highlights = require('vscode-diff.render.highlights')
+  local ns_conflict = highlights.ns_conflict
+  
+  -- Check if extmarks need re-initialization (e.g., after undo to original state)
+  -- If any extmark is missing or invalid, re-initialize all tracking
+  local needs_reinit = false
+  for _, block in ipairs(session.conflict_blocks) do
+    if not block.extmark_id then
+      needs_reinit = true
+      break
+    end
+    local mark = vim.api.nvim_buf_get_extmark_by_id(session.result_bufnr, tracking_ns, block.extmark_id, { details = true })
+    if not mark or #mark < 3 or not mark[3] then
+      needs_reinit = true
+      break
+    end
+    -- Check if extmark position is reasonable (not spanning entire buffer or starting at 0 when it shouldn't)
+    local mark_start = mark[1]
+    local mark_end = mark[3].end_row
+    local expected_start = block.base_range.start_line - 1
+    -- If extmark start moved to 0 but expected start is not 0, it's corrupted (common after undo/redo)
+    if mark_start == 0 and expected_start > 0 then
+      needs_reinit = true
+      break
+    end
+  end
+  
+  if needs_reinit and session.result_bufnr and vim.api.nvim_buf_is_valid(session.result_bufnr) then
+    M.initialize_tracking(session.result_bufnr, session.conflict_blocks)
+  end
+  
+  -- Helper to set signs for a buffer range (for non-empty ranges)
+  local function set_signs_for_range(bufnr, start_line, end_line, namespace, hl_group, is_active)
+    if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then return end
+    
+    local line_count = vim.api.nvim_buf_line_count(bufnr)
+    
+    if start_line == end_line then
+      -- Empty range: show a top-aligned horizontal bar sign to indicate "something goes here"
+      if start_line >= 0 and start_line < line_count then
+        local marks = vim.api.nvim_buf_get_extmarks(bufnr, namespace, {start_line, 0}, {start_line, -1}, {})
+        for _, mark in ipairs(marks) do
+          vim.api.nvim_buf_del_extmark(bufnr, namespace, mark[1])
+        end
+        vim.api.nvim_buf_set_extmark(bufnr, namespace, start_line, 0, {
+          sign_text = "▔▔",  -- Upper block - appears at top of line, like between two lines
+          sign_hl_group = hl_group,
+          priority = 50,
+        })
+      end
+    else
+      for line = start_line, end_line - 1 do
+        if line >= 0 and line < line_count then
+          local marks = vim.api.nvim_buf_get_extmarks(bufnr, namespace, {line, 0}, {line, -1}, {})
+          for _, mark in ipairs(marks) do
+            vim.api.nvim_buf_del_extmark(bufnr, namespace, mark[1])
+          end
+          vim.api.nvim_buf_set_extmark(bufnr, namespace, line, 0, {
+            sign_text = "▌",
+            sign_hl_group = hl_group,
+            priority = 50,
+          })
+        end
+      end
+    end
+  end
+  
+  -- Clear result buffer signs (they move with content, so clear and re-add)
+  if session.result_bufnr and vim.api.nvim_buf_is_valid(session.result_bufnr) then
+    vim.api.nvim_buf_clear_namespace(session.result_bufnr, result_signs_ns, 0, -1)
+  end
+  
+  -- Update signs for each block based on is_block_active state
+  for _, block in ipairs(session.conflict_blocks) do
+    local is_active = is_block_active(session, block)
+    
+    -- Determine highlight groups for left/right/result based on accepted side
+    local left_hl, right_hl, result_hl
+    if is_active then
+      -- Unresolved: all orange
+      left_hl = "CodeDiffConflictSign"
+      right_hl = "CodeDiffConflictSign"
+      result_hl = "CodeDiffConflictSign"
+    else
+      -- Resolved: check which side was accepted
+      local accepted = get_accepted_side(session, block)
+      if accepted == "incoming" then
+        left_hl = "CodeDiffConflictSignAccepted"   -- Green (chosen)
+        right_hl = "CodeDiffConflictSignRejected"  -- Red (not chosen)
+      elseif accepted == "current" then
+        left_hl = "CodeDiffConflictSignRejected"   -- Red (not chosen)
+        right_hl = "CodeDiffConflictSignAccepted"  -- Green (chosen)
+      elseif accepted == "both" then
+        left_hl = "CodeDiffConflictSignAccepted"   -- Green (both chosen)
+        right_hl = "CodeDiffConflictSignAccepted"  -- Green (both chosen)
+      else
+        -- Manual edit or unknown - use gray
+        left_hl = "CodeDiffConflictSignResolved"
+        right_hl = "CodeDiffConflictSignResolved"
+      end
+      -- Result buffer always uses gray for resolved
+      result_hl = "CodeDiffConflictSignResolved"
+    end
+    
+    -- Update left buffer (incoming)
+    local left_start = block.output1_range.start_line - 1
+    local left_end = block.output1_range.end_line - 1
+    set_signs_for_range(session.original_bufnr, left_start, left_end, ns_conflict, left_hl, is_active)
+    
+    -- Update right buffer (current)
+    local right_start = block.output2_range.start_line - 1
+    local right_end = block.output2_range.end_line - 1
+    set_signs_for_range(session.modified_bufnr, right_start, right_end, ns_conflict, right_hl, is_active)
+    
+    -- Update result buffer (use tracked extmark position)
+    if session.result_bufnr and vim.api.nvim_buf_is_valid(session.result_bufnr) and block.extmark_id then
+      local mark = vim.api.nvim_buf_get_extmark_by_id(session.result_bufnr, tracking_ns, block.extmark_id, { details = true })
+      if mark and #mark >= 3 then
+        local result_start = mark[1]
+        local result_end = mark[3].end_row
+        local line_count = vim.api.nvim_buf_line_count(session.result_bufnr)
+        
+        if result_start == result_end then
+          -- Empty conflict region: show a top-aligned horizontal bar sign
+          if result_start >= 0 and result_start < line_count then
+            vim.api.nvim_buf_set_extmark(session.result_bufnr, result_signs_ns, result_start, 0, {
+              sign_text = "▔▔",  -- Upper block - appears at top of line, like between two lines
+              sign_hl_group = result_hl,
+              priority = 50,
+            })
+          end
+        else
+          for line = result_start, result_end - 1 do
+            if line >= 0 and line < line_count then
+              vim.api.nvim_buf_set_extmark(session.result_bufnr, result_signs_ns, line, 0, {
+                sign_text = "▌",
+                sign_hl_group = result_hl,
+                priority = 50,
+              })
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+--- Setup autocmd to refresh signs when result buffer changes
+--- @param tabpage number The tabpage ID
+--- @param result_bufnr number The result buffer handle
+function M.setup_sign_refresh_autocmd(tabpage, result_bufnr)
+  if not result_bufnr or not vim.api.nvim_buf_is_valid(result_bufnr) then return end
+  
+  local group = vim.api.nvim_create_augroup("VscodeDiffConflictSigns_" .. tabpage, { clear = true })
+  
+  vim.api.nvim_create_autocmd({"TextChanged", "TextChangedI"}, {
+    group = group,
+    buffer = result_bufnr,
+    callback = function()
+      local session = lifecycle.get_session(tabpage)
+      if session then
+        M.refresh_all_conflict_signs(session)
+      end
+    end,
+  })
 end
 
 --- Apply text to result buffer at the conflict's range
@@ -289,6 +533,7 @@ function M.accept_incoming(tabpage)
   end
 
   apply_to_result(result_bufnr, block, incoming_lines, base_lines)
+  M.refresh_all_conflict_signs(session)
   auto_refresh.refresh_result_now(result_bufnr)
   return true
 end
@@ -338,6 +583,7 @@ function M.accept_current(tabpage)
   end
 
   apply_to_result(result_bufnr, block, current_lines, base_lines)
+  M.refresh_all_conflict_signs(session)
   auto_refresh.refresh_result_now(result_bufnr)
   return true
 end
@@ -397,6 +643,7 @@ function M.accept_both(tabpage)
   end
 
   apply_to_result(result_bufnr, block, combined, base_lines)
+  M.refresh_all_conflict_signs(session)
   auto_refresh.refresh_result_now(result_bufnr)
   return true
 end
@@ -454,6 +701,7 @@ function M.discard(tabpage)
   end
 
   apply_to_result(result_bufnr, block, base_content, base_lines)
+  M.refresh_all_conflict_signs(session)
   auto_refresh.refresh_result_now(result_bufnr)
   return true
 end
@@ -501,6 +749,7 @@ function M.diffget_incoming(tabpage)
   end
 
   apply_to_result(result_bufnr, block, incoming_lines, base_lines)
+  M.refresh_all_conflict_signs(session)
   auto_refresh.refresh_result_now(result_bufnr)
   return true
 end
@@ -548,6 +797,7 @@ function M.diffget_current(tabpage)
   end
 
   apply_to_result(result_bufnr, block, current_lines, base_lines)
+  M.refresh_all_conflict_signs(session)
   auto_refresh.refresh_result_now(result_bufnr)
   return true
 end

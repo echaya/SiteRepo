@@ -326,6 +326,15 @@ local function setup_conflict_result_window(tabpage, session_config, original_wi
   local conflict_actions = require('vscode-diff.render.conflict_actions')
   conflict_actions.initialize_tracking(result_bufnr, conflict_diffs.conflict_blocks)
 
+  -- Setup autocmd to refresh signs when result buffer changes (event-driven approach)
+  conflict_actions.setup_sign_refresh_autocmd(tabpage, result_bufnr)
+
+  -- Initialize all conflict signs (uses refresh_all_conflict_signs for centralized logic)
+  local session = lifecycle.get_session(tabpage)
+  if session then
+    conflict_actions.refresh_all_conflict_signs(session)
+  end
+
   -- Return focus to modified window
   if vim.api.nvim_win_is_valid(modified_win) then
     vim.api.nvim_set_current_win(modified_win)

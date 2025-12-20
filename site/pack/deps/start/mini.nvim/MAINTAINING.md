@@ -189,7 +189,9 @@ Begin the process of stopping official support for outdated Neovim version short
     - '.github/DISCUSSION_TEMPLATE/q-a.yml' to be included in a dropdown menu.
 - Generate help files.
 - Add README to 'readmes' directory following the structure of some of already existing README (preferably one of the latest). NOTE: comment out mentions of `stable` branch, as it won't work during beta-testing.
-- Update main README to mention new module in table of contents.
+- Update main README:
+    - Mention new module in table of contents.
+    - Remove the module from "Planned modules" section (if present).
 - Update 'CHANGELOG.md' to mention introduction of new module.
 - Update 'CONTRIBUTING.md' to mention new highlight groups (if there are any).
 - Create separate release branch and commit changes with message 'feat(xxx): add NEW MODULE'. NOTE: it is cleaner to synchronize standalone repositories prior to this commit.
@@ -261,9 +263,11 @@ There is no clear guidelines for when a stable (minor) release should be made. M
     ```
 - Check that standalone repositories actually got updates (tag + `stable`): manually visit some of them (at least new modules) on GitHub.
 
-### Post release
+### After release
 
-- Close all beta-testing issues for new plugins.
-- Use development version in 'CHANGELOG.md' ('0.xx.0.9000'). Commit.
-- Synchronize nvim-mini.org.
+- Synchronize nvim-mini.org. Merge blog post. Push. Post on Reddit and other social media.
+- Finish beta-testing new modules:
+    - Close beta-testing issues.
+    - Add them to MiniMax.
+- Use development version in 'CHANGELOG.md' ('0.(xx+1).0-dev'). Commit.
 - Check for `TODO`s about actions to be done *after* release.
