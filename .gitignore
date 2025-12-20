@@ -8,7 +8,6 @@ src/.ipynb_checkpoints
 /__pycache__
 plugged-old/
 *.pyc
-tags
 test.*
 temp*.*
 *.ipynb
