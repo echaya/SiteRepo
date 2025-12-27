@@ -303,7 +303,7 @@ The following projects inspired architectural decisions but no code was copied:
 
 **Author**: Tim Pope  
 **Source**: https://github.com/tpope/vim-fugitive  
-**Inspiration**: The virtual file URL scheme (`vscodediff://`) is inspired by vim-fugitive's `fugitive://` pattern for creating virtual buffers that represent git objects.
+**Inspiration**: The virtual file URL scheme (`codediff://`) is inspired by vim-fugitive's `fugitive://` pattern for creating virtual buffers that represent git objects.
 
 ### gitsigns.nvim & diffview.nvim
 

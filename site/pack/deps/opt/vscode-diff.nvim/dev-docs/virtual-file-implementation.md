@@ -4,7 +4,7 @@
 
 ### What We Built
 
-A **virtual file URL scheme** (`vscodediff://`) that allows LSP servers to attach to and analyze git historical content, providing accurate semantic token highlighting.
+A **virtual file URL scheme** (`codediff://`) that allows LSP servers to attach to and analyze git historical content, providing accurate semantic token highlighting.
 
 ---
 
@@ -16,7 +16,7 @@ The implementation now uses an **explicit, flexible buffer type system** that su
 
 ```lua
 BufferType = {
-  VIRTUAL_FILE = "VIRTUAL_FILE",  -- Virtual file (vscodediff://) for LSP semantic tokens
+  VIRTUAL_FILE = "VIRTUAL_FILE",  -- Virtual file (codediff://) for LSP semantic tokens
   REAL_FILE = "REAL_FILE",        -- Real file on disk
   SCRATCH = "SCRATCH"             -- Scratch buffer with no file backing
 }
@@ -46,7 +46,7 @@ The system is **generalized** and supports all 4 combinations:
 
 ### 1. Git Diff Mode (VIRTUAL_FILE + REAL_FILE)
 - **Used for:** `:CodeDiff HEAD` (comparing working file with git revision)
-- **Left buffer:** Virtual file with `vscodediff://` URL
+- **Left buffer:** Virtual file with `codediff://` URL
 - **Right buffer:** Real file buffer (working file)
 - **LSP attachment:** Left buffer gets LSP via virtual file URL scheme
 - **Semantic tokens:** Requested from right buffer's LSP server for left buffer content
@@ -70,12 +70,12 @@ Vim-fugitive uses `fugitive://` URLs to create "real" file buffers that LSP can 
 
 **URL Format:**
 ```
-vscodediff:///path/to/git-root///commit-hash/relative/path/to/file.lua
+codediff:///path/to/git-root///commit-hash/relative/path/to/file.lua
 ```
 
 **Example:**
 ```
-vscodediff:////home/user/project///HEAD/src/file.lua
+codediff:////home/user/project///HEAD/src/file.lua
 ```
 
 ---
@@ -87,27 +87,27 @@ vscodediff:////home/user/project///HEAD/src/file.lua
 **Purpose:** Handle virtual file URL scheme for git revisions
 
 **Key Functions:**
-- `create_url(git_root, commit, filepath)` - Generate vscodediff:// URL
+- `create_url(git_root, commit, filepath)` - Generate codediff:// URL
 - `parse_url(url)` - Parse URL back to components
 - `setup()` - Register BufReadCmd and BufWriteCmd autocmds
 
 **How It Works:**
-1. **BufReadCmd Autocmd** intercepts reads of `vscodediff://` URLs
+1. **BufReadCmd Autocmd** intercepts reads of `codediff://` URLs
 2. **git.get_file_at_revision()** fetches content from git
 3. **Populates Buffer** with historical content
 4. **Sets Filetype** for TreeSitter and LSP
 5. **Triggers BufRead** event for LSP attachment
-6. **Fires Custom Event** (`VscodeDiffVirtualFileLoaded`) for diff highlighting
+6. **Fires Custom Event** (`CodeDiffVirtualFileLoaded`) for diff highlighting
 
 ```lua
 -- BufReadCmd callback pseudocode:
-1. Parse vscodediff:// URL
+1. Parse codediff:// URL
 2. Call git.get_file_at_revision(commit, filepath, callback)
 3. In callback:
    - Set buffer lines
    - Mark buffer as readonly
    - Detect and set filetype
-   - Fire VscodeDiffVirtualFileLoaded event
+   - Fire CodeDiffVirtualFileLoaded event
    - Fire BufRead event (for LSP)
 ```
 
@@ -119,16 +119,16 @@ vscodediff:////home/user/project///HEAD/src/file.lua
 - Detect if this is a git diff (has `git_revision` and `git_root`)
 - For git diffs: Create virtual file URL buffer instead of scratch buffer
 - Skip setting content (BufReadCmd handles it)
-- Listen for `VscodeDiffVirtualFileLoaded` event
+- Listen for `CodeDiffVirtualFileLoaded` event
 - Apply diff highlights AFTER virtual file loads
 
 **Flow for Virtual Files:**
 ```lua
-1. Create buffer with vscodediff:// URL (vim.fn.bufadd)
+1. Create buffer with codediff:// URL (vim.fn.bufadd)
 2. Create windows and display buffer
    └─> This triggers BufReadCmd
 3. BufReadCmd loads content asynchronously
-4. Fires VscodeDiffVirtualFileLoaded event
+4. Fires CodeDiffVirtualFileLoaded event
 5. Event handler applies:
    - Diff highlights
    - Semantic tokens
@@ -180,7 +180,7 @@ end
 ```
 
 **Why This Works:**
-- Virtual file has its own URI (`vscodediff://...`)
+- Virtual file has its own URI (`codediff://...`)
 - LSP server sees it as a separate file
 - Analyzes the buffer's actual content (git historical version)
 - Tokens are accurate for that version!

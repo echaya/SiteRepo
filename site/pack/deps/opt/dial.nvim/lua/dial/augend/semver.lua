@@ -13,7 +13,7 @@ end
 
 ---@class AugendSemver
 ---@implement Augend
----@field kind '"major"' | '"minor"' | '"patch"'
+---@field kind "major" | "minor" | "patch"
 local AugendSemver = {}
 
 local M = {}

@@ -76,7 +76,7 @@ end
 
 ---Returns the indices with the value nil.
 ---returns an index array
----@param tbl array
+---@param tbl any[]
 ---@return integer[]
 function M.index_with_nil_value(tbl)
     -- local maxn, k = 0, nil

@@ -3,7 +3,7 @@ local common = require "dial.augend.common"
 
 local M = {}
 
----@alias datekind '"year"' | '"month"' | '"day"' | '"hour"' | '"min"' | '"sec"'
+---@alias datekind "year" | "month" | "day" | "hour" | "min" | "sec"
 ---@alias dttable table<datekind, integer>
 ---@alias dateparser fun(string, osdate): osdate
 ---@alias dateformatter fun(osdate): string

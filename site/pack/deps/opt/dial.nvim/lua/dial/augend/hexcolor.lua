@@ -10,8 +10,8 @@ local function cast_u8(n)
     return n
 end
 
----@alias colorcase '"upper"' | '"lower"' | '"prefer_upper"' | '"prefer_lower"'
----@alias colorkind '"r"' | '"g"' | '"b"' | '"all"'
+---@alias colorcase "upper" | "lower" | "prefer_upper" | "prefer_lower"
+---@alias colorkind "r" | "g" | "b" | "all"
 
 ---@class AugendHexColor
 ---@implement Augend

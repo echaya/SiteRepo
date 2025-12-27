@@ -8,6 +8,20 @@ There are following change types:
 
 # Version 0.18.0-dev
 
+## mini.misc
+
+### Evolve
+
+- Update `setup_termbg_sync()` to use OSC 111 control sequence to reset terminal emulator's background color. This provides a more robust behavior across platforms (like `tmux`).
+
+    The previous "reset by explicitly setting initial background color" behavior is available by setting the new `opts.explicit_reset` option to `true`.
+
+## mini.pick
+
+### Expand
+
+- Allow `source.preview` to directly set another buffer into picker's main window. The recommended way is still to adjust the provided `buf_id` buffer, but there is now a workaround if this is not reasonably possible.
+
 
 # Version 0.17.0
 

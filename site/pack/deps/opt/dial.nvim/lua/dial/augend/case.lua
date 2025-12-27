@@ -3,9 +3,9 @@ local util = require "dial.util"
 
 local M = {}
 
----@alias casetype '"PascalCase"' | '"camelCase"' | '"snake_case"' | '"kebab-case"' | '"SCREAMING_SNAKE_CASE"'
----@alias extractf fun(word: string) -> string[] | nil
----@alias constractf fun(terms: string[]) -> string
+---@alias casetype "PascalCase" | "camelCase" | "snake_case" | "kebab-case" | "SCREAMING_SNAKE_CASE"
+---@alias extractf fun(word: string): string[] | nil
+---@alias constractf fun(terms: string[]): string
 ---@alias casepattern { word_regex: string, extract: extractf, constract: constractf }
 
 ---@class AugendCase

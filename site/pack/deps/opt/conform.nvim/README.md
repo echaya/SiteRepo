@@ -255,6 +255,7 @@ You can view this list in vim with `:help conform-formatters`
 - [gawk](https://www.gnu.org/software/gawk/manual/gawk.html) - Format awk programs with gawk.
 - [gci](https://github.com/daixiang0/gci) - GCI, a tool that controls Go package import order and makes it always deterministic.
 - [gdformat](https://github.com/Scony/godot-gdscript-toolkit) - A formatter for Godot's gdscript.
+- [gdscript-formatter](https://github.com/GDQuest/GDScript-formatter) - A faster code formatter for GDScript and Godot 4.
 - [gersemi](https://github.com/BlankSpruce/gersemi) - A formatter to make your CMake code the real treasure.
 - [ghdl](https://ghdl.github.io/ghdl/) - Open-source analyzer, compiler, simulator and synthesizer for VHDL.
 - [ghokin](https://github.com/antham/ghokin) - Parallelized formatter with no external dependencies for gherkin.
@@ -329,6 +330,7 @@ You can view this list in vim with `:help conform-formatters`
 - [oxfmt](https://github.com/oxc-project/oxc) - A Prettier-compatible code formatter.
 - [oxlint](https://github.com/oxc-project/oxc) - An oxidized replacement for ESLint that fixes lint errors.
 - [packer_fmt](https://developer.hashicorp.com/packer/docs/commands/fmt) - The packer fmt Packer command is used to format HCL2 configuration files to a canonical format and style.
+- [palantir-java-format](https://github.com/palantir/palantir-java-format) - A modern, lambda-friendly, 120 character Java formatter.
 - [pangu](https://github.com/vinta/pangu.py) - Insert whitespace between CJK and half-width characters.
 - [perlimports](https://github.com/perl-ide/App-perlimports) - Make implicit Perl imports explicit.
 - [perltidy](https://github.com/perltidy/perltidy) - Perl::Tidy, a source code formatter for Perl.
@@ -523,6 +525,7 @@ The following magic strings are available in `args` and `range_args`. They will 
 - [Lazy loading with lazy.nvim](doc/recipes.md#lazy-loading-with-lazynvim)
 - [Leave visual mode after range format](doc/recipes.md#leave-visual-mode-after-range-format)
 - [Run the first available formatter followed by more formatters](doc/recipes.md#run-the-first-available-formatter-followed-by-more-formatters)
+- [Create a separate command to do special formatting you don't want to happen on save](doc/recipes.md#create-a-separate-command-to-do-special-formatting-you-dont-want-to-happen-on-save)
 
 <!-- /RECIPES -->
 

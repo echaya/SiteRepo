@@ -9,7 +9,7 @@ local util = require "dial.util"
 ---@field prefix string
 ---@field natural boolean
 ---@field query string
----@field case '"upper"' | '"lower"'
+---@field case "upper" | "lower"
 ---@field delimiter string
 ---@field delimiter_digits integer
 local AugendInteger = {}
@@ -22,7 +22,7 @@ local M = {}
 ---@field radix integer
 ---@field plus fun(self:BigInt, value:BigInt, natural:boolean):BigInt `value` must be positive
 ---@field minus fun(self:BigInt, value:BigInt, natural:boolean):BigInt `value` must be positive
----@field to_string fun(self:BigInt, case:'"upper"'|'"lower"'):string
+---@field to_string fun(self:BigInt, case:"upper"|"lower"):string
 local BigInt = {}
 
 ---@param n string|integer
@@ -163,7 +163,7 @@ function BigInt.new(n, radix)
         return self
     end
 
-    ---@param case '"upper"' | '"lower"'
+    ---@param case "upper" | "lower"
     ---@return string
     function self:to_string(case)
         local digits
@@ -238,7 +238,7 @@ local function radix_to_query_character(radix)
     return "0-9a-" .. string.char(86 + radix) .. "A-" .. string.char(54 + radix)
 end
 
----@param config { radix?: integer, prefix?: string, natural?: boolean, case?: '"upper"' | '"lower"', delimiter?: string, delimiter_digits?: number }
+---@param config { radix?: integer, prefix?: string, natural?: boolean, case?: "upper" | "lower", delimiter?: string, delimiter_digits?: number }
 ---@return Augend
 function M.new(config)
     vim.validate("radix", config.radix, "number", true)

@@ -68,14 +68,14 @@ local function main()
   io.stderr:write(string.format("Input2 (incoming): %s (%d lines)\n", input2_path, #input2_lines))
   
   -- Load our diff module
-  local ok, diff_module = pcall(require, "vscode-diff.diff")
+  local ok, diff_module = pcall(require, "vscode-diff.core.diff")
   if not ok then
     io.stderr:write("Error loading diff module: " .. tostring(diff_module) .. "\n")
     os.exit(1)
   end
   
   -- Load merge alignment module
-  local ok2, merge_alignment = pcall(require, "vscode-diff.render.merge_alignment")
+  local ok2, merge_alignment = pcall(require, "vscode-diff.ui.merge_alignment")
   if not ok2 then
     io.stderr:write("Error loading merge_alignment module: " .. tostring(merge_alignment) .. "\n")
     os.exit(1)

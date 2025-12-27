@@ -62,7 +62,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
   dependencies = { "MunifTanjim/nui.nvim" },
   cmd = "CodeDiff",
   config = function()
-    require("vscode-diff").setup({
+    require("codediff").setup({
       -- Highlight configuration
       highlights = {
         -- Line-level: accepts highlight group names or hex colors (e.g., "#2ea043")
@@ -285,7 +285,7 @@ Compare two arbitrary files side-by-side:
 
 ```lua
 -- Primary user API - setup configuration
-require("vscode-diff").setup({
+require("codediff").setup({
   highlights = {
     line_insert = "DiffAdd",
     line_delete = "DiffDelete",
@@ -294,9 +294,9 @@ require("vscode-diff").setup({
 })
 
 -- Advanced usage - direct access to internal modules
-local diff = require("vscode-diff.diff")
-local render = require("vscode-diff.render")
-local git = require("vscode-diff.git")
+local diff = require("codediff.diff")
+local render = require("codediff.ui")
+local git = require("codediff.git")
 
 -- Example 1: Compute diff between two sets of lines
 local lines_a = {"line 1", "line 2"}
@@ -443,30 +443,33 @@ For more details on the test structure, see [`tests/README.md`](tests/README.md)
 
 ```
 vscode-diff.nvim/
-├── libvscode-diff/       # C diff engine
-│   ├── src/              # C implementation
-│   ├── include/          # C headers
-│   └── tests/            # C unit tests
-├── lua/vscode-diff/      # Lua modules
-│   ├── init.lua          # Main API
-│   ├── config.lua        # Configuration
-│   ├── diff.lua          # FFI interface
-│   ├── git.lua           # Git operations
-│   ├── commands.lua      # Command handlers
-│   ├── installer.lua     # Binary installer
-│   └── render/           # Rendering modules
-│       ├── core.lua      # Diff rendering
-│       ├── view.lua      # View management
-│       ├── explorer.lua  # Git status explorer
-│       └── highlights.lua # Highlight setup
-├── plugin/               # Plugin entry point
-│   └── vscode-diff.lua   # Auto-loaded on startup
-├── tests/                # Test suite (plenary.nvim)
-│   └── README.md         # Test documentation
-├── docs/                 # Production docs
-├── dev-docs/             # Development docs
-├── Makefile              # Build automation
-└── README.md             # This file
+├── libvscode-diff/        # C diff engine
+│   ├── src/               # C implementation
+│   ├── include/           # C headers
+│   └── tests/             # C unit tests
+├── lua/
+│   ├── codediff/          # Main Lua modules
+│   │   ├── init.lua       # Main API
+│   │   ├── config.lua     # Configuration
+│   │   ├── diff.lua       # FFI interface
+│   │   ├── git.lua        # Git operations
+│   │   ├── commands.lua   # Command handlers
+│   │   ├── installer.lua  # Binary installer
+│   │   └── ui/            # UI components
+│   │       ├── core.lua       # Diff rendering
+│   │       ├── highlights.lua # Highlight setup
+│   │       ├── view/          # View management
+│   │       ├── explorer/      # Git status explorer
+│   │       ├── lifecycle/     # Lifecycle management
+│   │       └── conflict/      # Conflict resolution
+│   └── vscode-diff/       # Backward compatibility shims
+├── plugin/                # Plugin entry point
+│   └── codediff.lua       # Auto-loaded on startup
+├── tests/                 # Test suite (plenary.nvim)
+├── docs/                  # Production docs
+├── dev-docs/              # Development docs
+├── Makefile               # Build automation
+└── README.md
 ```
 
 ## Roadmap

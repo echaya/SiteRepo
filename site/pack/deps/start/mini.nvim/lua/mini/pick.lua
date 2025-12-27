@@ -388,7 +388,9 @@
 ---   of item previewing new scratch buffer is be created.
 --- - `item` - item to preview.
 ---
---- It should update buffer `buf_id` to visually represent `item`.
+--- It should update buffer `buf_id` to visually represent `item`. It can also
+--- directly set another buffer in picker's main window, but usually it is more
+--- robust to update given `buf_id` directly.
 ---
 --- Example: >lua
 ---
@@ -623,7 +625,6 @@
 --- <
 --- # Switch toggle and move keys ~
 --- >lua
----
 ---   require('mini.pick').setup({
 ---     mappings = {
 ---       toggle_info    = '<C-k>',
@@ -633,9 +634,8 @@
 ---     }
 ---   })
 --- <
---- # Different window styles: ~
+--- # Different window styles ~
 --- >lua
----
 ---   -- Different border
 ---   { window = { config = { border = 'double' } } }
 ---
@@ -1799,7 +1799,8 @@ MiniPick.set_picker_opts = function(opts)
   picker.opts = vim.tbl_deep_extend('force', picker.opts, opts or {})
   picker.action_keys = H.normalize_mappings(picker.opts.mappings)
   if cur_cwd ~= picker.opts.source.cwd then H.win_set_cwd(picker.windows.main, picker.opts.source.cwd) end
-  H.picker_update(picker, true, true)
+  local do_match = ((opts or {}).source or {}).match ~= nil
+  H.picker_update(picker, do_match, true)
 end
 
 --- Set target window for active picker
@@ -2959,7 +2960,7 @@ H.picker_show_preview = function(picker)
   vim.bo[buf_id].bufhidden = 'wipe'
   H.set_winbuf(win_id, buf_id)
   preview(buf_id, item)
-  picker.buffers.preview = buf_id
+  picker.buffers.preview = vim.api.nvim_win_get_buf(win_id)
   picker.view_state = 'preview'
 end
 
@@ -3405,7 +3406,9 @@ end
 H.files_get_command = function(tool)
   if tool == 'rg' then return { 'rg', '--files', '--color=never' } end
   if tool == 'fd' then return { 'fd', '--type=f', '--color=never' } end
-  if tool == 'git' then return { 'git', 'ls-files', '--cached', '--others', '--exclude-standard' } end
+  if tool == 'git' then
+    return { 'git', '-c', 'core.quotepath=false', 'ls-files', '--cached', '--others', '--exclude-standard' }
+  end
   H.error([[Wrong 'tool' for `files` builtin.]])
 end
 
