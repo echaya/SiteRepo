@@ -20,6 +20,7 @@
 ---     - [DanilaMihailov/beacon.nvim](https://github.com/DanilaMihailov/beacon.nvim)
 ---     - [folke/lazy.nvim](https://github.com/folke/lazy.nvim)
 ---     - [folke/noice.nvim](https://github.com/folke/noice.nvim)
+---     - [folke/snacks.nvim](https://github.com/folke/snacks.nvim)
 ---     - [folke/todo-comments.nvim](https://github.com/folke/todo-comments.nvim)
 ---     - [folke/trouble.nvim](https://github.com/folke/trouble.nvim)
 ---     - [folke/which-key.nvim](https://github.com/folke/which-key.nvim)
@@ -897,6 +898,9 @@ H.apply_palette = function(palette, use_cterm)
     hi('NoiceCmdlinePopupBorder', {fg=p.base0D, bg=nil, attr=nil, sp=nil})
     hi('NoiceConfirmBorder',      {fg=p.base0E, bg=nil, attr=nil, sp=nil})
   end
+
+  -- folke/snacks.nvim
+  -- Everything works correctly out of the box
 
   -- folke/trouble.nvim
   if H.has_integration('folke/trouble.nvim') then
