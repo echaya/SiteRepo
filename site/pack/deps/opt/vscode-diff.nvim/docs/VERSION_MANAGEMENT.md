@@ -120,7 +120,7 @@ CMakeLists.txt reads VERSION file:
 ```cmake
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" PROJECT_VERSION)
 string(STRIP "${PROJECT_VERSION}" PROJECT_VERSION)
-project(vscode-diff-nvim VERSION ${PROJECT_VERSION})
+project(codediff-nvim VERSION ${PROJECT_VERSION})
 ```
 
 ### Bump Script

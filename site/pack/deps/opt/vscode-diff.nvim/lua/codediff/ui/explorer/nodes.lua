@@ -261,8 +261,30 @@ function M.prepare_node(node, max_width, selected_path, selected_group)
   else
     -- Match both path AND group to handle files in both staged and unstaged
     local is_selected = data.path and data.path == selected_path and data.group == selected_group
+    
+    -- Get selected background color once
+    local selected_bg = nil
+    if is_selected then
+      local sel_hl = vim.api.nvim_get_hl(0, { name = "CodeDiffExplorerSelected", link = false })
+      selected_bg = sel_hl.bg
+    end
+    
+    -- Helper to get highlight with selected background but original foreground
     local function get_hl(default)
-      return is_selected and "CodeDiffExplorerSelected" or (default or "Normal")
+      if not is_selected then
+        return default or "Normal"
+      end
+      -- Create a combined highlight: original fg + selected bg
+      local base_hl_name = default or "Normal"
+      local combined_name = "CodeDiffExplorerSel_" .. base_hl_name:gsub("[^%w]", "_")
+      
+      -- Get foreground from base highlight
+      local base_hl = vim.api.nvim_get_hl(0, { name = base_hl_name, link = false })
+      local fg = base_hl.fg
+      
+      -- Set the combined highlight (will be cached by nvim)
+      vim.api.nvim_set_hl(0, combined_name, { fg = fg, bg = selected_bg })
+      return combined_name
     end
 
     -- Check if we're in tree mode (directory is already shown in hierarchy)
@@ -273,7 +295,7 @@ function M.prepare_node(node, max_width, selected_path, selected_group)
     if view_mode == "tree" and data.indent_state then
       indent = build_indent_markers(data.indent_state)
       if #indent > 0 then
-        line:append(indent, use_indent_markers and "NeoTreeIndentMarker" or get_hl("Normal"))
+        line:append(indent, get_hl(use_indent_markers and "NeoTreeIndentMarker" or "Normal"))
       end
     else
       indent = string.rep("  ", node:get_depth() - 1)
@@ -297,7 +319,7 @@ function M.prepare_node(node, max_width, selected_path, selected_group)
 
     -- Calculate how much width we've used and reserve for status
     local used_width = vim.fn.strdisplaywidth(indent) + vim.fn.strdisplaywidth(icon_part)
-    local status_reserve = vim.fn.strdisplaywidth(status_symbol) + 2  -- 2 spaces padding before status
+    local status_reserve = vim.fn.strdisplaywidth(status_symbol) + 3  -- 2 spaces before + 1 space after status
     local available_for_content = max_width - used_width - status_reserve
 
     -- Show: filename + full directory path, truncate directory from left if needed
@@ -343,6 +365,7 @@ function M.prepare_node(node, max_width, selected_path, selected_group)
       line:append(string.rep(" ", padding_needed), get_hl("Normal"))
     end
     line:append(status_symbol, get_hl(data.status_color))
+    line:append(" ", get_hl("Normal"))  -- Right padding (matches status_reserve calculation)
   end
 
   return line

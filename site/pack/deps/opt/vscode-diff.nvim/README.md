@@ -1,8 +1,8 @@
-# vscode-diff.nvim
+# codediff.nvim
 
 [![Pre-release](https://img.shields.io/github/v/release/esmuellert/vscode-diff.nvim?include_prereleases&sort=semver&label=🚀%20pre-release&color=orange)](https://github.com/esmuellert/vscode-diff.nvim/issues/97) [![Downloads](https://img.shields.io/github/downloads/esmuellert/vscode-diff.nvim/total?label=⬇%20downloads&color=blue)](https://github.com/esmuellert/vscode-diff.nvim/releases)
 
-> **🧪 v2.0.0 Pre-release Available!** The `next` branch includes new features like **Git Merge Tool support**. [Help us test it!](https://github.com/esmuellert/vscode-diff.nvim/issues/97)
+> **🧪 v2.0.0 Pre-release Available!** The `next` branch includes new features like **Git Merge Tool support**. [Help us test it!](https://github.com/esmuellert/codediff.nvim/issues/97)
 
 A Neovim plugin that provides VSCode-style side-by-side diff rendering with two-tier highlighting.
 
@@ -47,7 +47,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
 **Minimal installation:**
 ```lua
 {
-  "esmuellert/vscode-diff.nvim",
+  "esmuellert/codediff.nvim",
   dependencies = { "MunifTanjim/nui.nvim" },
   cmd = "CodeDiff",
 }
@@ -58,7 +58,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
 **With custom configuration:**
 ```lua
 {
-  "esmuellert/vscode-diff.nvim",
+  "esmuellert/codediff.nvim",
   dependencies = { "MunifTanjim/nui.nvim" },
   cmd = "CodeDiff",
   config = function()
@@ -173,12 +173,12 @@ If you prefer to install manually without a plugin manager:
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/esmuellert/vscode-diff.nvim ~/.local/share/nvim/vscode-diff.nvim
+git clone https://github.com/esmuellert/codediff.nvim ~/.local/share/nvim/codediff.nvim
 ```
 
 2. **Add to your Neovim runtime path in `init.lua`:**
 ```lua
-vim.opt.rtp:append("~/.local/share/nvim/vscode-diff.nvim")
+vim.opt.rtp:append("~/.local/share/nvim/codediff.nvim")
 ```
 
 3. **Install the C library:**
@@ -190,7 +190,7 @@ The plugin requires a C library binary in the plugin root directory. The plugin 
 
 **Option A: Download from GitHub releases** (recommended)
 
-Download the appropriate binary from the [GitHub releases page](https://github.com/esmuellert/vscode-diff.nvim/releases) and place it in the plugin root directory. Rename it to match the expected format: `libvscode_diff.so`/`.dylib`/`.dll` or `libvscode_diff_<version>.so`/`.dylib`/`.dll`. **Linux users**: If your system lacks OpenMP, also download `libgomp_linux_{arch}_{version}.so.1` and rename it to `libgomp.so.1` in the same directory.
+Download the appropriate binary from the [GitHub releases page](https://github.com/esmuellert/codediff.nvim/releases) and place it in the plugin root directory. Rename it to match the expected format: `libvscode_diff.so`/`.dylib`/`.dll` or `libvscode_diff_<version>.so`/`.dylib`/`.dll`. **Linux users**: If your system lacks OpenMP, also download `libgomp_linux_{arch}_{version}.so.1` and rename it to `libgomp.so.1` in the same directory.
 
 **Option B: Build from source**
 
@@ -442,7 +442,7 @@ For more details on the test structure, see [`tests/README.md`](tests/README.md)
 ### Project Structure
 
 ```
-vscode-diff.nvim/
+codediff.nvim/
 ├── libvscode-diff/        # C diff engine
 │   ├── src/               # C implementation
 │   ├── include/           # C headers

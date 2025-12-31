@@ -10,7 +10,7 @@ OpenMP parallelization requires `libgomp.so.1`, but not all systems have it inst
 Error: libgomp.so.1: cannot open shared object file: No such file or directory
 ```
 
-This breaks the plugin for users without OpenMP libraries installed (see [Issue #48](https://github.com/esmuellert/vscode-diff.nvim/issues/48)).
+This breaks the plugin for users without OpenMP libraries installed (see [Issue #48](https://github.com/esmuellert/codediff.nvim/issues/48)).
 
 ---
 
@@ -174,7 +174,7 @@ end
 After installation, the plugin folder contains:
 
 ```
-~/.local/share/nvim/lazy/vscode-diff.nvim/
+~/.local/share/nvim/lazy/codediff.nvim/
 ├── libvscode_diff_linux_arm64_0.11.1.so   # Main binary (RUNPATH=$ORIGIN)
 ├── libgomp.so.1                           # Bundled (only if system doesn't have it)
 ├── lua/
@@ -328,8 +328,8 @@ sudo yum install libgomp           # CentOS/RHEL
 sudo pacman -S gcc-libs            # Arch Linux
 
 # Option 2: Manual download
-cd ~/.local/share/nvim/lazy/vscode-diff.nvim
-curl -LO https://github.com/esmuellert/vscode-diff.nvim/releases/download/v{VERSION}/libgomp_linux_{arch}_{VERSION}.so.1
+cd ~/.local/share/nvim/lazy/codediff.nvim
+curl -LO https://github.com/esmuellert/codediff.nvim/releases/download/v{VERSION}/libgomp_linux_{arch}_{VERSION}.so.1
 mv libgomp_linux_* libgomp.so.1
 ```
 
@@ -349,7 +349,7 @@ nvim --headless -c "lua print(pcall(function() require('ffi').load('gomp', true)
 ### Verify plugin is using bundled vs system libgomp
 
 ```bash
-cd ~/.local/share/nvim/lazy/vscode-diff.nvim
+cd ~/.local/share/nvim/lazy/codediff.nvim
 ldd libvscode_diff*.so | grep gomp
 ```
 

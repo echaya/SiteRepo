@@ -174,7 +174,7 @@ build.cmd
 ## Directory Structure
 
 ```
-vscode-diff.nvim/
+codediff.nvim/
 ├── CMakeLists.txt           # Root CMake configuration
 ├── Makefile                 # Convenience wrapper
 ├── libvscode-diff/

@@ -1,6 +1,6 @@
 # Filler Line Algorithm
 
-This document provides a comprehensive explanation of how the filler line insertion mechanism works in vscode-diff.nvim, which replicates VSCode's advanced diff algorithm for side-by-side view alignment.
+This document provides a comprehensive explanation of how the filler line insertion mechanism works in codediff.nvim, which replicates VSCode's advanced diff algorithm for side-by-side view alignment.
 
 ## Table of Contents
 
