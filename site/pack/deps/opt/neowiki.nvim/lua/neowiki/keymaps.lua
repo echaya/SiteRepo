@@ -13,11 +13,6 @@ local M = {}
 -- @return (string): The `lhs` of the mapping.
 --
 local make_repeatable = function(mode, lhs, rhs)
-  vim.validate({
-    mode = { mode, { "string", "table" } },
-    rhs = { rhs, "function" },
-    lhs = { lhs, "string" },
-  })
   if not vim.startswith(lhs, "<Plug>") then
     error("`lhs` should start with `<Plug>`, given: " .. lhs)
   end

@@ -471,6 +471,7 @@ FORMATTERS                                                    *conform-formatter
 `palantir-java-format` - A modern, lambda-friendly, 120 character Java
                        formatter.
 `pangu` - Insert whitespace between CJK and half-width characters.
+`pasfmt` - Delphi code formatter.
 `perlimports` - Make implicit Perl imports explicit.
 `perltidy` - Perl::Tidy, a source code formatter for Perl.
 `pg_format` - PostgreSQL SQL syntax beautifier.
@@ -517,6 +518,7 @@ FORMATTERS                                                    *conform-formatter
 `ruff_organize_imports` - An extremely fast Python linter, written in Rust.
                         Organize imports.
 `rufo` - Rufo is an opinionated ruby formatter.
+`rumdl` - Markdown Linter and Formatter written in Rust.
 `runic` - Julia code formatter.
 `rustfmt` - A tool for formatting rust code according to style guidelines.
 `rustywind` - A tool for formatting Tailwind CSS classes.

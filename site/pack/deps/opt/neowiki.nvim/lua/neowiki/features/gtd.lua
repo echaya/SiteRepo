@@ -528,14 +528,29 @@ M.attach_to_buffer = function(bufnr)
   vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
     group = group,
     buffer = bufnr,
-    callback = function()
+    callback = function(_)
       vim.defer_fn(function()
-        if vim.api.nvim_buf_is_valid(bufnr) then
+        if not vim.api.nvim_buf_is_valid(bufnr) then
+          return
+        end
+
+        if vim.api.nvim_get_mode().mode:sub(1, 1) == "i" then
+          _build_gtd_tree(bufnr)
+          M.update_progress(bufnr)
+        else
           run_update_pipeline(bufnr)
         end
-      end, 200) -- Debounce delay in milliseconds.
+      end, 200)
     end,
-    desc = "Debounced GTD update on text change",
+  })
+
+  -- Ensure validation runs when leaving insert mode
+  vim.api.nvim_create_autocmd("InsertLeave", {
+    group = group,
+    buffer = bufnr,
+    callback = function()
+      run_update_pipeline(bufnr)
+    end,
   })
 
   -- Listen for when the buffer is detached (e.g., closed) to clean up the cache.

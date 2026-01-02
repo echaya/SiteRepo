@@ -25,7 +25,8 @@ M.open_file_in_float = function(buffer_number)
   }
 
   -- Merge the user's config from the global `config` object over our internal defaults.
-  local final_float_config = util.deep_merge(internal_defaults, config.floating_wiki or {})
+  local final_float_config =
+    vim.tbl_deep_extend("force", internal_defaults, config.floating_wiki or {})
 
   local win_config = final_float_config.open
   local win_style_options = final_float_config.style

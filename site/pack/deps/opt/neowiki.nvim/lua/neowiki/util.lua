@@ -1,25 +1,8 @@
 -- lua/neowiki/util.lua
 local M = {}
 local is_windows = vim.fn.has("win32") == 1
-
----
--- Recursively merges two tables. Values in `override` take precedence.
--- @param base (table): The table to merge into.
--- @param override (table): The table with values to merge from.
--- @return (table): A new table containing the merged result.
---
-M.deep_merge = function(base, override)
-  local result = vim.deepcopy(base)
-  for k, v in pairs(override) do
-    if type(v) == "table" and type(result[k]) == "table" and not vim.islist(v) then
-      result[k] = M.deep_merge(result[k], v)
-    else
-      result[k] = v
-    end
-  end
-  return result
-end
-
+local is_case_insensitive = (vim.loop.os_uname().sysname == "Windows_NT")
+  or (vim.loop.os_uname().sysname == "Darwin")
 ---
 -- Filters a table by applying a predicate function to each item.
 -- This is a pure function that does not depend on any external state or modules.
@@ -202,7 +185,12 @@ M.normalize_path_for_comparison = function(path)
   if not path then
     return ""
   end
-  return normalize_path(path):lower()
+  local normalized = normalize_path(path)
+  if is_case_insensitive then
+    return normalized:lower()
+  else
+    return normalized
+  end
 end
 
 ---
@@ -297,6 +285,11 @@ M.process_link_target = function(target, ext)
   end
   local clean_target = target:match("^%s*(.-)%s*$")
 
+  -- Strip wrapping angle brackets if present (e.g. <filename>)
+  if clean_target:sub(1, 1) == "<" and clean_target:sub(-1) == ">" then
+    clean_target = clean_target:sub(2, -2)
+  end
+
   -- If it's a web link, return it as-is without modification.
   if M.is_web_link(clean_target) then
     return clean_target
@@ -308,7 +301,7 @@ M.process_link_target = function(target, ext)
     clean_target = clean_target .. ext
   end
 
-  -- NEW: Prepend "./" if it's not already a relative path.
+  -- Prepend "./" if it's not already a relative path.
   if not clean_target:match("^%./") then
     clean_target = "./" .. clean_target
   end

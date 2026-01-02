@@ -441,20 +441,41 @@ local function apply_backlink_updates(files_to_update)
   local changes_for_qf = {}
 
   for file_path, changes in pairs(files_to_update) do
-    local read_ok, lines = pcall(vim.fn.readfile, file_path)
-    if read_ok then
-      for i = 1, #lines do
-        lines[i] = lines[i]:gsub("\r$", "")
-      end
+    local bufnr = vim.fn.bufadd(file_path) -- Get buffer ID, create if needed (doesn't load)
 
+    -- Check if buffer is actually loaded
+    if vim.api.nvim_buf_is_loaded(bufnr) then
+      -- 1. MODIFY BUFFER DIRECTLY
+      local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
       for lnum, new_line in pairs(changes) do
-        lines[lnum] = new_line
-        table.insert(
-          changes_for_qf,
-          { filename = file_path, lnum = lnum, text = "=> " .. new_line }
-        )
+        local row = lnum - 1
+        if lines[lnum] then
+          table.insert(changes_for_qf, {
+            filename = file_path,
+            lnum = lnum,
+            text = "=> " .. new_line,
+          })
+          vim.api.nvim_buf_set_lines(bufnr, row, row + 1, false, { new_line })
+        end
       end
-      pcall(vim.fn.writefile, lines, file_path)
+    else
+      -- 2. MODIFY FILE ON DISK
+      local read_ok, lines = pcall(vim.fn.readfile, file_path)
+      if read_ok then
+        for i = 1, #lines do
+          lines[i] = lines[i]:gsub("\r$", "")
+        end
+
+        for lnum, new_line in pairs(changes) do
+          lines[lnum] = new_line
+          table.insert(changes_for_qf, {
+            filename = file_path,
+            lnum = lnum,
+            text = "=> " .. new_line,
+          })
+        end
+        pcall(vim.fn.writefile, lines, file_path)
+      end
     end
   end
 

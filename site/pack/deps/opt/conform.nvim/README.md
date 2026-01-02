@@ -332,6 +332,7 @@ You can view this list in vim with `:help conform-formatters`
 - [packer_fmt](https://developer.hashicorp.com/packer/docs/commands/fmt) - The packer fmt Packer command is used to format HCL2 configuration files to a canonical format and style.
 - [palantir-java-format](https://github.com/palantir/palantir-java-format) - A modern, lambda-friendly, 120 character Java formatter.
 - [pangu](https://github.com/vinta/pangu.py) - Insert whitespace between CJK and half-width characters.
+- [pasfmt](https://github.com/integrated-application-development/pasfmt) - Delphi code formatter.
 - [perlimports](https://github.com/perl-ide/App-perlimports) - Make implicit Perl imports explicit.
 - [perltidy](https://github.com/perltidy/perltidy) - Perl::Tidy, a source code formatter for Perl.
 - [pg_format](https://github.com/darold/pgFormatter) - PostgreSQL SQL syntax beautifier.
@@ -366,6 +367,7 @@ You can view this list in vim with `:help conform-formatters`
 - [ruff_format](https://docs.astral.sh/ruff/) - An extremely fast Python linter, written in Rust. Formatter subcommand.
 - [ruff_organize_imports](https://docs.astral.sh/ruff/) - An extremely fast Python linter, written in Rust. Organize imports.
 - [rufo](https://github.com/ruby-formatter/rufo) - Rufo is an opinionated ruby formatter.
+- [rumdl](https://github.com/rvben/rumdl) - Markdown Linter and Formatter written in Rust.
 - [runic](https://github.com/fredrikekre/Runic.jl) - Julia code formatter.
 - [rustfmt](https://github.com/rust-lang/rustfmt) - A tool for formatting rust code according to style guidelines.
 - [rustywind](https://github.com/avencera/rustywind) - A tool for formatting Tailwind CSS classes.

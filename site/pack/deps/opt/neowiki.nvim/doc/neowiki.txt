@@ -4,7 +4,7 @@ MIT License Copyright (c) 2025 echaya
 
 ==============================================================================
 
-CONTENTS                                      *neowiki-contents*
+CONTENTS                                                      *neowiki-contents*
 
 1. Introduction...............................|neowiki-introduction|
 2. Features...................................|neowiki-features|
@@ -16,14 +16,14 @@ CONTENTS                                      *neowiki-contents*
 8. API........................................|neowiki-api|
 ==============================================================================
 
-1. Introduction                               *neowiki-introduction*
+1. Introduction                                           *neowiki-introduction*
 
 neowiki.nvim is a lightweight, first-class Neovim citizen with Lua finesse,
 offering a minimal, intuitive workflow out of the box for note-taking and
 Getting Things Done (GTD).
 ==============================================================================
 
-2. Features                                   *neowiki-features*
+2. Features                                                   *neowiki-features*
 
 - _Flexible Wiki Opening_
   Open wikis your way — in the current buffer, a new tab, or a sleek floating
@@ -58,9 +58,12 @@ Getting Things Done (GTD).
   the box.
 ==============================================================================
 
-3. Installation                               *neowiki-installation*
+3. Installation                                           *neowiki-installation*
 
 This plugin requires Neovim >= 0.10.
+
+*Tip:* After installation, run `:checkhealth neowiki` to verify your environment,
+dependencies, and configuration paths.
 
 Using lazy.nvim:
 >lua
@@ -98,22 +101,25 @@ lua vim.keymap.set("n", "<leader>wT", require("neowiki").open_wiki_new_tab, { de
 <
 ==============================================================================
 
-4. External Dependencies                      *neowiki-dependencies*
+4. External Dependencies                                  *neowiki-dependencies*
 
 neowiki.nvim is designed to be fast and efficient by leveraging modern
 command-line tools for file searching. While these dependencies are optional,
 installing them is highly recommended for the best performance and to enable
-all features. If none of the following tools are found in your PATH,
-neowiki.nvim will automatically use a slower, native Lua-based search method
-to get the job done.
+all features.
+
+Run `:checkhealth neowiki` to see which tools are currently active.
+
+SEARCH TOOLS (Priority: rg > fd > git > native)
+-----------------------------------------------
+If none of the following tools are found in your PATH, neowiki.nvim will
+automatically use a slower, native Lua-based search method.
 
 - ***ripgrep*** (`rg`)
   The primary and fastest search tool used by the plugin. It is **required**
   for the global backlink search feature used when **renaming or deleting
   pages**. Without `rg`, backlink updates will fall back to searching only
-  within a limited scope (such as the parent wiki's index file). It is also
-  the first choice for finding wiki pages for insertion and detecting nested
-  wiki structures.
+  within a limited scope (such as the parent wiki's index file).
 
 - ***fd***
   A fast and simple alternative for finding files. It is used as the second
@@ -122,12 +128,23 @@ to get the job done.
 
 - ***git***
   If `rg` and `fd` are not found, neowiki.nvim can use `git ls-files` to find
-  files within a git repository, which is still very fast. It is used as the
-  third choice for listing wiki pages for insertion and detecting nested
-  wiki structures.
+  files within a git repository. It is used as the third choice for listing
+  wiki pages.
+
+OTHER DEPENDENCIES
+------------------
+- ***nvim-treesitter***
+  Strongly recommended. neowiki.nvim uses Treesitter parsers (`markdown` and
+  `markdown_inline`) to robustly detect and parse links, ensuring that links
+  inside code blocks or other ignored regions are handled correctly.
+  Without it, the plugin falls back to Regex parsing.
+
+- ***vim-repeat***
+  Optional. Installs `tpope/vim-repeat` to enable dot-repeat (`.`) functionality
+  for actions like toggling GTD tasks (`<leader>wt`).
 ==============================================================================
 
-5. Setup                                      *neowiki-setup*
+5. Setup                                                         *neowiki-setup*
 
 If you are not using a plugin manager that supports the `opts` table (like
 lazy.nvim), you must call the `setup()` function manually.
@@ -140,7 +157,7 @@ lazy.nvim), you must call the `setup()` function manually.
 
 ==============================================================================
 
-6. Configuration                              *neowiki-configuration*
+6. Configuration                                         *neowiki-configuration*
 
 The `setup` function accepts a table to customize the plugin's behavior. Below
 are the default settings. You only need to pass the options you wish
@@ -207,7 +224,7 @@ require("neowiki").setup({
 
 ==============================================================================
 
-7. Mappings                                   *neowiki-mappings*
+7. Mappings                                                   *neowiki-mappings*
 
 Default Key Mappings
 --------------------
@@ -239,7 +256,7 @@ directory.
 | Normal   | `q`               | Close the floating window           |
 ==============================================================================
 
-8. API                                        *neowiki-api*
+8. API                                                             *neowiki-api*
 
 The following functions are exposed in the main `neowiki` module and can be
 used for custom mappings or scripts.

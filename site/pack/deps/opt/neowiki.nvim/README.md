@@ -39,6 +39,8 @@
 
 Requires **Neovim >= 0.10**. For the best experience, install Treesitter’s `markdown` and `markdown_inline` parsers.
 
+*Tip*: After installation, run `:checkhealth neowiki` to verify your environment, dependencies, and configuration paths.
+
 ### Using Lazy.nvim
 ```lua
 {
@@ -86,10 +88,8 @@ lua vim.keymap.set("n", "<leader>wT", require("neowiki").open_wiki_new_tab, { de
 - *fd*: A fast file finder, used as the second choice if `rg` is not available for listing pages.
 - *git*: If `rg` and `fd` are unavailable, `git ls-files` is used as a fallback for finding files within a git repository.
 
-### GTD Enhancements
-
-`neowiki.nvim` supports enhanced GTD functionality with optional plugin.
-
+### Functional Enhancements
+* `nvim-treesitter`: Strongly recommended. `neowiki.nvim` uses the `markdown` and `markdown_inline` parsers to robustly detect and parse links, ensuring that links inside code blocks or other ignored regions are handled correctly.
 - [*vim-repeat*](https://github.com/tpope/vim-repeat): Enables repeating GTD actions (e.g., task creation and completion with `<leader>wt`) using the dot (`.`) command.
 
 ## 📝 Usage

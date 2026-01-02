@@ -16,7 +16,7 @@ local markdown_patterns = {
 
 --- Public API ---
 
-M.VERSION = "0.3.0"
+M.VERSION = "1.0.0"
 M.open_wiki = api.open_wiki
 M.open_wiki_new_tab = api.open_wiki_new_tab
 M.open_wiki_floating = api.open_wiki_floating
@@ -28,7 +28,7 @@ M.open_wiki_floating = api.open_wiki_floating
 -- @return (string): The default wiki path.
 --
 local function get_default_path()
-  return vim.fs.joinpath(vim.loop.os_homedir(), "wiki")
+  return util.join_path(vim.loop.os_homedir(), "wiki")
 end
 
 ---
@@ -135,7 +135,7 @@ end
 M.setup = function(opts)
   opts = opts or {}
   -- Merge user config into the default config.
-  local local_config = util.deep_merge(config, opts)
+  local local_config = vim.tbl_deep_extend("force", config, opts)
   for k, v in pairs(local_config) do
     config[k] = v
   end
