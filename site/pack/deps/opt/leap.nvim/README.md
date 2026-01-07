@@ -62,14 +62,11 @@ At the same time, it reduces mental effort by all possible means:
 * _You don't have to be aware of the context_: the eyes can keep focusing on
   the target the whole time.
 
-* _You don't have to make decisions on the fly_: the sequence you should type
-  is fixed from the start.
-
 * _You don't have to pause in the middle_: if typing at a moderate speed, at
   each step you already know what the immediate next keypress should be, and
   your mind can process the rest in the background.
 
-## 🚀 Getting started
+## 🐾 Getting started
 
 ### Requirements
 
@@ -93,24 +90,6 @@ vim.keymap.set('n',             'S', '<Plug>(leap-from-window)')
 
 See `:h leap-mappings` for more.
 
-Remote operations (`gs{leap}apy` or `ygs{leap}ap` - `{leap}` means
-`{char1}{char2}{label?}`, as usual):
-
-```lua
-vim.keymap.set({'n', 'o'}, 'gs', function ()
-  require('leap.remote').action {
-    -- Automatically enter Visual mode when coming from Normal.
-    input = vim.fn.mode(true):match('o') and '' or 'v'
-  }
-end)
--- Forced linewise version (`gS{leap}jjy`):
-vim.keymap.set({'n', 'o'}, 'gS', function ()
-  require('leap.remote').action { input = 'V' }
-end)
-```
-
-See below for more (e.g. setting up automatic paste after yanking).
-
 Treesitter node selection (`vRRR...y` or `yR{label}`):
 
 ```lua
@@ -121,6 +100,20 @@ vim.keymap.set({'x', 'o'}, 'R',  function ()
 end)
 ```
 
+Remote operations (`gs{leap}apy` or `ygs{leap}ap`, where `{leap}` means
+`{char1}{char2}{label?}`, as usual):
+
+```lua
+vim.keymap.set({'n', 'o'}, 'gs', function ()
+  require('leap.remote').action {
+    -- Automatically enter Visual mode when coming from Normal.
+    input = vim.fn.mode(true):match('o') and '' or 'v'
+  }
+end)
+```
+
+See below for more (e.g. setting up automatic paste after yanking).
+
 </details>
 
 <details>
@@ -128,25 +121,19 @@ end)
 
 ```lua
 -- Highly recommended: define a preview filter to reduce visual noise
--- and the blinking effect after the first keypress
--- (`:h leap.opts.preview`). You can still target any visible
--- positions if needed, but you can define what is considered an
--- exceptional case.
--- Exclude whitespace and the middle of alphabetic words from preview:
---   foobar[baaz] = quux
---   ^----^^^--^^-^-^--^
+-- and the blinking effect after the first keypress (see
+-- `:h leap.opts.preview`).
+-- For example, skip preview if the first character of the match is
+-- whitespace or is in the middle of an alphabetic word:
 require('leap').opts.preview = function (ch0, ch1, ch2)
   return not (
-    ch1:match('%s')
-    or (ch0:match('%a') and ch1:match('%a') and ch2:match('%a'))
+    ch1:match('%s') or (ch0:match('%a') and ch1:match('%a') and ch2:match('%a'))
   )
 end
 
 -- Define equivalence classes for brackets and quotes, in addition to
 -- the default whitespace group:
-require('leap').opts.equivalence_classes = {
-  ' \t\r\n', '([{', ')]}', '\'"`'
-}
+require('leap').opts.equivalence_classes = { ' \t\r\n', '([{', ')]}', '\'"`' }
 
 -- Use the traversal keys to repeat the previous motion without
 -- explicitly invoking Leap:
@@ -280,9 +267,9 @@ end
 
 **Swapping regions**
 
-It deserves mention that this feature also makes exchanging two regions of text
-moderately simple, without needing a custom plugin: `d{region1} gs{leap}
-v{region2}p <jumping-back-here> P`.
+This feature also makes exchanging two regions of text moderately simple,
+without needing a custom plugin: `d{region1} gs{leap} v{region2}p
+<jumping-back-here> P`.
 
 Example (swapping two words): `diw gs{leap} viwp P`.
 
@@ -294,13 +281,12 @@ pretty much text editing at the speed of thought: `cxiw cxirw{leap}`.
 
 **Jumping to off-screen areas with native search commands**
 
-The `remote` module is not really an extension, but more of an "inverse plugin"
-bundled with Leap; the jump logic is not hardcoded - `action` can in fact use
-any function via the `jumper` parameter, be it a custom `leap()` call or
-something entirely different.
+The `remote` module is not really an extension, but a separate plugin bundled
+with Leap; `action` can use any jump logic via the `jumper` parameter, be it a
+custom `leap()` call or something entirely different.
 
-You can even use the native search commands directly, that is, target
-off-screen regions, with the special `jumper` values `/` and `?`:
+You can even use the native search commands, that is, target off-screen
+regions, with the special `jumper` values `/` and `?`:
 
 ```lua
 vim.keymap.set({'n', 'o'}, 'g/', function ()
@@ -391,15 +377,13 @@ unique in that it
 ### Features
 
 <details>
-<summary>Smart case sensitivity, wildcard characters (one-way
-aliases)</summary>
+<summary>Wildcard characters (one-way aliases)</summary>
 
 The preview phase, unfortunately, makes them impossible, by design: for a
-potential match, we might need to show two different labels (corresponding to
-two different futures) at the same time (`:h leap-wildcard-problem`).
-([1](https://github.com/ggandor/leap.nvim/issues/28),
-[2](https://github.com/ggandor/leap.nvim/issues/89#issuecomment-1368885497),
-[3](https://github.com/ggandor/leap.nvim/issues/155#issuecomment-1556124351))
+potential match, we might need to show two different labels - corresponding to
+two different futures - at the same time (see `:h leap-wildcard-problem` for a
+longer explanation). `smartcase` is experimentally supported, but it can only
+be applied on the first input character (`:h leap-smartcase`).
 
 </details>
 
@@ -413,7 +397,7 @@ do
     require('leap').leap { opts = clever_s }
   end)
   vim.keymap.set({ 'n', 'x', 'o' }, 'S', function ()
-    require('leap').leap { opts = clever_s, backward = true }
+    require('leap').leap { backward = true, opts = clever_s }
   end)
 end
 ```

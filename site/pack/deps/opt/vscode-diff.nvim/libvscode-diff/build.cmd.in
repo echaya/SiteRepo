@@ -12,7 +12,7 @@ if not exist build\include mkdir build\include
 
 REM Generate version.h from VERSION file
 set /p VERSION=<..\VERSION
-powershell -Command "(Get-Content include\version.h.in) -replace '@''PROJECT_VERSION@', '!VERSION!' | Set-Content build\include\version.h"
+powershell -NoLogo -NoProfile -Command "(Get-Content include\version.h.in) -replace '@''PROJECT_VERSION@', '!VERSION!' | Set-Content build\include\version.h"
 
 echo Building vscode_diff (standalone mode)...
 echo Platform: Windows

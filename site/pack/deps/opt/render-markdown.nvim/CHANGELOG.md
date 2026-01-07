@@ -2,6 +2,8 @@
 
 ## Pre-release
 
+## 8.11.0 (2026-01-07)
+
 ### Features
 
 - handle latex converters as fallback [13bfaaa](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/13bfaaabaaf732cf58d14004ed79b331bb40b838)
@@ -11,6 +13,8 @@
 - add more YouTube domains [#569](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/569)
 - allow html.comment.text to be a function [#574](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/574)
   [acddb80](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/acddb80d9a12e33c03ca288de39c9963396f358a)
+- add priority option for dash [#579](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/579)
+  [da6a7b2](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/da6a7b25471ab23824f3429225973186eb0b62d2)
 
 ### Bug Fixes
 
@@ -18,9 +22,10 @@
   [f58c05f](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/f58c05f349d6e7650f4b40b0df1514400f0c10de)
 - link icons following long checkboxes [#564](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/564)
   [b2b1353](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/b2b135347e299ffbf7f4123fb7811899b0c9f4b8)
-- reduce code background priority in nofile buffers [26097a4](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/26097a4eb95b391d0308c1b77cce89b28bbc9916)
 - ignore inline highlights that start or end in nested node [#568](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/568)
   [7a43c8b](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/7a43c8b444fa15b7736b34b248addb951126f723)
+- reduce code background priority in nofile buffers [26097a4](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/26097a4eb95b391d0308c1b77cce89b28bbc9916)
+- lower priority for code highlights in all buffers [#581](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/581)
 
 ### Collaborator Shoutouts
 
