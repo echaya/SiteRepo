@@ -78,7 +78,7 @@ local validate_body = function(parts)
   if string.find(parts[3], '^%S') == nil then return false, 'First body line should not start with whitespace.' end
 
   for i = 3, #parts do
-    if vim.fn.strdisplaywidth(parts[i]) > 80 then
+    if vim.fn.strdisplaywidth(parts[i]) > 80 and not vim.startswith(parts[i], 'Co-authored-by:') then
       return false, 'Body line is longer than 80 characters: ' .. vim.inspect(parts[i])
     end
   end

@@ -125,6 +125,10 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
           hover = "K",        -- Show file diff preview
           refresh = "R",      -- Refresh git status
           toggle_view_mode = "i",  -- Toggle between 'list' and 'tree' views
+          toggle_stage = "-", -- Stage/unstage selected file
+          stage_all = "S",    -- Stage all files
+          unstage_all = "U",  -- Unstage all files
+          restore = "X",      -- Discard changes (restore file)
         },
         conflict = {
           accept_incoming = "<leader>ct",  -- Accept incoming (theirs/left) change
@@ -277,6 +281,29 @@ Compare two arbitrary files side-by-side:
 
 ```vim
 :CodeDiff file file_a.txt file_b.txt
+```
+
+### Directory Comparison Mode
+
+Compare two directories without git:
+
+```vim
+" Auto-detect directories
+:CodeDiff ~/project-v1 ~/project-v2
+
+" Explicit dir subcommand
+:CodeDiff dir /path/to/dir1 /path/to/dir2
+```
+
+Shows files as Added (A), Deleted (D), or Modified (M) based on file size and modification time. Select a file to view its diff.
+
+### Git Merge Tool
+
+Use CodeDiff as your git merge tool for resolving conflicts:
+
+```bash
+git config --global merge.tool codediff
+git config --global mergetool.codediff.cmd 'nvim "$MERGED" -c "CodeDiff merge \"$MERGED\""'
 ```
 
 ### Lua API

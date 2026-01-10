@@ -2,9 +2,9 @@
 local M = {}
 
 -- Subcommands available for :CodeDiff
-M.SUBCOMMANDS = { "merge", "file", "install" }
+M.SUBCOMMANDS = { "merge", "file", "dir", "install" }
 
-local git = require('codediff.core.git')
+local git = require("codediff.core.git")
 local lifecycle = require("codediff.ui.lifecycle")
 
 --- Handles diffing the current buffer against a given git revision.
@@ -55,7 +55,7 @@ local function handle_git_diff(revision, revision2)
           end
 
           vim.schedule(function()
-            local view = require('codediff.ui.view')
+            local view = require("codediff.ui.view")
             ---@type SessionConfig
             local session_config = {
               mode = "standalone",
@@ -71,7 +71,7 @@ local function handle_git_diff(revision, revision2)
       else
         -- Compare revision vs working tree
         vim.schedule(function()
-          local view = require('codediff.ui.view')
+          local view = require("codediff.ui.view")
           ---@type SessionConfig
           local session_config = {
             mode = "standalone",
@@ -93,7 +93,7 @@ local function handle_file_diff(file_a, file_b)
   local filetype = vim.filetype.match({ filename = file_a }) or ""
 
   -- Create diff view (no pre-reading needed, :edit will load content)
-  local view = require('codediff.ui.view')
+  local view = require("codediff.ui.view")
   ---@type SessionConfig
   local session_config = {
     mode = "standalone",
@@ -104,6 +104,48 @@ local function handle_file_diff(file_a, file_b)
     modified_revision = nil,
   }
   view.create(session_config, filetype)
+end
+
+local function handle_dir_diff(dir1, dir2)
+  local dir_mod = require("codediff.core.dir")
+
+  -- Expand ~ and environment variables in paths
+  dir1 = vim.fn.expand(dir1)
+  dir2 = vim.fn.expand(dir2)
+
+  if vim.fn.isdirectory(dir1) == 0 then
+    vim.notify("Not a directory: " .. dir1, vim.log.levels.ERROR)
+    return
+  end
+  if vim.fn.isdirectory(dir2) == 0 then
+    vim.notify("Not a directory: " .. dir2, vim.log.levels.ERROR)
+    return
+  end
+
+  local diff = dir_mod.diff_directories(dir1, dir2)
+  local status_result = diff.status_result
+
+  if #status_result.unstaged == 0 and #status_result.staged == 0 then
+    vim.notify("No differences between directories", vim.log.levels.INFO)
+    return
+  end
+
+  local view = require("codediff.ui.view")
+
+  ---@type SessionConfig
+  local session_config = {
+    mode = "explorer",
+    git_root = nil, -- nil signals non-git (directory) mode
+    original_path = diff.root1,
+    modified_path = diff.root2,
+    original_revision = nil,
+    modified_revision = nil,
+    explorer_data = {
+      status_result = status_result,
+    },
+  }
+
+  view.create(session_config, "")
 end
 
 local function handle_explorer(revision, revision2)
@@ -136,19 +178,19 @@ local function handle_explorer(revision, revision2)
         end
 
         -- Create explorer view with empty diff panes initially
-        local view = require('codediff.ui.view')
+        local view = require("codediff.ui.view")
 
         ---@type SessionConfig
         local session_config = {
           mode = "explorer",
           git_root = git_root,
-          original_path = "",  -- Empty indicates explorer mode placeholder
+          original_path = "", -- Empty indicates explorer mode placeholder
           modified_path = "",
           original_revision = original_rev,
           modified_revision = modified_rev,
           explorer_data = {
             status_result = status_result,
-          }
+          },
         }
 
         -- view.create handles everything: tab, windows, explorer, and lifecycle
@@ -214,11 +256,11 @@ function M.vscode_merge(opts)
 
   local filename = args[1]
   -- Strip surrounding quotes if present (from shell escaping in git mergetool)
-  filename = filename:gsub('^"(.*)"$', '%1'):gsub("^'(.*)'$", '%1')
-  
+  filename = filename:gsub('^"(.*)"$', "%1"):gsub("^'(.*)'$", "%1")
+
   -- Resolve to absolute path
   local full_path = vim.fn.fnamemodify(filename, ":p")
-  
+
   if vim.fn.filereadable(full_path) == 0 then
     vim.notify("File not found: " .. filename, vim.log.levels.ERROR)
     return
@@ -226,8 +268,8 @@ function M.vscode_merge(opts)
 
   -- Ensure all required modules are loaded before we start vim.wait
   -- This prevents issues with lazy-loading during the wait loop
-  local view = require('codediff.ui.view')
-  
+  local view = require("codediff.ui.view")
+
   -- For synchronous execution (required by git mergetool), we need to block
   -- until the view is ready. Use vim.wait which processes the event loop.
   local view_ready = false
@@ -241,7 +283,7 @@ function M.vscode_merge(opts)
     end
 
     local relative_path = git.get_relative_path(full_path, git_root)
-    
+
     -- Schedule everything that needs main thread (vim.filetype.match, view.create)
     vim.schedule(function()
       local filetype = vim.filetype.match({ filename = full_path }) or ""
@@ -256,7 +298,7 @@ function M.vscode_merge(opts)
         modified_revision = ":2",
         conflict = true,
       }
-      
+
       view.create(session_config, filetype, function()
         view_ready = true
       end)
@@ -264,11 +306,13 @@ function M.vscode_merge(opts)
   end)
 
   -- Block until view is ready - this allows event loop to process callbacks
-  vim.wait(10000, function() return view_ready end, 10)
-  
+  vim.wait(10000, function()
+    return view_ready
+  end, 10)
+
   -- Force screen redraw after vim.wait to ensure all windows are visible
-  vim.cmd('redraw!')
-  
+  vim.cmd("redraw!")
+
   if error_msg then
     vim.notify(error_msg, vim.log.levels.ERROR)
   end
@@ -280,7 +324,7 @@ function M.vscode_diff(opts)
   if lifecycle.get_session(current_tab) then
     -- Check for unsaved conflict files before closing
     if not lifecycle.confirm_close_with_unsaved(current_tab) then
-      return  -- User cancelled
+      return -- User cancelled
     end
     vim.cmd("tabclose")
     return
@@ -292,6 +336,16 @@ function M.vscode_diff(opts)
     -- :CodeDiff without arguments opens explorer mode
     handle_explorer()
     return
+  end
+
+  -- Auto-detect two directory arguments: :CodeDiff dir1 dir2
+  if #args == 2 then
+    local expanded1 = vim.fn.expand(args[1])
+    local expanded2 = vim.fn.expand(args[2])
+    if vim.fn.isdirectory(expanded1) == 1 and vim.fn.isdirectory(expanded2) == 1 then
+      handle_dir_diff(expanded1, expanded2)
+      return
+    end
   end
 
   local subcommand = args[1]
@@ -311,7 +365,7 @@ function M.vscode_diff(opts)
       -- Check if arguments are files or revisions
       local arg1 = args[2]
       local arg2 = args[3]
-      
+
       -- If both are readable files, treat as file diff
       if vim.fn.filereadable(arg1) == 1 and vim.fn.filereadable(arg2) == 1 then
         -- :CodeDiff file file_a.txt file_b.txt
@@ -323,11 +377,18 @@ function M.vscode_diff(opts)
     else
       vim.notify("Usage: :CodeDiff file <revision> [revision2] OR :CodeDiff file <file_a> <file_b>", vim.log.levels.ERROR)
     end
+  elseif subcommand == "dir" then
+    -- :CodeDiff dir dir1 dir2
+    if #args ~= 3 then
+      vim.notify("Usage: :CodeDiff dir <dir1> <dir2>", vim.log.levels.ERROR)
+      return
+    end
+    handle_dir_diff(args[2], args[3])
   elseif subcommand == "install" or subcommand == "install!" then
     -- :CodeDiff install or :CodeDiff install!
     -- Handle both :CodeDiff! install and :CodeDiff install!
     local force = opts.bang or subcommand == "install!"
-    local installer = require('codediff.core.installer')
+    local installer = require("codediff.core.installer")
 
     if force then
       vim.notify("Reinstalling libvscode-diff...", vim.log.levels.INFO)
@@ -343,9 +404,9 @@ function M.vscode_diff(opts)
   else
     -- :CodeDiff <revision> [revision2] - opens explorer mode
     if #args == 2 then
-       handle_explorer(args[1], args[2])
+      handle_explorer(args[1], args[2])
     else
-       handle_explorer(subcommand)
+      handle_explorer(subcommand)
     end
   end
 end

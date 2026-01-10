@@ -21,6 +21,12 @@ There are following change types:
 
 - Allow mode arrays for clues and triggers for parity with `modes` parameter of `vim.keymap.set`. By @pkazmier, PR #2202.
 
+## mini.extra
+
+### Expand
+
+- Add `pickers.manpages` picker.
+
 ## mini.hues
 
 ### Expand

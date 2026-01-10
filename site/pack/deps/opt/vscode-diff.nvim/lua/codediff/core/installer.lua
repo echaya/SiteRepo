@@ -101,7 +101,9 @@ local function get_installed_version()
   if handle then
     while true do
       local name, type = vim.loop.fs_scandir_next(handle)
-      if not name then break end
+      if not name then
+        break
+      end
 
       if type == "file" then
         local version = name:match(pattern)
@@ -146,11 +148,7 @@ local function build_download_url(os, arch, version)
   -- Local filename (only includes version)
   local local_filename = get_lib_filename(version)
 
-  local url = string.format(
-    "https://github.com/esmuellert/vscode-diff.nvim/releases/download/v%s/%s",
-    version,
-    download_filename
-  )
+  local url = string.format("https://github.com/esmuellert/vscode-diff.nvim/releases/download/v%s/%s", version, download_filename)
 
   return url, local_filename, nil
 end
@@ -178,6 +176,17 @@ local function command_exists(cmd)
   end
 end
 
+-- Check if Neovim is running from Nix store
+-- When nvim is from Nix, it uses Nix's own ld-linux which does NOT search
+-- system library paths (/usr/lib, ldconfig cache). Libraries must be either:
+-- 1. In RPATH/RUNPATH of the binary
+-- 2. In Nix store paths configured in Nix's ld.so.cache
+-- 3. Bundled alongside the .so (via $ORIGIN RPATH)
+local function is_nvim_from_nix()
+  local resolved = vim.fn.resolve(vim.v.progpath)
+  return resolved:find("^/nix/store") ~= nil
+end
+
 -- Check if libgomp is available on the system
 -- Uses ldconfig cache which matches what the native linker actually searches.
 -- This is more reliable than ffi.load() which may find libraries via LD_LIBRARY_PATH
@@ -194,6 +203,13 @@ local function check_system_libgomp()
   local plugin_root = get_plugin_root()
   if vim.fn.filereadable(plugin_root .. "/libgomp.so.1") == 1 then
     return true
+  end
+
+  -- If nvim is from Nix store, system ldconfig is NOT used by Nix's ld-linux.
+  -- We must bundle libgomp since Nix's linker won't find /usr/lib libraries.
+  -- This handles both NixOS and non-NixOS systems using Nix Home Manager for nvim.
+  if is_nvim_from_nix() then
+    return false
   end
 
   -- Check ldconfig cache - this is what the native linker actually uses
@@ -227,7 +243,7 @@ local function download_file(url, dest_path)
       "powershell",
       "-NoProfile",
       "-Command",
-      string.format("Invoke-WebRequest -Uri '%s' -OutFile '%s'", url, dest_path)
+      string.format("Invoke-WebRequest -Uri '%s' -OutFile '%s'", url, dest_path),
     }
   else
     return false, "No download tool found. Please install curl or wget."
@@ -309,11 +325,7 @@ local function install_libgomp_if_needed(opts)
 
   -- Build libgomp download URL
   local libgomp_filename = string.format("libgomp_linux_%s_%s.so.1", arch, current_version)
-  local url = string.format(
-    "https://github.com/esmuellert/vscode-diff.nvim/releases/download/v%s/%s",
-    current_version,
-    libgomp_filename
-  )
+  local url = string.format("https://github.com/esmuellert/vscode-diff.nvim/releases/download/v%s/%s", current_version, libgomp_filename)
 
   if not opts.silent then
     vim.notify("Downloading libgomp from: " .. url, vim.log.levels.INFO)
@@ -378,6 +390,8 @@ function M.install(opts)
       if not opts.silent then
         vim.notify("libvscode-diff (manual build) found at: " .. unversioned_path, vim.log.levels.INFO)
       end
+      -- Still check and install libgomp if needed (e.g., Nix environment)
+      install_libgomp_if_needed(opts)
       return true
     end
 
@@ -388,14 +402,12 @@ function M.install(opts)
         if not opts.silent then
           vim.notify("libvscode-diff already installed at: " .. lib_path, vim.log.levels.INFO)
         end
+        -- Still check and install libgomp if needed (e.g., Nix environment)
+        install_libgomp_if_needed(opts)
         return true
       end
     elseif installed_version and not opts.silent then
-      vim.notify(string.format(
-        "Updating libvscode-diff from v%s to v%s...",
-        installed_version,
-        current_version
-      ), vim.log.levels.INFO)
+      vim.notify(string.format("Updating libvscode-diff from v%s to v%s...", installed_version, current_version), vim.log.levels.INFO)
 
       -- Remove old version files
       local old_lib_filename = get_lib_filename(installed_version)
@@ -417,10 +429,7 @@ function M.install(opts)
   end
 
   if not opts.silent then
-    vim.notify(
-      string.format("Installing libvscode-diff v%s for %s %s...", current_version, os_name, arch),
-      vim.log.levels.INFO
-    )
+    vim.notify(string.format("Installing libvscode-diff v%s for %s %s...", current_version, os_name, arch), vim.log.levels.INFO)
   end
 
   -- Build download URL
@@ -517,6 +526,11 @@ end
 
 -- Check if library needs update
 function M.needs_update()
+  -- Check libgomp first - if missing, we need to run installer regardless of main library status
+  if not check_system_libgomp() then
+    return true
+  end
+
   local plugin_root = get_plugin_root()
 
   -- Check unversioned first - assume manual build is always up to date
