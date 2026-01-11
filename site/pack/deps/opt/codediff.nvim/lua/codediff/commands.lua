@@ -6,6 +6,7 @@ M.SUBCOMMANDS = { "merge", "file", "dir", "install" }
 
 local git = require("codediff.core.git")
 local lifecycle = require("codediff.ui.lifecycle")
+local config = require("codediff.config")
 
 --- Handles diffing the current buffer against a given git revision.
 -- @param revision string: The git revision (e.g., "HEAD", commit hash, branch name) to compare the current file against.
@@ -149,20 +150,12 @@ local function handle_dir_diff(dir1, dir2)
 end
 
 local function handle_explorer(revision, revision2)
-  -- Use current buffer's directory if available, otherwise use cwd
+  -- Try buffer path first (consistent with original behavior), fallback to cwd
   local current_buf = vim.api.nvim_get_current_buf()
   local current_file = vim.api.nvim_buf_get_name(current_buf)
-  local check_path = current_file ~= "" and current_file or vim.fn.getcwd()
+  local cwd = vim.fn.getcwd()
 
-  -- Check if in git repository
-  git.get_git_root(check_path, function(err_root, git_root)
-    if err_root then
-      vim.schedule(function()
-        vim.notify(err_root, vim.log.levels.ERROR)
-      end)
-      return
-    end
-
+  local function open_explorer(git_root)
     local function process_status(err_status, status_result, original_rev, modified_rev)
       vim.schedule(function()
         if err_status then
@@ -244,7 +237,40 @@ local function handle_explorer(revision, revision2)
         process_status(err_status, status_result, nil, nil)
       end)
     end
-  end)
+  end
+
+  -- Try buffer path first if available
+  if current_file ~= "" then
+    git.get_git_root(current_file, function(err_file, git_root_file)
+      if not err_file then
+        open_explorer(git_root_file)
+        return
+      end
+
+      -- Buffer path failed, try cwd as fallback
+      git.get_git_root(cwd, function(err_cwd, git_root_cwd)
+        if not err_cwd then
+          open_explorer(git_root_cwd)
+          return
+        end
+        -- Both failed
+        vim.schedule(function()
+          vim.notify("Not in a git repository", vim.log.levels.ERROR)
+        end)
+      end)
+    end)
+  else
+    -- No buffer, try cwd directly
+    git.get_git_root(cwd, function(err_cwd, git_root)
+      if err_cwd then
+        vim.schedule(function()
+          vim.notify(err_cwd, vim.log.levels.ERROR)
+        end)
+        return
+      end
+      open_explorer(git_root)
+    end)
+  end
 end
 
 function M.vscode_merge(opts)
@@ -288,14 +314,30 @@ function M.vscode_merge(opts)
     vim.schedule(function()
       local filetype = vim.filetype.match({ filename = full_path }) or ""
 
+      -- Determine conflict buffer positions based on config
+      -- conflict_ours_position controls where :2 (OURS) appears on screen
+      local ours_position = config.options.diff.conflict_ours_position or "right"
+
+      -- After conflict_window.lua's win_splitmove(rightbelow=false):
+      -- - original_win is on LEFT
+      -- - modified_win is on RIGHT
+      local original_rev, modified_rev
+      if ours_position == "right" then
+        original_rev = ":3" -- THEIRS in original_win (LEFT)
+        modified_rev = ":2" -- OURS in modified_win (RIGHT)
+      else
+        original_rev = ":2" -- OURS in original_win (LEFT)
+        modified_rev = ":3" -- THEIRS in modified_win (RIGHT)
+      end
+
       ---@type SessionConfig
       local session_config = {
         mode = "standalone",
         git_root = git_root,
         original_path = relative_path,
         modified_path = relative_path,
-        original_revision = ":3",
-        modified_revision = ":2",
+        original_revision = original_rev,
+        modified_revision = modified_rev,
         conflict = true,
       }
 

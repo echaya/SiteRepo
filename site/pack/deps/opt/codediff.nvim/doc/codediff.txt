@@ -1,0 +1,204 @@
+codediff.nvim                                 *codediff.txt* *codediff.nvim* *codediff*
+
+CodeDiff provides VSCode-style side-by-side diff rendering with two-tier
+highlighting.
+
+This help file is usage-focused. For installation, build, and development
+details, see README.md.
+
+==============================================================================
+QUICK START                                           *codediff-quickstart*
+
+After installing the plugin and running |:CodeDiff|, you can:
+- Browse changed files (default explorer)
+- Compare the current file with a git revision
+- Compare two files or directories
+
+==============================================================================
+COMMANDS                                                  *codediff-commands*
+
+:CodeDiff [args]
+    Open the CodeDiff UI. See |codediff-usage| for available modes.
+
+:CodeDiff install
+:CodeDiff install!
+    Manually install/update the C library (optional; auto-installed on use).
+
+==============================================================================
+USAGE                                                       *codediff-usage*
+
+File explorer mode (git status by default):
+>
+  :CodeDiff
+  :CodeDiff HEAD~5
+  :CodeDiff main
+  :CodeDiff abc123
+  :CodeDiff main HEAD
+<
+
+Git diff mode (current buffer vs revision):
+>
+  :CodeDiff file HEAD
+  :CodeDiff file HEAD~1
+  :CodeDiff file abc123
+  :CodeDiff file main
+  :CodeDiff file v1.0.0
+  :CodeDiff file main HEAD
+<
+
+Requirements:
+- Current buffer must be saved to a file
+- File must be in a git repository
+- Git revision must exist
+
+Behavior:
+- Left buffer: git revision (readonly)
+- Right buffer: current buffer (readonly)
+- Opens in a new tab
+- Async operation (won't block Neovim)
+
+File comparison mode:
+>
+  :CodeDiff file file_a.txt file_b.txt
+<
+
+Directory comparison mode:
+>
+  :CodeDiff ~/project-v1 ~/project-v2
+  :CodeDiff dir /path/to/dir1 /path/to/dir2
+<
+
+Shows files as Added (A), Deleted (D), or Modified (M) based on file size and
+modification time. Select a file to view its diff.
+
+Git merge tool:
+>
+  git config --global merge.tool codediff
+  git config --global mergetool.codediff.cmd 'nvim "$MERGED" -c "CodeDiff merge \"$MERGED\""'
+<
+
+==============================================================================
+CONFIGURATION                                        *codediff-configuration*
+
+Setup entry point:
+>
+  require("codediff").setup({
+    highlights = {
+      line_insert = "DiffAdd",
+      line_delete = "DiffDelete",
+      char_insert = nil,
+      char_delete = nil,
+      char_brightness = nil,
+      conflict_sign = nil,
+      conflict_sign_resolved = nil,
+      conflict_sign_accepted = nil,
+      conflict_sign_rejected = nil,
+    },
+    diff = {
+      disable_inlay_hints = true,
+      max_computation_time_ms = 5000,
+      hide_merge_artifacts = false,
+    },
+    explorer = {
+      position = "left",
+      width = 40,
+      height = 15,
+      indent_markers = true,
+      icons = {
+        folder_closed = "",
+        folder_open = "",
+      },
+      view_mode = "list",
+      file_filter = {
+        ignore = {},
+      },
+    },
+    keymaps = {
+      view = {
+        quit = "q",
+        toggle_explorer = "<leader>b",
+        next_hunk = "]c",
+        prev_hunk = "[c",
+        next_file = "]f",
+        prev_file = "[f",
+        diff_get = "do",
+        diff_put = "dp",
+      },
+      explorer = {
+        select = "<CR>",
+        hover = "K",
+        refresh = "R",
+        toggle_view_mode = "i",
+        toggle_stage = "-",
+        stage_all = "S",
+        unstage_all = "U",
+        restore = "X",
+      },
+      conflict = {
+        accept_incoming = "<leader>ct",
+        accept_current = "<leader>co",
+        accept_both = "<leader>cb",
+        discard = "<leader>cx",
+        next_conflict = "]x",
+        prev_conflict = "[x",
+        diffget_incoming = "2do",
+        diffget_current = "3do",
+      },
+    },
+  })
+<
+
+==============================================================================
+HIGHLIGHT GROUPS                                     *codediff-highlight-groups*
+
+CodeDiff defines highlight groups matching VSCode's diff colors:
+- CodeDiffLineInsert - light green background for inserted lines
+- CodeDiffLineDelete - light red background for deleted lines
+- CodeDiffCharInsert - deep/dark green for inserted characters
+- CodeDiffCharDelete - deep/dark red for deleted characters
+- CodeDiffFiller - gray foreground for filler line slashes (///)
+
+Default behavior:
+- Uses DiffAdd and DiffDelete for line-level highlights
+- Character-level highlights auto-adjusted based on vim.o.background:
+  - Dark themes: brightness multiplied by 1.4
+  - Light themes: brightness multiplied by 0.92
+
+Customization examples:
+>
+  highlights = {
+    line_insert = "#1d3042",
+    line_delete = "#351d2b",
+    char_brightness = 1.5,
+  }
+
+  highlights = {
+    line_insert = "DiffAdd",
+    line_delete = "DiffDelete",
+    char_insert = "#3fb950",
+    char_delete = "#ff7b72",
+  }
+<
+
+==============================================================================
+LUA API                                                   *codediff-lua-api*
+
+Primary entry point:
+>
+  require("codediff").setup({ ... })
+<
+
+Advanced usage (internal modules):
+>
+  local diff = require("codediff.diff")
+  local render = require("codediff.ui")
+  local git = require("codediff.git")
+<
+
+==============================================================================
+SEE ALSO                                                *codediff-see-also*
+
+README.md for full installation, build, and development details.
+
+==============================================================================
+vim:tw=78:ft=help:norl:

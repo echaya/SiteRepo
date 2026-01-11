@@ -147,6 +147,46 @@ Begin the process of stopping official support for outdated Neovim version short
 - Modify CI to test on new Neovim version.
 - Update issue template to mention new Neovim version as released one, make it default choice, and bump Nightly version.
 
+## Reacting to failing tests after Neovim Nightly changes
+
+As Neovim is in active development, from time to time there will be test failures only on Neovim Nightly (and not on earlier versions). Adjusting tests to pass on all supported versions is important. The sooner the better, as it will allow for an easier deduction of what Neovim change is responsible here.
+
+For examples of how this was done in the past, search `git log --oneline` output for "Nightly". This is probably the best way to learn about different approaches.
+
+Here is a rough outline of how to act (with some Git commit hashes for illustration):
+
+- Investigate if the change actually affects plugin functionality or is it only due to how the test is set up. Trying to manually reproduce the tested behavior on Nightly version is usually helpful for this decision.
+
+    Common examples of code related changes on Nightly:
+    - Changing how certain functions work: different arguments or a breaking change. Like in `848c5e8f428faf843051768e0d56104cd02aea1f`.
+    - Deprecating functions. Like in `0f85c464605cab5ba922644d3f2508c6d62f258e`.
+
+    However, usually it is about how a test is set up. Some common examples:
+
+    - Screenshot testing fails in areas that are not relevant to what is being tested. For example, highlighting attributes of the command line are different (like in `bac6c8bb77fe0a872719ea43c39e35c7c695f05e`) or the number of picker items in 'mini.pick' has changed (like in `b409fd1d8b9ea7ec7c0923eb2562b52ed5d1ab0a`)
+    - New option/mapping/command/etc. is added that broke assumptions about testing environment. Like in `0a8a1072137d916406507c941698a4bfa9dbbe7a`.
+    - Mocking (like LSP or system interaction) is not precise enough for the actually behavior anymore. Like in `c889667a9d73b106bd303a043eb37a91da4a41a2`.
+
+- If the change affects the code:
+    - Adjust the code to work on all supported versions. This should always be the priority.
+    - If you think the Nightly change is unintended, open an issue upstream. Usually requires narrowing down to a reproducible example that does not involve this plugin at all (this is hard!).
+    - If needed, also adjust the tests to pass on all versions.
+    - If needed, prioritize version support in order: current release, Nightly, previous releases. Like if there is a question of different performance trade-offs.
+
+- If the change only affects the test:
+    - First try to adjust the test to pass on all supported Neovim versions. Like adding different code paths for Neovim>=0.xx and Neovim<0.xx.
+
+        This is usually not the case for failing screenshot testing. If feasible and can be done concisely, replace failing screenshot testing with other means of equivalent testing. Like in `68955a915c45ae7c988c539abe6e89f0971a9a2d`.
+
+    - If the previous path is not possible or is significantly complex, make an educated decision of whether test fail is related to the actually tested functionality or not.
+
+        If it tests something crucial, make the best effort to test on the widest *forward-compatible* set of Neovim versions. I.e. it should test on Neovim>=0.yy and not Neovim<=0.yy.
+
+        Usually it is good enough for non-crucial part of the test to make only a forward-compatible test that starts on current Nightly (as long as that version is being tested in CI).
+        Like in `3f5d06a6f710966cb93baaadc4897eeb6d6210e5` or `be6979dddb339c4a548d2f1dac5c290b5bf73306`.
+
+- Make adjustments and commit. Use commit message with title that contains "Nightly" and (preferably) with body describing the culprit for the change. This helps when searching the Git history for similar cases.
+
 ## Adding new config settings
 
 - Add code which uses new setting.

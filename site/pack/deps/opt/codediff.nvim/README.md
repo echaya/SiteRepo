@@ -90,6 +90,8 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
         disable_inlay_hints = true,         -- Disable inlay hints in diff windows for cleaner view
         max_computation_time_ms = 5000,     -- Maximum time for diff computation (VSCode default)
         hide_merge_artifacts = false,       -- Hide merge tool temp files (*.orig, *.BACKUP.*, *.BASE.*, *.LOCAL.*, *.REMOTE.*)
+        original_position = "left",         -- Position of original (old) content: "left" or "right"
+        conflict_ours_position = "right",   -- Position of ours (:2) in conflict view: "left" or "right"
       },
 
       -- Explorer panel configuration
@@ -304,6 +306,24 @@ Use CodeDiff as your git merge tool for resolving conflicts:
 ```bash
 git config --global merge.tool codediff
 git config --global mergetool.codediff.cmd 'nvim "$MERGED" -c "CodeDiff merge \"$MERGED\""'
+```
+
+### Git Diff Tool
+
+Use CodeDiff as your git diff tool for viewing changes:
+
+```bash
+git config --global diff.tool codediff
+git config --global difftool.codediff.cmd 'nvim "$LOCAL" "$REMOTE" +"CodeDiff file $LOCAL $REMOTE"'
+```
+
+Then use `git difftool` to view diffs:
+
+```bash
+git difftool                      # View all uncommitted changes
+git difftool HEAD~2 HEAD          # Compare two commits
+git difftool main feature-branch  # Compare branches
+git difftool -y                   # Skip confirmation prompts
 ```
 
 ### Lua API
