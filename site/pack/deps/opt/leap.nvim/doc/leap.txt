@@ -233,9 +233,10 @@ Example configuration: >lua
                           *leap-equivalence-class* *leap.opts.equivalence_classes*
 `equivalence_classes = { ' \t\r\n' }`
 
-    A character in search patterns will match any other in its equivalence
-    class. The sets can either be defined as strings or tables.
-    Example - whitespace, brackets, and quotes: >lua
+    Input characters match any other member of their equivalence classes
+    (mutual alias groups). The sets can either be defined as strings or
+    tables.
+    Example - groups for whitespace, brackets, and quotes: >lua
         { ' \t\r\n', '([{', ')]}', '\'"`' }
 <
     Note: If you want to be able to target empty lines and characters at the
@@ -454,8 +455,7 @@ leap({opts})                                                       *leap.leap()*
                                                                        *leap-ft*
                • {inputlen}? (`0|1|2`, default: `2`) Set to 1 for |f|-like
                  motions. See an example of a full setup in the README.
-                 Note: This feature is experimental, subject to change or
-                 removal.
+
                                                            *leap-custom-pattern*
                • {pattern}?
                  (`string | fun(pattern: string, typed: string[]): string`)
@@ -486,8 +486,6 @@ leap({opts})                                                       *leap.leap()*
                       return '\\%'..vim.fn.line('.')..'l' .. pat
                     end
 <
-                 Note: This feature is experimental, subject to change or
-                 removal.
                                                            *leap-custom-targets*
                • {targets}? (`table|fun():table?`) A list of targets, or a
                  function returning such a list. The advantage of the latter

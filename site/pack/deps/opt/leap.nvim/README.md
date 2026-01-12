@@ -73,7 +73,7 @@ At the same time, it reduces mental effort by all possible means:
 * Neovim >= 0.10.0 stable, or latest nightly
 
 * [repeat.vim](https://github.com/tpope/vim-repeat), for dot-repeating (`.`)
-  delete/change/etc. operations
+  delete/change/etc. operations (optional)
 
 ### Installation
 
@@ -117,7 +117,7 @@ See below for more (e.g. setting up automatic paste after yanking).
 </details>
 
 <details>
-<summary>Suggested additional tweaks</summary>
+<summary>Suggested additional configuration</summary>
 
 ```lua
 -- Highly recommended: define a preview filter to reduce visual noise
@@ -127,7 +127,8 @@ See below for more (e.g. setting up automatic paste after yanking).
 -- whitespace or is in the middle of an alphabetic word:
 require('leap').opts.preview = function (ch0, ch1, ch2)
   return not (
-    ch1:match('%s') or (ch0:match('%a') and ch1:match('%a') and ch2:match('%a'))
+    ch1:match('%s')
+    or (ch0:match('%a') and ch1:match('%a') and ch2:match('%a'))
   )
 end
 
@@ -138,6 +139,17 @@ require('leap').opts.equivalence_classes = { ' \t\r\n', '([{', ')]}', '\'"`' }
 -- Use the traversal keys to repeat the previous motion without
 -- explicitly invoking Leap:
 require('leap.user').set_repeat_keys('<enter>', '<backspace>')
+
+-- Automatic paste after remote yank operations:
+vim.api.nvim_create_autocmd('User', {
+  pattern = 'RemoteOperationDone',
+  group = vim.api.nvim_create_augroup('LeapRemote', {}),
+  callback = function (event)
+    if vim.v.operator == 'y' and event.data.register == '"' then
+      vim.cmd('normal! p')
+    end
+  end,
+})
 ```
 
 </details>
@@ -223,7 +235,7 @@ vim.api.nvim_create_autocmd('User', {
 })
 ```
 
-**Icing on the cake, no. 2 - giving input ahead of time (remote text objects)**
+**Icing on the cake, no. 2 - feeding input**
 
 The `input` parameter lets you feed keystrokes automatically after the jump:
 
@@ -232,36 +244,24 @@ The `input` parameter lets you feed keystrokes automatically after the jump:
 vim.keymap.set({'n', 'o'}, 'gs', function ()
   require('leap.remote').action { input = 'v' }
 end)
-
 ```
-
-Other ideas: `V` (forced linewise), `K`, `gx`, etc.
 
 By feeding text objects as `input`, you can create _remote text objects_, for
 an even more intuitive workflow (`yarp{leap}` - "yank a remote paragraph
 at..."):
 
 ```lua
--- Create remote versions of all a/i text objects by inserting `r`
--- into the middle (`iw` becomes `irw`, etc.).
-do
-  -- A trick to avoid having to create separate hardcoded mappings for
-  -- each text object: when entering `ar`/`ir`, consume the next
-  -- character, and create the input from that character concatenated to
-  -- `a`/`i`.
-  local remote_text_object = function (prefix)
-     local ok, ch = pcall(vim.fn.getcharstr)  -- pcall for handling <C-c>
-     if not ok or (ch == vim.keycode('<esc>')) then
-       return
-     end
-     require('leap.remote').action { input = prefix .. ch }
-  end
-
-  for _, prefix in ipairs { 'a', 'i' } do
-    vim.keymap.set({'x', 'o'}, prefix .. 'r', function ()
-      remote_text_object(prefix)
-    end)
-  end
+-- Create remote versions of all a/i text objects by inserting `r` into
+-- the middle (`iw` becomes `irw`, etc.).
+for _, ai in ipairs { 'a', 'i' } do
+  vim.keymap.set({ 'x', 'o' }, ai .. 'r', function ()
+    -- A trick to avoid having to create separate mappings for each text
+    -- object: when entering `ar`/`ir`, consume the next character, and
+    -- create the input from that character concatenated to `a`/`i`.
+    local ok, ch = pcall(vim.fn.getcharstr)  -- pcall for handling <C-c>
+    if not ok or ch == vim.keycode('<esc>') then return end
+    require('leap.remote').action { input = ai .. ch }
+  end)
 end
 ```
 
@@ -549,17 +549,15 @@ There are lots of ways you can extend the plugin and bend it to your will - see
 `:h leap.leap()` and `:h leap-events`. Besides tweaking the basic parameters of
 the function (search scope, jump offset, etc.), you can:
 
-* feed it with a prepared **search pattern**
-* feed it with prepared **targets**, and only use it as labeler/selector
-* give it a custom **action** to perform, instead of jumping
+* feed it with a **prepared search pattern**
+* feed it with **prepared targets**, and only use it as labeler/selector
+* give it a **custom action** to perform, instead of jumping
 * customize the behavior of specific calls via **autocommands**
 
 Examples:
 
 <details>
 <summary>1-character search (enhanced f/t motions)</summary>
-
-Note: `inputlen` is an experimental feature at the moment.
 
 ```lua
 do
@@ -594,7 +592,6 @@ do
   end
 end
 
-------------------------------------------------------------------------
 -- [1] Match the modes here for which you don't want to use labels
 --     (`:h mode()`, `:h lua-pattern`).
 -- [2] This helper function makes it easier to set "clever-f"-like
