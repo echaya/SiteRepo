@@ -169,6 +169,14 @@ local function command_exists(cmd)
     local handle = io.popen("which " .. cmd .. " 2>/dev/null")
     if handle then
       local result = handle:read("*a")
+
+      -- Try `type` if `which` fails
+      if result == "" then
+        handle:close()
+        handle = io.popen("type " .. cmd .. " 2>/dev/null")
+        result = handle:read("*a")
+      end
+
       handle:close()
       return result ~= ""
     end

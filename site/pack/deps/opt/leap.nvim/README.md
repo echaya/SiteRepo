@@ -20,7 +20,9 @@ very quickly, with near-zero mental overhead.
 * Bundled module for remote operations ("spooky actions at a distance")
 * Small API surface, yet highly extensible
 
-![showcase](../media/showcase.gif?raw=true)
+<p align="center">
+  <img src="../media/showcase.gif?raw=true" alt="Leap in action"/>
+</p>
 
 ### How to use it (TL;DR)
 
@@ -66,7 +68,7 @@ At the same time, it reduces mental effort by all possible means:
   each step you already know what the immediate next keypress should be, and
   your mind can process the rest in the background.
 
-## 🐾 Getting started
+## 🔩 Getting started
 
 ### Requirements
 
@@ -259,7 +261,7 @@ for _, ai in ipairs { 'a', 'i' } do
     -- object: when entering `ar`/`ir`, consume the next character, and
     -- create the input from that character concatenated to `a`/`i`.
     local ok, ch = pcall(vim.fn.getcharstr)  -- pcall for handling <C-c>
-    if not ok or ch == vim.keycode('<esc>') then return end
+    if not ok or (ch == vim.keycode('<esc>')) then return end
     require('leap.remote').action { input = ai .. ch }
   end)
 end
@@ -374,7 +376,53 @@ unique in that it
 
 ## ❔ FAQ
 
-### Features
+### Search and motions
+
+<details>
+<summary>1-character search (enhanced f/t motions)</summary>
+
+```lua
+do
+  -- Return an argument table for `leap()`, tailored for f/t-motions.
+  local function as_ft (key_specific_args)
+    local common_args = {
+      inputlen = 1,
+      inclusive = true,
+      -- To limit search scope to the current line:
+      -- pattern = function (pat) return '\\%.l'..pat end,
+      opts = {
+        labels = '',  -- force autojump
+        safe_labels = vim.fn.mode(1):match'[no]' and '' or nil,  -- [1]
+      },
+    }
+    return vim.tbl_deep_extend('keep', common_args, key_specific_args)
+  end
+
+  local clever = require('leap.user').with_traversal_keys        -- [2]
+  local clever_f = clever('f', 'F')
+  local clever_t = clever('t', 'T')
+
+  for key, key_specific_args in pairs {
+    f = { opts = clever_f, },
+    F = { backward = true, opts = clever_f },
+    t = { offset = -1, opts = clever_t },
+    T = { backward = true, offset = 1, opts = clever_t },
+  } do
+    vim.keymap.set({'n', 'x', 'o'}, key, function ()
+      require('leap').leap(as_ft(key_specific_args))
+    end)
+  end
+end
+
+-- [1] Match the modes here for which you don't want to use labels
+--     (`:h mode()`, `:h lua-pattern`).
+-- [2] This helper function makes it easier to set "clever-f"-like
+--     functionality (https://github.com/rhysd/clever-f.vim), returning
+--     an `opts` table derived from the defaults, where the given keys
+--     are added to `keys.next_target` and `keys.prev_target`
+```
+
+</details>
 
 <details>
 <summary>Wildcard characters (one-way aliases)</summary>
@@ -384,23 +432,6 @@ potential match, we might need to show two different labels - corresponding to
 two different futures - at the same time (see `:h leap-wildcard-problem` for a
 longer explanation). `smartcase` is experimentally supported, but it can only
 be applied on the first input character (`:h leap-smartcase`).
-
-</details>
-
-<details>
-<summary>"Clever s" (à la Sneak)</summary>
-
-```lua
-do
-  local clever_s = require('leap.user').with_traversal_keys('s', 'S')
-  vim.keymap.set({ 'n', 'x', 'o' }, 's', function ()
-    require('leap').leap { opts = clever_s }
-  end)
-  vim.keymap.set({ 'n', 'x', 'o' }, 'S', function ()
-    require('leap').leap { backward = true, opts = clever_s }
-  end)
-end
-```
 
 </details>
 
@@ -425,30 +456,6 @@ characters together as mutual aliases, e.g.:
 </details>
 
 <details>
-<summary>Arbitrary remote actions instead of jumping</summary>
-
-Basic template:
-
-```lua
-local function remote_action ()
-  require('leap').leap {
-    windows = require('leap.user').get_focusable_windows(),
-    action = function (target)
-      local winid = target.wininfo.winid
-      local lnum, col = unpack(target.pos)  -- 1/1-based indexing!
-      -- ... do something at the given position ...
-    end,
-  }
-end
-```
-
-See [Extending Leap](#extending-leap) for more.
-
-</details>
-
-### Configuration
-
-<details>
 <summary>Disable auto-jumping to the first match</summary>
 
 ```lua
@@ -465,6 +472,25 @@ require('leap').opts.labels = ''
 ```
 
 </details>
+
+<details>
+<summary>"Clever s" (à la Sneak)</summary>
+
+```lua
+do
+  local clever_s = require('leap.user').with_traversal_keys('s', 'S')
+  vim.keymap.set({ 'n', 'x', 'o' }, 's', function ()
+    require('leap').leap { opts = clever_s }
+  end)
+  vim.keymap.set({ 'n', 'x', 'o' }, 'S', function ()
+    require('leap').leap { backward = true, opts = clever_s }
+  end)
+end
+```
+
+</details>
+
+### Labels and highlighting
 
 <details>
 <summary>Disable previewing labels</summary>
@@ -533,6 +559,28 @@ vim.api.nvim_create_autocmd('ColorScheme', {
 ### Miscellaneous
 
 <details>
+<summary>Arbitrary remote actions instead of jumping</summary>
+
+Basic template:
+
+```lua
+local function remote_action ()
+  require('leap').leap {
+    windows = require('leap.user').get_focusable_windows(),
+    action = function (target)
+      local winid = target.wininfo.winid
+      local lnum, col = unpack(target.pos)  -- 1/1-based indexing!
+      -- ... do something at the given position ...
+    end,
+  }
+end
+```
+
+See [Extending Leap](#extending-leap) for more.
+
+</details>
+
+<details>
 <summary>Was the name inspired by Jef Raskin's Leap?</summary>
 
 To paraphrase Steve Jobs about their logo and Turing's poison apple, I wish it
@@ -557,58 +605,10 @@ the function (search scope, jump offset, etc.), you can:
 Examples:
 
 <details>
-<summary>1-character search (enhanced f/t motions)</summary>
-
-```lua
-do
-  -- Return an argument table for `leap()`, tailored for f/t-motions.
-  local function as_ft (key_specific_args)
-    local common_args = {
-      inputlen = 1,
-      inclusive = true,
-      -- To limit search scope to the current line:
-      -- pattern = function (pat) return '\\%.l'..pat end,
-      opts = {
-        labels = '',  -- force autojump
-        safe_labels = vim.fn.mode(1):match'[no]' and '' or nil,  -- [1]
-      },
-    }
-    return vim.tbl_deep_extend('keep', common_args, key_specific_args)
-  end
-
-  local clever = require('leap.user').with_traversal_keys        -- [2]
-  local clever_f = clever('f', 'F')
-  local clever_t = clever('t', 'T')
-
-  for key, key_specific_args in pairs {
-    f = { opts = clever_f, },
-    F = { backward = true, opts = clever_f },
-    t = { offset = -1, opts = clever_t },
-    T = { backward = true, offset = 1, opts = clever_t },
-  } do
-    vim.keymap.set({'n', 'x', 'o'}, key, function ()
-      require('leap').leap(as_ft(key_specific_args))
-    end)
-  end
-end
-
--- [1] Match the modes here for which you don't want to use labels
---     (`:h mode()`, `:h lua-pattern`).
--- [2] This helper function makes it easier to set "clever-f"-like
---     functionality (https://github.com/rhysd/clever-f.vim), returning
---     an `opts` table derived from the defaults, where the given keys
---     are added to `keys.next_target` and `keys.prev_target`
-```
-
-</details>
-
-<details>
 <summary>Search integration</summary>
 
 When finishing a `/` or `?` search command, automatically label visible
 matches, so that you can jump to them directly.
-
-Note: `pattern` is an experimental feature at the moment.
 
 ```lua
 vim.api.nvim_create_autocmd('CmdlineLeave', {
@@ -703,8 +703,6 @@ end
 
 <details>
 <summary>Jump to lines</summary>
-
-Note: `pattern` is an experimental feature at the moment.
 
 ```lua
 vim.keymap.set({'n', 'x', 'o'}, '|', function ()

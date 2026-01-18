@@ -916,13 +916,10 @@ MiniSurround.user_input = function(prompt, text)
   -- using that string. Although doable with very obscure string, this is not
   -- very clean.
   -- Overcome this by adding temporary keystroke listener.
-  local on_key = vim.on_key or vim.register_keystroke_callback
   local was_cancelled = false
-  on_key(function(key)
-    if key == vim.api.nvim_replace_termcodes('<Esc>', true, true, true) then was_cancelled = true end
-  end, H.ns_id.input)
+  vim.on_key(function(key) was_cancelled = was_cancelled or key == '\27' end, H.ns_id.input)
 
-  -- Ask for input
+  -- Ask for input. Use `pcall` to allow `<C-c>` to cancel user input
   -- NOTE: it would be GREAT to make this work with `vim.ui.input()` but I
   -- didn't find a way to make it work without major refactor of whole module.
   -- The main issue is that `vim.ui.input()` is designed to perform action in
@@ -933,17 +930,12 @@ MiniSurround.user_input = function(prompt, text)
   -- immediately and proceed in main event loop. Couldn't find a relatively
   -- simple way to stop execution of this current function until `ui.input()`'s
   -- callback finished execution.
-  local opts = { prompt = '(mini.surround) ' .. prompt .. ': ', default = text or '' }
   vim.cmd('echohl Question')
-  -- Use `pcall` to allow `<C-c>` to cancel user input
-  local ok, res = pcall(vim.fn.input, opts)
-  vim.cmd([[echohl None | echo '' | redraw]])
+  local ok, res = pcall(vim.fn.input, { prompt = '(mini.surround) ' .. prompt .. ': ', default = text or '' })
+  vim.cmd('echohl None | echo "" | redraw')
 
-  -- Stop key listening
-  on_key(nil, H.ns_id.input)
-
-  if not ok or was_cancelled then return end
-  return res
+  vim.on_key(nil, H.ns_id.input)
+  return (ok and not was_cancelled) and res or nil
 end
 
 --- Generate common surrounding specifications

@@ -233,10 +233,9 @@ Example configuration: >lua
                           *leap-equivalence-class* *leap.opts.equivalence_classes*
 `equivalence_classes = { ' \t\r\n' }`
 
-    Input characters match any other member of their equivalence classes
-    (mutual alias groups). The sets can either be defined as strings or
-    tables.
-    Example - groups for whitespace, brackets, and quotes: >lua
+    Mutual alias groups for input characters: members will match any other in
+    their equivalence class. Can be strings or tables.
+    Example - whitespace, brackets, and quotes: >lua
         { ' \t\r\n', '([{', ')]}', '\'"`' }
 <
     Note: If you want to be able to target empty lines and characters at the
