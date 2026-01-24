@@ -6,6 +6,7 @@
   - [Setup](#setup)
   - [Commands](#commands)
     - [REPLStart](#replstart)
+    - [REPLStartOrFocusOrHide](#replstartorfocusorhide)
     - [REPLAttachBufferToREPL](#replattachbuffertorepl)
     - [REPLDetachBufferToREPL](#repldetachbuffertorepl)
     - [REPLCleanup](#replcleanup)
@@ -216,9 +217,43 @@ You can create a REPL with a specific id by providing a count, such as
 increamental ID will be created. You can also provide a name as an argument. If
 no argument is given, you'll be prompted to select a REPL from the list of
 available ones. If the id is already in use, it will focus on the REPL with
-that id. If you append a `!` to the command, the current buffer will attach to
-the newly created REPL, for instance, `REPLStart!` or `3REPLStart!`. Note that
-attachment only happens when a new REPL is created.
+that id.
+
+When a name is provided and a count is also provided (for example, `2REPLStart
+ipython`), the count selects the Nth REPL with that name. If there are fewer
+than N existing REPLs with that name, a new one is created. When a name is
+provided without a count (`REPLStart ipython`), it always creates a new REPL of
+that name.
+
+If you append a `!` to the command, the current buffer will attach to the newly
+created REPL, for instance, `REPLStart!` or `3REPLStart!`. Note that attachment
+only happens when a new REPL is created.
+
+### REPLStartOrFocusOrHide
+
+Toggles the visibility (focus/hide) of an existing REPL, or creates a new one
+if it does not exist.
+
+The rules for counts and optional REPL names mirror those of `REPLStart`,
+including named selection logic like `2REPLStartOrFocusOrHide ipython`.
+
+Here are examples of how to use this command:
+
+1. `REPLStartOrFocusOrHide` will hide or focus REPL 1 when it exists, otherwise
+   it creates a new REPL.
+
+2. `REPLStartOrFocusOrHide ipython` will hide or focus the first `ipython`
+   REPL, otherwise it creates a new `ipython` REPL.
+
+3. `3REPLStartOrFocusOrHide` will hide or focus REPL 3 when it exists, otherwise
+   it creates a new REPL.
+
+4. `3REPLStartOrFocusOrHide ipython` will hide or focus the 3rd `ipython`
+   REPL, otherwise it creates a new `ipython` REPL.
+
+**Important difference**: without a count, `REPLStart` always attempts to start
+a new REPL, whereas `REPLStartOrFocusOrHide` first attempts to focus/hide an
+existing REPL and creates a new one only if none is found.
 
 ### REPLAttachBufferToREPL
 
@@ -514,6 +549,7 @@ Note:
 `yarepl` provides the following keymaps:
 
 - `<Plug>(REPLStart)`
+- `<Plug>(REPLStartOrFocusOrHide)`
 - `<Plug>(REPLFocus)`
 - `<Plug>(REPLHide)`
 - `<Plug>(REPLHideOrFocus)`
@@ -532,6 +568,7 @@ equivalent to `:REPLStart`. Type `3<Leader>s` is equivalent to `:3REPLStart`.
 And for each meta you registered (say you have a meta named `ipython`), the following keymaps will be registered:
 
 - `<Plug>(REPLStart-ipython)`
+- `<Plug>(REPLStartOrFocusOrHide-ipython)`
 - `<Plug>(REPLFocus-ipython)`
 - `<Plug>(REPLHide-ipython)`
 - `<Plug>(REPLHideOrFocus-ipython)`

@@ -2,7 +2,7 @@
 local M = {}
 
 -- Subcommands available for :CodeDiff
-M.SUBCOMMANDS = { "merge", "file", "dir", "install" }
+M.SUBCOMMANDS = { "merge", "file", "dir", "history", "install" }
 
 local git = require("codediff.core.git")
 local lifecycle = require("codediff.ui.lifecycle")
@@ -147,6 +147,108 @@ local function handle_dir_diff(dir1, dir2)
   }
 
   view.create(session_config, "")
+end
+
+-- Handle file history command
+-- range: git range (e.g., "origin/main..HEAD", "HEAD~10")
+-- file_path: optional file path to filter history
+local function handle_history(range, file_path)
+  local current_buf = vim.api.nvim_get_current_buf()
+  local current_file = vim.api.nvim_buf_get_name(current_buf)
+  local cwd = vim.fn.getcwd()
+
+  -- Expand file_path before async context (vim.fn.expand can't be called in fast event)
+  local expanded_file_path = nil
+  if file_path then
+    expanded_file_path = vim.fn.expand(file_path)
+    if vim.fn.filereadable(expanded_file_path) ~= 1 then
+      expanded_file_path = file_path
+    end
+  end
+
+  local function open_history(git_root)
+    -- Build options for commit list
+    local history_opts = {
+      no_merges = true,
+    }
+
+    -- Only apply default limit when no range specified
+    if not range or range == "" then
+      history_opts.limit = 100
+    end
+
+    -- If file_path specified, filter by that file
+    if expanded_file_path then
+      history_opts.path = git.get_relative_path(expanded_file_path, git_root)
+    end
+
+    git.get_commit_list(range or "", git_root, history_opts, function(err, commits)
+      if err then
+        vim.schedule(function()
+          vim.notify("Failed to get commit history: " .. err, vim.log.levels.ERROR)
+        end)
+        return
+      end
+
+      if #commits == 0 then
+        vim.schedule(function()
+          vim.notify("No commits found in range", vim.log.levels.INFO)
+        end)
+        return
+      end
+
+      vim.schedule(function()
+        local view = require("codediff.ui.view")
+
+        ---@type SessionConfig
+        local session_config = {
+          mode = "history",
+          git_root = git_root,
+          original_path = "",
+          modified_path = "",
+          original_revision = nil,
+          modified_revision = nil,
+          history_data = {
+            commits = commits,
+            range = range,
+            file_path = history_opts.path,
+          },
+        }
+
+        view.create(session_config, "")
+      end)
+    end)
+  end
+
+  -- Try buffer path first if available
+  if current_file ~= "" then
+    git.get_git_root(current_file, function(err_file, git_root_file)
+      if not err_file then
+        open_history(git_root_file)
+        return
+      end
+
+      git.get_git_root(cwd, function(err_cwd, git_root_cwd)
+        if not err_cwd then
+          open_history(git_root_cwd)
+          return
+        end
+        vim.schedule(function()
+          vim.notify("Not in a git repository", vim.log.levels.ERROR)
+        end)
+      end)
+    end)
+  else
+    git.get_git_root(cwd, function(err_cwd, git_root)
+      if err_cwd then
+        vim.schedule(function()
+          vim.notify(err_cwd, vim.log.levels.ERROR)
+        end)
+        return
+      end
+      open_history(git_root)
+    end)
+  end
 end
 
 local function handle_explorer(revision, revision2)
@@ -426,6 +528,44 @@ function M.vscode_diff(opts)
       return
     end
     handle_dir_diff(args[2], args[3])
+  elseif subcommand == "history" then
+    -- :CodeDiff history [range] [file]
+    -- Examples:
+    --   :CodeDiff history                    - last 100 commits
+    --   :CodeDiff history HEAD~10            - last 10 commits
+    --   :CodeDiff history origin/main..HEAD  - commits in range
+    --   :CodeDiff history HEAD~10 %          - last 10 commits for current file
+    --   :CodeDiff history %                  - history for current file
+    --   :CodeDiff history path/to/file.lua   - history for specific file
+    local arg1 = args[2]
+    local arg2 = args[3]
+    local range = nil
+    local file_path = nil
+
+    -- Helper to expand path (handles % and normal paths)
+    local function expand_path(p)
+      if p == "%" then
+        return vim.api.nvim_buf_get_name(0)
+      else
+        return vim.fn.expand(p)
+      end
+    end
+
+    if arg1 and arg2 then
+      -- Two params: first is range, second is file_path
+      range = arg1
+      file_path = expand_path(arg2)
+    elseif arg1 then
+      -- One param: try as file_path first, otherwise treat as range
+      local expanded = expand_path(arg1)
+      if vim.fn.filereadable(expanded) == 1 then
+        file_path = expanded
+      else
+        range = arg1
+      end
+    end
+
+    handle_history(range, file_path)
   elseif subcommand == "install" or subcommand == "install!" then
     -- :CodeDiff install or :CodeDiff install!
     -- Handle both :CodeDiff! install and :CodeDiff install!

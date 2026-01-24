@@ -203,6 +203,13 @@ function M.setup()
   -- Conflict sign for rejected side (red - this content was not chosen)
   -- Fallback chain: user config -> GitSignsDelete -> DiagnosticSignError -> hardcoded red
   set_conflict_sign_hl("CodeDiffConflictSignRejected", hl_config.conflict_sign_rejected, { "GitSignsDelete", "DiagnosticSignError" }, "#f85149")
+
+  -- History panel title (bold, slightly dimmed)
+  vim.api.nvim_set_hl(0, "CodeDiffHistoryTitle", {
+    bold = true,
+    link = "FloatTitle",
+    default = true,
+  })
 end
 
 return M

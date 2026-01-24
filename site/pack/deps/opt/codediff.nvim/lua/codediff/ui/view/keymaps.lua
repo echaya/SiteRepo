@@ -231,6 +231,62 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     vim.api.nvim_echo({ { string.format("Put hunk %d", hunk_idx), "None" } }, false, {})
   end
 
+  -- Helper: Toggle stage/unstage for current file (tab-wide)
+  -- Works in: explorer buffer, diff buffers (original/modified)
+  -- Does nothing in: history buffer, other buffers
+  local function toggle_stage()
+    local current_buf = vim.api.nvim_get_current_buf()
+    local explorer = lifecycle.get_explorer(tabpage)
+    local session = lifecycle.get_session(tabpage)
+
+    if not session then
+      return
+    end
+
+    -- Only available in explorer mode with git
+    if not is_explorer_mode then
+      vim.notify("Stage/unstage only available in explorer mode", vim.log.levels.WARN)
+      return
+    end
+
+    if not explorer or not explorer.git_root then
+      vim.notify("Stage/unstage only available in git mode", vim.log.levels.WARN)
+      return
+    end
+
+    -- Case 1: Cursor in explorer buffer
+    if explorer.bufnr and current_buf == explorer.bufnr then
+      -- Delegate to explorer action (handles files and directories)
+      local explorer_module = require("codediff.ui.explorer")
+      explorer_module.toggle_stage_entry(explorer, explorer.tree)
+      return
+    end
+
+    -- Case 2: Cursor in diff buffers (original or modified)
+    if current_buf == original_bufnr or current_buf == modified_bufnr then
+      local file_path = explorer.current_file_path
+      local group = explorer.current_file_group
+
+      -- Guard: must have a current file selected
+      if not file_path then
+        vim.notify("No file selected", vim.log.levels.WARN)
+        return
+      end
+
+      -- Guard: file must be stageable
+      if not group or (group ~= "staged" and group ~= "unstaged" and group ~= "conflicts") then
+        vim.notify("Current file cannot be staged/unstaged", vim.log.levels.WARN)
+        return
+      end
+
+      local explorer_module = require("codediff.ui.explorer")
+      explorer_module.toggle_stage_file(explorer.git_root, file_path, group)
+      return
+    end
+
+    -- Case 3: Other buffers (history, etc.) - do nothing silently
+  end
+
   -- ========================================================================
   -- Bind all keymaps using unified API (one place for all keymaps!)
   -- ========================================================================
@@ -269,6 +325,28 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
   end
   if keymaps.diff_put then
     lifecycle.set_tab_keymap(tabpage, "n", keymaps.diff_put, diff_put, { desc = "Put change to other buffer" })
+  end
+
+  -- Toggle stage/unstage (- key) - only in explorer mode
+  -- Support legacy config: keymaps.explorer.toggle_stage (deprecated)
+  if is_explorer_mode then
+    local toggle_stage_key = keymaps.toggle_stage
+    local explorer_keymaps = config.options.keymaps.explorer or {}
+
+    -- Fallback to deprecated explorer.toggle_stage if view.toggle_stage not set
+    if not toggle_stage_key and explorer_keymaps.toggle_stage then
+      toggle_stage_key = explorer_keymaps.toggle_stage
+      vim.schedule(function()
+        vim.notify(
+          "[codediff] keymaps.explorer.toggle_stage is deprecated. Please use keymaps.view.toggle_stage instead.",
+          vim.log.levels.WARN
+        )
+      end)
+    end
+
+    if toggle_stage_key then
+      lifecycle.set_tab_keymap(tabpage, "n", toggle_stage_key, toggle_stage, { desc = "Toggle stage/unstage" })
+    end
   end
 end
 

@@ -42,6 +42,12 @@ There are following change types:
 
     The previous "reset by explicitly setting initial background color" behavior is available by setting the new `opts.explicit_reset` option to `true`.
 
+## mini.pairs
+
+### Refine
+
+- Update neighborhood patterns for default mappings to work better with multibyte characters. Their meaning is the same, just the form is adjusted to be more versatile.
+
 ## mini.pick
 
 ### Expand

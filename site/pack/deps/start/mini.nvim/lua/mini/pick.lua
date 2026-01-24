@@ -1389,15 +1389,18 @@ MiniPick.builtin.grep_live = function(local_opts, opts)
 
   local cwd = H.full_path(opts.source.cwd or vim.fn.getcwd())
   local set_items_opts, spawn_opts = { do_match = false, querytick = H.querytick }, { cwd = cwd }
-  local process
+  local sys = { kill = function() end }
   local match = function(_, _, query)
-    pcall(vim.loop.process_kill, process)
+    sys:kill()
     if H.querytick == set_items_opts.querytick then return end
-    if #query == 0 then return MiniPick.set_picker_items({}, set_items_opts) end
+    if #query == 0 then
+      sys = { kill = function() end }
+      return MiniPick.set_picker_items({}, set_items_opts)
+    end
 
     set_items_opts.querytick = H.querytick
     local command = H.grep_get_command(tool, table.concat(query), globs)
-    process = MiniPick.set_picker_items_from_cli(command, { set_items_opts = set_items_opts, spawn_opts = spawn_opts })
+    sys = MiniPick.set_picker_items_from_cli(command, { set_items_opts = set_items_opts, spawn_opts = spawn_opts })
   end
 
   local add_glob = function()
@@ -1736,29 +1739,33 @@ MiniPick.set_picker_items_from_cli = function(command, opts)
   if not MiniPick.is_picker_active() then return end
 
   local executable, args = command[1], vim.list_slice(command, 2, #command)
-  local process, pid, stdout = nil, nil, vim.loop.new_pipe()
+  local stdout, data_feed = vim.loop.new_pipe(), {}
   local spawn_opts = vim.tbl_deep_extend('force', opts.spawn_opts, { args = args, stdio = { nil, stdout, nil } })
   if type(spawn_opts.cwd) == 'string' then spawn_opts.cwd = H.full_path(spawn_opts.cwd) end
+
+  local process, pid
   process, pid = vim.loop.spawn(executable, spawn_opts, function()
-    if process:is_active() then process:close() end
+    if not process:is_closing() then process:close() end
   end)
+  -- NOTE: `cancel` is better name, but go with `vim.system():kill` for future
+  local kill = function()
+    if stdout:is_active() then stdout:read_stop() end
+    data_feed = nil
+    if not stdout:is_closing() then stdout:close() end
+    if process:is_active() then process:kill() end
+  end
 
-  -- Make sure to stop the process if picker is stopped
-  local kill_process = function() pcall(vim.loop.process_kill, process) end
-  vim.api.nvim_create_autocmd('User', { pattern = 'MiniPickStop', once = true, callback = kill_process })
+  -- Make sure to fully stop the process if picker is stopped
+  vim.api.nvim_create_autocmd('User', { pattern = 'MiniPickStop', once = true, callback = kill })
 
-  local data_feed = {}
   stdout:read_start(function(err, data)
     assert(not err, err)
     if data ~= nil then return table.insert(data_feed, data) end
-
-    local items = vim.split(table.concat(data_feed), '\r?\n')
-    data_feed = nil
     stdout:close()
-    vim.schedule(function() MiniPick.set_picker_items(opts.postprocess(items), opts.set_items_opts) end)
+    coroutine.wrap(H.set_picker_items_from_feed)(data_feed, '\r?\n', opts)
   end)
 
-  return process, pid
+  return { pid = pid, kill = kill }
 end
 
 --- Set match indexes for active picker
@@ -3391,6 +3398,44 @@ H.choose_set_cursor = function(win_id, lnum, col)
 end
 
 -- Builtins -------------------------------------------------------------------
+-- Stdout feed is the final result split into unknown places. This function is
+-- a longer version of `vim.split(table.concat(feed, ''), '\r?\n')` but allows
+-- to interrupt computation and doesn't create big string for the whole feed.
+H.set_picker_items_from_feed = function(feed, pattern, opts)
+  -- Check active picker as `poke_picker()` will always be `true` in this case
+  if not MiniPick.is_picker_active() then return end
+
+  -- NOTE: For intended effect, relies on presence of the active coroutine
+  local poke_picker = H.poke_picker_throttle(H.querytick)
+
+  -- Realign feed so that each one ends in a pattern
+  for i = 2, #feed do
+    if not poke_picker() then return end
+    local _, to = feed[i]:find(pattern)
+    -- Account for chunks with no matches. Possibly several in a row.
+    to = to or feed[i]:len()
+    local j = i - 1
+    while j > 1 and feed[j] == '' do
+      j = j - 1
+    end
+    feed[j], feed[i] = feed[j] .. feed[i]:sub(1, to), feed[i]:sub(to + 1)
+  end
+
+  local res, insert = {}, table.insert
+  for i = 1, #feed do
+    -- Poke once per feed item and not match, because latter is too much and
+    -- might be less performant as each poke computes time.
+    if not poke_picker() then return end
+    for s in vim.gsplit(feed[i], pattern, { trimempty = true }) do
+      insert(res, s)
+    end
+    -- Cleanup
+    feed[i] = nil
+  end
+
+  vim.schedule(function() MiniPick.set_picker_items(opts.postprocess(res), opts.set_items_opts) end)
+end
+
 H.cli_postprocess = function(items)
   while items[#items] == '' do
     items[#items] = nil

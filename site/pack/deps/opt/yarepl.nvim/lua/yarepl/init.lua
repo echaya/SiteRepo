@@ -11,6 +11,11 @@ local is_win32 = vim.fn.has 'win32' == 1
 ---@field source_command_hint? table Configuration for showing source command hints
 ---@field send_delayed_final_cr? boolean Whether to send a delayed carriage return after commands
 
+---@class yarepl.REPLInstance
+---@field bufnr number
+---@field term number
+---@field name string
+
 M.formatter = {}
 M.commands = {}
 M._virt_text_ns_id = api.nvim_create_namespace 'YareplVirtualText'
@@ -57,7 +62,9 @@ local default_config = function()
     }
 end
 
+---@type yarepl.REPLInstance[]
 M._repls = {}
+---@type table<number, yarepl.REPLInstance>
 M._bufnrs_to_repls = {}
 
 local function repl_is_valid(repl)
@@ -217,6 +224,19 @@ local function repl_swap(id_1, id_2)
     repl_cleanup()
 end
 
+local function find_repl_by_name_index(name, index)
+    local count = 0
+    for _, repl in ipairs(M._repls) do
+        if repl_is_valid(repl) and repl.name == name then
+            count = count + 1
+            if count == index then
+                return repl
+            end
+        end
+    end
+    return nil
+end
+
 local function attach_buffer_to_repl(bufnr, repl)
     if not repl_is_valid(repl) then
         vim.notify [[REPL doesn't exist!]]
@@ -238,10 +258,10 @@ M.bufnr_is_attached_to_repl = function(bufnr)
     end
 end
 
----@param id number|nil the id of the repl,
----@param name string|nil the name of the closest repl that will try to find
----@param bufnr number|nil the buffer number of the buffer
----@return table|nil repl the repl object or nil if not found
+---@param id number? the id of the repl,
+---@param name string? the name of the closest repl that will try to find
+---@param bufnr number? the buffer number of the buffer
+---@return yarepl.REPLInstance? repl the repl object or nil if not found
 -- get the repl specified by `id` and `name`. If `id` is 0, then will try to
 -- find the REPL `bufnr` is attached to, if not find, will use `id = 1`. If
 -- `name` is not nil or not an empty string, then will try to find the REPL
@@ -285,6 +305,20 @@ local function repl_win_scroll_to_bottom(repl)
     if repl_win ~= -1 then
         local lines = api.nvim_buf_line_count(repl.bufnr)
         api.nvim_win_set_cursor(repl_win, { lines, 0 })
+    end
+end
+
+local function post_create_repl(id, bufnr, opts)
+    if not repl_is_valid(M._repls[id]) then
+        return
+    end
+
+    if opts.bang then
+        attach_buffer_to_repl(bufnr, M._repls[id])
+    end
+
+    if M._config.scroll_to_bottom_after_sending then
+        repl_win_scroll_to_bottom(M._repls[id])
     end
 end
 
@@ -720,6 +754,7 @@ local function add_keymap(meta_name)
 
     local mode_commands = {
         { 'n', 'REPLStart' },
+        { 'n', 'REPLStartOrFocusOrHide' },
         { 'n', 'REPLFocus' },
         { 'n', 'REPLHide' },
         { 'n', 'REPLHideOrFocus' },
@@ -759,19 +794,19 @@ local function add_keymap(meta_name)
 end
 
 M.commands.start = function(opts)
-    -- if calling the command without any count, we want count to become 1.
     local repl_name = opts.args
-    local id = opts.count == 0 and #M._repls + 1 or opts.count
-    local repl = M._repls[id]
     local current_bufnr = api.nvim_get_current_buf()
 
-    if repl_is_valid(repl) then
-        vim.notify(string.format('REPL %d already exists', id))
-        focus_repl(repl)
-        return
-    end
-
     if repl_name == '' then
+        local id = opts.count == 0 and #M._repls + 1 or opts.count
+        local repl = M._repls[id]
+
+        if repl_is_valid(repl) then
+            vim.notify(string.format('REPL %d already exists', id))
+            focus_repl(repl)
+            return
+        end
+
         local repls = {}
         for name, _ in pairs(M._config.metas) do
             table.insert(repls, name)
@@ -786,25 +821,21 @@ M.commands.start = function(opts)
 
             repl_name = choice
             create_repl(id, repl_name)
-
-            if opts.bang then
-                attach_buffer_to_repl(current_bufnr, M._repls[id])
-            end
-
-            if M._config.scroll_to_bottom_after_sending then
-                repl_win_scroll_to_bottom(M._repls[id])
-            end
+            post_create_repl(id, current_bufnr, opts)
         end)
     else
+        local id = #M._repls + 1
+
+        if opts.count ~= 0 then
+            local repl = find_repl_by_name_index(repl_name, opts.count)
+            if repl then
+                focus_repl(repl)
+                return
+            end
+        end
+
         create_repl(id, repl_name)
-
-        if opts.bang then
-            attach_buffer_to_repl(current_bufnr, M._repls[id])
-        end
-
-        if M._config.scroll_to_bottom_after_sending then
-            repl_win_scroll_to_bottom(M._repls[id])
-        end
+        post_create_repl(id, current_bufnr, opts)
     end
 end
 
@@ -845,14 +876,8 @@ M.commands.hide = function(opts)
     end
 end
 
-M.commands.hide_or_focus = function(opts)
-    local id = opts.count
-    local name = opts.args
-    local current_buffer = api.nvim_get_current_buf()
-
-    local repl = M._get_repl(id, name, current_buffer)
-
-    if not repl then
+local function hide_or_focus_repl(repl)
+    if not repl_is_valid(repl) then
         vim.notify [[REPL doesn't exist!]]
         return
     end
@@ -867,6 +892,53 @@ M.commands.hide_or_focus = function(opts)
     else
         focus_repl(repl)
     end
+end
+
+M.commands.hide_or_focus = function(opts)
+    local id = opts.count
+    local name = opts.args
+    local current_buffer = api.nvim_get_current_buf()
+
+    local repl = M._get_repl(id, name, current_buffer)
+
+    if not repl then
+        vim.notify [[REPL doesn't exist!]]
+        return
+    end
+
+    hide_or_focus_repl(repl)
+end
+
+M.commands.start_or_focus_or_hide = function(opts)
+    local id = opts.count
+    local name = opts.args
+    local has_name = name ~= nil and name ~= ''
+    local repl
+
+    if id == 0 then
+        if has_name then
+            repl = find_repl_by_name_index(name, 1)
+        else
+            repl = M._repls[1]
+        end
+
+        if repl_is_valid(repl) then
+            hide_or_focus_repl(repl)
+            return
+        end
+    else
+        if has_name then
+            repl = find_repl_by_name_index(name, id)
+        else
+            repl = M._repls[id]
+        end
+        if repl_is_valid(repl) then
+            hide_or_focus_repl(repl)
+            return
+        end
+    end
+
+    M.commands.start(opts)
 end
 
 M.commands.close = function(opts)
@@ -1173,19 +1245,31 @@ M.setup = function(opts)
     end
 end
 
+local function list_metas()
+    local metas = {}
+    for name, _ in pairs(M._config.metas) do
+        table.insert(metas, name)
+    end
+    return metas
+end
+
 api.nvim_create_user_command('REPLStart', M.commands.start, {
     count = true,
     bang = true,
     nargs = '?',
-    complete = function()
-        local metas = {}
-        for name, _ in pairs(M._config.metas) do
-            table.insert(metas, name)
-        end
-        return metas
-    end,
+    complete = list_metas,
     desc = [[
 Create REPL `i` from the list of available REPLs.
+]],
+})
+
+api.nvim_create_user_command('REPLStartOrFocusOrHide', M.commands.start_or_focus_or_hide, {
+    count = true,
+    bang = true,
+    nargs = '?',
+    complete = list_metas,
+    desc = [[
+Start a REPL or toggle focus/hide on an existing REPL.
 ]],
 })
 

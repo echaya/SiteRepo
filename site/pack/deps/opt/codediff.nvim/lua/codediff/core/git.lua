@@ -598,6 +598,173 @@ function M.delete_untracked(git_root, rel_path, callback)
   end)
 end
 
+-- Get commit list for file history (async)
+-- range: git range expression (e.g., "origin/main..HEAD", "HEAD~10..HEAD")
+-- git_root: absolute path to git repository root
+-- opts: optional table with keys:
+--   path: file path to filter commits (relative to git_root)
+--   limit: maximum number of commits to return
+--   no_merges: exclude merge commits
+--   reverse: reverse order (oldest first)
+-- callback: function(err, commits) where commits is array of:
+--   { hash, short_hash, author, date, date_relative, subject, ref_names, files_changed, insertions, deletions }
+function M.get_commit_list(range, git_root, opts, callback)
+  opts = opts or {}
+  local is_single_file = opts.path and opts.path ~= ""
+
+  local args = {
+    "log",
+    "--pretty=format:%H%x00%h%x00%an%x00%at%x00%ar%x00%s%x00%D%x00",
+  }
+
+  -- For single file mode, use --numstat to get stats AND file path (for renames)
+  -- For multi-file mode, use --shortstat for aggregate stats
+  if is_single_file then
+    table.insert(args, "--numstat")
+    table.insert(args, "--follow")
+  else
+    table.insert(args, "--shortstat")
+  end
+
+  if opts.no_merges then
+    table.insert(args, "--no-merges")
+  end
+
+  if opts.limit then
+    table.insert(args, "-n")
+    table.insert(args, tostring(opts.limit))
+  end
+
+  if opts.reverse then
+    table.insert(args, "--reverse")
+  end
+
+  if range and range ~= "" then
+    table.insert(args, range)
+  end
+
+  if is_single_file then
+    table.insert(args, "--")
+    table.insert(args, opts.path)
+  end
+
+  run_git_async(args, { cwd = git_root }, function(err, output)
+    if err then
+      callback(err, nil)
+      return
+    end
+
+    local commits = {}
+    local current_commit = nil
+
+    for line in output:gmatch("[^\n]+") do
+      -- Check if this is a commit line (contains null separators)
+      if line:find("\0") then
+        -- Save previous commit if exists
+        if current_commit then
+          table.insert(commits, current_commit)
+        end
+
+        local parts = vim.split(line, "\0")
+        if #parts >= 7 then
+          current_commit = {
+            hash = parts[1],
+            short_hash = parts[2],
+            author = parts[3],
+            date = tonumber(parts[4]),
+            date_relative = parts[5],
+            subject = parts[6],
+            ref_names = parts[7] ~= "" and parts[7] or nil,
+            files_changed = 0,
+            insertions = 0,
+            deletions = 0,
+            file_path = nil, -- Actual file path at this commit (for --follow)
+          }
+        end
+      elseif current_commit and line:match("^%d+%s+%d+%s+") then
+        -- Parse numstat line: "40\t12\tpath" or "0\t0\tlua/{old => new}/file.lua"
+        local ins, del, path = line:match("^(%d+)%s+(%d+)%s+(.+)$")
+        if ins and del and path then
+          current_commit.insertions = (current_commit.insertions or 0) + tonumber(ins)
+          current_commit.deletions = (current_commit.deletions or 0) + tonumber(del)
+          current_commit.files_changed = (current_commit.files_changed or 0) + 1
+          -- Extract actual file path, handling rename notation like "lua/{old => new}/file.lua"
+          -- For renames, extract the old path (before =>)
+          if path:match("{.*=>.*}") then
+            -- Rename notation: extract old path
+            -- Examples: "lua/{vscode-diff => codediff}/file.lua" or "lua/vscode-diff/{ => core}/git.lua"
+            local prefix, old, _, suffix = path:match("^(.*)%{(.-)%s*=>%s*(.-)%}(.*)$")
+            if prefix then
+              -- Remove trailing slash from prefix if old is empty (move into subdir)
+              if old == "" and prefix:sub(-1) == "/" then
+                prefix = prefix:sub(1, -2)
+              end
+              current_commit.file_path = prefix .. old .. suffix
+            else
+              current_commit.file_path = path
+            end
+          else
+            current_commit.file_path = path
+          end
+        end
+      elseif current_commit and line:match("%d+ file") then
+        -- Parse shortstat line: " 3 files changed, 32 insertions(+), 8 deletions(-)"
+        local files = line:match("(%d+) file")
+        local ins = line:match("(%d+) insertion")
+        local del = line:match("(%d+) deletion")
+        current_commit.files_changed = tonumber(files) or 0
+        current_commit.insertions = tonumber(ins) or 0
+        current_commit.deletions = tonumber(del) or 0
+      end
+    end
+
+    -- Don't forget the last commit
+    if current_commit then
+      table.insert(commits, current_commit)
+    end
+
+    callback(nil, commits)
+  end)
+end
+
+-- Get files changed in a specific commit (async)
+-- commit_hash: full or short commit hash
+-- git_root: absolute path to git repository root
+-- callback: function(err, files) where files is array of:
+--   { path, status, old_path }
+function M.get_commit_files(commit_hash, git_root, callback)
+  run_git_async({ "diff-tree", "--no-commit-id", "--name-status", "-r", "-M", commit_hash }, { cwd = git_root }, function(err, output)
+    if err then
+      callback(err, nil)
+      return
+    end
+
+    local files = {}
+    for line in output:gmatch("[^\n]+") do
+      local parts = vim.split(line, "\t")
+      if #parts >= 2 then
+        local status = parts[1]:sub(1, 1)
+        local path = parts[2]
+        local old_path = nil
+
+        -- Handle renames (R100 or similar)
+        if status == "R" and #parts >= 3 then
+          old_path = parts[2]
+          path = parts[3]
+        end
+
+        table.insert(files, {
+          path = path,
+          status = status,
+          old_path = old_path,
+        })
+      end
+    end
+
+    callback(nil, files)
+  end)
+end
+
 -- Get revision candidates for command completion (sync)
 -- Returns list of branches, tags, remotes, and special refs
 function M.get_rev_candidates(git_root)

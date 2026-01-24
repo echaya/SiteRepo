@@ -43,6 +43,7 @@ M.defaults = {
     height = 15, -- Height when position is "bottom" (lines)
     view_mode = "list", -- "list" (flat file list) or "tree" (directory tree)
     indent_markers = true, -- Show indent markers in tree view (│, ├, └)
+    initial_focus = "explorer", -- Initial focus: "explorer", "original", or "modified"
     icons = {
       folder_closed = "\u{e5ff}", -- Nerd Font: folder
       folder_open = "\u{e5fe}", -- Nerd Font: folder-open
@@ -50,6 +51,15 @@ M.defaults = {
     file_filter = {
       ignore = {}, -- Glob patterns to hide (e.g., {"*.lock", "dist/*"})
     },
+  },
+
+  -- History panel configuration (for :CodeDiff history)
+  history = {
+    position = "bottom", -- "left" or "bottom" (default: bottom)
+    width = 40, -- Width when position is "left" (columns)
+    height = 15, -- Height when position is "bottom" (lines)
+    initial_focus = "history", -- Initial focus: "history", "original", or "modified"
+    view_mode = "list", -- "list" or "tree" for files under commits
   },
 
   -- Keymaps
@@ -63,16 +73,20 @@ M.defaults = {
       prev_file = "[f",
       diff_get = "do", -- Get change from other buffer (like vimdiff)
       diff_put = "dp", -- Put change to other buffer (like vimdiff)
+      toggle_stage = "-", -- Stage/unstage current file (works in explorer and diff buffers)
     },
     explorer = {
       select = "<CR>",
       hover = "K",
       refresh = "R",
       toggle_view_mode = "i", -- Toggle between 'list' and 'tree' views
-      toggle_stage = "-", -- Stage/unstage selected file (like diffview)
       stage_all = "S", -- Stage all files
       unstage_all = "U", -- Unstage all files
       restore = "X", -- Discard changes to file (restore to index/HEAD)
+    },
+    history = {
+      select = "<CR>", -- Select commit/file or toggle expand
+      toggle_view_mode = "i", -- Toggle between 'list' and 'tree' views
     },
     -- Conflict mode keymaps (only active in merge conflict views)
     conflict = {
