@@ -2,6 +2,8 @@
 
 ## General CLI Agent Behavior Instructions
 
+> ⚠️ **CRITICAL: NEVER commit code unless the user explicitly requests it.** After completing changes, STOP and wait for user to say "commit". Each commit request authorizes only ONE commit operation.
+
 ### Communication and File Operation Guidelines
 
 1. **Output Messages**: When responding to users, utilize the native chat output interface. Do not use command-line utilities such as `cat`, `echo`, or `write-host` to display messages in the console.
@@ -25,8 +27,6 @@
 4. **Trailing Spaces**: NEVER add trailing spaces to any line in any file. Always ensure lines end cleanly without whitespace.
 
 5. **Pull Requests**: When asked to create a PR, push the branch as is (do not create a new branch), create PR with comprehensive description (summary, changes, benefits, testing), and enable auto-merge.
-
-6. **Commits**: NEVER commit code unless explicitly requested by the user. Each request authorizes only a single commit operation. Use proper conventional commit messages.
 
 ## Path-Specific Instructions
 
