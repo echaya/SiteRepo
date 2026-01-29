@@ -1,56 +1,71 @@
--- Code generated from fnl/leap/opts.fnl - do not edit directly.
+local M = {
+   default = {
+      preview = true,
+      equivalence_classes = {" \t\r\n"},
+      safe_labels = "sfnut/SFNLHMUGTZ?",
+      labels = "sfnjklhodweimbuyvrgtaqpcxz/SFNJKLHODWEIMBUYVRGTAQPCXZ?",
+      keys = {
+         next_target = "<enter>",
+         prev_target = "<backspace>",
+         next_group = "<space>",
+         prev_group = "<backspace>"
+      },
+      vim_opts = {
+         ["wo.scrolloff"] = 0,  -- keep the view when auto-jumping
+         ["wo.sidescrolloff"] = 0,
+         ["wo.conceallevel"] = 0,
+         ["bo.modeline"] = false  -- see lightspeed#81
+      },
+      -- Deprecated options.
+      case_sensitive = nil,
+      max_highlighted_traversal_targets = 10,
+      substitute_chars = {},
+      highlight_unlabeled_phase_one_targets = false
+   },
+   -- Will be updated by `leap()` on invocation.
+   current_call = {},
+}
 
-local M = {default = {preview = true, equivalence_classes = {" \9\13\n"}, safe_labels = "sfnut/SFNLHMUGTZ?", labels = ("sfnjklhodweimbuyvrgtaqpcxz/" .. "SFNJKLHODWEIMBUYVRGTAQPCXZ?"), keys = {next_target = "<enter>", prev_target = "<backspace>", next_group = "<space>", prev_group = "<backspace>"}, vim_opts = {["wo.scrolloff"] = 0, ["wo.sidescrolloff"] = 0, ["wo.conceallevel"] = 0, ["bo.modeline"] = false}, case_sensitive = nil, max_highlighted_traversal_targets = 10, substitute_chars = {}, highlight_unlabeled_phase_one_targets = false}, current_call = {}}
-local function _1_(self, key_2a)
-  local key
-  if (key_2a == "special_keys") then
-    key = "keys"
-  else
-    local _ = key_2a
-    key = key_2a
-  end
-  return self[key]
-end
-setmetatable(M.default, {__index = _1_})
-local function _3_(self, key_2a)
-  local key
-  if (key_2a == "special_keys") then
-    key = "keys"
-  else
-    local _ = key_2a
-    key = key_2a
-  end
-  local _5_ = self.current_call[key]
-  if (_5_ == nil) then
-    return rawget(self.default, key)
-  elseif (nil ~= _5_) then
-    local val = _5_
-    local and_6_ = (type(val) == "table") and not vim.isarray(val)
-    if and_6_ then
-      local _8_
-      do
-        local t_7_ = getmetatable(val)
-        if (nil ~= t_7_) then
-          t_7_ = t_7_.merge
-        else
-        end
-        _8_ = t_7_
+-- `default` might be accessed directly (see `init.lua`), need to handle
+-- the deprecated name here too.
+setmetatable(M.default, {
+   __index = function(self, key_)
+      return self[key_ == 'special_keys' and 'keys' or key_]
+   end,
+})
+
+setmetatable(M, {
+   __index = function(self, key_)
+      -- Handle deprecated name.
+      local key = key_ == 'special_keys' and 'keys' or key_
+
+      -- Try to look up everything in the `current_call` table first,
+      -- so that we can override settings on a per-call basis.
+      local cc = self.current_call[key]
+      if cc == nil then  -- `false` should be returned too
+         return rawget(self.default, key)
+      else
+         local first_access_to_dict =
+            type(cc) == 'table'
+            and not vim.isarray(cc)
+            and (getmetatable(cc) and getmetatable(cc).merge or nil) ~= false
+         if first_access_to_dict then
+            -- On the first access, we automatically merge map-like
+            -- subtables with their defaults. This way users can set the
+            -- relevant values only, without having to deepcopy the
+            -- whole default subtable, and then modify it.
+            for k, v in pairs(self.default[key]) do
+               if cc[k] == nil then cc[k] = v end
+            end
+            -- Using a metatable field as a convenient flag to skip
+            -- merging on subsequent access. It can also be used by
+            -- users to prevent merging in the first place.
+            return setmetatable(cc, { merge = false })
+         else
+            return cc
+         end
       end
-      and_6_ = (_8_ ~= false)
-    end
-    if and_6_ then
-      for k, v in pairs(self.default[key]) do
-        if (val[k] == nil) then
-          val[k] = v
-        else
-        end
-      end
-      return setmetatable(val, {merge = false})
-    else
-      return val
-    end
-  else
-    return nil
-  end
-end
-return setmetatable(M, {__index = _3_})
+   end,
+})
+
+return M
