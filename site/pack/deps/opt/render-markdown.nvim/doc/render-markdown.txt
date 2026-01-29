@@ -1,4 +1,4 @@
-*render-markdown.txt*       For NVIM v0.11.5      Last change: 2026 January 16
+*render-markdown.txt*       For NVIM v0.11.6      Last change: 2026 January 28
 
 ==============================================================================
 Table of Contents                          *render-markdown-table-of-contents*
@@ -516,8 +516,9 @@ Default Configuration ~
             -- Turn on / off language heading related rendering.
             language = true,
             -- Determines where language icon is rendered.
-            -- | right | right side of code block |
-            -- | left  | left side of code block  |
+            -- | center | center of code block |
+            -- | right  | right of code block  |
+            -- | left   | left of code block   |
             position = 'left',
             -- Whether to include the language icon above code blocks.
             language_icon = true,
@@ -868,6 +869,8 @@ Default Configuration ~
             highlight_title = 'RenderMarkdownLinkTitle',
             -- Applies to WikiLink elements.
             wiki = {
+                -- Turn on / off WikiLink rendering.
+                enabled = true,
                 icon = '󱗖 ',
                 body = function()
                     return nil
@@ -1196,8 +1199,9 @@ Code Block Configuration ~
             -- Turn on / off language heading related rendering.
             language = true,
             -- Determines where language icon is rendered.
-            -- | right | right side of code block |
-            -- | left  | left side of code block  |
+            -- | center | center of code block |
+            -- | right  | right of code block  |
+            -- | left   | left of code block   |
             position = 'left',
             -- Whether to include the language icon above code blocks.
             language_icon = true,
@@ -1625,6 +1629,8 @@ Link Configuration ~
             highlight_title = 'RenderMarkdownLinkTitle',
             -- Applies to WikiLink elements.
             wiki = {
+                -- Turn on / off WikiLink rendering.
+                enabled = true,
                 icon = '󱗖 ',
                 body = function()
                     return nil

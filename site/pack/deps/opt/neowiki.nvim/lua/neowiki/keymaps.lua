@@ -133,6 +133,7 @@ M.create_buffer_keymaps = function(buffer_number)
   }
 
   -- If we are in a floating window, override split actions to show a notification.
+  local close_lhs = config.keymaps.close_float
   if util.is_float() then
     local function notify_disabled()
       vim.notify(
@@ -149,13 +150,16 @@ M.create_buffer_keymaps = function(buffer_number)
     logical_actions.action_link_vsplit = disabled_action
     logical_actions.action_link_split = disabled_action
 
-    local close_lhs = config.keymaps.close_float
     if close_lhs and close_lhs ~= "" then
       vim.keymap.set("n", close_lhs, "<cmd>close<CR>", {
         buffer = buffer_number,
         desc = "neowiki: Close floating window",
         silent = true,
       })
+    end
+  else
+    if close_lhs and close_lhs ~= "" then
+      pcall(vim.keymap.del, "n", close_lhs, { buffer = buffer_number })
     end
   end
 

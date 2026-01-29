@@ -135,7 +135,15 @@ function M.create(session_config, filetype, on_ready)
       modified_info.bufnr,
       original_win,
       modified_win,
-      {} -- Empty diff result - will be updated on first file selection
+      {}, -- Empty diff result - will be updated on first file selection
+      function()
+        local ob, mb = lifecycle.get_buffers(tabpage)
+        if not ob or not mb then
+          return
+        end
+        local is_explorer = lifecycle.get_mode(tabpage) == "explorer"
+        setup_all_keymaps(tabpage, ob, mb, is_explorer)
+      end
     )
   else
     -- Normal mode: Full rendering
@@ -196,7 +204,16 @@ function M.create(session_config, filetype, on_ready)
                 modified_info.bufnr,
                 original_win,
                 modified_win,
-                conflict_diffs.base_to_modified_diff
+                conflict_diffs.base_to_modified_diff,
+                function()
+                  local ob, mb = lifecycle.get_buffers(tabpage)
+                  if not ob or not mb then
+                    return
+                  end
+                  setup_all_keymaps(tabpage, ob, mb, false)
+                  local conflict = require("codediff.ui.conflict")
+                  conflict.setup_keymaps(tabpage)
+                end
               )
 
               -- Setup auto-refresh for consistency (both buffers are virtual in conflict mode)
@@ -246,7 +263,15 @@ function M.create(session_config, filetype, on_ready)
             modified_info.bufnr,
             original_win,
             modified_win,
-            lines_diff
+            lines_diff,
+            function()
+              local ob, mb = lifecycle.get_buffers(tabpage)
+              if not ob or not mb then
+                return
+              end
+              local is_explorer = lifecycle.get_mode(tabpage) == "explorer"
+              setup_all_keymaps(tabpage, ob, mb, is_explorer)
+            end
           )
 
           -- Enable auto-refresh for real file buffers only
@@ -424,6 +449,9 @@ function M.create(session_config, filetype, on_ready)
       vim.api.nvim_win_set_width(original_win, diff_width)
       vim.api.nvim_win_set_width(modified_win, diff_width)
     end
+
+    -- Setup keymaps for history mode (needs to be after session is created with mode="history")
+    setup_all_keymaps(tabpage, original_info.bufnr, modified_info.bufnr, false)
   end
 
   return {

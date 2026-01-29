@@ -631,6 +631,9 @@ local function leap(kwargs)
       -- clean up after themselves on that event (next time, that is).
       if callback then callback() end
       vim.cmd.redraw()
+      -- Should be after `redraw()`, to avoid a flickering effect
+      -- when jumping directly onto a label.
+      pcall(api.nvim__redraw, { cursor = true })  -- EXPERIMENTAL API
    end
 
    local function can_traverse(targets)

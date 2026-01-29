@@ -118,7 +118,6 @@ local function jump_to(pos, kwargs)
 
    -- Refresh view.
    if not is_op_mode then
-      pcall(api.nvim__redraw, { cursor = true })  -- EXPERIMENTAL
       force_matchparen_refresh()
    end
 end

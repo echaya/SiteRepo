@@ -10,6 +10,10 @@ local config = require("codediff.config")
 function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explorer_mode)
   local keymaps = config.options.keymaps.view
 
+  -- Check if this is history mode
+  local session = lifecycle.get_session(tabpage)
+  local is_history_mode = session and session.mode == "history"
+
   -- Helper: Navigate to next hunk
   local function navigate_next_hunk()
     local session = lifecycle.get_session(tabpage)
@@ -23,6 +27,24 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
 
     local current_buf = vim.api.nvim_get_current_buf()
     local is_original = current_buf == original_bufnr
+    local is_modified = current_buf == modified_bufnr
+    local is_result = session.result_bufnr and current_buf == session.result_bufnr
+
+    -- If cursor is in result buffer (conflict mode), use modified side line numbers
+    -- but stay in current window
+    if is_result then
+      is_original = false
+    -- If cursor is not in any diff buffer (e.g., in explorer/history), switch to modified window
+    elseif not is_original and not is_modified then
+      is_original = false -- Use modified side for line numbers
+      local target_win = session.modified_win
+      if target_win and vim.api.nvim_win_is_valid(target_win) then
+        vim.api.nvim_set_current_win(target_win)
+      else
+        return
+      end
+    end
+
     local cursor = vim.api.nvim_win_get_cursor(0)
     local current_line = cursor[1]
 
@@ -56,6 +78,24 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
 
     local current_buf = vim.api.nvim_get_current_buf()
     local is_original = current_buf == original_bufnr
+    local is_modified = current_buf == modified_bufnr
+    local is_result = session.result_bufnr and current_buf == session.result_bufnr
+
+    -- If cursor is in result buffer (conflict mode), use modified side line numbers
+    -- but stay in current window
+    if is_result then
+      is_original = false
+    -- If cursor is not in any diff buffer (e.g., in explorer/history), switch to modified window
+    elseif not is_original and not is_modified then
+      is_original = false -- Use modified side for line numbers
+      local target_win = session.modified_win
+      if target_win and vim.api.nvim_win_is_valid(target_win) then
+        vim.api.nvim_set_current_win(target_win)
+      else
+        return
+      end
+    end
+
     local cursor = vim.api.nvim_win_get_cursor(0)
     local current_line = cursor[1]
 
@@ -77,26 +117,44 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     vim.api.nvim_echo({ { string.format("Hunk %d of %d", #diff_result.changes, #diff_result.changes), "None" } }, false, {})
   end
 
-  -- Helper: Navigate to next file (explorer mode only)
+  -- Helper: Navigate to next file (works in both explorer and history mode)
+  -- In single-file history mode, navigates commits instead
   local function navigate_next_file()
-    local explorer_obj = lifecycle.get_explorer(tabpage)
-    if not explorer_obj then
-      vim.notify("No explorer found for this tab", vim.log.levels.WARN)
+    local panel_obj = lifecycle.get_explorer(tabpage)
+    if not panel_obj then
       return
     end
-    local explorer = require("codediff.ui.explorer")
-    explorer.navigate_next(explorer_obj)
+    if is_history_mode then
+      local history = require("codediff.ui.history")
+      if panel_obj.is_single_file_mode then
+        history.navigate_next_commit(panel_obj)
+      else
+        history.navigate_next(panel_obj)
+      end
+    else
+      local explorer = require("codediff.ui.explorer")
+      explorer.navigate_next(panel_obj)
+    end
   end
 
-  -- Helper: Navigate to previous file (explorer mode only)
+  -- Helper: Navigate to previous file (works in both explorer and history mode)
+  -- In single-file history mode, navigates commits instead
   local function navigate_prev_file()
-    local explorer_obj = lifecycle.get_explorer(tabpage)
-    if not explorer_obj then
-      vim.notify("No explorer found for this tab", vim.log.levels.WARN)
+    local panel_obj = lifecycle.get_explorer(tabpage)
+    if not panel_obj then
       return
     end
-    local explorer = require("codediff.ui.explorer")
-    explorer.navigate_prev(explorer_obj)
+    if is_history_mode then
+      local history = require("codediff.ui.history")
+      if panel_obj.is_single_file_mode then
+        history.navigate_prev_commit(panel_obj)
+      else
+        history.navigate_prev(panel_obj)
+      end
+    else
+      local explorer = require("codediff.ui.explorer")
+      explorer.navigate_prev(panel_obj)
+    end
   end
 
   -- Helper: Quit diff view
@@ -287,6 +345,78 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     -- Case 3: Other buffers (history, etc.) - do nothing silently
   end
 
+  -- Helper: Open the current real buffer in the previous tab (or create one before)
+  local function open_in_prev_tab()
+    local session = lifecycle.get_session(tabpage)
+    if not session then
+      return
+    end
+
+    local current_buf = vim.api.nvim_get_current_buf()
+    local side = nil
+    if current_buf == original_bufnr then
+      side = "original"
+    elseif current_buf == modified_bufnr then
+      side = "modified"
+    end
+
+    -- Only operate on diff buffers; ignore explorer/history/result silently
+    if not side then
+      return
+    end
+
+    local is_virtual = (side == "original" and lifecycle.is_original_virtual(tabpage)) or (side == "modified" and lifecycle.is_modified_virtual(tabpage))
+    if is_virtual then
+      vim.notify("Current buffer is virtual; nothing to open in a tab", vim.log.levels.WARN)
+      return
+    end
+
+    local buf_name = vim.api.nvim_buf_get_name(current_buf)
+    if buf_name == "" then
+      vim.notify("Buffer has no name; cannot open in previous tab", vim.log.levels.WARN)
+      return
+    end
+
+    local cursor = vim.api.nvim_win_get_cursor(0)
+    local current_tab = vim.api.nvim_get_current_tabpage()
+    local tabs = vim.api.nvim_list_tabpages()
+
+    local current_index = nil
+    for i, tab in ipairs(tabs) do
+      if tab == current_tab then
+        current_index = i
+        break
+      end
+    end
+
+    local target_tab
+    if current_index and current_index > 1 then
+      target_tab = tabs[current_index - 1]
+    else
+      vim.cmd("tabnew")
+      target_tab = vim.api.nvim_get_current_tabpage()
+      vim.cmd("tabmove 0")
+    end
+
+    if vim.api.nvim_get_current_tabpage() ~= target_tab then
+      vim.api.nvim_set_current_tabpage(target_tab)
+    end
+
+    local target_win = vim.api.nvim_get_current_win()
+    if not vim.api.nvim_win_is_valid(target_win) then
+      vim.notify("No valid window in target tab to open buffer", vim.log.levels.ERROR)
+      return
+    end
+
+    local ok, err = pcall(vim.api.nvim_win_set_buf, target_win, current_buf)
+    if not ok then
+      vim.notify("Failed to open buffer in previous tab: " .. err, vim.log.levels.ERROR)
+      return
+    end
+
+    pcall(vim.api.nvim_win_set_cursor, target_win, cursor)
+  end
+
   -- ========================================================================
   -- Bind all keymaps using unified API (one place for all keymaps!)
   -- ========================================================================
@@ -309,22 +439,15 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     lifecycle.set_tab_keymap(tabpage, "n", keymaps.toggle_explorer, toggle_explorer, { desc = "Toggle explorer visibility" })
   end
 
-  -- File navigation (]f, [f) - only in explorer mode
-  if is_explorer_mode then
-    if keymaps.next_file then
-      lifecycle.set_tab_keymap(tabpage, "n", keymaps.next_file, navigate_next_file, { desc = "Next file in explorer" })
-    end
-    if keymaps.prev_file then
-      lifecycle.set_tab_keymap(tabpage, "n", keymaps.prev_file, navigate_prev_file, { desc = "Previous file in explorer" })
-    end
-  end
-
   -- Diff get/put (do, dp) - like vimdiff
   if keymaps.diff_get then
     lifecycle.set_tab_keymap(tabpage, "n", keymaps.diff_get, diff_get, { desc = "Get change from other buffer" })
   end
   if keymaps.diff_put then
     lifecycle.set_tab_keymap(tabpage, "n", keymaps.diff_put, diff_put, { desc = "Put change to other buffer" })
+  end
+  if keymaps.open_in_prev_tab then
+    lifecycle.set_tab_keymap(tabpage, "n", keymaps.open_in_prev_tab, open_in_prev_tab, { desc = "Open buffer in previous tab" })
   end
 
   -- Toggle stage/unstage (- key) - only in explorer mode
@@ -337,15 +460,22 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     if not toggle_stage_key and explorer_keymaps.toggle_stage then
       toggle_stage_key = explorer_keymaps.toggle_stage
       vim.schedule(function()
-        vim.notify(
-          "[codediff] keymaps.explorer.toggle_stage is deprecated. Please use keymaps.view.toggle_stage instead.",
-          vim.log.levels.WARN
-        )
+        vim.notify("[codediff] keymaps.explorer.toggle_stage is deprecated. Please use keymaps.view.toggle_stage instead.", vim.log.levels.WARN)
       end)
     end
 
     if toggle_stage_key then
       lifecycle.set_tab_keymap(tabpage, "n", toggle_stage_key, toggle_stage, { desc = "Toggle stage/unstage" })
+    end
+  end
+
+  -- File navigation (]f, [f) - works in both explorer and history mode
+  if is_explorer_mode or is_history_mode then
+    if keymaps.next_file then
+      lifecycle.set_tab_keymap(tabpage, "n", keymaps.next_file, navigate_next_file, { desc = "Next file" })
+    end
+    if keymaps.prev_file then
+      lifecycle.set_tab_keymap(tabpage, "n", keymaps.prev_file, navigate_prev_file, { desc = "Previous file" })
     end
   end
 end

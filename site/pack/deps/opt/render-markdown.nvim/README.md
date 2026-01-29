@@ -450,8 +450,9 @@ require('render-markdown').setup({
         -- Turn on / off language heading related rendering.
         language = true,
         -- Determines where language icon is rendered.
-        -- | right | right side of code block |
-        -- | left  | left side of code block  |
+        -- | center | center of code block |
+        -- | right  | right of code block  |
+        -- | left   | left of code block   |
         position = 'left',
         -- Whether to include the language icon above code blocks.
         language_icon = true,
@@ -802,6 +803,8 @@ require('render-markdown').setup({
         highlight_title = 'RenderMarkdownLinkTitle',
         -- Applies to WikiLink elements.
         wiki = {
+            -- Turn on / off WikiLink rendering.
+            enabled = true,
             icon = '󱗖 ',
             body = function()
                 return nil
@@ -1136,8 +1139,9 @@ require('render-markdown').setup({
         -- Turn on / off language heading related rendering.
         language = true,
         -- Determines where language icon is rendered.
-        -- | right | right side of code block |
-        -- | left  | left side of code block  |
+        -- | center | center of code block |
+        -- | right  | right of code block  |
+        -- | left   | left of code block   |
         position = 'left',
         -- Whether to include the language icon above code blocks.
         language_icon = true,
@@ -1579,6 +1583,8 @@ require('render-markdown').setup({
         highlight_title = 'RenderMarkdownLinkTitle',
         -- Applies to WikiLink elements.
         wiki = {
+            -- Turn on / off WikiLink rendering.
+            enabled = true,
             icon = '󱗖 ',
             body = function()
                 return nil

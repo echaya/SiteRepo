@@ -417,6 +417,7 @@ M.code = {}
 M.code.position = {
     left = 'left',
     right = 'right',
+    center = 'center',
 }
 
 ---@enum render.md.code.Width
@@ -454,8 +455,9 @@ M.code.default = {
     -- Turn on / off language heading related rendering.
     language = true,
     -- Determines where language icon is rendered.
-    -- | right | right side of code block |
-    -- | left  | left side of code block  |
+    -- | center | center of code block |
+    -- | right  | right of code block  |
+    -- | left   | left of code block   |
     position = 'left',
     -- Whether to include the language icon above code blocks.
     language_icon = true,
@@ -1242,6 +1244,7 @@ M.link = {}
 ---@field suffix string
 
 ---@class (exact) render.md.link.wiki.Config
+---@field enabled boolean
 ---@field icon string
 ---@field body fun(ctx: render.md.link.Context): render.md.mark.Text|string?
 ---@field highlight string
@@ -1291,6 +1294,8 @@ M.link.default = {
     highlight_title = 'RenderMarkdownLinkTitle',
     -- Applies to WikiLink elements.
     wiki = {
+        -- Turn on / off WikiLink rendering.
+        enabled = true,
         icon = '󱗖 ',
         body = function()
             return nil
@@ -1360,6 +1365,7 @@ function M.link.schema()
         highlight_title = { type = 'string' },
         wiki = {
             record = {
+                enabled = { type = 'boolean' },
                 icon = { type = 'string' },
                 body = { type = 'function' },
                 highlight = { type = 'string' },

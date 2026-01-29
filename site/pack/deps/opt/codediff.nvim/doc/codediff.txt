@@ -123,6 +123,7 @@ Setup entry point:
         prev_file = "[f",
         diff_get = "do",
         diff_put = "dp",
+        open_in_prev_tab = "gf",
         toggle_stage = "-",
       },
       explorer = {
@@ -133,6 +134,10 @@ Setup entry point:
         stage_all = "S",
         unstage_all = "U",
         restore = "X",
+      },
+      history = {
+        select = "<CR>",
+        toggle_view_mode = "i",
       },
       conflict = {
         accept_incoming = "<leader>ct",
