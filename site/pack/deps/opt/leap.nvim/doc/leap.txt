@@ -26,13 +26,13 @@ very quickly, with near-zero mental overhead.
 USAGE                                                               *leap-usage*
 
 • Initiate the search in a given scope (|leap-mappings|), and start typing a
-  2-character pattern ({char1}{char2}). To target the last character on a
-  line, type `{char}<space>`. To target an empty line, type `<space><space>`.
-  |leap-till-eol| |leap-to-eol|
+  2-character pattern ({char1}{char2}). Type {char}<space> for the last
+  character on a line, and <space><space> for empty lines. |leap-till-eol|
+  |leap-to-eol|
 
-• After typing {char1}, you see "labels" appearing next to some pairs. This is
-  just a preview - labels only get active after finishing the pattern.
-  *leap-preview*
+• After typing {char1}, you can instantly see "labels" appearing next to some
+  pairs. They are not active yet, but this preview allows your mind to process
+  them in the background. *leap-preview*
 
 • Type {char2}, which filters the matches. When the closest pair is unlabeled,
   you automatically jump there. In case that was your target, you can safely
@@ -61,10 +61,10 @@ Leap provides some predefined <Plug> keys, aliasing calls to |leap.leap()|:
     *<Plug>(leap-from-window)*    |  Other windows   |          |
     *<Plug>(leap-anywhere)*       |  All windows     |          |
 
-   See also: |leap-target-ordering|.
+    See also: |leap-target-ordering|.
 
-To create custom motions, simply call `leap()` with your preferred arguments
-instead. E.g., `<Plug>(leap-backward)` is a synonym for: >lua
+To create custom motions, simply call `leap()` with your preferred arguments.
+E.g., `<Plug>(leap-backward)` is just a synonym for: >lua
     function () require('leap').leap { backward = true } end
 
 Suggested arrangements ~

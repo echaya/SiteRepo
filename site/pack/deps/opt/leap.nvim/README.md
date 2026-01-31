@@ -14,33 +14,33 @@ very quickly, with near-zero mental overhead.
 ### How to use it (TL;DR)
 
 * Initiate the search in a given scope, and start typing a 2-character pattern
-  (`{char1}{char2}`). To target the last character on a line, type
-  `{char}<space>`. To target an empty line, type `<space><space>`.
+  (`{char1}{char2}`). Type `{char}<space>` for the last character on a line,
+  and `<space><space>` for empty lines.
 
-* After typing `{char1}`, you see "labels" appearing next to some pairs. **This
-  is just a preview** - labels only get active after finishing the pattern.
+* After typing `{char1}`, you can instantly see **labels** appearing next to
+  some pairs. They are not active yet, but **this preview allows your mind to
+  process them in the background**.
 
-* Type `{char2}`, which filters the matches. When the closest pair is
-  unlabeled, you **automatically jump there**. In case that was your target,
-  you can safely ignore the remaining labels - those will not conflict with any
+* Type `{char2}`, which filters the matches. **When the closest pair is
+  unlabeled, you automatically jump there**. In case that was your target, you
+  can safely ignore the remaining labels - those will not conflict with any
   sensible command, and will disappear on the next keypress.
 
 * Else: type the label character to jump to the given position. If there are
   more matches than available labels, you can move between groups with
   `<space>` and `<backspace>`.
 
-At any stage, `<enter>` jumps to the next/closest available target: pressing
-`<enter>` right away repeats the previous search; `{char}<enter>` accepts the
-closest `{char}` match (can be used as a multiline substitute for `fFtT`
-motions).
+At any stage, `<enter>` is a shortcut, jumping to the next/closest available
+target: pressing `<enter>` right away repeats the previous search;
+`{char}<enter>` accepts the closest `{char}` match.
 
-### Why is this method cool?
+### Why this method?
 
 It is ridiculously fast: not counting the trigger key, leaping to literally
 anywhere on the screen rarely takes more than 3 keystrokes in total, that can
 be typed in one go. Often 2 is enough.
 
-At the same time, it reduces mental effort by all possible means:
+At the same time, it reduces (even unconscious) mental effort by various means:
 
 * _You don't have to weigh alternatives_: a single universal motion type can be
   used in all non-trivial situations.
@@ -51,11 +51,10 @@ At the same time, it reduces mental effort by all possible means:
 * _You don't have to be aware of the context_: the eyes can keep focusing on
   the target the whole time.
 
-* _You don't have to pause in the middle_: if typing at a moderate speed, at
-  each step you already know what the immediate next keypress should be, and
-  your mind can process the rest in the background.
+* _You don't have to pause in the middle_: if typing at a moderate speed, your
+  mind can prepare for the next steps ahead of time.
 
-## 🔩 Getting started
+## Getting started
 
 ### Requirements
 
@@ -154,9 +153,10 @@ Using the `keys` feature of lazy.nvim might even cause
 
 </details>
 
-Help files are not exactly page-turners, but I suggest at least skimming
-[`:help leap`](doc/leap.txt), even if you don't have a specific question yet,
-as it contains lots of additional information and details.
+Help files are not exactly page-turners, but [`:help leap`](doc/leap.txt) is
+written with considerable care, and I suggest at least skimming it, even if you
+don't have a specific question yet, as it contains lots of additional
+information and details.
 
 ### Experimental modules
 
@@ -295,7 +295,7 @@ example, search for a markdown header, then move to the concrete target
 
 </details>
 
-## 🔍 Design considerations in detail
+## Design considerations in detail
 
 ### The ideal
 
@@ -318,15 +318,13 @@ That is, **you do not want to think about**
 
 * **the steps**: the motion should be atomic (↔ Vim motion combos), and ideally
   you should be able to type the whole input sequence in one go, on more or
-  less autopilot (↔ any kind of just-in-time labeling method; note that the
+  less autopilot (↔ any kind of just-in-time labeling method, including the
   "search command on steroids" approach by
   [Pounce](https://github.com/rlane/pounce.nvim) and
-  [Flash](https://github.com/folke/flash.nvim), where you can type as many
-  characters as you want, and the labels appear at an unknown time by design,
-  makes this last goal impossible)
+  [Flash](https://github.com/folke/flash.nvim))
 
-All the while using **as few keystrokes as possible**, and getting distracted by
-**as little incidental visual noise as possible**.
+All the while using as few keystrokes as possible, and getting distracted by as
+little incidental visual noise as possible.
 
 ### How do we measure up?
 
@@ -361,7 +359,7 @@ unique in that it
 
 * feels natural to use for both distant _and_ close targets
 
-## ❔ FAQ
+## FAQ
 
 ### Search and motions
 
@@ -477,6 +475,28 @@ end
 
 </details>
 
+<details>
+<summary>Arbitrary remote actions instead of jumping</summary>
+
+Basic template:
+
+```lua
+local function remote_action ()
+  require('leap').leap {
+    windows = require('leap.user').get_focusable_windows(),
+    action = function (target)
+      local winid = target.wininfo.winid
+      local lnum, col = unpack(target.pos)  -- 1/1-based indexing!
+      -- ... do something at the given position ...
+    end,
+  }
+end
+```
+
+See [Extending Leap](#extending-leap) for more.
+
+</details>
+
 ### Labels and highlighting
 
 <details>
@@ -555,28 +575,6 @@ vim.api.nvim_create_autocmd('ColorScheme', {
 ### Miscellaneous
 
 <details>
-<summary>Arbitrary remote actions instead of jumping</summary>
-
-Basic template:
-
-```lua
-local function remote_action ()
-  require('leap').leap {
-    windows = require('leap.user').get_focusable_windows(),
-    action = function (target)
-      local winid = target.wininfo.winid
-      local lnum, col = unpack(target.pos)  -- 1/1-based indexing!
-      -- ... do something at the given position ...
-    end,
-  }
-end
-```
-
-See [Extending Leap](#extending-leap) for more.
-
-</details>
-
-<details>
 <summary>Was the name inspired by Jef Raskin's Leap?</summary>
 
 To paraphrase Steve Jobs about their logo and Turing's poison apple, I wish it
@@ -587,7 +585,7 @@ the modal paradigm is a fundamental difference in Vim's approach.
 
 </details>
 
-## 🔧 Extending Leap
+## Extending Leap
 
 There are lots of ways you can extend the plugin and bend it to your will - see
 `:h leap.leap()` and `:h leap-events`. Besides tweaking the basic parameters of

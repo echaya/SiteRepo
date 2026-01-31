@@ -183,7 +183,7 @@ local function rank(targets, cursor_positions, src_win)
       local pos = target.pos
       local curpos = cursor_positions[win]
 
-      local distance = euclidean_distance(pos, curpos)
+      local distance = curpos and euclidean_distance(pos, curpos) or 99999 -- #287
       local curr_win_bonus = (win == src_win) and 30
       local curr_line_bonus = curr_win_bonus and (pos[1] == curpos[1]) and 999
       local curr_line_fwd_bonus = curr_line_bonus and (pos[2] > curpos[2]) and 999

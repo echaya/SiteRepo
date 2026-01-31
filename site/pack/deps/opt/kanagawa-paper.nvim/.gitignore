@@ -1,8 +1,0 @@
-images/
-/doc/tags
-.lua
-.tests
-/extras/**
-!/extras/README.md
-tests/languages/
-.DS_Store
