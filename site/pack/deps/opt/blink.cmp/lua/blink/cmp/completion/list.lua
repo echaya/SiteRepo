@@ -47,6 +47,7 @@
 
 --- @class blink.cmp.CompletionListSelectAndAcceptOpts
 --- @field callback? fun() Called after the item is accepted
+--- @field force? boolean Force accept without visual feedback (no menu, no ghost text visible)
 
 --- @class blink.cmp.CompletionListAcceptOpts : blink.cmp.CompletionListSelectAndAcceptOpts
 --- @field index? number The index of the item to accept, if not provided, the currently selected item will be accepted
@@ -176,7 +177,9 @@ function list.get_item_idx_in_list(item)
 end
 
 function list.select(idx, opts)
+  if idx ~= nil and idx < 0 then idx = math.max(#list.items + idx + 1, 1) end
   opts = opts or {}
+
   local item = list.items[idx]
 
   local auto_insert = opts.auto_insert

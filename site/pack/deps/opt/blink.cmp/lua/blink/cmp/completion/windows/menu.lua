@@ -148,14 +148,8 @@ function menu.queue_auto_show(context, items)
   -- getting completions can take a while, so we factor in how long it's been since the context was created
   local delay_ms = math.max(0, menu.auto_show.delay_ms(context, items) - (vim.uv.now() - context.timestamp))
 
-  -- no delay, show immediately
-  if delay_ms == 0 then
-    menu.open()
-    menu.update_position()
-    return
-  end
-
-  -- only start a new timer if the cursor has moved or the id has changed
+  -- only start a new timer if the cursor has moved or the id has changed.
+  -- note we should use timer, even for 0ms, to prevent synchronous geometry races
   local timer_key = string.format('%d|%d|%d', context.id, context.cursor[1], context.cursor[2])
   if menu.auto_show.timer:is_active() and menu.auto_show.timer_key == timer_key then return end
 

@@ -26,23 +26,22 @@ very quickly, with near-zero mental overhead.
 USAGE                                                               *leap-usage*
 
 • Initiate the search in a given scope (|leap-mappings|), and start typing a
-  2-character pattern ({char1}{char2}). Type {char}<space> for the last
-  character on a line, and <space><space> for empty lines. |leap-till-eol|
+  2-character pattern ({char1}{char2}). For the last character on a line, type
+  {char}<space>; for empty lines, type <space><space>. |leap-till-eol|
   |leap-to-eol|
 
-• After typing {char1}, you can instantly see "labels" appearing next to some
-  pairs. They are not active yet, but this preview allows your mind to process
-  them in the background. *leap-preview*
+• After typing {char1}, you can see "labels" appearing next to some pairs.
+  They are not active yet, but this preview allows you to process them in the
+  background. *leap-preview*
 
-• Type {char2}, which filters the matches. When the closest pair is unlabeled,
-  you automatically jump there. In case that was your target, you can safely
-  ignore the remaining labels - those will not conflict with any sensible
-  command, and will disappear on the next keypress. |leap.opts.safe_labels|
-  *leap-autojump*
+• Typing {char2} filters the matches. When the closest one is unlabeled, you
+  automatically jump there. If that was your target, you can safely ignore the
+  remaining labels - those will not conflict with any sensible command, and
+  will disappear on the next keypress. |leap.opts.safe_labels| *leap-autojump*
 
-• Else: type the label character to jump to the given position. If there are
-  more matches than available labels, you can move between groups with <space>
-  and <backspace>. |leap.opts.keys|
+• Else: type the label character to jump. If there are more matches than
+  available labels, use <space> and <backspace> to move between groups.
+  |leap.opts.keys|
 
 See |leap-features| for lots of additional details.
 
@@ -63,9 +62,10 @@ Leap provides some predefined <Plug> keys, aliasing calls to |leap.leap()|:
 
     See also: |leap-target-ordering|.
 
-To create custom motions, simply call `leap()` with your preferred arguments.
-E.g., `<Plug>(leap-backward)` is just a synonym for: >lua
-    function () require('leap').leap { backward = true } end
+For custom motions, call `leap()` with your preferred arguments instead: >lua
+    vim.keymap.set({'x', 'o'}, 's', function ()
+      require('leap').leap { offset = 1, inclusive = true }
+    end)
 
 Suggested arrangements ~
 
@@ -95,24 +95,19 @@ problems).
 ==============================================================================
 FEATURES                                                         *leap-features*
 
+Input methods and modifiers ~
+
 Directional motions (like |<Plug>(leap-forward)|) can be preceded with
 |[count]|, skipping labeling, and jumping directly to the n-th match. Also
 works with |leap-shortcut| (`2s{char}<enter>`).
 
 |forced-motion|s work, including |o_v| as inclusive/exclusive toggle.
+|V| and |o_V| will make the search skip the current line.
 
 If a |language-mapping| ('keymap') is active, Leap waits for keymapped
 sequences as needed and searches for the keymapped result.
 
-The last character on a line can be targeted by pressing <space> after it.
-There is nothing special going on here: <space> is simply an alias for `\n`
-and `\r`, set in |leap.opts.equivalence_classes| by default. *leap-till-eol*
-
-To target actual EOL positions, including empty lines, press a newline alias
-twice (pretend that each newline character is duplicated). *leap-to-eol*
-
-The search can go horizontally offscreen for directional motions (those
-targets can only be reached via |leap-traversal|).
+Search ~
 
 Case sensitivity is determined by 'ignorecase' and 'smartcase'. If you want
 specific settings for Leap motions, you can set these to temporary values in
@@ -127,11 +122,19 @@ repeated invocation will only match `Ab`-s, like a regular search command
 would (|leap-repeat| is not implemented as a step-by-step replay of the
 original invocation's phases). *leap-smartcase*
 
+The last character on a line can be targeted by pressing <space> after it.
+There is nothing special going on here: <space> is simply an alias for `\n`
+and `\r`, set in |leap.opts.equivalence_classes| by default. *leap-till-eol*
+
+To target actual EOL positions, including empty lines, press a newline alias
+twice (pretend that each newline character is duplicated). *leap-to-eol*
+
 A same-character pair (`==`) will match a longer such sequence (`=====`) only
 at the beginning, so that e.g. separator lines will not create unnecessary
 noise and eat up all the labels.
 
-|V| or |o_V| will make the search skip the current line.
+The search can go horizontally offscreen for directional motions (those
+targets can only be reached via |leap-traversal|).
 
                                                           *leap-target-ordering*
 When searching bidirectionally (e.g., |<Plug>(leap)|), matches are sorted by
@@ -139,25 +142,21 @@ Euclidean (beeline) distance from the cursor, but the current line you're on,
 and on that line, forward direction is prioritized. That is, you can be sure
 that the targets right in front of you will be the first ones.
 
+Jump, repeat, traversal ~
                                                            *leap-smart-autojump*
 |leap-autojump| is only triggered if the remaining matches can be covered by a
 set of "safe" target labels (keys never used right after leaping), otherwise
 the cursor stays put, and an extended label set is loaded. To fine-tune or
 disable this behaviour, see |leap.opts.safe_labels| and |leap.opts.labels|.
 
-                                                    *leap-repeat* *leap-traversal*
 At any stage, <enter> (|leap.opts.keys.next_target|) jumps to the next/closest
-available target: pressing <enter> right away repeats the previous search;
-`{char}<enter>` accepts the closest `{char}` match (can be used as a multiline
-substitute for `fFtT` motions). *leap-shortcut*
+available target:
 
-In case of directional search, <enter> can continue traversing through the
-rest of the targets (`s<enter><enter>...`). If you overshoot, <backspace>
-(|leap.opts.keys.prev_target|) steps back.
+• Pressing <enter> right away repeats the previous search. *leap-repeat*
 
-There is a convenience function in the `user` module to set keys to repeat the
-previous search without explicitly invoking Leap (`<enter><enter>...` instead
-of `s<enter><enter>...`): >lua
+  There is a convenience function in the `user` module to set keys to repeat
+  the previous search without explicitly invoking Leap (`<enter><enter>...`
+  instead of `s<enter><enter>...`): >lua
     require('leap.user').set_repeat_keys('<enter>', '<backspace>', {
       -- When true, repeat in the direction of the last motion
       -- (by default, <cr>/<bs> always goes forward/backward).
@@ -165,12 +164,21 @@ of `s<enter><enter>...`): >lua
       modes = {'n', 'x', 'o'},
     })
 <
+• `{char}<enter>` accepts the closest `{char}` match (can be used as a
+  multiline substitute for `fFtT` motions). *leap-shortcut*
+
+In case of directional search, <enter> can continue traversing through the
+rest of the targets (`s<enter><enter>...`, `s{char}<enter><enter>...`, etc.).
+If you overshoot, <backspace> (|leap.opts.keys.prev_target|) steps back.
+*leap-traversal*
+
                                                                *leap-dot-repeat*
 Operations can be repeated with |.|, if vim-repeat
 (https://github.com/tpope/vim-repeat) is installed. Dot-repeat works as you
 would expect, e.g., if you aimed for the 2nd target backwards, `.` will do the
 same (the "beeline" |leap-target-ordering| is ignored).
 
+Handling preview conflicts ~
                                   *leap-concealed-labels* *leap-preview-conflicts*
 Labels in subsequent target groups are concealed with an empty block or a
 middle dot, depending on the color scheme, and have a dimmed color.

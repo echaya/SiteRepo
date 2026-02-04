@@ -27,7 +27,10 @@ function text_edits.apply(text_edit, additional_text_edits)
     local cur_bufnr = vim.api.nvim_get_current_buf()
     local prev_buflisted = vim.bo[cur_bufnr].buflisted
     vim.lsp.util.apply_text_edits(all_edits, cur_bufnr, 'utf-8')
-    -- vim.bo[cur_bufnr].buflisted = prev_buflisted
+
+    -- FIXME: restoring buflisted=false on regular file buffers, e.g. gitcommit,
+    -- causes neovim closing the window. Leave them listed to avoid this issue.
+    -- Non-file buffers can be safely restored.
     if not prev_buflisted and vim.bo[cur_bufnr].buftype ~= '' then vim.bo[cur_bufnr].buflisted = false end
   end
 
@@ -376,7 +379,7 @@ function text_edits.write_to_dot_repeat(text_edit)
         col = 0,
         noautocmd = true,
       })
-      vim.api.nvim_buf_set_text(0, 0, 0, 0, 0, { '_' .. string.rep('a', chars_to_delete) })
+      vim.api.nvim_buf_set_text(buf, 0, 0, 0, 0, { '_' .. string.rep('a', chars_to_delete) })
       vim.api.nvim_win_set_cursor(0, { 1, chars_to_delete + 1 })
 
       -- emulate builtin completion (dot repeat)

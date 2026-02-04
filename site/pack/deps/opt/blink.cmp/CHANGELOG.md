@@ -1,3 +1,40 @@
+## [1.9.0](https://github.com/Saghen/blink.cmp/compare/v1.8.0...v1.9.0) (2025-11-14)
+
+### Features
+
+* add `force` option to accept completions without visual feedback ([3182a89](https://github.com/Saghen/blink/commit/3182a8963a4d7aca4cc1c49ca079c6ebada18474))
+* **cmdline:** match neovim's select behavior for S-Tab ([#2313](https://github.com/Saghen/blink/issues/2313)) ([37ce860](https://github.com/Saghen/blink/commit/37ce860d8eeeee92d60b9a72db21e369d97e6a75))
+* **cmdline:** support v:lua custom completion ([#2350](https://github.com/Saghen/blink/issues/2350)) ([2b4d146](https://github.com/Saghen/blink/commit/2b4d146d0221180c8534c1241ac6dbfa4a2e0412))
+* **keymaps:** implemented more detailed descriptions ([#2282](https://github.com/Saghen/blink/issues/2282)) ([20756cf](https://github.com/Saghen/blink/commit/20756cfa7ec395d7799f4ddcaff5a00f297c9a06))
+* **nix:** change plugin pname to blink.cmp ([57d900e](https://github.com/Saghen/blink/commit/57d900e6982f63c7cde689aa06d8af76c8da083e))
+* support for FreeBSD x86_64 ([#2326](https://github.com/Saghen/blink/issues/2326)) ([18712d9](https://github.com/Saghen/blink/commit/18712d9d292dd362067de74d3b54eb90ce860ba9))
+
+### Bug Fixes
+
+* **cmdline:** escape only unquoted args with spaces ([39ce844](https://github.com/Saghen/blink/commit/39ce844ed96d145c5a96510b0733d14a72481a74)), closes [#2301](https://github.com/Saghen/blink/issues/2301)
+* **cmdline:** handle path-like first arguments in `:!` shellcmd ([74967d4](https://github.com/Saghen/blink/commit/74967d4f9e6bffd4f707493917503e9d9c73e92c)), closes [#2272](https://github.com/Saghen/blink/issues/2272)
+* comments ([#2297](https://github.com/Saghen/blink/issues/2297)) ([3b83374](https://github.com/Saghen/blink/commit/3b83374f982103a9423432e1edbf5c17ef8ca509))
+* documentation draw() function crashing on unmodifiable buffer ([#2319](https://github.com/Saghen/blink/issues/2319)) ([5074242](https://github.com/Saghen/blink/commit/507424257ba992259f2073ac7ec540af506a0899))
+* don't clear last_char on transient mode changes ([#2325](https://github.com/Saghen/blink/issues/2325)) ([b137f63](https://github.com/Saghen/blink/commit/b137f63d89d0285ca76eed12e1923220e0aff8c1)), closes [#2323](https://github.com/Saghen/blink/issues/2323)
+* explicitly target temp buffer in dot-repeat ([820f1dd](https://github.com/Saghen/blink/commit/820f1ddf634ec267412e403711bf74be26cac677)), closes [#2330](https://github.com/Saghen/blink/issues/2330)
+* **ghost_text:** ensure display across settings ([b14922e](https://github.com/Saghen/blink/commit/b14922e5c4b30efe0857256989b72eaf1f14109f))
+* **ghost_text:** handle multibyte chars and improve performance ([#2252](https://github.com/Saghen/blink/issues/2252)) ([73ea297](https://github.com/Saghen/blink/commit/73ea297bc665c936b51797d5a55599536ffee0d8))
+* **ghost_text:** prevent highlight blending ([ceed154](https://github.com/Saghen/blink/commit/ceed1545929b74cf79b5a8950e7c415683bf690b)), closes [#2320](https://github.com/Saghen/blink/issues/2320)
+* **keymap:** add missing return in cmdline preset ([716967c](https://github.com/Saghen/blink/commit/716967ca4a1242f15fb9a4c610098b61a0dec6be))
+* **keymap:** assert description defined before checking if fallback ([e72fc44](https://github.com/Saghen/blink/commit/e72fc4443f2f91e023d0edd168074ba16898e970))
+* **keymap:** infinite recursion on fallback ([f631fce](https://github.com/Saghen/blink/commit/f631fcef4828bf35a1520468971f5420e0b47693)), closes [#2314](https://github.com/Saghen/blink/issues/2314)
+* **menu:** always defer menu display through event loop ([5beb962](https://github.com/Saghen/blink/commit/5beb962fda05ab132617c81d22bc5eb2529b944f)), closes [#1932](https://github.com/Saghen/blink/issues/1932)
+* **nix:** specify linker args for the Darwin build ([#2335](https://github.com/Saghen/blink/issues/2335)) ([1769b62](https://github.com/Saghen/blink/commit/1769b62d5c21803ff655c8deb9314e4a00f6fec5))
+* **plugin:** respect user LSP capabilities in init ([7beba91](https://github.com/Saghen/blink/commit/7beba91fdc61fdc84ea6d6395d614671e609f895)), closes [#2288](https://github.com/Saghen/blink/issues/2288)
+* **provider:** make `enabled` flag respect user config properly ([2e4e54b](https://github.com/Saghen/blink/commit/2e4e54b1283f4cf3673063fc3e10993c20aeec5c)), closes [#2251](https://github.com/Saghen/blink/issues/2251)
+* **provider:** respect `min_keyword_length` over global setting ([#2354](https://github.com/Saghen/blink/issues/2354)) ([e05c91f](https://github.com/Saghen/blink/commit/e05c91f97b7643947e457cf0beef74bc577592bc))
+* **signature:** enable trigger after show signature manually ([#2243](https://github.com/Saghen/blink/issues/2243)) ([7a97c64](https://github.com/Saghen/blink/commit/7a97c642a3ef2566a3b18461d257864ad1dbbb4f))
+* **signature:** Update active parameter to use line and col range ([#2296](https://github.com/Saghen/blink/issues/2296)) ([b6f04e8](https://github.com/Saghen/blink/commit/b6f04e80a0728d81ece2f4adc204141ae84749e0))
+* **terminal:** handle `TermRequest` race condition with pcall ([2b6c8dc](https://github.com/Saghen/blink/commit/2b6c8dc6286b4ddec849a5c1f245614db4d5566a)), closes [#2322](https://github.com/Saghen/blink/issues/2322)
+* **text_edits:** only restore buflisted for non-file buffers ([0cd7c4c](https://github.com/Saghen/blink/commit/0cd7c4cc9b3f47886976ec8ff635d8654aaf6e58)), closes [#2261](https://github.com/Saghen/blink/issues/2261)
+* **usercmd:** subcmd completion and error handling ([#2276](https://github.com/Saghen/blink/issues/2276)) ([f132267](https://github.com/Saghen/blink/commit/f13226770b4947eb7e66befbeb53c3db39f13e25))
+* **window:** make popup windows unmodifiable ([#2254](https://github.com/Saghen/blink/issues/2254)) ([d017b6f](https://github.com/Saghen/blink/commit/d017b6f32669d69918882637931ce7ece5a2b5e8))
+
 ## [1.8.0](https://github.com/Saghen/blink.cmp/compare/v1.7.0...v1.8.0) (2025-11-14)
 
 ### Highlights

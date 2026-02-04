@@ -7,28 +7,23 @@ primarily on [vim-sneak](https://github.com/justinmk/vim-sneak). Using some
 clever ideas, it allows you to jump to any position in the visible editor area
 very quickly, with near-zero mental overhead.
 
-<p align="center">
-  <img src="../media/showcase.gif?raw=true" alt="Leap in action"/>
-</p>
-
 ### How to use it (TL;DR)
 
 * Initiate the search in a given scope, and start typing a 2-character pattern
-  (`{char1}{char2}`). Type `{char}<space>` for the last character on a line,
-  and `<space><space>` for empty lines.
+  (`{char1}{char2}`). For the last character on a line, type `{char}<space>`;
+  for empty lines, type `<space><space>`.
 
-* After typing `{char1}`, you can instantly see **labels** appearing next to
-  some pairs. They are not active yet, but **this preview allows your mind to
-  process them in the background**.
+* After typing `{char1}`, you can see **labels** appearing next to some pairs.
+  **They are not active yet, but this preview allows you to process them in the
+  background**.
 
-* Type `{char2}`, which filters the matches. **When the closest pair is
-  unlabeled, you automatically jump there**. In case that was your target, you
-  can safely ignore the remaining labels - those will not conflict with any
-  sensible command, and will disappear on the next keypress.
+* Typing `{char2}` filters the matches. When the closest one is unlabeled, you
+  automatically jump there. If that was your target, you can safely ignore the
+  remaining labels - those will not conflict with any sensible command, and
+  will disappear on the next keypress.
 
-* Else: type the label character to jump to the given position. If there are
-  more matches than available labels, you can move between groups with
-  `<space>` and `<backspace>`.
+* Else: type the label character to jump. If there are more matches than
+  available labels, use `<space>` and `<backspace>` to move between groups.
 
 At any stage, `<enter>` is a shortcut, jumping to the next/closest available
 target: pressing `<enter>` right away repeats the previous search;
@@ -36,11 +31,10 @@ target: pressing `<enter>` right away repeats the previous search;
 
 ### Why this method?
 
-It is ridiculously fast: not counting the trigger key, leaping to literally
-anywhere on the screen rarely takes more than 3 keystrokes in total, that can
-be typed in one go. Often 2 is enough.
+Not counting the trigger key, leaping to literally anywhere on the screen
+rarely takes more than 3 keystrokes in total. Often 2 is enough.
 
-At the same time, it reduces (even unconscious) mental effort by various means:
+At the same time, it reduces mental effort by all possible means:
 
 * _You don't have to weigh alternatives_: a single universal motion type can be
   used in all non-trivial situations.
@@ -53,6 +47,15 @@ At the same time, it reduces (even unconscious) mental effort by various means:
 
 * _You don't have to pause in the middle_: if typing at a moderate speed, your
   mind can prepare for the next steps ahead of time.
+
+### Showcase
+
+This efficient mode of navigation allows building interesting features on top of it. "Text editing at the speed of thought" has become a bit of an inflated phrase in the Vim world, but cloning an arbitrary syntax tree node from an arbitrary window with eight keystrokes speaks for itself:
+
+<figure>
+    <img src="../media/showcase.gif?raw=true" width="80%" alt="Leap in action" title="Leap in action" />
+    <figcaption>Copying a function from another window with help of Treesitter</figcaption>
+</figure>
 
 ## Getting started
 

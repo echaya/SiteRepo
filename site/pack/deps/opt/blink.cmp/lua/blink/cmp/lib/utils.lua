@@ -52,27 +52,6 @@ function utils.schedule_if_needed(fn)
   end
 end
 
---- Flattens an arbitrarily deep table into a  single level table
---- @param t table
---- @return table
-function utils.flatten(t)
-  if t[1] == nil then return t end
-
-  local flattened = {}
-  for _, v in ipairs(t) do
-    if type(v) == 'table' and vim.tbl_isempty(v) then goto continue end
-
-    if v[1] == nil then
-      table.insert(flattened, v)
-    else
-      vim.list_extend(flattened, utils.flatten(v))
-    end
-
-    ::continue::
-  end
-  return flattened
-end
-
 --- Returns the index of the first occurrence of the value in the array
 --- @generic T
 --- @param arr T[]

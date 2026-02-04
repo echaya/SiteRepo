@@ -54,6 +54,12 @@ There are following change types:
 
 - Allow `source.preview` to directly set another buffer into picker's main window. The recommended way is still to adjust the provided `buf_id` buffer, but there is now a workaround if this is not reasonably possible.
 
+## mini.surround
+
+### Expand
+
+- Create Visual and Operator-pending mode mappings for `find` and `find_left` actions.
+
 ## mini.test
 
 ### Refine

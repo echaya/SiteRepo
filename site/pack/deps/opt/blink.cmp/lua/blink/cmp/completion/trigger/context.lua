@@ -172,7 +172,7 @@ function context.get_term_command()
 
   local extmarks = vim.api.nvim_buf_get_extmarks(
     0,
-    vim.api.nvim_create_namespace('blink-term-command-start'),
+    vim.api.nvim_create_namespace('blink_cmp_term_command_start'),
     { cursor_row - 1, cursor_col - 1 },
     { cursor_row - 1, 0 },
     { limit = 1 }

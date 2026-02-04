@@ -784,6 +784,11 @@ require('render-markdown').setup({
             enabled = true,
             -- Inlined with content.
             icon = '󰯔 ',
+            -- Custom processing for footnote body to show.
+            -- Runs before prefix / suffix are added and superscript processing.
+            body = function(ctx)
+                return ctx.text
+            end,
             -- Replace value with superscript equivalent.
             superscript = true,
             -- Added before link content.
@@ -805,16 +810,20 @@ require('render-markdown').setup({
         wiki = {
             -- Turn on / off WikiLink rendering.
             enabled = true,
+            -- Inlined with content.
             icon = '󱗖 ',
+            -- Custom processing for WikiLink body to show.
             body = function()
                 return nil
             end,
+            -- Applies to the inlined icon.
             highlight = 'RenderMarkdownWikiLink',
+            -- Highlight for item associated with the WikiLink.
             scope_highlight = nil,
         },
         -- Define custom destination patterns so icons can quickly inform you of what a link
-        -- contains. Applies to 'inline_link', 'uri_autolink', and wikilink nodes. When multiple
-        -- patterns match a link the one with the longer pattern is used.
+        -- contains. Applies to 'image', 'inline_link', 'uri_autolink', and WikiLink nodes.
+        -- When multiple patterns match a link the one with the longer pattern is used.
         -- The key is for healthcheck and to allow users to change its values, value type below.
         -- | pattern   | matched against the destination text                            |
         -- | icon      | gets inlined before the link text                               |
@@ -838,8 +847,9 @@ require('render-markdown').setup({
             slack = { pattern = 'slack%.com', icon = '󰒱 ' },
             stackoverflow = { pattern = 'stackoverflow%.com', icon = '󰓌 ' },
             steam = { pattern = 'steampowered%.com', icon = ' ' },
-            twitter = { pattern = 'x%.com', icon = ' ' },
+            twitter = { pattern = 'twitter%.com', icon = ' ' },
             wikipedia = { pattern = 'wikipedia%.org', icon = '󰖬 ' },
+            x = { pattern = 'x%.com', icon = ' ' },
             youtube = { pattern = 'youtube[^.]*%.com', icon = '󰗃 ' },
             youtube_short = { pattern = 'youtu%.be', icon = '󰗃 ' },
         },
@@ -847,6 +857,8 @@ require('render-markdown').setup({
     sign = {
         -- Turn on / off sign rendering.
         enabled = true,
+        -- Priority to assign to sign.
+        priority = nil,
         -- Applies to background of sign text.
         highlight = 'RenderMarkdownSign',
     },
@@ -1564,6 +1576,11 @@ require('render-markdown').setup({
             enabled = true,
             -- Inlined with content.
             icon = '󰯔 ',
+            -- Custom processing for footnote body to show.
+            -- Runs before prefix / suffix are added and superscript processing.
+            body = function(ctx)
+                return ctx.text
+            end,
             -- Replace value with superscript equivalent.
             superscript = true,
             -- Added before link content.
@@ -1585,16 +1602,20 @@ require('render-markdown').setup({
         wiki = {
             -- Turn on / off WikiLink rendering.
             enabled = true,
+            -- Inlined with content.
             icon = '󱗖 ',
+            -- Custom processing for WikiLink body to show.
             body = function()
                 return nil
             end,
+            -- Applies to the inlined icon.
             highlight = 'RenderMarkdownWikiLink',
+            -- Highlight for item associated with the WikiLink.
             scope_highlight = nil,
         },
         -- Define custom destination patterns so icons can quickly inform you of what a link
-        -- contains. Applies to 'inline_link', 'uri_autolink', and wikilink nodes. When multiple
-        -- patterns match a link the one with the longer pattern is used.
+        -- contains. Applies to 'image', 'inline_link', 'uri_autolink', and WikiLink nodes.
+        -- When multiple patterns match a link the one with the longer pattern is used.
         -- The key is for healthcheck and to allow users to change its values, value type below.
         -- | pattern   | matched against the destination text                            |
         -- | icon      | gets inlined before the link text                               |
@@ -1618,8 +1639,9 @@ require('render-markdown').setup({
             slack = { pattern = 'slack%.com', icon = '󰒱 ' },
             stackoverflow = { pattern = 'stackoverflow%.com', icon = '󰓌 ' },
             steam = { pattern = 'steampowered%.com', icon = ' ' },
-            twitter = { pattern = 'x%.com', icon = ' ' },
+            twitter = { pattern = 'twitter%.com', icon = ' ' },
             wikipedia = { pattern = 'wikipedia%.org', icon = '󰖬 ' },
+            x = { pattern = 'x%.com', icon = ' ' },
             youtube = { pattern = 'youtube[^.]*%.com', icon = '󰗃 ' },
             youtube_short = { pattern = 'youtu%.be', icon = '󰗃 ' },
         },
@@ -1642,6 +1664,8 @@ require('render-markdown').setup({
     sign = {
         -- Turn on / off sign rendering.
         enabled = true,
+        -- Priority to assign to sign.
+        priority = nil,
         -- Applies to background of sign text.
         highlight = 'RenderMarkdownSign',
     },
@@ -1724,9 +1748,9 @@ The table below shows all the highlight groups with their default link
 | RenderMarkdownMath            | @markup.math                       | Latex lines                |
 | RenderMarkdownIndent          | Whitespace                         | Indent icon                |
 | RenderMarkdownHtmlComment     | @comment                           | HTML comment inline text   |
-| RenderMarkdownLink            | @markup.link.label.markdown_inline | Link icons                 |
-| RenderMarkdownLinkTitle       | @markup.link.markdown_inline       | Link titles                |
-| RenderMarkdownWikiLink        | RenderMarkdownLink                 | WikiLink icon & text       |
+| RenderMarkdownLink            | @markup.link.label.markdown_inline | Link icon                  |
+| RenderMarkdownLinkTitle       | @markup.link.markdown_inline       | Link title                 |
+| RenderMarkdownWikiLink        | RenderMarkdownLink                 | WikiLink icon              |
 | RenderMarkdownUnchecked       | @markup.list.unchecked             | Unchecked checkbox         |
 | RenderMarkdownChecked         | @markup.list.checked               | Checked checkbox           |
 | RenderMarkdownTodo            | @markup.raw                        | Todo custom checkbox       |

@@ -1,5 +1,6 @@
 local utils = {}
 
+local constants = require('blink.cmp.sources.cmdline.constants')
 local path_lib = require('blink.cmp.sources.path.lib')
 
 ---@param path string
@@ -12,6 +13,21 @@ local function fnameescape(path)
   -- Unescape %:
   path = path:gsub('\\(%%:)', '%1')
   return path
+end
+
+---@param completion_type string
+---@param line string
+---@return boolean
+function utils.is_path_completion(completion_type, line)
+  if vim.tbl_contains(constants.completion_types.path, completion_type) then return true end
+
+  if completion_type == 'shellcmd' then
+    -- Treat :!<path> as path completion when the first shellcmd argument looks like a path
+    local token = line:sub(2):match('^%s*(%S+)')
+    if token and token:match('^[~./]') then return true end
+  end
+
+  return false
 end
 
 -- Try to match the content inside the first pair of quotes (excluding)
@@ -43,7 +59,7 @@ end
 function utils.contains_wildcard(line) return line:find('[%*%?%[%]]') ~= nil end
 
 --- Split the command line into arguments, handling path escaping and trailing spaces.
---- For path completions, split by paths and normalize each one if needed.
+--- For path completions, split by paths and escape unquoted args with spaces.
 --- For other completions, splits by spaces and preserves trailing empty arguments.
 ---@param line string
 ---@param is_path_completion boolean
@@ -57,9 +73,8 @@ function utils.smart_split(line, is_path_completion)
 
     for i = 2, #tokens do
       local arg = tokens[i]
-      -- Escape argument if it contains unescaped spaces
-      -- Some commands may expect escaped paths (:edit), others may not (:view)
-      if arg and arg ~= '' and arg ~= '|' and not arg:find('\\ ') then arg = fnameescape(arg) end
+      -- Escape only unquoted args with spaces
+      if arg and not arg:match('^[\'"]') and not arg:find('\\ ') and arg:find(' ') then arg = fnameescape(arg) end
       table.insert(args, arg)
     end
     return line, { cmd, unpack(args) }
@@ -112,6 +127,48 @@ function utils.get_completions(pattern, type, completion_type)
   end
 
   return vim.fn.getcompletion(pattern, type, true)
+end
+
+---@param func_str string v:lua function string, e.g. "v:lua.foo.bar"
+---@param prefix string
+---@param line string
+---@param col number
+---@return boolean success
+---@return table|string|nil result
+function utils.call_vlua(func_str, prefix, line, col)
+  local parts = vim.split(func_str, '.', { plain = true })
+  if #parts < 2 then return false, nil end
+
+  local func_name = parts[#parts]
+
+  ---@type function|nil
+  local fn
+
+  -- Prefer global table lookup, supporting deep module functions (e.g., v:lua.foo.bar.baz)
+  ---@type table|nil
+  local tbl = _G
+  for i = 2, #parts - 1 do
+    if type(tbl) ~= 'table' then
+      tbl = nil
+      break
+    end
+    tbl = tbl[parts[i]]
+  end
+  if type(tbl) == 'table' then fn = tbl[func_name] end
+
+  -- Fallback to require()
+  if not fn and #parts > 2 then
+    local module_name = table.concat(parts, '.', 2, #parts - 1)
+    local ok, mod = pcall(require, module_name)
+    if ok and type(mod) == 'table' then fn = mod[func_name] end
+  end
+
+  if type(fn) == 'function' then
+    local ok, result = pcall(fn, prefix, line, col)
+    return ok, result
+  end
+
+  return false, nil
 end
 
 return utils
