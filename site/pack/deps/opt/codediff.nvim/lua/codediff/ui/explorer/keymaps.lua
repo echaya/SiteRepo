@@ -162,19 +162,8 @@ function M.setup(explorer)
     end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Restore/discard changes" }))
   end
 
-  -- Navigate to next file (uses view keymaps)
-  if config.options.keymaps.view.next_file then
-    vim.keymap.set("n", config.options.keymaps.view.next_file, function()
-      render_module.navigate_next(explorer)
-    end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Next file" }))
-  end
-
-  -- Navigate to previous file (uses view keymaps)
-  if config.options.keymaps.view.prev_file then
-    vim.keymap.set("n", config.options.keymaps.view.prev_file, function()
-      render_module.navigate_prev(explorer)
-    end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Previous file" }))
-  end
+  -- Note: next_file/prev_file keymaps are set via view/keymaps.lua:setup_all_keymaps()
+  -- which uses set_tab_keymap to set them on all buffers including explorer
 end
 
 return M

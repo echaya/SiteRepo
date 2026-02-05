@@ -4,6 +4,7 @@ local M = {}
 local lifecycle = require("codediff.ui.lifecycle")
 local auto_refresh = require("codediff.ui.auto_refresh")
 local config = require("codediff.config")
+local navigation = require("codediff.ui.view.navigation")
 
 -- Centralized keymap setup for all diff view keymaps
 -- This function sets up ALL keymaps in one place for better maintainability
@@ -13,149 +14,6 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
   -- Check if this is history mode
   local session = lifecycle.get_session(tabpage)
   local is_history_mode = session and session.mode == "history"
-
-  -- Helper: Navigate to next hunk
-  local function navigate_next_hunk()
-    local session = lifecycle.get_session(tabpage)
-    if not session or not session.stored_diff_result then
-      return
-    end
-    local diff_result = session.stored_diff_result
-    if #diff_result.changes == 0 then
-      return
-    end
-
-    local current_buf = vim.api.nvim_get_current_buf()
-    local is_original = current_buf == original_bufnr
-    local is_modified = current_buf == modified_bufnr
-    local is_result = session.result_bufnr and current_buf == session.result_bufnr
-
-    -- If cursor is in result buffer (conflict mode), use modified side line numbers
-    -- but stay in current window
-    if is_result then
-      is_original = false
-    -- If cursor is not in any diff buffer (e.g., in explorer/history), switch to modified window
-    elseif not is_original and not is_modified then
-      is_original = false -- Use modified side for line numbers
-      local target_win = session.modified_win
-      if target_win and vim.api.nvim_win_is_valid(target_win) then
-        vim.api.nvim_set_current_win(target_win)
-      else
-        return
-      end
-    end
-
-    local cursor = vim.api.nvim_win_get_cursor(0)
-    local current_line = cursor[1]
-
-    -- Find next hunk after current line
-    for i, mapping in ipairs(diff_result.changes) do
-      local target_line = is_original and mapping.original.start_line or mapping.modified.start_line
-      if target_line > current_line then
-        pcall(vim.api.nvim_win_set_cursor, 0, { target_line, 0 })
-        vim.api.nvim_echo({ { string.format("Hunk %d of %d", i, #diff_result.changes), "None" } }, false, {})
-        return
-      end
-    end
-
-    -- Wrap around to first hunk
-    local first_hunk = diff_result.changes[1]
-    local target_line = is_original and first_hunk.original.start_line or first_hunk.modified.start_line
-    pcall(vim.api.nvim_win_set_cursor, 0, { target_line, 0 })
-    vim.api.nvim_echo({ { string.format("Hunk 1 of %d", #diff_result.changes), "None" } }, false, {})
-  end
-
-  -- Helper: Navigate to previous hunk
-  local function navigate_prev_hunk()
-    local session = lifecycle.get_session(tabpage)
-    if not session or not session.stored_diff_result then
-      return
-    end
-    local diff_result = session.stored_diff_result
-    if #diff_result.changes == 0 then
-      return
-    end
-
-    local current_buf = vim.api.nvim_get_current_buf()
-    local is_original = current_buf == original_bufnr
-    local is_modified = current_buf == modified_bufnr
-    local is_result = session.result_bufnr and current_buf == session.result_bufnr
-
-    -- If cursor is in result buffer (conflict mode), use modified side line numbers
-    -- but stay in current window
-    if is_result then
-      is_original = false
-    -- If cursor is not in any diff buffer (e.g., in explorer/history), switch to modified window
-    elseif not is_original and not is_modified then
-      is_original = false -- Use modified side for line numbers
-      local target_win = session.modified_win
-      if target_win and vim.api.nvim_win_is_valid(target_win) then
-        vim.api.nvim_set_current_win(target_win)
-      else
-        return
-      end
-    end
-
-    local cursor = vim.api.nvim_win_get_cursor(0)
-    local current_line = cursor[1]
-
-    -- Find previous hunk before current line (search backwards)
-    for i = #diff_result.changes, 1, -1 do
-      local mapping = diff_result.changes[i]
-      local target_line = is_original and mapping.original.start_line or mapping.modified.start_line
-      if target_line < current_line then
-        pcall(vim.api.nvim_win_set_cursor, 0, { target_line, 0 })
-        vim.api.nvim_echo({ { string.format("Hunk %d of %d", i, #diff_result.changes), "None" } }, false, {})
-        return
-      end
-    end
-
-    -- Wrap around to last hunk
-    local last_hunk = diff_result.changes[#diff_result.changes]
-    local target_line = is_original and last_hunk.original.start_line or last_hunk.modified.start_line
-    pcall(vim.api.nvim_win_set_cursor, 0, { target_line, 0 })
-    vim.api.nvim_echo({ { string.format("Hunk %d of %d", #diff_result.changes, #diff_result.changes), "None" } }, false, {})
-  end
-
-  -- Helper: Navigate to next file (works in both explorer and history mode)
-  -- In single-file history mode, navigates commits instead
-  local function navigate_next_file()
-    local panel_obj = lifecycle.get_explorer(tabpage)
-    if not panel_obj then
-      return
-    end
-    if is_history_mode then
-      local history = require("codediff.ui.history")
-      if panel_obj.is_single_file_mode then
-        history.navigate_next_commit(panel_obj)
-      else
-        history.navigate_next(panel_obj)
-      end
-    else
-      local explorer = require("codediff.ui.explorer")
-      explorer.navigate_next(panel_obj)
-    end
-  end
-
-  -- Helper: Navigate to previous file (works in both explorer and history mode)
-  -- In single-file history mode, navigates commits instead
-  local function navigate_prev_file()
-    local panel_obj = lifecycle.get_explorer(tabpage)
-    if not panel_obj then
-      return
-    end
-    if is_history_mode then
-      local history = require("codediff.ui.history")
-      if panel_obj.is_single_file_mode then
-        history.navigate_prev_commit(panel_obj)
-      else
-        history.navigate_prev(panel_obj)
-      end
-    else
-      local explorer = require("codediff.ui.explorer")
-      explorer.navigate_prev(panel_obj)
-    end
-  end
 
   -- Helper: Quit diff view
   local function quit_diff()
@@ -428,10 +286,10 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
 
   -- Hunk navigation (]c, [c)
   if keymaps.next_hunk then
-    lifecycle.set_tab_keymap(tabpage, "n", keymaps.next_hunk, navigate_next_hunk, { desc = "Next hunk" })
+    lifecycle.set_tab_keymap(tabpage, "n", keymaps.next_hunk, navigation.next_hunk, { desc = "Next hunk" })
   end
   if keymaps.prev_hunk then
-    lifecycle.set_tab_keymap(tabpage, "n", keymaps.prev_hunk, navigate_prev_hunk, { desc = "Previous hunk" })
+    lifecycle.set_tab_keymap(tabpage, "n", keymaps.prev_hunk, navigation.prev_hunk, { desc = "Previous hunk" })
   end
 
   -- Explorer toggle (e) - only in explorer mode
@@ -472,10 +330,10 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
   -- File navigation (]f, [f) - works in both explorer and history mode
   if is_explorer_mode or is_history_mode then
     if keymaps.next_file then
-      lifecycle.set_tab_keymap(tabpage, "n", keymaps.next_file, navigate_next_file, { desc = "Next file" })
+      lifecycle.set_tab_keymap(tabpage, "n", keymaps.next_file, navigation.next_file, { desc = "Next file" })
     end
     if keymaps.prev_file then
-      lifecycle.set_tab_keymap(tabpage, "n", keymaps.prev_file, navigate_prev_file, { desc = "Previous file" })
+      lifecycle.set_tab_keymap(tabpage, "n", keymaps.prev_file, navigation.prev_file, { desc = "Previous file" })
     end
   end
 end

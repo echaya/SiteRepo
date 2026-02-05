@@ -85,19 +85,8 @@ function M.setup(history, opts)
     end
   end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Select file" }))
 
-  -- Navigate to next file (uses view keymaps)
-  if config.options.keymaps.view.next_file then
-    vim.keymap.set("n", config.options.keymaps.view.next_file, function()
-      opts.navigate_next(history)
-    end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Next file" }))
-  end
-
-  -- Navigate to previous file (uses view keymaps)
-  if config.options.keymaps.view.prev_file then
-    vim.keymap.set("n", config.options.keymaps.view.prev_file, function()
-      opts.navigate_prev(history)
-    end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Previous file" }))
-  end
+  -- Note: next_file/prev_file keymaps are set via view/keymaps.lua:setup_all_keymaps()
+  -- which uses set_tab_keymap to set them on all buffers including history panel
 
   -- Toggle view mode between list and tree
   if history_keymaps.toggle_view_mode then

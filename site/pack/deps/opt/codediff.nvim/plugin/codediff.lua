@@ -47,7 +47,7 @@ local function get_cached_rev_candidates(git_root)
 end
 
 -- Register user command with subcommand completion
-local function complete_codediff(arg_lead, cmd_line, cursor_pos)
+local function complete_codediff(arg_lead, cmd_line, _)
   local args = vim.split(cmd_line, "%s+", { trimempty = true })
 
   -- If no args or just ":CodeDiff", suggest subcommands and revisions
@@ -56,13 +56,34 @@ local function complete_codediff(arg_lead, cmd_line, cursor_pos)
     local cwd = vim.fn.getcwd()
     local git_root = git.get_git_root_sync(cwd)
     local rev_candidates = get_cached_rev_candidates(git_root)
-    return vim.list_extend(candidates, rev_candidates)
+    if rev_candidates then
+      vim.list_extend(candidates, rev_candidates)
+    end
+    return candidates
   end
 
   -- If first arg is "merge" or "file", complete with file paths
   local first_arg = args[2]
   if first_arg == "merge" or first_arg == "file" then
     return vim.fn.getcompletion(arg_lead, "file")
+  end
+
+  -- Special handling for history subcommand flags
+  if first_arg == "history" then
+    -- If arg_lead starts with -, complete flags
+    if arg_lead:match("^%-") then
+      local flag_candidates = { "--reverse", "-r" }
+      local filtered = {}
+      for _, flag in ipairs(flag_candidates) do
+        if flag:find(arg_lead, 1, true) == 1 then
+          table.insert(filtered, flag)
+        end
+      end
+      if #filtered > 0 then
+        return filtered
+      end
+    end
+    -- Otherwise fall through to default completion (files, revisions)
   end
 
   -- For revision arguments, suggest git refs filtered by arg_lead
@@ -76,8 +97,10 @@ local function complete_codediff(arg_lead, cmd_line, cursor_pos)
     local base_rev = arg_lead:match("^(.+)%.%.%.$")
     if base_rev then
       -- User typed "main...", suggest completing with refs or leave as-is
-      for _, candidate in ipairs(rev_candidates) do
-        table.insert(filtered, base_rev .. "..." .. candidate)
+      if rev_candidates then
+        for _, candidate in ipairs(rev_candidates) do
+          table.insert(filtered, base_rev .. "..." .. candidate)
+        end
       end
       -- Also include the bare triple-dot (compares to working tree)
       table.insert(filtered, 1, arg_lead)
@@ -85,11 +108,13 @@ local function complete_codediff(arg_lead, cmd_line, cursor_pos)
     end
 
     -- Normal completion: match refs and also suggest triple-dot variants
-    for _, candidate in ipairs(rev_candidates) do
-      if candidate:find(arg_lead, 1, true) == 1 then
-        table.insert(filtered, candidate)
-        -- Also suggest the merge-base variant
-        table.insert(filtered, candidate .. "...")
+    if rev_candidates then
+      for _, candidate in ipairs(rev_candidates) do
+        if candidate:find(arg_lead, 1, true) == 1 then
+          table.insert(filtered, candidate)
+          -- Also suggest the merge-base variant
+          table.insert(filtered, candidate .. "...")
+        end
       end
     end
     if #filtered > 0 then

@@ -166,7 +166,8 @@ end
 -- Handle file history command
 -- range: git range (e.g., "origin/main..HEAD", "HEAD~10")
 -- file_path: optional file path to filter history
-local function handle_history(range, file_path)
+local function handle_history(range, file_path, flags)
+  flags = flags or {} -- Default to empty table for backward compat
   local current_buf = vim.api.nvim_get_current_buf()
   local current_file = vim.api.nvim_buf_get_name(current_buf)
   local cwd = vim.fn.getcwd()
@@ -185,6 +186,11 @@ local function handle_history(range, file_path)
     local history_opts = {
       no_merges = true,
     }
+
+    -- Apply reverse flag if present
+    if flags.reverse then
+      history_opts.reverse = true
+    end
 
     -- Only apply default limit when no range specified
     if not range or range == "" then
@@ -627,7 +633,7 @@ function M.vscode_diff(opts)
     end
     handle_dir_diff(args[2], args[3])
   elseif subcommand == "history" then
-    -- :CodeDiff history [range] [file]
+    -- :CodeDiff history [range] [file] [--reverse|-r]
     -- Examples:
     --   :CodeDiff history                    - last 100 commits
     --   :CodeDiff history HEAD~10            - last 10 commits
@@ -635,8 +641,29 @@ function M.vscode_diff(opts)
     --   :CodeDiff history HEAD~10 %          - last 10 commits for current file
     --   :CodeDiff history %                  - history for current file
     --   :CodeDiff history path/to/file.lua   - history for specific file
-    local arg1 = args[2]
-    local arg2 = args[3]
+    --   :CodeDiff history --reverse          - last 100 commits (oldest first)
+    --   :CodeDiff history HEAD~10 -r         - last 10 commits (oldest first)
+
+    -- Import flag parser
+    local args_parser = require("codediff.core.args")
+
+    -- Define flag spec for history command
+    local flag_spec = {
+      ["--reverse"] = { short = "-r", type = "boolean" },
+    }
+
+    -- Parse args: separate positional from flags
+    local remaining_args = vim.list_slice(args, 2) -- Skip "history" subcommand
+    local positional, flags, parse_err = args_parser.parse_args(remaining_args, flag_spec)
+
+    if parse_err then
+      vim.notify("Error: " .. parse_err, vim.log.levels.ERROR)
+      return
+    end
+
+    -- Use positional[1], positional[2] instead of args[2], args[3]
+    local arg1 = positional[1]
+    local arg2 = positional[2]
     local range = nil
     local file_path = nil
 
@@ -663,7 +690,7 @@ function M.vscode_diff(opts)
       end
     end
 
-    handle_history(range, file_path)
+    handle_history(range, file_path, flags)
   elseif subcommand == "install" or subcommand == "install!" then
     -- :CodeDiff install or :CodeDiff install!
     -- Handle both :CodeDiff! install and :CodeDiff install!

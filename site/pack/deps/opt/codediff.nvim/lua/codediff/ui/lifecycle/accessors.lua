@@ -399,34 +399,6 @@ function M.confirm_close_with_unsaved(tabpage)
   end
 end
 
---- Find and save an existing buffer-local keymap before overwriting
---- @param bufnr number Buffer number
---- @param mode string Keymap mode
---- @param lhs string Left-hand side of the keymap
---- @return table|nil The saved keymap data, or nil if no existing keymap
-local function save_existing_keymap(bufnr, mode, lhs)
-  if not vim.api.nvim_buf_is_valid(bufnr) then
-    return nil
-  end
-  local keymaps = vim.api.nvim_buf_get_keymap(bufnr, mode)
-  for _, map in ipairs(keymaps) do
-    if map.lhs == lhs then
-      return {
-        lhs = map.lhs,
-        rhs = map.rhs,
-        callback = map.callback,
-        expr = map.expr == 1,
-        noremap = map.noremap == 1,
-        nowait = map.nowait == 1,
-        silent = map.silent == 1,
-        script = map.script == 1,
-        desc = map.desc,
-      }
-    end
-  end
-  return nil
-end
-
 --- Set a keymap on all buffers in the diff tab (both diff buffers + explorer + result)
 --- This is the unified API for setting tab-wide keymaps
 --- @param tabpage number Tab page ID
@@ -442,43 +414,37 @@ function M.set_tab_keymap(tabpage, mode, lhs, rhs, opts)
     return false
   end
 
-  -- Initialize saved keymaps storage if needed
-  sess.saved_keymaps = sess.saved_keymaps or {}
+  -- Track all buffers that have keymaps set (for cleanup on close)
+  sess.keymap_buffers = sess.keymap_buffers or {}
 
   opts = opts or {}
   local base_opts = { noremap = true, silent = true, nowait = true }
 
-  -- Helper to save existing keymap before setting new one
-  local function set_with_save(bufnr)
-    if not vim.api.nvim_buf_is_valid(bufnr) then
-      return
-    end
-    -- Save existing keymap (only if not already saved for this buffer/lhs)
-    local key = bufnr .. ":" .. mode .. ":" .. lhs
-    if sess.saved_keymaps[key] == nil then
-      local existing = save_existing_keymap(bufnr, mode, lhs)
-      -- Store even if nil (marks that we've checked this keymap)
-      sess.saved_keymaps[key] = existing or false
-    end
-    vim.keymap.set(mode, lhs, rhs, vim.tbl_extend("force", base_opts, opts, { buffer = bufnr }))
+  if vim.api.nvim_buf_is_valid(sess.original_bufnr) then
+    vim.keymap.set(mode, lhs, rhs, vim.tbl_extend("force", base_opts, opts, { buffer = sess.original_bufnr }))
+    sess.keymap_buffers[sess.original_bufnr] = true
   end
 
-  set_with_save(sess.original_bufnr)
-  set_with_save(sess.modified_bufnr)
+  if vim.api.nvim_buf_is_valid(sess.modified_bufnr) then
+    vim.keymap.set(mode, lhs, rhs, vim.tbl_extend("force", base_opts, opts, { buffer = sess.modified_bufnr }))
+    sess.keymap_buffers[sess.modified_bufnr] = true
+  end
 
   local explorer = sess.explorer
-  if explorer and explorer.bufnr then
-    set_with_save(explorer.bufnr)
+  if explorer and explorer.bufnr and vim.api.nvim_buf_is_valid(explorer.bufnr) then
+    vim.keymap.set(mode, lhs, rhs, vim.tbl_extend("force", base_opts, opts, { buffer = explorer.bufnr }))
+    sess.keymap_buffers[explorer.bufnr] = true
   end
 
-  if sess.result_bufnr then
-    set_with_save(sess.result_bufnr)
+  if sess.result_bufnr and vim.api.nvim_buf_is_valid(sess.result_bufnr) then
+    vim.keymap.set(mode, lhs, rhs, vim.tbl_extend("force", base_opts, opts, { buffer = sess.result_bufnr }))
+    sess.keymap_buffers[sess.result_bufnr] = true
   end
 
   return true
 end
 
---- Remove codediff keymaps from a session's buffers and restore original keymaps
+--- Remove codediff keymaps from a session's buffers
 function M.clear_tab_keymaps(tabpage)
   local active_diffs = session.get_active_diffs()
   local sess = active_diffs[tabpage]
@@ -486,65 +452,30 @@ function M.clear_tab_keymaps(tabpage)
     return
   end
 
-  -- Guard: If already cleared, don't run again (prevents double-cleanup from deleting restored keymaps)
-  if not sess.saved_keymaps then
-    return
-  end
-
-  local saved_keymaps = sess.saved_keymaps
-
-  -- Helper to restore a single keymap
-  local function restore_keymap(bufnr, mode, lhs)
+  local function del_buf_keymaps(bufnr, keys)
     if not vim.api.nvim_buf_is_valid(bufnr) then
       return
     end
-    local key = bufnr .. ":" .. mode .. ":" .. lhs
-    local saved = saved_keymaps[key]
-
-    -- First, delete the codediff keymap
-    pcall(vim.keymap.del, mode, lhs, { buffer = bufnr })
-
-    -- Then restore the original keymap if one existed
-    if saved and saved ~= false then
-      local restore_opts = {
-        buffer = bufnr,
-        expr = saved.expr,
-        noremap = saved.noremap,
-        nowait = saved.nowait,
-        silent = saved.silent,
-        desc = saved.desc,
-      }
-      local rhs = saved.callback or saved.rhs or ""
-      pcall(vim.keymap.set, mode, lhs, rhs, restore_opts)
-    end
-  end
-
-  -- Helper to restore keymaps for a buffer from a keymap config table
-  local function restore_buf_keymaps(bufnr, keys)
-    if not vim.api.nvim_buf_is_valid(bufnr) then
-      return
-    end
-    for _, lhs in pairs(keys) do
-      if lhs then
-        restore_keymap(bufnr, "n", lhs)
+    for _, key in pairs(keys) do
+      if key then
+        pcall(vim.keymap.del, "n", key, { buffer = bufnr })
       end
     end
   end
 
-  restore_buf_keymaps(sess.original_bufnr, config.options.keymaps.view)
-  restore_buf_keymaps(sess.modified_bufnr, config.options.keymaps.view)
+  -- Delete keymaps from ALL buffers that ever had them set (not just current ones)
+  if sess.keymap_buffers then
+    for bufnr, _ in pairs(sess.keymap_buffers) do
+      del_buf_keymaps(bufnr, config.options.keymaps.view)
+    end
+  end
 
+  -- Also handle explorer keymaps separately (explorer buffer uses both view and explorer keymaps)
   if sess.explorer and sess.explorer.bufnr then
-    restore_buf_keymaps(sess.explorer.bufnr, config.options.keymaps.view)
-    restore_buf_keymaps(sess.explorer.bufnr, config.options.keymaps.explorer or {})
+    del_buf_keymaps(sess.explorer.bufnr, config.options.keymaps.explorer or {})
   end
 
-  if sess.result_bufnr then
-    restore_buf_keymaps(sess.result_bufnr, config.options.keymaps.view)
-  end
-
-  -- Clear saved keymaps
-  sess.saved_keymaps = nil
+  sess.keymap_buffers = nil
 end
 
 --- Setup auto-sync on file switch: automatically update diff when user edits a different file in working buffer
