@@ -89,6 +89,7 @@ local function do_diff_update(bufnr, skip_watcher_check)
     local config = require("codediff.config")
     local diff_options = {
       max_computation_time_ms = config.options.diff.max_computation_time_ms,
+      ignore_trim_whitespace = config.options.diff.ignore_trim_whitespace,
     }
     local lines_diff = diff.compute_diff(original_lines, modified_lines, diff_options)
     if not lines_diff then
@@ -270,6 +271,7 @@ local function do_result_diff_update(bufnr)
   local config = require("codediff.config")
   local diff_options = {
     max_computation_time_ms = config.options.diff.max_computation_time_ms,
+    ignore_trim_whitespace = config.options.diff.ignore_trim_whitespace,
   }
   local lines_diff = diff.compute_diff(base_lines, result_lines, diff_options)
   if not lines_diff then

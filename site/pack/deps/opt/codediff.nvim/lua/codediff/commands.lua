@@ -232,6 +232,7 @@ local function handle_history(range, file_path, flags)
             commits = commits,
             range = range,
             file_path = history_opts.path,
+            base_revision = flags.base,
           },
         }
 
@@ -650,6 +651,7 @@ function M.vscode_diff(opts)
     -- Define flag spec for history command
     local flag_spec = {
       ["--reverse"] = { short = "-r", type = "boolean" },
+      ["--base"] = { short = "-b", type = "string" },
     }
 
     -- Parse args: separate positional from flags

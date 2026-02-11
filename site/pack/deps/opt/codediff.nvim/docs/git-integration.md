@@ -170,6 +170,40 @@ The plugin uses standard git commands:
 - File content fetching is done asynchronously (non-blocking)
 - The diff computation happens after file content is retrieved
 
+## File History with Fixed Base (`--base`)
+
+By default, `:CodeDiff history` compares each commit against its parent.
+The `--base` flag changes this to compare every commit against a fixed reference:
+
+```vim
+" Compare each commit against the current working tree
+:CodeDiff history --base WORKING
+
+" Compare each commit against HEAD
+:CodeDiff history --base HEAD
+
+" Compare each commit against a branch
+:CodeDiff history --base main
+
+" Short form
+:CodeDiff history -b WORKING
+
+" Combine with range, file path, and other flags
+:CodeDiff history origin/main..HEAD --base WORKING %
+:CodeDiff history HEAD~10 -b HEAD --reverse
+```
+
+### Comparison Modes
+
+**Sequential (default):** Each commit compared to its parent.
+Useful for reviewing what changed in each individual commit.
+
+**Fixed base (`--base WORKING`):** Each commit compared to working tree.
+Useful for seeing how far each historical commit is from your current state.
+
+**Fixed base (`--base <revision>`):** Each commit compared to a specific ref.
+Useful for seeing how each commit differs from a branch tip or tag.
+
 ## Future Enhancements
 
 Potential improvements:

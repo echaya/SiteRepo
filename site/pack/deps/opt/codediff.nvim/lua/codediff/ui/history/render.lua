@@ -16,6 +16,7 @@ local keymaps_module = require("codediff.ui.history.keymaps")
 -- opts: { range, path, ... } original options
 function M.create(commits, git_root, tabpage, width, opts)
   opts = opts or {}
+  local base_revision = opts.base_revision
 
   -- Get history panel position and size from config (separate from explorer)
   local history_config = config.options.history or {}
@@ -92,6 +93,10 @@ function M.create(commits, git_root, tabpage, width, opts)
     title_text = "Commit History: " .. opts.range .. " (" .. #commits .. ")"
   else
     title_text = "Commit History (" .. #commits .. ")"
+  end
+
+  if base_revision then
+    title_text = title_text .. " [base: " .. base_revision .. "]"
   end
 
   -- Add title node
@@ -267,8 +272,9 @@ function M.create(commits, git_root, tabpage, width, opts)
     end
 
     -- Check if already displaying same file
+    local target_hash = base_revision or (commit_hash .. "^")
     local session = lifecycle.get_session(tabpage)
-    if session and session.original_revision == commit_hash .. "^" and session.modified_revision == commit_hash then
+    if session and session.original_revision == target_hash and session.modified_revision == commit_hash then
       if session.modified_path == file_path or session.original_path == file_path then
         return
       end
@@ -279,9 +285,9 @@ function M.create(commits, git_root, tabpage, width, opts)
       local session_config = {
         mode = "history",
         git_root = git_root,
-        original_path = old_path or file_path,
+        original_path = base_revision and file_path or (old_path or file_path),
         modified_path = file_path,
-        original_revision = commit_hash .. "^",
+        original_revision = target_hash,
         modified_revision = commit_hash,
       }
       view.update(tabpage, session_config, true)

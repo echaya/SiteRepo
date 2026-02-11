@@ -71,6 +71,30 @@ Directory comparison mode:
 Shows files as Added (A), Deleted (D), or Modified (M) based on file size and
 modification time. Select a file to view its diff.
 
+File history mode:                                    *codediff-history*
+>
+  :CodeDiff history
+  :CodeDiff history HEAD~10
+  :CodeDiff history origin/main..HEAD
+  :CodeDiff history HEAD~20 %
+  :CodeDiff history --reverse
+<
+
+Each commit is compared against its parent by default. Use --base to compare
+every commit against a fixed reference instead:
+>
+  :CodeDiff history --base WORKING
+  :CodeDiff history --base HEAD
+  :CodeDiff history --base main
+  :CodeDiff history HEAD~10 -b WORKING %
+<
+
+Options:
+  --reverse, -r   Show commits oldest first
+  --base, -b      Compare each commit against a fixed revision instead of
+                  its parent. Accepts any git revision (HEAD, branch name,
+                  commit hash) or WORKING for the current working tree.
+
 Git merge tool:
 >
   git config --global merge.tool codediff

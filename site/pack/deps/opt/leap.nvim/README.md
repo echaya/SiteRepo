@@ -84,7 +84,7 @@ See `:h leap-mappings` for more.
 Treesitter node selection (`vRRR...y` or `yR{label}`):
 
 ```lua
-vim.keymap.set({'x', 'o'}, 'R',  function ()
+vim.keymap.set({'x', 'o'}, 'R',  function()
   require('leap.treesitter').select {
     opts = require('leap.user').with_traversal_keys('R', 'r')
   }
@@ -95,7 +95,7 @@ Remote operations (`gs{leap}apy` or `ygs{leap}ap`, where `{leap}` means
 `{char1}{char2}{label?}`, as usual):
 
 ```lua
-vim.keymap.set({'n', 'o'}, 'gs', function ()
+vim.keymap.set({'n', 'o'}, 'gs', function()
   require('leap.remote').action {
     -- Automatically enter Visual mode when coming from Normal.
     input = vim.fn.mode(true):match('o') and '' or 'v'
@@ -116,7 +116,7 @@ See below for more (e.g. setting up automatic paste after yanking).
 -- (see `:h leap.opts.preview`).
 -- For example, skip preview if the first character of the match is
 -- whitespace or is in the middle of an alphabetic word:
-require('leap').opts.preview = function (ch0, ch1, ch2)
+require('leap').opts.preview = function(ch0, ch1, ch2)
   return not (
     ch1:match('%s')
     or (ch0:match('%a') and ch1:match('%a') and ch2:match('%a'))
@@ -135,7 +135,7 @@ require('leap.user').set_repeat_keys('<enter>', '<backspace>')
 vim.api.nvim_create_autocmd('User', {
   pattern = 'RemoteOperationDone',
   group = vim.api.nvim_create_augroup('LeapRemote', {}),
-  callback = function (event)
+  callback = function(event)
     if vim.v.operator == 'y' and event.data.register == '"' then
       vim.cmd('normal! p')
     end
@@ -176,7 +176,7 @@ redundant nodes (only the outermost are kept in a given line range), making the
 selection much more efficient.
 
 ```lua
-vim.keymap.set({'x', 'o'}, 'R',  function ()
+vim.keymap.set({'x', 'o'}, 'R',  function()
   require('leap.treesitter').select {
     -- To increase/decrease the selection in a clever-f-like manner,
     -- with the trigger key itself (vRRRRrr...). The default keys
@@ -200,7 +200,7 @@ page, then continues where it left off. Once returning to Normal mode, it jumps
 back, as if you had operated from the distance.
 
 ```lua
-vim.keymap.set({'n', 'x', 'o'}, 'gs', function ()
+vim.keymap.set({'n', 'x', 'o'}, 'gs', function()
   require('leap.remote').action()
 end)
 ```
@@ -218,7 +218,7 @@ object, `yarp{leap}`, and voilà, the remote paragraph appears there):
 vim.api.nvim_create_autocmd('User', {
   pattern = 'RemoteOperationDone',
   group = vim.api.nvim_create_augroup('LeapRemote', {}),
-  callback = function (event)
+  callback = function(event)
     -- Do not paste if some special register was in use.
     if vim.v.operator == 'y' and event.data.register == '"' then
       vim.cmd('normal! p')
@@ -233,7 +233,7 @@ The `input` parameter lets you feed keystrokes automatically after the jump:
 
 ```lua
 -- Trigger visual selection right away, so that you can `gs{leap}apy`:
-vim.keymap.set({'n', 'o'}, 'gs', function ()
+vim.keymap.set({'n', 'o'}, 'gs', function()
   require('leap.remote').action { input = 'v' }
 end)
 ```
@@ -246,7 +246,7 @@ at..."):
 -- Create remote versions of all a/i text objects by inserting `r` into
 -- the middle (`iw` becomes `irw`, etc.).
 for _, ai in ipairs { 'a', 'i' } do
-  vim.keymap.set({ 'x', 'o' }, ai .. 'r', function ()
+  vim.keymap.set({ 'x', 'o' }, ai .. 'r', function()
     -- A trick to avoid having to create separate mappings for each text
     -- object: when entering `ar`/`ir`, consume the next character, and
     -- create the input from that character concatenated to `a`/`i`.
@@ -269,7 +269,7 @@ With remote text objects, the swap is even simpler, almost on par with
 [vim-exchange](https://github.com/tommcdo/vim-exchange): `diw virw{leap}p P`.
 
 Using remote text objects _and_ combining them with an exchange operator is
-pretty much text editing at the speed of thought: `cxiw cxirw{leap}`.
+pretty much unimprovable: `cxiw cxirw{leap}`.
 
 **Jumping to off-screen areas with native search commands**
 
@@ -281,10 +281,10 @@ You can even use the native search commands, that is, target off-screen
 regions, with the special `jumper` values `/` and `?`:
 
 ```lua
-vim.keymap.set({'n', 'o'}, 'g/', function ()
+vim.keymap.set({'n', 'o'}, 'g/', function()
   require('leap.remote').action { jumper = '/' }
 end)
-vim.keymap.set({'n', 'o'}, 'g?', function ()
+vim.keymap.set({'n', 'o'}, 'g?', function()
   require('leap.remote').action { jumper = '?' }
 end)
 ```
@@ -371,43 +371,41 @@ unique in that it
 
 ```lua
 do
-  -- Return an argument table for `leap()`, tailored for f/t-motions.
-  local function as_ft (key_specific_args)
-    local common_args = {
-      inputlen = 1,
-      inclusive = true,
-      -- To limit search scope to the current line:
-      -- pattern = function (pat) return '\\%.l'..pat end,
-      opts = {
-        labels = '',  -- force autojump
-        safe_labels = vim.fn.mode(1):match'[no]' and '' or nil,  -- [1]
-      },
-    }
-    return vim.tbl_deep_extend('keep', common_args, key_specific_args)
+  local function ft(key_specific_args)
+    require('leap').leap(
+      vim.tbl_deep_extend('keep', key_specific_args, {
+        -- Uncomment to limit search scope to the current line:
+        -- pattern = function(pat) return '\\%.l' .. pat end,
+        inputlen = 1,
+        inclusive = true,
+        opts = {
+          -- Force autojump.
+          labels = '',
+          -- Match the modes where you don't need labels (`:h mode()`).
+          safe_labels = vim.fn.mode(1):match('o') and '' or nil,
+        },
+      })
+    )
   end
 
-  local clever = require('leap.user').with_traversal_keys        -- [2]
-  local clever_f = clever('f', 'F')
-  local clever_t = clever('t', 'T')
+  -- A helper function making it easier to set "clever-f" behavior
+  -- (use f/F or t/T instead of ;/, - see the plugin clever-f.vim).
+  local clever = require('leap.user').with_traversal_keys
+  local clever_f, clever_t = clever('f', 'F'), clever('t', 'T')
 
-  for key, key_specific_args in pairs {
-    f = { opts = clever_f, },
-    F = { backward = true, opts = clever_f },
-    t = { offset = -1, opts = clever_t },
-    T = { backward = true, offset = 1, opts = clever_t },
-  } do
-    vim.keymap.set({'n', 'x', 'o'}, key, function ()
-      require('leap').leap(as_ft(key_specific_args))
-    end)
-  end
+  vim.keymap.set({ 'n', 'x', 'o' }, 'f', function()
+    ft { opts = clever_f }
+  end)
+  vim.keymap.set({ 'n', 'x', 'o' }, 'F', function()
+    ft { backward = true, opts = clever_f }
+  end)
+  vim.keymap.set({ 'n', 'x', 'o' }, 't', function()
+    ft { offset = -1, opts = clever_t }
+  end)
+  vim.keymap.set({ 'n', 'x', 'o' }, 'T', function()
+    ft { backward = true, offset = 1, opts = clever_t }
+  end)
 end
-
--- [1] Match the modes here for which you don't want to use labels
---     (`:h mode()`, `:h lua-pattern`).
--- [2] This helper function makes it easier to set "clever-f"-like
---     functionality (https://github.com/rhysd/clever-f.vim), returning
---     an `opts` table derived from the defaults, where the given keys
---     are added to `keys.next_target` and `keys.prev_target`
 ```
 
 </details>
@@ -467,10 +465,10 @@ require('leap').opts.labels = ''
 ```lua
 do
   local clever_s = require('leap.user').with_traversal_keys('s', 'S')
-  vim.keymap.set({ 'n', 'x', 'o' }, 's', function ()
+  vim.keymap.set({ 'n', 'x', 'o' }, 's', function()
     require('leap').leap { opts = clever_s }
   end)
-  vim.keymap.set({ 'n', 'x', 'o' }, 'S', function ()
+  vim.keymap.set({ 'n', 'x', 'o' }, 'S', function()
     require('leap').leap { backward = true, opts = clever_s }
   end)
 end
@@ -487,7 +485,7 @@ Basic template:
 local function remote_action ()
   require('leap').leap {
     windows = require('leap.user').get_focusable_windows(),
-    action = function (target)
+    action = function(target)
       local winid = target.wininfo.winid
       local lnum, col = unpack(target.pos)  -- 1/1-based indexing!
       -- ... do something at the given position ...
@@ -521,7 +519,7 @@ depends on implementation details.
 ```lua
 -- `on_beacons` hooks into `beacons.light_up_beacons`, the function
 -- responsible for displaying stuff.
-require('leap').opts.on_beacons = function (targets, _, _)
+require('leap').opts.on_beacons = function(targets, _, _)
   for _, t in ipairs(targets) do
     -- Overwrite the `offset` value in all beacons.
     -- target.beacon looks like: { <offset>, <extmark_opts> }
@@ -540,7 +538,7 @@ There is a helper function for that in the `user` module:
 ```lua
 vim.api.nvim_create_autocmd('ColorScheme', {
   group = vim.api.nvim_create_augroup('LeapBackdrop', {}),
-  callback = function ()
+  callback = function()
     if vim.g.colors_name == 'this_color_scheme_needs_backdrop' then
       require('leap.user').set_backdrop_highlight('Comment')
     end
@@ -563,7 +561,7 @@ don't particularly like, the simplest solution (besides a PR) is:
 ```lua
 vim.api.nvim_create_autocmd('ColorScheme', {
   group = vim.api.nvim_create_augroup('LeapColorTweaks', {}),
-  callback = function ()
+  callback = function()
     if vim.g.colors_name == 'bad_color_scheme' then
       -- Forces using the defaults: sets `IncSearch` for labels,
       -- `Search` for matches, and updates the look of concealed labels.
@@ -594,10 +592,10 @@ There are lots of ways you can extend the plugin and bend it to your will - see
 `:h leap.leap()` and `:h leap-events`. Besides tweaking the basic parameters of
 the function (search scope, jump offset, etc.), you can:
 
-* feed it with a **prepared search pattern**
-* feed it with **prepared targets**, and only use it as labeler/selector
-* give it a **custom action** to perform, instead of jumping
-* customize the behavior of specific calls via **autocommands**
+* feed it with a prepared search pattern
+* feed it with prepared targets, and only use it as labeler/selector
+* give it a custom action to perform, instead of jumping
+* customize the behavior of specific calls via autocommands
 
 Examples:
 
@@ -610,14 +608,14 @@ matches, so that you can jump to them directly.
 ```lua
 vim.api.nvim_create_autocmd('CmdlineLeave', {
   group = vim.api.nvim_create_augroup('LeapOnSearch', {}),
-  callback = function ()
+  callback = function()
     local ev = vim.v.event
     local is_search_cmd = (ev.cmdtype == '/') or (ev.cmdtype == '?')
     local cnt = vim.fn.searchcount().total
     if is_search_cmd and (not ev.abort) and (cnt > 1) then
       -- Allow CmdLineLeave-related chores to be completed before
       -- invoking Leap.
-      vim.schedule(function ()
+      vim.schedule(function()
         -- We want "safe" labels, but no auto-jump (as the search
         -- command already does that), so just use `safe_labels`
         -- as `labels`, with n/N removed.
@@ -665,7 +663,7 @@ do
     vim.go.hlsearch = vim.go.hlsearch
     -- Allow the search command to complete its chores before
     -- invoking Leap (Command-line mode).
-    vim.schedule(function ()
+    vim.schedule(function()
       require('leap').leap {
         pattern = vim.fn.getreg('/'),
         -- If you always want to go forward/backward with the given key,
@@ -686,11 +684,11 @@ do
     end)
   end
 
-  vim.keymap.set({'n', 'x', 'o', 'c'}, '<c-s>', function ()
+  vim.keymap.set({'n', 'x', 'o', 'c'}, '<c-s>', function()
     leap_search('<c-s>', false)
   end, { desc = 'Leap to search matches' })
 
-  vim.keymap.set({'n', 'x', 'o', 'c'}, '<c-q>', function ()
+  vim.keymap.set({'n', 'x', 'o', 'c'}, '<c-q>', function()
     leap_search('<c-q>', true)
   end, { desc = 'Leap to search matches (reverse)' })
 end
@@ -702,7 +700,7 @@ end
 <summary>Jump to lines</summary>
 
 ```lua
-vim.keymap.set({'n', 'x', 'o'}, '|', function ()
+vim.keymap.set({'n', 'x', 'o'}, '|', function()
   local line = vim.fn.line('.')
   -- Skip 3-3 lines around the cursor.
   local top, bot = unpack { math.max(1, line - 3), line + 3 }
@@ -741,7 +739,7 @@ local function pick_with_leap (buf)
   local picker = require('telescope.actions.state').get_current_picker(buf)
   require('leap').leap {
     targets = get_targets(picker),
-    action = function (target)
+    action = function(target)
       picker:set_selection(target.pos[1] - 1)
       require('telescope.actions').select_default(buf)
     end,

@@ -1069,9 +1069,7 @@ local function leap(kwargs)
          prepare_labeled_targets_(sublist)
          set_beacons(sublist, { phase = st.phase })
       end
-      if st.phase == 1 then
-         resolve_conflicts(targets)
-      end
+      resolve_conflicts(targets)
    else
       local use_no_labels = no_labels_to_use or st.repeating_shortcut
       if use_no_labels then

@@ -156,7 +156,11 @@ local function resume_diff(tabpage)
   if need_recompute or not diff.stored_diff_result then
     -- Buffer or file changed, recompute diff
     local diff_module = require("codediff.core.diff")
-    lines_diff = diff_module.compute_diff(original_lines, modified_lines)
+    local config = require("codediff.config")
+    lines_diff = diff_module.compute_diff(original_lines, modified_lines, {
+      max_computation_time_ms = config.options.diff.max_computation_time_ms,
+      ignore_trim_whitespace = config.options.diff.ignore_trim_whitespace,
+    })
     diff_was_recomputed = true
 
     if lines_diff then

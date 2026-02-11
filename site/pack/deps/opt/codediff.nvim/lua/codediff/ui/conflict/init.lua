@@ -35,6 +35,10 @@ M.accept_incoming = actions.accept_incoming
 M.accept_current = actions.accept_current
 M.accept_both = actions.accept_both
 M.discard = actions.discard
+M.accept_all_incoming = actions.accept_all_incoming
+M.accept_all_current = actions.accept_all_current
+M.accept_all_both = actions.accept_all_both
+M.discard_all = actions.discard_all
 
 -- Delegate to diffget module
 M.diffget_incoming = diffget.diffget_incoming

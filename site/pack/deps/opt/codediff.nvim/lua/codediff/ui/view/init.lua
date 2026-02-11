@@ -422,6 +422,7 @@ function M.create(session_config, filetype, on_ready)
     local history_obj = history.create(commits, session_config.git_root, tabpage, nil, {
       range = session_config.history_data.range,
       file_path = session_config.history_data.file_path,
+      base_revision = session_config.history_data.base_revision,
     })
 
     -- Store history panel reference in lifecycle (reuse explorer slot)

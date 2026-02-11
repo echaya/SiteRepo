@@ -88,6 +88,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
     diff = {
       disable_inlay_hints = true,         -- Disable inlay hints in diff windows for cleaner view
       max_computation_time_ms = 5000,     -- Maximum time for diff computation (VSCode default)
+      ignore_trim_whitespace = false,     -- Ignore leading/trailing whitespace changes (like diffopt+=iwhite)
       hide_merge_artifacts = false,       -- Hide merge tool temp files (*.orig, *.BACKUP.*, *.BASE.*, *.LOCAL.*, *.REMOTE.*)
       original_position = "left",         -- Position of original (old) content: "left" or "right"
       conflict_ours_position = "right",   -- Position of ours (:2) in conflict view: "left" or "right"
@@ -359,12 +360,19 @@ Review commits on a per-commit basis:
 :CodeDiff history HEAD~10 --reverse
 :CodeDiff history origin/main..HEAD -r
 :CodeDiff history HEAD~20 % --reverse
+
+" Compare each commit against the current working tree
+:CodeDiff history --base WORKING
+
+" Compare each commit against HEAD
+:CodeDiff history --base HEAD
 ```
 
 The history panel shows a list of commits. Each commit can be expanded to show its changed files. Select a file to view the diff between the commit and its parent (`commit^` vs `commit`).
 
 **Options:**
 - `--reverse` or `-r`: Show commits in chronological order (oldest first) instead of reverse chronological. Useful for following development story from beginning to end, or reviewing PR changes in the order they were made.
+- `--base` or `-b`: Compare each commit against a fixed revision instead of its parent. Accepts any git revision (`HEAD`, branch name, commit hash) or `WORKING` for the current working tree.
 
 **History Keymaps:**
 - `i` - Toggle between list and tree view for files under commits

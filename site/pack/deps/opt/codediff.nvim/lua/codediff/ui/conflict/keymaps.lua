@@ -96,6 +96,34 @@ function M.setup_keymaps(tabpage)
         )
       end
 
+      -- Accept ALL incoming
+      if keymaps.accept_all_incoming then
+        vim.keymap.set("n", keymaps.accept_all_incoming, function()
+          actions.accept_all_incoming(tabpage)
+        end, vim.tbl_extend("force", base_opts, { buffer = bufnr, desc = "Accept ALL incoming changes" }))
+      end
+
+      -- Accept ALL current
+      if keymaps.accept_all_current then
+        vim.keymap.set("n", keymaps.accept_all_current, function()
+          actions.accept_all_current(tabpage)
+        end, vim.tbl_extend("force", base_opts, { buffer = bufnr, desc = "Accept ALL current changes" }))
+      end
+
+      -- Accept ALL both
+      if keymaps.accept_all_both then
+        vim.keymap.set("n", keymaps.accept_all_both, function()
+          actions.accept_all_both(tabpage)
+        end, vim.tbl_extend("force", base_opts, { buffer = bufnr, desc = "Accept ALL both changes" }))
+      end
+
+      -- Discard ALL
+      if keymaps.discard_all then
+        vim.keymap.set("n", keymaps.discard_all, function()
+          actions.discard_all(tabpage)
+        end, vim.tbl_extend("force", base_opts, { buffer = bufnr, desc = "Discard ALL, reset to base" }))
+      end
+
       -- Navigation
       if keymaps.next_conflict then
         vim.keymap.set("n", keymaps.next_conflict, function()

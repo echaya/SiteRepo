@@ -31,6 +31,7 @@ M.defaults = {
   diff = {
     disable_inlay_hints = true, -- Disable inlay hints in diff windows for cleaner view
     max_computation_time_ms = 5000, -- Maximum time for diff computation (5 seconds, VSCode default)
+    ignore_trim_whitespace = false, -- Ignore leading/trailing whitespace changes (like diffopt+=iwhite)
     hide_merge_artifacts = false, -- Hide merge tool temp files (*.orig, *.BACKUP.*, *.BASE.*, *.LOCAL.*, *.REMOTE.*)
     original_position = "left", -- Position of original (old) content: "left" or "right"
     conflict_ours_position = "right", -- Position of ours (:2) in conflict view: "left" or "right" (independent of original_position)
@@ -96,6 +97,11 @@ M.defaults = {
       accept_current = "<leader>co", -- Accept current (ours/right) change
       accept_both = "<leader>cb", -- Accept both changes (incoming first)
       discard = "<leader>cx", -- Discard both, keep base
+      -- Accept all (whole file) - uppercase versions like diffview
+      accept_all_incoming = "<leader>cT", -- Accept ALL incoming changes
+      accept_all_current = "<leader>cO", -- Accept ALL current changes
+      accept_all_both = "<leader>cB", -- Accept ALL both changes
+      discard_all = "<leader>cX", -- Discard ALL, reset to base
       next_conflict = "]x", -- Jump to next conflict
       prev_conflict = "[x", -- Jump to previous conflict
       -- Vimdiff-style numbered diffget (from result buffer)

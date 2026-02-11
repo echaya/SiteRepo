@@ -72,7 +72,7 @@ local function complete_codediff(arg_lead, cmd_line, _)
   if first_arg == "history" then
     -- If arg_lead starts with -, complete flags
     if arg_lead:match("^%-") then
-      local flag_candidates = { "--reverse", "-r" }
+      local flag_candidates = { "--reverse", "-r", "--base", "-b" }
       local filtered = {}
       for _, flag in ipairs(flag_candidates) do
         if flag:find(arg_lead, 1, true) == 1 then

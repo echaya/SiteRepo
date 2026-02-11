@@ -60,12 +60,12 @@ Leap provides some predefined <Plug> keys, aliasing calls to |leap.leap()|:
     *<Plug>(leap-from-window)*    |  Other windows   |          |
     *<Plug>(leap-anywhere)*       |  All windows     |          |
 
-    See also: |leap-target-ordering|.
-
 For custom motions, call `leap()` with your preferred arguments instead: >lua
-    vim.keymap.set({'x', 'o'}, 's', function ()
+    vim.keymap.set({'x', 'o'}, 's', function()
       require('leap').leap { offset = 1, inclusive = true }
     end)
+
+See also: |leap-target-ordering|.
 
 Suggested arrangements ~
 
@@ -224,7 +224,7 @@ Example configuration: >lua
     -- Exclude whitespace and the middle of alphabetic words from preview:
     --   foobar[baaz] = quux
     --   ^----^^^--^^-^-^--^
-    function (ch0, ch1, ch2)
+    function(ch0, ch1, ch2)
       return not (
         ch1:match('%s') or
         ch0:match('%a') and ch1:match('%a') and ch2:match('%a')
@@ -350,7 +350,7 @@ autocommand for |ColorScheme|: >lua
 
     vim.api.nvim_create_autocmd('ColorScheme', {
       group = vim.api.nvim_create_augroup('LeapColorTweaks', {}),
-      callback = function ()
+      callback = function()
         -- Color-scheme-specific settings
         if vim.g.colors_name == 'foo' then
           -- Force using the defaults of Leap for this scheme.
@@ -396,7 +396,7 @@ define custom behaviours for it: >lua
 
     vim.api.nvim_create_autocmd('User', {
       pattern = 'LeapEnter',
-      callback = function ()
+      callback = function()
         if require('leap').state.args.called_leap2 then
           -- Put some special logic here (set options, highlight groups,
           -- mappings, etc.), that will only apply to `leap2()`.
@@ -407,7 +407,7 @@ define custom behaviours for it: >lua
           vim.api.nvim_create_autocmd('User', {
             pattern = 'LeapLeave',
             once = true,
-            callback = function () vim.g.foo = saved end,
+            callback = function() vim.g.foo = saved end,
           })
         end
       end
@@ -475,10 +475,10 @@ leap({opts})                                                       *leap.leap()*
 
                  Examples: >lua
                     -- Search only for word beginnings:
-                    pattern = function (pat) return '\\<' .. pat end
+                    pattern = function(pat) return '\\<' .. pat end
 
                     -- Limit search scope to the current line:
-                    pattern = function (pat)
+                    pattern = function(pat)
                       -- It is best to hardcode line numbers, as `leap()`
                       -- might move the cursor before the search starts.
                       return '\\%'..vim.fn.line('.')..'l' .. pat
