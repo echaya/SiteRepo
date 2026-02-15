@@ -110,6 +110,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
       file_filter = {
         ignore = {},  -- Glob patterns to hide (e.g., {"*.lock", "dist/*"})
       },
+      focus_on_select = false,  -- Jump to modified pane after selecting a file (default: stay in explorer)
     },
 
     -- History panel configuration (for :CodeDiff history)
@@ -134,6 +135,9 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
         diff_put = "dp",    -- Put change to other buffer (like vimdiff)
         open_in_prev_tab = "gf", -- Open current buffer in previous tab (or create one before)
         toggle_stage = "-", -- Stage/unstage current file (works in explorer and diff buffers)
+        stage_hunk = "<leader>hs",   -- Stage hunk under cursor to git index
+        unstage_hunk = "<leader>hu", -- Unstage hunk under cursor from git index
+        discard_hunk = "<leader>hr", -- Discard hunk under cursor (working tree only)
       },
       explorer = {
         select = "<CR>",    -- Open diff for selected file
@@ -366,6 +370,11 @@ Review commits on a per-commit basis:
 
 " Compare each commit against HEAD
 :CodeDiff history --base HEAD
+
+" Line-range history: show only commits that changed the selected lines
+:'<,'>CodeDiff history
+:'<,'>CodeDiff history HEAD~10
+:'<,'>CodeDiff history --reverse
 ```
 
 The history panel shows a list of commits. Each commit can be expanded to show its changed files. Select a file to view the diff between the commit and its parent (`commit^` vs `commit`).
@@ -373,6 +382,8 @@ The history panel shows a list of commits. Each commit can be expanded to show i
 **Options:**
 - `--reverse` or `-r`: Show commits in chronological order (oldest first) instead of reverse chronological. Useful for following development story from beginning to end, or reviewing PR changes in the order they were made.
 - `--base` or `-b`: Compare each commit against a fixed revision instead of its parent. Accepts any git revision (`HEAD`, branch name, commit hash) or `WORKING` for the current working tree.
+
+**Visual selection:** When called with a visual range (`:'<,'>CodeDiff history`), only commits that modified the selected lines are shown. This uses `git log -L` under the hood and is useful for tracing the evolution of a specific function or block in a large file.
 
 **History Keymaps:**
 - `i` - Toggle between list and tree view for files under commits
@@ -590,8 +601,7 @@ codediff.nvim/
 ├── plugin/                # Plugin entry point
 │   └── codediff.lua       # Auto-loaded on startup
 ├── tests/                 # Test suite (plenary.nvim)
-├── docs/                  # Production docs
-├── dev-docs/              # Development docs
+├── docs/                  # Documentation and development history
 ├── Makefile               # Build automation
 └── README.md
 ```

@@ -166,7 +166,8 @@ end
 -- Handle file history command
 -- range: git range (e.g., "origin/main..HEAD", "HEAD~10")
 -- file_path: optional file path to filter history
-local function handle_history(range, file_path, flags)
+-- line_range: optional {start, end} for line-range history (git log -L)
+local function handle_history(range, file_path, flags, line_range)
   flags = flags or {} -- Default to empty table for backward compat
   local current_buf = vim.api.nvim_get_current_buf()
   local current_file = vim.api.nvim_buf_get_name(current_buf)
@@ -200,6 +201,11 @@ local function handle_history(range, file_path, flags)
     -- If file_path specified, filter by that file
     if expanded_file_path then
       history_opts.path = git.get_relative_path(expanded_file_path, git_root)
+    end
+
+    -- If line range specified, set up for git log -L
+    if line_range and history_opts.path then
+      history_opts.line_range = line_range
     end
 
     git.get_commit_list(range or "", git_root, history_opts, function(err, commits)
@@ -635,6 +641,7 @@ function M.vscode_diff(opts)
     handle_dir_diff(args[2], args[3])
   elseif subcommand == "history" then
     -- :CodeDiff history [range] [file] [--reverse|-r]
+    -- :'<,'>CodeDiff history                  - line-range history for selection
     -- Examples:
     --   :CodeDiff history                    - last 100 commits
     --   :CodeDiff history HEAD~10            - last 10 commits
@@ -692,7 +699,24 @@ function M.vscode_diff(opts)
       end
     end
 
-    handle_history(range, file_path, flags)
+    -- Detect visual range: opts.range == 2 means a range was explicitly given
+    -- (e.g., :'<,'>CodeDiff history)
+    local line_range = nil
+    if opts.range == 2 then
+      line_range = { opts.line1, opts.line2 }
+      -- Visual range implies current file
+      if not file_path then
+        local buf_name = vim.api.nvim_buf_get_name(0)
+        if buf_name ~= "" then
+          file_path = buf_name
+        else
+          vim.notify("Line-range history requires a file buffer", vim.log.levels.ERROR)
+          return
+        end
+      end
+    end
+
+    handle_history(range, file_path, flags, line_range)
   elseif subcommand == "install" or subcommand == "install!" then
     -- :CodeDiff install or :CodeDiff install!
     -- Handle both :CodeDiff! install and :CodeDiff install!

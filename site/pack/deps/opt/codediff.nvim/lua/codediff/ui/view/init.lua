@@ -64,9 +64,17 @@ function M.create(session_config, filetype, on_ready)
     vim.cmd(split_cmd)
     modified_win = vim.api.nvim_get_current_win()
 
+    -- Create separate scratch buffers for each window (so initial_buf can be deleted)
+    local orig_scratch = vim.api.nvim_create_buf(false, true)
+    local mod_scratch = vim.api.nvim_create_buf(false, true)
+    vim.bo[orig_scratch].buftype = "nofile"
+    vim.bo[mod_scratch].buftype = "nofile"
+    vim.api.nvim_win_set_buf(original_win, orig_scratch)
+    vim.api.nvim_win_set_buf(modified_win, mod_scratch)
+
     -- Create placeholder buffer info (will be updated by explorer)
-    original_info = { bufnr = vim.api.nvim_win_get_buf(original_win) }
-    modified_info = { bufnr = vim.api.nvim_win_get_buf(modified_win) }
+    original_info = { bufnr = orig_scratch }
+    modified_info = { bufnr = mod_scratch }
   else
     -- Normal mode: Full buffer setup
     local original_is_virtual = is_virtual_revision(session_config.original_revision)
@@ -509,6 +517,25 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
     lifecycle.set_result(tabpage, nil, nil)
   end
 
+  -- IMPORTANT: Restore window widths BEFORE loading buffers
+  -- Loading virtual files with :edit! in a 1-column window can fail
+  if
+    (vim.api.nvim_win_is_valid(original_win) and vim.w[original_win].codediff_placeholder)
+    or (vim.api.nvim_win_is_valid(modified_win) and vim.w[modified_win].codediff_placeholder)
+  then
+    if vim.api.nvim_win_is_valid(original_win) then
+      vim.w[original_win].codediff_placeholder = nil
+    end
+    if vim.api.nvim_win_is_valid(modified_win) then
+      vim.w[modified_win].codediff_placeholder = nil
+    end
+    pcall(vim.api.nvim_del_augroup_by_name, "codediff_skip_placeholder_" .. tabpage)
+    local total_width = vim.api.nvim_win_get_width(original_win) + vim.api.nvim_win_get_width(modified_win)
+    local half_width = math.floor(total_width / 2)
+    vim.api.nvim_win_set_width(original_win, half_width)
+    vim.api.nvim_win_set_width(modified_win, half_width)
+  end
+
   -- Determine if new buffers are virtual
   local original_is_virtual = is_virtual_revision(session_config.original_revision)
   local modified_is_virtual = is_virtual_revision(session_config.modified_revision)
@@ -614,6 +641,24 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
         -- Restore focus to the window that was active before update
         if saved_current_win and vim.api.nvim_win_is_valid(saved_current_win) then
           vim.api.nvim_set_current_win(saved_current_win)
+        end
+
+        -- Restore window widths if coming from single-pane view (placeholder mode)
+        if
+          (vim.api.nvim_win_is_valid(original_win) and vim.w[original_win].codediff_placeholder)
+          or (vim.api.nvim_win_is_valid(modified_win) and vim.w[modified_win].codediff_placeholder)
+        then
+          if vim.api.nvim_win_is_valid(original_win) then
+            vim.w[original_win].codediff_placeholder = nil
+          end
+          if vim.api.nvim_win_is_valid(modified_win) then
+            vim.w[modified_win].codediff_placeholder = nil
+          end
+          pcall(vim.api.nvim_del_augroup_by_name, "codediff_skip_placeholder_" .. tabpage)
+          local total_width = vim.api.nvim_win_get_width(original_win) + vim.api.nvim_win_get_width(modified_win)
+          local half_width = math.floor(total_width / 2)
+          vim.api.nvim_win_set_width(original_win, half_width)
+          vim.api.nvim_win_set_width(modified_win, half_width)
         end
       end
     end

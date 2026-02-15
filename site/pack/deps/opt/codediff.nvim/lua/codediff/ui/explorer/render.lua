@@ -136,6 +136,7 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
     bufnr = split.bufnr,
     winid = split.winid,
     git_root = git_root,
+    tabpage = tabpage,
     dir1 = opts.dir1,
     dir2 = opts.dir2,
     base_revision = base_revision,
@@ -184,6 +185,150 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
     end
 
     local abs_path = git_root .. "/" .. file_path
+
+    -- Handle untracked files: show file without diff (hide left pane)
+    if file_data.status == "??" then
+      vim.schedule(function()
+        local sess = lifecycle.get_session(tabpage)
+        if sess then
+          local orig_win, mod_win = lifecycle.get_windows(tabpage)
+          local highlights = require("codediff.ui.highlights")
+
+          -- Clear highlights from current session buffers
+          local old_orig_buf, old_mod_buf = lifecycle.get_buffers(tabpage)
+          if old_orig_buf and vim.api.nvim_buf_is_valid(old_orig_buf) then
+            vim.api.nvim_buf_clear_namespace(old_orig_buf, highlights.ns_highlight, 0, -1)
+            vim.api.nvim_buf_clear_namespace(old_orig_buf, highlights.ns_filler, 0, -1)
+          end
+          if old_mod_buf and vim.api.nvim_buf_is_valid(old_mod_buf) then
+            vim.api.nvim_buf_clear_namespace(old_mod_buf, highlights.ns_highlight, 0, -1)
+            vim.api.nvim_buf_clear_namespace(old_mod_buf, highlights.ns_filler, 0, -1)
+          end
+
+          -- Create empty scratch buffer for original window
+          local empty_buf = vim.api.nvim_create_buf(false, true)
+          vim.bo[empty_buf].modifiable = false
+          vim.bo[empty_buf].buftype = "nofile"
+
+          -- Set up the hidden left pane
+          if orig_win and vim.api.nvim_win_is_valid(orig_win) then
+            vim.api.nvim_win_set_buf(orig_win, empty_buf)
+
+            -- Shrink window to minimum width (effectively hidden)
+            vim.api.nvim_win_set_width(orig_win, 1)
+
+            -- Mark this window as a placeholder for later restoration
+            vim.w[orig_win].codediff_placeholder = true
+
+            -- Set up auto-skip: when entering this window, redirect based on where we came from
+            local skip_group = vim.api.nvim_create_augroup("codediff_skip_placeholder_" .. tabpage, { clear = true })
+            vim.api.nvim_create_autocmd("WinEnter", {
+              group = skip_group,
+              buffer = empty_buf,
+              callback = function()
+                -- Get previous window
+                local prev_win = vim.fn.win_getid(vim.fn.winnr("#"))
+
+                -- If came from file window (right), go left to explorer
+                -- If came from explorer (left), go right to file
+                if prev_win == mod_win then
+                  vim.cmd("wincmd h")
+                else
+                  vim.cmd("wincmd l")
+                end
+              end,
+            })
+          end
+
+          -- Load the untracked file into modified window (reuse buffer pattern)
+          if mod_win and vim.api.nvim_win_is_valid(mod_win) then
+            -- Use bufadd/bufload instead of :edit to reuse existing buffer if available
+            local file_bufnr = vim.fn.bufadd(abs_path)
+            vim.fn.bufload(file_bufnr)
+            vim.api.nvim_win_set_buf(mod_win, file_bufnr)
+
+            -- Update session state to keep it consistent
+            lifecycle.update_buffers(tabpage, empty_buf, file_bufnr)
+            lifecycle.update_paths(tabpage, "", abs_path)
+            lifecycle.update_revisions(tabpage, nil, nil)
+            lifecycle.update_diff_result(tabpage, {}) -- Empty diff for untracked
+
+            -- Re-apply all view keymaps on the new buffers
+            local view_keymaps = require("codediff.ui.view.keymaps")
+            view_keymaps.setup_all_keymaps(tabpage, empty_buf, file_bufnr, true)
+          end
+        end
+      end)
+      return
+    end
+
+    -- Handle deleted files: show old content without diff (hide right pane)
+    if file_data.status == "D" then
+      vim.schedule(function()
+        local sess = lifecycle.get_session(tabpage)
+        if sess then
+          local orig_win, mod_win = lifecycle.get_windows(tabpage)
+          local highlights = require("codediff.ui.highlights")
+
+          -- Clear highlights from current session buffers
+          local old_orig_buf, old_mod_buf = lifecycle.get_buffers(tabpage)
+          if old_orig_buf and vim.api.nvim_buf_is_valid(old_orig_buf) then
+            vim.api.nvim_buf_clear_namespace(old_orig_buf, highlights.ns_highlight, 0, -1)
+            vim.api.nvim_buf_clear_namespace(old_orig_buf, highlights.ns_filler, 0, -1)
+          end
+          if old_mod_buf and vim.api.nvim_buf_is_valid(old_mod_buf) then
+            vim.api.nvim_buf_clear_namespace(old_mod_buf, highlights.ns_highlight, 0, -1)
+            vim.api.nvim_buf_clear_namespace(old_mod_buf, highlights.ns_filler, 0, -1)
+          end
+
+          -- Create empty scratch buffer for modified window
+          local empty_buf = vim.api.nvim_create_buf(false, true)
+          vim.bo[empty_buf].modifiable = false
+          vim.bo[empty_buf].buftype = "nofile"
+
+          -- Set up the hidden right pane
+          if mod_win and vim.api.nvim_win_is_valid(mod_win) then
+            vim.api.nvim_win_set_buf(mod_win, empty_buf)
+            vim.api.nvim_win_set_width(mod_win, 1)
+            vim.w[mod_win].codediff_placeholder = true
+
+            local skip_group = vim.api.nvim_create_augroup("codediff_skip_placeholder_" .. tabpage, { clear = true })
+            vim.api.nvim_create_autocmd("WinEnter", {
+              group = skip_group,
+              buffer = empty_buf,
+              callback = function()
+                local prev_win = vim.fn.win_getid(vim.fn.winnr("#"))
+                if prev_win == orig_win then
+                  vim.cmd("wincmd l")
+                else
+                  vim.cmd("wincmd h")
+                end
+              end,
+            })
+          end
+
+          -- Load the deleted file's old content into original window via virtual buffer
+          if orig_win and vim.api.nvim_win_is_valid(orig_win) then
+            local revision = (group == "staged") and "HEAD" or ":0"
+            local virtual_file = require("codediff.core.virtual_file")
+            local url = virtual_file.create_url(git_root, revision, file_path)
+            local file_bufnr = vim.fn.bufadd(url)
+            vim.fn.bufload(file_bufnr)
+            vim.api.nvim_win_set_buf(orig_win, file_bufnr)
+
+            lifecycle.update_buffers(tabpage, file_bufnr, empty_buf)
+            lifecycle.update_paths(tabpage, abs_path, "")
+            lifecycle.update_revisions(tabpage, revision, nil)
+            lifecycle.update_diff_result(tabpage, {})
+
+            -- Re-apply all view keymaps on the new buffers
+            local view_keymaps = require("codediff.ui.view.keymaps")
+            view_keymaps.setup_all_keymaps(tabpage, file_bufnr, empty_buf, true)
+          end
+        end
+      end)
+      return
+    end
 
     -- Check if this exact diff is already being displayed
     -- Same file can have different diffs (staged vs HEAD, working vs staged)

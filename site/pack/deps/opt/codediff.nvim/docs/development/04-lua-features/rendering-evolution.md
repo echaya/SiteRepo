@@ -1,53 +1,41 @@
-# render.lua Evolution: From ef54a877 to Current Implementation
+# Lua Rendering Layer Evolution
 
-**Date:** October 29, 2025  
-**Base Commit:** ef54a877 (Fix major mismatch between VSCode)  
-**Focus:** Filler line calculation algorithm evolution
+This document consolidates the development journey of the Lua rendering layer, covering filler line calculation, color scheme corrections, and extmark layering insights. It tracks the iterative problem-solving process that brought the rendering pipeline into alignment with VSCode's diff editor behavior.
 
 ---
 
-## Table of Contents
+## Filler Line Calculation
 
-1. [Overview](#overview)
-2. [Initial State (ef54a877)](#initial-state-ef54a877)
-3. [Problem Discovery](#problem-discovery)
-4. [Solution Attempts](#solution-attempts)
-5. [Current Implementation](#current-implementation)
-6. [Known Issues](#known-issues)
-7. [VSCode Reference Implementation](#vscode-reference-implementation)
-8. [Data Structure Conventions](#data-structure-conventions)
+**Date:** October 29, 2025
+**Base Commit:** ef54a877 (Fix major mismatch between VSCode)
 
----
+### Overview
 
-## Overview
-
-This document tracks the evolution of filler line calculation in `render.lua`, focusing on the attempts to match VSCode's diff editor behavior for side-by-side view alignment.
+This section tracks the evolution of filler line calculation in `render.lua`, focusing on the attempts to match VSCode's diff editor behavior for side-by-side view alignment.
 
 **Key Challenge:** Determining the correct position (before vs after a line) to insert filler lines for proper vertical alignment between the original and modified editors.
 
----
+### Initial State (ef54a877)
 
-## Initial State (ef54a877)
-
-### Rendering Algorithm (3 Steps)
+#### Rendering Algorithm (3 Steps)
 
 The initial implementation after commit ef54a877 used a simplified 3-step algorithm:
 
-#### Step 1: Line-Level Highlights
+**Step 1: Line-Level Highlights**
 ```lua
 -- Apply light background to entire changed line ranges
 apply_line_highlights(bufnr, line_range, "CodeDiffLineDelete")
 apply_line_highlights(bufnr, line_range, "CodeDiffLineInsert")
 ```
 
-#### Step 2: Character-Level Highlights
+**Step 2: Character-Level Highlights**
 ```lua
 -- Apply dark background to specific changed text from inner changes
 -- Skips empty ranges and line-ending-only changes
 apply_char_highlight(bufnr, char_range, "CodeDiffCharDelete", lines)
 ```
 
-#### Step 3: Filler Lines (Simple Empty Range Detection)
+**Step 3: Filler Lines (Simple Empty Range Detection)**
 ```lua
 -- For each inner change:
 if is_empty_range(original) and not is_empty_range(modified) then
@@ -64,7 +52,7 @@ end
 - No line wrapping in diff buffers
 - Avoid VSCode's complex `emitAlignment` state machine
 
-### Problem with Simple Approach
+#### Problem with Simple Approach
 
 The simple empty-range detection failed for:
 1. **Multi-line expansions** (e.g., single line → multiple lines)
@@ -77,11 +65,9 @@ The simple empty-range detection failed for:
 - Expected: Fillers AFTER line 1230
 - Actual: No fillers added (neither side empty)
 
----
+### Problem Discovery
 
-## Problem Discovery
-
-### Test Case Analysis
+#### Test Case Analysis
 
 Testing with `a.ps1` and `b.ps1` revealed specific misalignment issues:
 
@@ -93,7 +79,7 @@ Testing with `a.ps1` and `b.ps1` revealed specific misalignment issues:
 | 1232 | Multi-line expansion (1→2 lines) | BEFORE line 1232 | ? Uncertain |
 | 1566-1570 | Multi-line expansion (4→44 lines) | AFTER line 1570 | ✗ Placed after 1566 |
 
-### Algorithm Output Analysis
+#### Algorithm Output Analysis
 
 From `node vscode-diff.mjs`:
 ```
@@ -109,11 +95,9 @@ From `node vscode-diff.mjs`:
 - Multi-line ranges (different start/end lines)
 - Position within line (column 1 vs mid-line)
 
----
+### Solution Attempts
 
-## Solution Attempts
-
-### Attempt 1: Simple Line Count Difference
+#### Attempt 1: Simple Line Count Difference
 
 ```lua
 -- For each inner change:
@@ -131,7 +115,7 @@ end
 **Result:** Added too many fillers (64 left, 9 right)
 - Added fillers for every inner change including 0→0 line changes (column-only changes)
 
-### Attempt 2: Skip Single-Line to Single-Line
+#### Attempt 2: Skip Single-Line to Single-Line
 
 ```lua
 -- Skip if both sides are single-line
@@ -144,7 +128,7 @@ end
 **Result:** Still incorrect positioning
 - Line 35 still had fillers before it instead of after
 
-### Attempt 3: Position Based on Empty vs Non-Empty
+#### Attempt 3: Position Based on Empty vs Non-Empty
 
 ```lua
 if line_diff > 0 then
@@ -163,7 +147,7 @@ end
 **Result:** Line 35 still placed fillers before (at line 34)
 - Used `end_line - 1` incorrectly
 
-### Attempt 4: Use end_line Directly
+#### Attempt 4: Use end_line Directly
 
 Discovered that ranges are **exclusive** at mapping level but **inclusive** at inner change level.
 
@@ -180,7 +164,7 @@ after_line = inner.original.end_line  -- Not end_line - 1
 **Result:** Line 35 placed fillers after line 35 ✓
 - But broke line 1216 (now AFTER instead of BEFORE)
 
-### Attempt 5: VSCode Alignment-Based Approach
+#### Attempt 5: VSCode Alignment-Based Approach
 
 Studied VSCode's `diffEditorViewZones.ts` and implemented alignment creation:
 
@@ -219,13 +203,9 @@ if (i.originalRange.endColumn < maxColumn) {
 - Line 1216 worked ✓
 - But line 1232 still had issues
 
----
-
-## Current Implementation
+### Current Implementation
 
 The current implementation in `render.lua` uses the **alignment-based approach** from VSCode:
-
-### Algorithm (Step-by-Step)
 
 #### Input
 - `mapping`: A line range mapping with `inner_changes`
@@ -299,7 +279,7 @@ The current implementation in `render.lua` uses the **alignment-based approach**
    end
    ```
 
-### How It Works (Example: Line 35)
+#### How It Works (Example: Line 35)
 
 **Input:**
 ```
@@ -315,14 +295,12 @@ Inner [3]: Orig L35:C50 - L35:C52, Mod L36:C38 - L38:C5
 
 **Result:** Fillers BEFORE line 35 ✗ (Expected: AFTER line 35)
 
----
+### Known Issues
 
-## Known Issues
+#### Issue 1: Line 35 - Fillers Before Instead of After
 
-### Issue 1: Line 35 - Fillers Before Instead of After
-
-**Symptom:** Fillers appear before line 35 (after line 34)  
-**Expected:** Fillers should appear after line 35  
+**Symptom:** Fillers appear before line 35 (after line 34)
+**Expected:** Fillers should appear after line 35
 **Cause:** Using `align.orig_end - 1` for all cases
 
 **Analysis:**
@@ -330,10 +308,10 @@ The alignment is created at line 35 (end of inner change). Using `after_line = 3
 
 **Possible Fix:** Different positioning for mid-line changes?
 
-### Issue 2: Line 1232 - Uncertain Correct Behavior
+#### Issue 2: Line 1232 - Uncertain Correct Behavior
 
-**Symptom:** Fillers after line 1232  
-**Expected:** User says fillers should be before line 1232  
+**Symptom:** Fillers after line 1232
+**Expected:** User says fillers should be before line 1232
 **Cause:** Unknown - need to verify against VSCode
 
 **Analysis:**
@@ -342,9 +320,9 @@ Inner: L1231:C5-L1232:C1 -> L1253:C5-L1255:C5
 ```
 This is a multi-line change (1231-1232 → 1253-1255). The `start_col=5` creates alignment at line 1231. The `end_col=1` (beginning of 1232) creates alignment at line 1232.
 
-### Issue 3: Inconsistent Positioning Logic
+#### Issue 3: Inconsistent Positioning Logic
 
-**Symptom:** No clear pattern for before/after placement  
+**Symptom:** No clear pattern for before/after placement
 **Root Cause:** Uncertain - the alignment-based approach doesn't match VSCode exactly
 
 **Observation:**
@@ -360,191 +338,13 @@ This is a multi-line change (1231-1232 → 1253-1255). The `start_col=5` creates
 - Otherwise: AFTER
 - But this doesn't explain line 1232
 
----
+### Final Solution (October 29, 2025)
 
-## VSCode Reference Implementation
-
-### Source Files
-
-**Primary Reference:**
-- File: `src/vs/editor/browser/widget/diffEditor/components/diffEditorViewZones/diffEditorViewZones.ts`
-- Function: `computeRangeAlignment` (lines 443-511)
-- Key Section: `innerHunkAlignment` logic (lines 489-498)
-
-**Supporting Files:**
-- `src/vs/editor/common/diff/rangeMapping.ts` - Range data structures
-- `src/vs/editor/common/core/ranges/lineRange.ts` - LineRange class
-
-### VSCode's Algorithm
-
-```typescript
-// Create alignments based on inner changes
-if (innerHunkAlignment) {
-  for (const i of c.innerChanges || []) {
-    // Unmodified text BEFORE the change
-    if (i.originalRange.startColumn > 1 && i.modifiedRange.startColumn > 1) {
-      emitAlignment(i.originalRange.startLineNumber, i.modifiedRange.startLineNumber);
-    }
-    
-    // Unmodified text AFTER the change
-    const maxColumn = originalModel.getLineMaxColumn(i.originalRange.endLineNumber);
-    if (i.originalRange.endColumn < maxColumn) {
-      emitAlignment(i.originalRange.endLineNumber, i.modifiedRange.endLineNumber);
-    }
-  }
-}
-
-// Final alignment at end of mapping
-emitAlignment(c.original.endLineNumberExclusive, c.modified.endLineNumberExclusive);
-```
-
-**Key Difference from Our Implementation:**
-VSCode uses `endLineNumber` directly (not `endLineNumber - 1`) for alignment creation, but then uses `endLineNumberExclusive - 1` for the final `afterLineNumber` when creating view zones.
-
-### View Zone Creation
-
-```typescript
-// diffEditorViewZones.ts lines 352-373
-const delta = a.modifiedHeightInPx - a.originalHeightInPx;
-if (delta > 0) {
-  origViewZones.push({
-    afterLineNumber: a.originalRange.endLineNumberExclusive - 1,
-    heightInPx: delta,
-    // ... other properties
-  });
-}
-```
-
-**Formula:** `afterLineNumber = endLineNumberExclusive - 1`
-
-**In Our Terms:**
-- VSCode's `endLineNumberExclusive` is the line number AFTER the range
-- `endLineNumberExclusive - 1` is the LAST line IN the range
-- So fillers go AFTER the last line of the range
-
----
-
-## Data Structure Conventions
-
-### Our C Code Output
-
-**Mapping-Level Ranges (EXCLUSIVE):**
-```lua
-mapping.original.start_line = 35  -- First line (inclusive)
-mapping.original.end_line = 36    -- EXCLUSIVE (line 36 is NOT included)
--- This represents only line 35
-```
-
-**Inner Change Ranges (INCLUSIVE):**
-```lua
-inner.original.start_line = 35
-inner.original.end_line = 35  -- INCLUSIVE (line 35 IS included)
--- This represents line 35
-```
-
-**Why the Difference?**
-- **Mappings:** Follow VSCode's `LineRange` class (exclusive end)
-- **Inner Changes:** Follow VSCode's `Range` class (inclusive end for same-line ranges)
-
-### VSCode's Range Classes
-
-**LineRange (Mappings):**
-```typescript
-class LineRange {
-  startLineNumber: number;        // Inclusive
-  endLineNumberExclusive: number; // Exclusive
-}
-```
-
-**Range (Inner Changes):**
-```typescript
-class Range {
-  startLineNumber: number;
-  startColumn: number;
-  endLineNumber: number;    // Inclusive for same-line ranges
-  endColumn: number;
-}
-```
-
-### Conversion Rules
-
-When using VSCode's algorithm in our code:
-
-1. **For mapping final alignment:**
-   ```lua
-   emit_alignment(mapping.original.end_line, mapping.modified.end_line)
-   -- end_line is already exclusive, use directly
-   ```
-
-2. **For inner change alignments:**
-   ```lua
-   emit_alignment(inner.original.end_line, inner.modified.end_line)
-   -- end_line is INCLUSIVE for inner changes, but use directly per VSCode
-   ```
-
-3. **For calculating after_line:**
-   ```lua
-   after_line = alignment.orig_end - 1
-   -- This converts exclusive end to the last included line
-   ```
-
-**Current Issue:** This conversion doesn't produce the expected results for all cases.
-
----
-
-## Next Steps
-
-### Investigation Needed
-
-1. **Verify VSCode Behavior:** Open `a.ps1` and `b.ps1` in VSCode diff editor
-   - Screenshot/document where fillers appear for lines 35, 1216, 1230, 1232, 1566-1570
-   - Identify the actual pattern
-
-2. **Check Inner Change Data:** Verify our C code produces correct inner change ranges
-   - Compare with VSCode's JSON output
-   - Ensure start_line/end_line match VSCode's expectations
-
-3. **Test Alignment Creation:** Add debug output to track all alignments created
-   - Log each `emit_alignment` call with context
-   - Compare with expected VSCode behavior
-
-### Potential Solutions
-
-**Option 1: Different positioning based on context**
-```lua
-if is_leading_insertion and orig_line_count == 0 then
-  after_line = align.orig_end - 1  -- BEFORE the line
-else
-  after_line = align.orig_end      -- AFTER the line
-end
-```
-
-**Option 2: Use VSCode's exact algorithm (TypeScript → Lua port)**
-- Port the entire `computeRangeAlignment` function
-- Include all edge case handling
-- Ensure identical behavior
-
-**Option 3: Simplified heuristic**
-```lua
--- Based on observed pattern (if confirmed):
-if starts_at_col_1 and is_empty_original then
-  position = "BEFORE"
-else
-  position = "AFTER"
-end
-```
-
----
-
-## Final Solution (October 29, 2025)
-
-### Root Cause Identified (Multiple Issues)
+#### Root Cause Identified (Multiple Issues)
 
 After comprehensive investigation of VSCode's source code (`diffEditorViewZones.ts`), TWO critical issues were identified:
 
-#### Issue 1: Inclusive/Exclusive Semantic Mismatch
-
-**The Problem:** Semantic mismatch between inclusive and exclusive line number ranges.
+**Issue 1: Inclusive/Exclusive Semantic Mismatch**
 
 - Our inner change `end_line` values are **INCLUSIVE** (e.g., for line 35: `start_line=35, end_line=35`)
 - VSCode's `emitAlignment` function treats all parameters as **EXCLUSIVE** endpoints
@@ -561,14 +361,14 @@ emit_alignment(35, 36)  -- Creates alignment [lastLine, 35) for original
                         -- Fillers placed BEFORE line 35 ❌
 
 -- Correct:
-emit_alignment(36, 37)  -- Creates alignment [lastLine, 36) for original  
+emit_alignment(36, 37)  -- Creates alignment [lastLine, 36) for original
                         -- afterLineNumber = 36 - 1 = 35
                         -- Fillers placed AFTER line 35 ✓
 ```
 
-#### Issue 2: Missing Gap Alignment (THE REAL ISSUE)
+**Issue 2: Missing Gap Alignment (THE REAL ISSUE)**
 
-**The Critical Discovery:** We were only processing alignments WITHIN each mapping, completely missing the alignments for UNCHANGED regions BETWEEN mappings.
+We were only processing alignments WITHIN each mapping, completely missing the alignments for UNCHANGED regions BETWEEN mappings.
 
 VSCode's algorithm has **three levels of alignment**:
 1. **Gap alignments** - Between mappings (for unchanged regions)
@@ -593,20 +393,20 @@ The gap alignment should create:
 ```lua
 Alignment {
   orig: [36, 1216)   -- 1180 lines
-  mod: [39, 1219)    -- 1180 lines  
+  mod: [39, 1219)    -- 1180 lines
 }
 ```
 
 This produces 3 fillers on the original side BEFORE line 1216 to account for the offset between mappings!
 
-### The Complete Fix
+#### The Complete Fix
 
 **File:** `lua/vscode-diff/render.lua`
 
 **Major Refactoring:**
 
 1. **Renamed function:** `calculate_fillers` → `calculate_all_fillers`
-2. **New signature:** Now takes ALL mappings instead of one mapping  
+2. **New signature:** Now takes ALL mappings instead of one mapping
 3. **Global tracking:** Maintains `global_last_orig` and `global_last_mod` across all mappings
 4. **Gap handling:** Creates alignments for unchanged regions between mappings
 5. **Inclusive→Exclusive conversion:** Adds +1 to inner change `end_line` values
@@ -662,13 +462,13 @@ for _, filler in ipairs(fillers) do
 end
 ```
 
-### Why This Works
+#### Why This Works
 
 1. **VSCode's Three-Level Alignment System:**
    - **Gap alignments:** Handle unchanged regions BETWEEN mappings (this was completely missing!)
    - **Inner alignments:** Handle unmodified text within mappings at inner change boundaries
    - **Final alignments:** Align the end of each mapping
-   
+
 2. **Global vs Local Tracking:**
    - Global `last_orig/last_mod` track position across ALL mappings (for gap alignments)
    - Local tracking within each mapping (for inner/final alignments)
@@ -679,26 +479,6 @@ end
    - For empty original range: use `end_line` without +1 (NOT `end_line + 1`)
    - Creates alignment [1216, 1216) on original (zero-length, before line 1216)
    - Creates alignment [1219, 1223) on modified (4 lines)
-   - 4 - 0 = 4 lines difference (but wait, that's wrong... let me recalculate)
-   - Actually: alignment [1216, 1216) includes lines from last position to 1216
-   - With last position = 1216, this is a zero-length alignment at the START
-   - The alignment is: orig [1216, 1216) = 0 lines, mod [1219, 1223) = 4 lines
-   - But this creates 4 fillers, not 3...
-   - 
-   - **CORRECTION:** The alignment should be [1216, 1216) vs [1219, 1223)
-   - But these start at different positions based on local last_line tracking
-   - With last_orig_line = 1216, last_mod_line = 1219:
-   -   emit_alignment(1216, 1223) creates:
-   -   orig: [1216, 1216) = 0 lines
-   -   mod: [1219, 1223) = 4 lines
-   - This should create 4 fillers, but we want 3!
-   - 
-   - **ACTUAL FIX NEEDED:** For empty range, use end_line directly (no +1)
-   - emit_alignment(1216, 1223) with last_orig=1216, last_mod=1219:
-   -   orig: [1216, 1216) = 0 lines  
-   -   mod: [1219, 1223) = 4 lines
-   - Fillers: 4 - 0 = 4, after_line = 1216 - 1 = 1215
-   - Fillers placed AFTER line 1215 = BEFORE line 1216 ✓
 
 4. **End-of-Line Expansions (Line 35 case):**
    - Inner alignment created at end of change (end_col < line_len)
@@ -712,7 +492,18 @@ end
 
 ### VSCode Reference Implementation
 
-From `src/vs/editor/browser/widget/diffEditor/components/diffEditorViewZones/diffEditorViewZones.ts`:
+#### Source Files
+
+**Primary Reference:**
+- File: `src/vs/editor/browser/widget/diffEditor/components/diffEditorViewZones/diffEditorViewZones.ts`
+- Function: `computeRangeAlignment` (lines 443-511)
+- Key Section: `innerHunkAlignment` logic (lines 489-498)
+
+**Supporting Files:**
+- `src/vs/editor/common/diff/rangeMapping.ts` - Range data structures
+- `src/vs/editor/common/core/ranges/lineRange.ts` - LineRange class
+
+#### VSCode's Algorithm
 
 ```typescript
 // Global tracking across all mappings
@@ -761,11 +552,93 @@ origViewZones.push({
 ```
 
 **Key Insight:** The gap handling (`handleAlignmentsOutsideOfDiffs`) is what makes leading insertions work! Without it, there's no alignment to create fillers before the insertion.
-**Key Insight:** The gap handling (`handleAlignmentsOutsideOfDiffs`) is what makes leading insertions work! Without it, there's no alignment to create fillers before the insertion.
 
----
+#### View Zone Creation
 
-## Conclusion
+```typescript
+// diffEditorViewZones.ts lines 352-373
+const delta = a.modifiedHeightInPx - a.originalHeightInPx;
+if (delta > 0) {
+  origViewZones.push({
+    afterLineNumber: a.originalRange.endLineNumberExclusive - 1,
+    heightInPx: delta,
+    // ... other properties
+  });
+}
+```
+
+**Formula:** `afterLineNumber = endLineNumberExclusive - 1`
+
+**In Our Terms:**
+- VSCode's `endLineNumberExclusive` is the line number AFTER the range
+- `endLineNumberExclusive - 1` is the LAST line IN the range
+- So fillers go AFTER the last line of the range
+
+### Data Structure Conventions
+
+#### Our C Code Output
+
+**Mapping-Level Ranges (EXCLUSIVE):**
+```lua
+mapping.original.start_line = 35  -- First line (inclusive)
+mapping.original.end_line = 36    -- EXCLUSIVE (line 36 is NOT included)
+-- This represents only line 35
+```
+
+**Inner Change Ranges (INCLUSIVE):**
+```lua
+inner.original.start_line = 35
+inner.original.end_line = 35  -- INCLUSIVE (line 35 IS included)
+-- This represents line 35
+```
+
+**Why the Difference?**
+- **Mappings:** Follow VSCode's `LineRange` class (exclusive end)
+- **Inner Changes:** Follow VSCode's `Range` class (inclusive end for same-line ranges)
+
+#### VSCode's Range Classes
+
+**LineRange (Mappings):**
+```typescript
+class LineRange {
+  startLineNumber: number;        // Inclusive
+  endLineNumberExclusive: number; // Exclusive
+}
+```
+
+**Range (Inner Changes):**
+```typescript
+class Range {
+  startLineNumber: number;
+  startColumn: number;
+  endLineNumber: number;    // Inclusive for same-line ranges
+  endColumn: number;
+}
+```
+
+#### Conversion Rules
+
+When using VSCode's algorithm in our code:
+
+1. **For mapping final alignment:**
+   ```lua
+   emit_alignment(mapping.original.end_line, mapping.modified.end_line)
+   -- end_line is already exclusive, use directly
+   ```
+
+2. **For inner change alignments:**
+   ```lua
+   emit_alignment(inner.original.end_line, inner.modified.end_line)
+   -- end_line is INCLUSIVE for inner changes, but use directly per VSCode
+   ```
+
+3. **For calculating after_line:**
+   ```lua
+   after_line = alignment.orig_end - 1
+   -- This converts exclusive end to the last included line
+   ```
+
+### Conclusion
 
 The filler line positioning issue has been **COMPLETELY RESOLVED** through a major refactoring that aligns with VSCode's architecture.
 
@@ -787,6 +660,248 @@ The filler line positioning issue has been **COMPLETELY RESOLVED** through a maj
 
 ---
 
-**Last Updated:** October 29, 2025  
-**Status:** RESOLVED (Complete Refactoring)  
-**Priority:** HIGH - Core diff viewing experience now fully correct
+## Color Scheme & Hierarchy
+
+### Initial Issue
+
+The original colors had inverted brightness:
+- "Light" colors were actually **darker** (#1e3a1e, #3a1e1e)
+- "Dark" colors were actually **lighter** (#2d6d2d, #6d2d2d)
+
+This caused char-level highlights to be **invisible** because they were lighter than the line backgrounds!
+
+### First Fix: Native Neovim Colors + Darkened Variants
+
+1. **Line-level (light):** Link to native `DiffAdd` and `DiffDelete`
+   - Adapts to user's color scheme automatically
+   - Provides consistent experience with `:diffthis`
+
+2. **Char-level (dark):** Calculate darkened version (60% brightness)
+   - Dynamically generated from native colors
+   - Always darker than line-level
+   - Maintains same color family
+
+```lua
+-- Line-level: Use native colors
+vim.api.nvim_set_hl(0, "CodeDiffLineInsert", {
+  link = "DiffAdd",  -- Native green
+})
+
+vim.api.nvim_set_hl(0, "CodeDiffLineDelete", {
+  link = "DiffDelete",  -- Native red
+})
+
+-- Char-level: Darken the native colors
+local function darken_color(color)
+  local r = math.floor((math.floor(color / 65536) % 256) * 0.6)
+  local g = math.floor((math.floor(color / 256) % 256) * 0.6)
+  local b = math.floor((color % 256) * 0.6)
+  return r * 65536 + g * 256 + b
+end
+
+local diff_add = vim.api.nvim_get_hl(0, {name = "DiffAdd"})
+vim.api.nvim_set_hl(0, "CodeDiffCharInsert", {
+  bg = darken_color(diff_add.bg),  -- 60% darker
+})
+```
+
+### Color Brightness Comparison
+
+**Before (Broken):**
+```
+                    Brightness
+Line Insert  #1e3a1e     41.8  ← "Light" but actually darker!
+Char Insert  #2d6d2d     84.4  ← "Dark" but actually lighter! (INVISIBLE)
+
+Line Delete  #3a1e1e     38.7  ← "Light" but actually darker!
+Char Delete  #6d2d2d     70.5  ← "Dark" but actually lighter! (INVISIBLE)
+```
+
+**After First Fix:**
+```
+                    Brightness
+Line Insert  #2a4556     62.9  ← Light (from DiffAdd)
+Char Insert  #192933     37.4  ← Dark (60% of DiffAdd) ✅
+
+Line Delete  #4b2a3d     54.0  ← Light (from DiffDelete)
+Char Delete  #2d1924     32.2  ← Dark (60% of DiffDelete) ✅
+```
+
+### Benefits
+
+1. **Adaptive:** Works with any color scheme (uses native DiffAdd/DiffDelete)
+2. **Correct hierarchy:** Char-level always darker than line-level
+3. **Same family:** Darkened colors maintain the same hue
+4. **Consistent:** Matches native `:diffthis` experience
+
+### Darkening Formula
+
+Multiply each RGB component by 0.6:
+```
+R' = R × 0.6
+G' = G × 0.6
+B' = B × 0.6
+```
+
+This maintains the color hue while reducing brightness by 40%.
+
+### Testing
+
+```vim
+:CodeDiff ../test_playground.txt ../modified_playground.txt
+```
+
+You should see:
+- ✅ Light backgrounds on changed lines
+- ✅ **Dark overlays** on specific changed characters (visible!)
+- ✅ Colors adapt to your color scheme
+
+---
+
+## Understanding Extmark Layering
+
+### The Critical Insight
+
+**`line_hl_group` and `hl_group` DON'T OVERRIDE EACH OTHER - They're different layers!**
+
+- `line_hl_group` = Background color for the **entire line** (edge to edge)
+- `hl_group` = Highlight for **specific text range**
+
+They both render **simultaneously**. The text highlight appears ON TOP of the line background.
+
+### The Problem
+
+The first fix (darkened char colors) was still wrong because it misunderstood layering:
+
+```
+Line background:  #4b2a3d (brightness 54.0) ← BRIGHT
+Text highlight:   #2d1924 (brightness 32.2) ← DARK
+
+Visual result:
+[line starts]DARK TEXT[lots of BRIGHT background][line ends]
+```
+
+**Why it's invisible:** The dark text gets lost in the bright line background!
+
+### The Corrected Strategy
+
+Instead of:
+- Line = Light/Bright
+- Char = Dark
+
+Do:
+- **Line = Dark/Subtle** (background tint)
+- **Char = Bright** (text highlight that stands out)
+
+### New Color Hierarchy
+
+```
+Line background:  #1d303c (brightness 43.7) ← DARK/SUBTLE
+Text highlight:   #2a4556 (brightness 62.9) ← BRIGHT
+
+Visual result:
+[line starts]BRIGHT TEXT[subtle dark background][line ends]
+```
+
+**Why it works:** Bright text on dark background = **HIGH CONTRAST** = VISIBLE! ✅
+
+### Implementation
+
+```lua
+-- Line-level: DARKER (70% of native DiffAdd/Delete)
+function adjust_brightness(color, 0.7)
+  -- Makes colors darker and more subtle
+end
+
+vim.api.nvim_set_hl(0, "CodeDiffLineInsert", {
+  bg = adjust_brightness(diff_add.bg, 0.7)  -- Darker
+})
+
+-- Char-level: BRIGHTER (use full native color)
+vim.api.nvim_set_hl(0, "CodeDiffCharInsert", {
+  bg = diff_add.bg  -- Full brightness
+})
+```
+
+### Color Comparison
+
+**Green (Insert):**
+| Layer | Color | Brightness | Purpose |
+|-------|-------|------------|---------|
+| Line (whole) | `#1d303c` | 43.7 | Dark subtle background |
+| Char (text) | `#2a4556` | 62.9 | **Bright highlight** ✅ |
+
+Difference: **+19.2 brightness** = visible!
+
+**Red (Delete):**
+| Layer | Color | Brightness | Purpose |
+|-------|-------|------------|---------|
+| Line (whole) | `#341d2a` | 37.4 | Dark subtle background |
+| Char (text) | `#4b2a3d` | 54.0 | **Bright highlight** ✅ |
+
+Difference: **+16.6 brightness** = visible!
+
+### How Extmarks Layer
+
+```
+Layer 1 (bottom):  line_hl_group
+                   ┌─────────────────────────────┐
+                   │ DARK BACKGROUND            │
+                   └─────────────────────────────┘
+
+Layer 2 (top):     hl_group (on text only)
+                   ┌──────┐
+                   │BRIGHT│ (empty) (empty)
+                   └──────┘
+
+Final render:      [BRIGHT][DARK][DARK][DARK]
+                    ^^^^^^^ ← This stands out!
+```
+
+### VSCode Behavior
+
+VSCode does the **exact same thing**:
+
+1. **Whole line**: Gets a subtle darker tint
+   - Shows "this line changed"
+   - Not too intrusive
+
+2. **Changed characters**: Get bright highlight
+   - Shows "exactly what changed"
+   - High contrast, clearly visible
+
+### Before & After
+
+**Old colors (broken):**
+```
+  Line #2a4556 (bright 62.9)
+  Char #192933 (dark 37.4)
+
+  Result:
+  ┌───────────────────────┐
+  │DARK  BRIGHT BRIGHT    │  ← Dark text invisible!
+  └───────────────────────┘
+```
+
+**New colors (fixed):**
+```
+  Line #1d303c (dark 43.7)
+  Char #2a4556 (bright 62.9)
+
+  Result:
+  ┌───────────────────────┐
+  │BRIGHT DARK DARK DARK  │  ← Bright text visible!
+  └───────────────────────┘
+```
+
+### Key Takeaways
+
+1. **Layering matters:** `line_hl_group` and `hl_group` both render simultaneously
+2. **Contrast is key:** Bright on dark = visible, dark on bright = invisible
+3. **Reverse the logic:** Make line backgrounds subtle, char highlights prominent
+4. **Match VSCode:** Subtle line tint + bright char highlight
+
+---
+
+**Last Updated:** October 29, 2025
+**Status:** RESOLVED

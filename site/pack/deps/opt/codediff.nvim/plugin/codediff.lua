@@ -129,6 +129,7 @@ end
 vim.api.nvim_create_user_command("CodeDiff", commands.vscode_diff, {
   nargs = "*",
   bang = true,
+  range = true,
   complete = complete_codediff,
   desc = "VSCode-style diff view: :CodeDiff [<revision>] | merge <file> | file <revision> | install"
 })

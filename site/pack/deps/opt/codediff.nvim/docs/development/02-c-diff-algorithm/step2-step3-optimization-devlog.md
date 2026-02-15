@@ -352,5 +352,5 @@ c-diff-core/
 - **VSCode Source:** `vscode/src/vs/editor/common/diff/defaultLinesDiffComputer/defaultLinesDiffComputer.ts`
 - **VSCode Source:** `vscode/src/vs/editor/common/diff/defaultLinesDiffComputer/heuristicSequenceOptimizations.ts`
 - **VSCode Source:** `vscode/src/vs/editor/common/diff/defaultLinesDiffComputer/algorithms/myersDiffAlgorithm.ts`
-- **Our Implementation Plan:** `dev-docs/advanced-diff/VSCODE_ADVANCED_DIFF_IMPLEMENTATION_PLAN.md`
-- **Step 1 Dev Log:** `dev-docs/advanced-diff/STEP1_CONSOLIDATED_DEVLOG.md`
+- **Our Implementation Plan:** [implementation-plan.md](implementation-plan.md)
+- **Step 1 Dev Log:** [step1-myers-devlog.md](step1-myers-devlog.md)

@@ -1,22 +1,77 @@
-# VSCode Diff Algorithm Extraction - Feasibility Study
+# VSCode Diff Algorithm Extraction Tool
 
-**Date:** October 28, 2025  
-**Status:** ✅ Successfully Completed
+**Date:** October 28, 2025
+**Status:** ✅ Complete
 
-## Executive Summary
+This script extracts and bundles VSCode's diff algorithm into a standalone JavaScript executable.
 
-Yes, it is **absolutely possible** to extract VSCode's diff algorithm into a standalone JavaScript executable. The extraction process is straightforward and the resulting bundle is compact (~239KB).
+## Quick Start
 
-## What Was Done
+```bash
+# Generate the standalone diff tool
+./scripts/build-vscode-diff.sh
 
-### 1. Repository Analysis
+# This creates: vscode-diff.mjs (default name)
+# Or specify a custom name:
+./scripts/build-vscode-diff.sh my-diff-tool.mjs
+```
+
+## Usage
+
+```bash
+node vscode-diff.mjs <file1> <file2>
+```
+
+## Example
+
+```bash
+# Create test files
+echo "line1" > test1.txt
+echo "line2" > test2.txt
+
+# Run diff
+node vscode-diff.mjs test1.txt test2.txt
+```
+
+## Requirements
+
+- Node.js (for running the generated tool)
+- npm (for esbuild during build process)
+- Git (for cloning VSCode repo)
+
+## What It Does
+
+1. Clones VSCode repository (sparse checkout for minimal size)
+2. Extracts only the diff algorithm files (~260 source files)
+3. Creates a wrapper script for CLI usage
+4. Bundles everything into a single ~239KB JavaScript file
+5. Cleans up temporary files
+
+## Use Cases
+
+- **Reference implementation** for testing
+- **Source of truth** for validation
+- **Debugging tool** for comparing outputs
+- **Standalone diff** without installing VSCode
+
+## Technical Details
+
+- **Bundle size:** ~239KB
+- **Build time:** ~20-30 seconds (includes git clone)
+- **Output format:** ESM (requires Node.js with ESM support)
+- **Algorithm:** Same as VSCode's DefaultLinesDiffComputer
+- **Dependencies:** None (fully bundled)
+
+## Feasibility Study
+
+### Repository Analysis
 
 Located the core diff algorithm in VSCode:
 - **Main file:** `src/vs/editor/common/diff/defaultLinesDiffComputer/defaultLinesDiffComputer.ts`
 - **Key function:** `computeDiff(originalLines, modifiedLines, options)`
 - **Dependencies:** Base utilities and core editor types
 
-### 2. Extraction Process
+### Extraction Process
 
 Used sparse Git checkout to minimize download size:
 ```bash
@@ -24,7 +79,7 @@ git clone --depth 1 --filter=blob:none --sparse https://github.com/microsoft/vsc
 git sparse-checkout set src/vs/editor/common/diff src/vs/base/common src/vs/editor/common/core
 ```
 
-### 3. Bundling Strategy
+### Bundling Strategy
 
 Created a wrapper script and bundled with esbuild:
 - **Input:** TypeScript wrapper + VSCode source code
@@ -32,26 +87,9 @@ Created a wrapper script and bundled with esbuild:
 - **Bundler:** esbuild (fast, zero-config)
 - **Build time:** ~20-30ms
 
-### 4. Created Automated Build Script
+## Output Format
 
-**Location:** `scripts/build-vscode-diff.sh`
-
-Features:
-- Fully automated extraction and bundling
-- No manual steps required
-- Outputs ready-to-use standalone `.mjs` file
-- Self-contained (cleans up temp files automatically)
-
-**Usage:**
-```bash
-bash scripts/build-vscode-diff.sh [output-filename.mjs]
-```
-
-**Default output:** `vscode-diff.mjs`
-
-## Output Format Comparison
-
-Both tools now produce **identical output format**:
+The tool outputs the exact same format as the C implementation's `print_linesdiff` function, making direct comparison trivial:
 
 ```
 =================================================================
@@ -76,22 +114,16 @@ Hit timeout: no
 =================================================================
 ```
 
-The JavaScript tool outputs in the exact same format as the C implementation's `print_linesdiff` function, making direct comparison trivial.
-
-## Key Features
-
 ### Identical Output Format
 
-The JavaScript tool now outputs in **exactly the same format** as the C implementation:
+The JavaScript tool outputs in **exactly the same format** as the C implementation:
 
 - Same header structure
 - Same line mapping format
 - Same inner change notation
 - Character positions use the same notation (L#:C#)
 
-This makes the JavaScript tool a **perfect reference** for validating the C implementation.
-
-## Integration Possibilities
+## Integration
 
 ### As Source of Truth
 
@@ -108,7 +140,7 @@ The VSCode JavaScript bundle can serve as a reference implementation:
 # Run VSCode diff
 node vscode-diff.mjs original.txt modified.txt
 
-# Run our C diff  
+# Run our C diff
 ./build/diff original.txt modified.txt
 
 # Outputs are now directly comparable - same format!
@@ -116,7 +148,7 @@ node vscode-diff.mjs original.txt modified.txt
 
 ### Direct Comparison
 
-Since both tools use the **identical output format**, you can now:
+Since both tools use the **identical output format**, you can:
 
 1. **Diff the outputs directly:** `diff <(node vscode-diff.mjs f1 f2) <(./build/diff f1 f2)`
 2. **Automated testing:** Compare outputs byte-for-byte in test suites
@@ -147,21 +179,15 @@ Since both tools use the **identical output format**, you can now:
 ### For Testing & Validation
 
 1. **Add VSCode reference tests:** Use the JavaScript tool as oracle for test cases
-2. **Create comparison suite:** Automate output comparison (after format normalization)
+2. **Create comparison suite:** Automate output comparison
 3. **Validate edge cases:** Use VSCode's implementation to verify complex scenarios
-
-### For Documentation
-
-1. **Document format differences:** Explain why outputs differ in structure but are algorithmically equivalent
-2. **Add "source of truth" section:** Reference VSCode's implementation
-3. **Include build instructions:** Add `scripts/build-vscode-diff.sh` to repo (optional)
 
 ### For CI/CD
 
 Consider adding a test that:
 1. Runs VSCode diff tool
 2. Runs our C diff tool
-3. Compares algorithmic results (not format)
+3. Compares algorithmic results
 4. Fails if results diverge
 
 ## Testing Examples
@@ -188,7 +214,7 @@ node vscode-diff.mjs code_before.js code_after.js
 
 ## Conclusion
 
-**Bottom Line:** Extracting VSCode's diff algorithm is not only possible but **remarkably easy**. The automated build script makes it a single command to generate a standalone, dependency-free JavaScript executable that can serve as a perfect source of truth for validating our C implementation.
+Extracting VSCode's diff algorithm is not only possible but **remarkably easy**. The automated build script makes it a single command to generate a standalone, dependency-free JavaScript executable that can serve as a perfect source of truth for validating our C implementation.
 
 The ~239KB bundle is small enough to:
 - Check into the repo (if desired)
@@ -196,4 +222,6 @@ The ~239KB bundle is small enough to:
 - Distribute with documentation
 - Run in CI/CD pipelines
 
-This gives us a reliable reference implementation directly from the source, ensuring our C port maintains perfect algorithmic fidelity to VSCode's behavior.
+## See Also
+
+- [VSCode Source](https://github.com/microsoft/vscode/blob/main/src/vs/editor/common/diff/defaultLinesDiffComputer/defaultLinesDiffComputer.ts) - Original algorithm

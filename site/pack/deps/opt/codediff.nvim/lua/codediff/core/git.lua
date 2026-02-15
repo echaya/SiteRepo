@@ -2,6 +2,19 @@
 -- All operations are async and atomic
 local M = {}
 
+-- Unquote git C-quoted paths (e.g., "my file.md" -> my file.md)
+local function unquote_path(path)
+  if path:sub(1, 1) == '"' and path:sub(-1) == '"' then
+    local unquoted = path:sub(2, -2)
+    unquoted = unquoted:gsub("\\(.)", function(char)
+      local escapes = { a = "\a", b = "\b", t = "\t", n = "\n", v = "\v", f = "\f", r = "\r", ["\\"] = "\\", ['"'] = '"' }
+      return escapes[char] or char
+    end)
+    return unquoted
+  end
+  return path
+end
+
 -- LRU Cache for git file content
 -- Stores recently fetched file content to avoid redundant git calls
 local ContentCache = {}
@@ -340,7 +353,7 @@ function M.get_status(git_root, callback)
         if #line >= 3 then
           local index_status = line:sub(1, 1)
           local worktree_status = line:sub(2, 2)
-          local path_part = line:sub(4)
+          local path_part = unquote_path(line:sub(4))
 
           -- Handle renames: "old_path -> new_path"
           local old_path, new_path = path_part:match("^(.+) %-> (.+)$")
@@ -403,13 +416,13 @@ function M.get_diff_revision(revision, git_root, callback)
         local parts = vim.split(line, "\t")
         if #parts >= 2 then
           local status = parts[1]:sub(1, 1)
-          local path = parts[2]
+          local path = unquote_path(parts[2])
           local old_path = nil
 
           -- Handle renames (R100 or similar)
           if status == "R" and #parts >= 3 then
-            old_path = parts[2]
-            path = parts[3]
+            old_path = unquote_path(parts[2])
+            path = unquote_path(parts[3])
           end
 
           table.insert(result.unstaged, {
@@ -471,13 +484,13 @@ function M.get_diff_revisions(rev1, rev2, git_root, callback)
         local parts = vim.split(line, "\t")
         if #parts >= 2 then
           local status = parts[1]:sub(1, 1)
-          local path = parts[2]
+          local path = unquote_path(parts[2])
           local old_path = nil
 
           -- Handle renames (R100 or similar)
           if status == "R" and #parts >= 3 then
-            old_path = parts[2]
-            path = parts[3]
+            old_path = unquote_path(parts[2])
+            path = unquote_path(parts[3])
           end
 
           table.insert(result.unstaged, {
@@ -491,6 +504,118 @@ function M.get_diff_revisions(rev1, rev2, git_root, callback)
 
     callback(nil, result)
   end)
+end
+
+-- Apply a unified diff patch to the git index (async)
+-- Used for hunk-level staging: generates a patch for a single hunk and applies it
+-- to the index without touching the working tree.
+--
+-- git_root: absolute path to git repository root
+-- patch: string containing a valid unified diff patch
+-- reverse: if true, reverse-apply the patch (used for unstaging)
+-- callback: function(err) - nil err on success
+-- Apply a unified diff patch via git apply (async)
+-- Supports staging hunks (--cached), unstaging (--cached --reverse),
+-- and discarding from working tree (--reverse, no --cached).
+--
+-- git_root: absolute path to git repository root
+-- patch: string containing a valid unified diff patch
+-- opts: table with optional flags:
+--   cached: boolean - apply to index (default: true)
+--   reverse: boolean - reverse-apply the patch (default: false)
+-- callback: function(err) - nil err on success
+function M.apply_patch(git_root, patch, opts, callback)
+  -- Support old signature: apply_patch(git_root, patch, reverse, callback)
+  if type(opts) == "boolean" then
+    opts = { cached = true, reverse = opts }
+  end
+  opts = opts or {}
+  if opts.cached == nil then
+    opts.cached = true
+  end
+
+  local args = { "apply", "--unidiff-zero", "-" }
+  if opts.cached then
+    table.insert(args, 2, "--cached")
+  end
+  if opts.reverse then
+    table.insert(args, 2, "--reverse")
+  end
+
+  if vim.system then
+    if git_root and vim.fn.isdirectory(git_root) == 0 then
+      callback("Directory does not exist: " .. git_root)
+      return
+    end
+
+    vim.system(vim.list_extend({ "git" }, args), {
+      cwd = git_root,
+      stdin = patch,
+      text = true,
+    }, function(result)
+      vim.schedule(function()
+        if result.code == 0 then
+          callback(nil)
+        else
+          callback(result.stderr or "git apply failed")
+        end
+      end)
+    end)
+  else
+    -- Fallback for older Neovim (< 0.10)
+    local stderr_data = {}
+    local stdin_pipe = vim.loop.new_pipe(false)
+    local stderr_pipe = vim.loop.new_pipe(false)
+
+    local handle
+    ---@diagnostic disable-next-line: missing-fields
+    handle = vim.loop.spawn("git", {
+      args = args,
+      cwd = git_root,
+      stdio = { stdin_pipe, nil, stderr_pipe },
+    }, function(code)
+      if stdin_pipe then
+        stdin_pipe:close()
+      end
+      if stderr_pipe then
+        stderr_pipe:close()
+      end
+      if handle then
+        handle:close()
+      end
+
+      vim.schedule(function()
+        if code == 0 then
+          callback(nil)
+        else
+          callback(table.concat(stderr_data) or "git apply failed")
+        end
+      end)
+    end)
+
+    if not handle then
+      callback("Failed to spawn git process")
+      return
+    end
+
+    if stderr_pipe then
+      stderr_pipe:read_start(function(err, data)
+        if data then
+          table.insert(stderr_data, data)
+        end
+      end)
+    end
+
+    -- Write patch to stdin and close
+    stdin_pipe:write(patch)
+    stdin_pipe:shutdown()
+  end
+end
+
+-- Discard a hunk from the working tree by reverse-applying a patch (async)
+-- Convenience wrapper: applies patch in reverse to working tree (not index)
+function M.discard_hunk_patch(git_root, patch, callback)
+  M.apply_patch(git_root, patch, { cached = false, reverse = true }, callback)
 end
 
 -- Run a git command synchronously
@@ -632,18 +757,23 @@ end
 function M.get_commit_list(range, git_root, opts, callback)
   opts = opts or {}
   local is_single_file = opts.path and opts.path ~= ""
+  local is_line_range = opts.line_range and is_single_file
 
   local args = {
     "log",
     "--pretty=format:%H%x00%h%x00%an%x00%at%x00%ar%x00%s%x00%D%x00",
   }
 
-  -- For single file mode, use --numstat to get stats AND file path (for renames)
-  -- For multi-file mode, use --shortstat for aggregate stats
-  if is_single_file then
+  if is_line_range then
+    -- git log -L requires -p or -s format; --numstat/--shortstat/--follow are incompatible
+    local l_arg = string.format("-L%d,%d:%s", opts.line_range[1], opts.line_range[2], opts.path)
+    table.insert(args, l_arg)
+  elseif is_single_file then
+    -- For single file mode, use --numstat to get stats AND file path (for renames)
     table.insert(args, "--numstat")
     table.insert(args, "--follow")
   else
+    -- For multi-file mode, use --shortstat for aggregate stats
     table.insert(args, "--shortstat")
   end
 
@@ -664,7 +794,8 @@ function M.get_commit_list(range, git_root, opts, callback)
     table.insert(args, range)
   end
 
-  if is_single_file then
+  -- For non-line-range single file, add -- path (line-range already includes the path in -L)
+  if is_single_file and not is_line_range then
     table.insert(args, "--")
     table.insert(args, opts.path)
   end
@@ -699,10 +830,10 @@ function M.get_commit_list(range, git_root, opts, callback)
             files_changed = 0,
             insertions = 0,
             deletions = 0,
-            file_path = nil, -- Actual file path at this commit (for --follow)
+            file_path = is_line_range and opts.path or nil,
           }
         end
-      elseif current_commit and line:match("^%d+%s+%d+%s+") then
+      elseif current_commit and not is_line_range and line:match("^%d+%s+%d+%s+") then
         -- Parse numstat line: "40\t12\tpath" or "0\t0\tlua/{old => new}/file.lua"
         local ins, del, path = line:match("^(%d+)%s+(%d+)%s+(.+)$")
         if ins and del and path then
@@ -728,7 +859,7 @@ function M.get_commit_list(range, git_root, opts, callback)
             current_commit.file_path = path
           end
         end
-      elseif current_commit and line:match("%d+ file") then
+      elseif current_commit and not is_line_range and line:match("%d+ file") then
         -- Parse shortstat line: " 3 files changed, 32 insertions(+), 8 deletions(-)"
         local files = line:match("(%d+) file")
         local ins = line:match("(%d+) insertion")
@@ -736,6 +867,15 @@ function M.get_commit_list(range, git_root, opts, callback)
         current_commit.files_changed = tonumber(files) or 0
         current_commit.insertions = tonumber(ins) or 0
         current_commit.deletions = tonumber(del) or 0
+      elseif current_commit and is_line_range then
+        -- For line-range mode, count insertions/deletions from diff lines
+        if line:match("^%+[^%+]") or (line == "+") then
+          current_commit.insertions = current_commit.insertions + 1
+          current_commit.files_changed = 1
+        elseif line:match("^%-[^%-]") or (line == "-") then
+          current_commit.deletions = current_commit.deletions + 1
+          current_commit.files_changed = 1
+        end
       end
     end
 
@@ -765,13 +905,13 @@ function M.get_commit_files(commit_hash, git_root, callback)
       local parts = vim.split(line, "\t")
       if #parts >= 2 then
         local status = parts[1]:sub(1, 1)
-        local path = parts[2]
+        local path = unquote_path(parts[2])
         local old_path = nil
 
         -- Handle renames (R100 or similar)
         if status == "R" and #parts >= 3 then
-          old_path = parts[2]
-          path = parts[3]
+          old_path = unquote_path(parts[2])
+          path = unquote_path(parts[3])
         end
 
         table.insert(files, {

@@ -14,7 +14,7 @@ function M.next_hunk()
   end
 
   local diff_result = session.stored_diff_result
-  if #diff_result.changes == 0 then
+  if not diff_result.changes or #diff_result.changes == 0 then
     return false
   end
 
@@ -76,7 +76,7 @@ function M.prev_hunk()
   end
 
   local diff_result = session.stored_diff_result
-  if #diff_result.changes == 0 then
+  if not diff_result.changes or #diff_result.changes == 0 then
     return false
   end
 

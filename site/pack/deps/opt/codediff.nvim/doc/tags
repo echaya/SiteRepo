@@ -3,6 +3,7 @@ codediff-commands	codediff.txt	/*codediff-commands*
 codediff-configuration	codediff.txt	/*codediff-configuration*
 codediff-highlight-groups	codediff.txt	/*codediff-highlight-groups*
 codediff-history	codediff.txt	/*codediff-history*
+codediff-history-line-range	codediff.txt	/*codediff-history-line-range*
 codediff-lua-api	codediff.txt	/*codediff-lua-api*
 codediff-quickstart	codediff.txt	/*codediff-quickstart*
 codediff-see-also	codediff.txt	/*codediff-see-also*
