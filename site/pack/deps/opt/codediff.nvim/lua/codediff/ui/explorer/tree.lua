@@ -5,12 +5,7 @@ local M = {}
 local Tree = require("nui.tree")
 local config = require("codediff.config")
 local filter = require("codediff.ui.explorer.filter")
-
--- Will be injected by init.lua
-local nodes = nil
-M._set_nodes_module = function(n)
-  nodes = n
-end
+local nodes = require("codediff.ui.explorer.nodes")
 
 -- Filter files based on explorer.file_filter config
 -- Returns files that should be shown (not ignored)

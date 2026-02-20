@@ -93,6 +93,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
       original_position = "left",         -- Position of original (old) content: "left" or "right"
       conflict_ours_position = "right",   -- Position of ours (:2) in conflict view: "left" or "right"
       cycle_next_hunk = true,             -- Wrap around when navigating hunks (]c/[c): false to stop at first/last
+      cycle_next_file = true,             -- Wrap around when navigating files (]f/[f): false to stop at first/last
     },
 
     -- Explorer panel configuration
@@ -138,6 +139,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
         stage_hunk = "<leader>hs",   -- Stage hunk under cursor to git index
         unstage_hunk = "<leader>hu", -- Unstage hunk under cursor from git index
         discard_hunk = "<leader>hr", -- Discard hunk under cursor (working tree only)
+        show_help = "g?",   -- Show floating window with available keymaps
       },
       explorer = {
         select = "<CR>",    -- Open diff for selected file

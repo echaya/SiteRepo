@@ -6,12 +6,6 @@ local config = require("codediff.config")
 local virtual_file = require("codediff.core.virtual_file")
 local accessors = require("codediff.ui.lifecycle.accessors")
 
--- Import from sibling modules (will be set by init.lua)
-local state = nil
-M._set_state_module = function(s)
-  state = s
-end
-
 -- Track active diff sessions
 -- Structure: {
 --   tabpage_id = {
@@ -71,6 +65,7 @@ function M.create_session(
   lines_diff,
   reapply_keymaps
 )
+  local state = require("codediff.ui.lifecycle.state")
   -- Save buffer states
   local original_state = state.save_buffer_state(original_bufnr)
   local modified_state = state.save_buffer_state(modified_bufnr)

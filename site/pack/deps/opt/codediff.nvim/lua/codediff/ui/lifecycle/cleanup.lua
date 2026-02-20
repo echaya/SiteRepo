@@ -2,16 +2,8 @@
 local M = {}
 
 local accessors = require("codediff.ui.lifecycle.accessors")
-
--- Will be injected by init.lua
-local session = nil
-local state = nil
-M._set_session_module = function(s)
-  session = s
-end
-M._set_state_module = function(s)
-  state = s
-end
+local session = require("codediff.ui.lifecycle.session")
+local state = require("codediff.ui.lifecycle.state")
 
 -- Autocmd group for cleanup
 local augroup = vim.api.nvim_create_augroup("codediff_lifecycle", { clear = true })

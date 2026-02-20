@@ -3,12 +3,7 @@
 local M = {}
 
 local lifecycle = require("codediff.ui.lifecycle")
-
--- Will be injected by init.lua
-local tracking = nil
-M._set_tracking_module = function(t)
-  tracking = t
-end
+local tracking = require("codediff.ui.conflict.tracking")
 
 --- Refresh all conflict signs based on current state (event-driven approach)
 --- Called on TextChanged to keep signs in sync with actual buffer content

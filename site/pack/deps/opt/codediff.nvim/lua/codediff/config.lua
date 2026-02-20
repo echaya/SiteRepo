@@ -36,6 +36,7 @@ M.defaults = {
     original_position = "left", -- Position of original (old) content: "left" or "right"
     conflict_ours_position = "right", -- Position of ours (:2) in conflict view: "left" or "right" (independent of original_position)
     cycle_next_hunk = true, -- Wrap around when navigating hunks (]c/[c): true = cycle, false = stop at first/last
+    cycle_next_file = true, -- Wrap around when navigating files (]f/[f): true = cycle, false = stop at first/last
   },
 
   -- Explorer panel configuration
@@ -81,6 +82,7 @@ M.defaults = {
       stage_hunk = "<leader>hs", -- Stage the hunk under cursor to git index
       unstage_hunk = "<leader>hu", -- Unstage the hunk under cursor from git index
       discard_hunk = "<leader>hr", -- Discard the hunk under cursor (working tree only)
+      show_help = "g?", -- Show floating window with available keymaps
     },
     explorer = {
       select = "<CR>",
@@ -94,6 +96,7 @@ M.defaults = {
     history = {
       select = "<CR>", -- Select commit/file or toggle expand
       toggle_view_mode = "i", -- Toggle between 'list' and 'tree' views
+      refresh = "R", -- Refresh history (re-fetch commits)
     },
     -- Conflict mode keymaps (only active in merge conflict views)
     conflict = {

@@ -3,16 +3,8 @@ local M = {}
 
 local lifecycle = require("codediff.ui.lifecycle")
 local auto_refresh = require("codediff.ui.auto_refresh")
-
--- Will be injected by init.lua
-local tracking = nil
-local signs = nil
-M._set_tracking_module = function(t)
-  tracking = t
-end
-M._set_signs_module = function(s)
-  signs = s
-end
+local tracking = require("codediff.ui.conflict.tracking")
+local signs = require("codediff.ui.conflict.signs")
 
 --- Apply text to result buffer at the conflict's range
 --- @param result_bufnr number Result buffer

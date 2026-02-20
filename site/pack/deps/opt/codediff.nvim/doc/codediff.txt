@@ -28,7 +28,7 @@ COMMANDS                                                  *codediff-commands*
 USAGE                                                       *codediff-usage*
 
 File explorer mode (git status by default):
->
+>vim
   :CodeDiff
   :CodeDiff HEAD~5
   :CodeDiff main
@@ -37,7 +37,7 @@ File explorer mode (git status by default):
 <
 
 Git diff mode (current buffer vs revision):
->
+>vim
   :CodeDiff file HEAD
   :CodeDiff file HEAD~1
   :CodeDiff file abc123
@@ -58,12 +58,12 @@ Behavior:
 - Async operation (won't block Neovim)
 
 File comparison mode:
->
+>vim
   :CodeDiff file file_a.txt file_b.txt
 <
 
 Directory comparison mode:
->
+>vim
   :CodeDiff ~/project-v1 ~/project-v2
   :CodeDiff dir /path/to/dir1 /path/to/dir2
 <
@@ -72,7 +72,7 @@ Shows files as Added (A), Deleted (D), or Modified (M) based on file size and
 modification time. Select a file to view its diff.
 
 File history mode:                                    *codediff-history*
->
+>vim
   :CodeDiff history
   :CodeDiff history HEAD~10
   :CodeDiff history origin/main..HEAD
@@ -84,7 +84,7 @@ Line-range history (visual selection):            *codediff-history-line-range*
 
 Visually select lines and run `:CodeDiff history` to show only commits that
 modified the selected line range. Uses `git log -L` under the hood.
->
+>vim
   :'<,'>CodeDiff history
   :'<,'>CodeDiff history HEAD~10
   :'<,'>CodeDiff history --reverse
@@ -92,7 +92,7 @@ modified the selected line range. Uses `git log -L` under the hood.
 
 Each commit is compared against its parent by default. Use --base to compare
 every commit against a fixed reference instead:
->
+>vim
   :CodeDiff history --base WORKING
   :CodeDiff history --base HEAD
   :CodeDiff history --base main
@@ -106,7 +106,7 @@ Options:
                   commit hash) or WORKING for the current working tree.
 
 Git merge tool:
->
+>sh
   git config --global merge.tool codediff
   git config --global mergetool.codediff.cmd 'nvim "$MERGED" -c "CodeDiff merge \"$MERGED\""'
 <
@@ -115,7 +115,7 @@ Git merge tool:
 CONFIGURATION                                        *codediff-configuration*
 
 Setup entry point:
->
+>lua
   require("codediff").setup({
     highlights = {
       line_insert = "DiffAdd",
@@ -159,6 +159,7 @@ Setup entry point:
         diff_put = "dp",
         open_in_prev_tab = "gf",
         toggle_stage = "-",
+        show_help = "g?",
       },
       explorer = {
         select = "<CR>",
@@ -196,6 +197,10 @@ CodeDiff defines highlight groups matching VSCode's diff colors:
 - CodeDiffCharInsert - deep/dark green for inserted characters
 - CodeDiffCharDelete - deep/dark red for deleted characters
 - CodeDiffFiller - gray foreground for filler line slashes (///)
+- CodeDiffHelpSection - section headings in keymap help (links to Statement)
+- CodeDiffHelpKey - key bindings in keymap help (links to Special)
+- CodeDiffHelpSep - separators in keymap help (links to NonText)
+- CodeDiffHelpDesc - descriptions in keymap help (links to Normal)
 
 Default behavior:
 - Uses DiffAdd and DiffDelete for line-level highlights
@@ -204,7 +209,7 @@ Default behavior:
   - Light themes: brightness multiplied by 0.92
 
 Customization examples:
->
+>lua
   highlights = {
     line_insert = "#1d3042",
     line_delete = "#351d2b",
@@ -223,12 +228,12 @@ Customization examples:
 LUA API                                                   *codediff-lua-api*
 
 Primary entry point:
->
+>lua
   require("codediff").setup({ ... })
 <
 
 Advanced usage (internal modules):
->
+>lua
   local diff = require("codediff.diff")
   local render = require("codediff.ui")
   local git = require("codediff.git")

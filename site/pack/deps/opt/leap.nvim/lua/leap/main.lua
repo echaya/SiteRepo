@@ -1235,26 +1235,37 @@ local function manage_vim_opts()
          or state.args.target_windows  -- deprecated
          or { api.nvim_get_current_win() }
 
-      for opt, val in pairs(user_vim_opts) do
-         -- E.g.: `wo.scrolloff = 0`.
+      for opt, val in pairs(user_vim_opts) do  -- e.g.: `wo.scrolloff = 0`
          local scope, name = unpack(vim.split(opt, '.', { plain = true }))
          if scope == 'wo' then
             for _, win in ipairs(windows) do
                local saved_val = get_opt(name, { scope = 'local', win = win })
                saved_vim_opts[{ 'wo', win, name }] = saved_val
-               set_opt(name, val, { scope = 'local', win = win })
+               local new_val = val
+               if type(val) == 'function' then
+                  new_val = val(win)
+               end
+               set_opt(name, new_val, { scope = 'local', win = win })
             end
          elseif scope == 'bo' then
             for _, win in ipairs(windows) do
                local buf = api.nvim_win_get_buf(win)
                local saved_val = get_opt(name, { buf = buf })
                saved_vim_opts[{ 'bo', buf, name }] = saved_val
-               set_opt(name, val, { buf = buf })
+               local new_val = val
+               if type(val) == 'function' then
+                  new_val = val(buf)
+               end
+               set_opt(name, new_val, { buf = buf })
             end
          elseif scope == 'go' then
             local saved_val = get_opt(name, { scope = 'global' })
             saved_vim_opts[name] = saved_val
-            set_opt(name, val, { scope = 'global' })
+            local new_val = val
+            if type(val) == 'function' then
+               new_val = val()
+            end
+            set_opt(name, new_val, { scope = 'global' })
          end
       end
    end

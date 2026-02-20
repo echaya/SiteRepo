@@ -8,6 +8,7 @@ local diff_module = require("codediff.core.diff")
 
 -- Common logic: Compute diff and render highlights
 -- @param auto_scroll_to_first_hunk boolean: Whether to auto-scroll to first change (default true)
+-- @param line_range table?: Optional {start_line, end_line} to scroll to instead of first hunk
 function M.compute_and_render(
   original_buf,
   modified_buf,
@@ -17,7 +18,8 @@ function M.compute_and_render(
   modified_is_virtual,
   original_win,
   modified_win,
-  auto_scroll_to_first_hunk
+  auto_scroll_to_first_hunk,
+  line_range
 )
   -- Compute diff
   local diff_options = {
@@ -64,10 +66,27 @@ function M.compute_and_render(
     vim.wo[original_win].wrap = false
     vim.wo[modified_win].wrap = false
 
-    -- Step 3a: On create, scroll to first change
+    -- Step 3a: On create, scroll to first change (or line_range target)
     if auto_scroll_to_first_hunk and #lines_diff.changes > 0 then
-      local first_change = lines_diff.changes[1]
-      local target_line = first_change.original.start_line
+      local target_line
+      if line_range then
+        -- Find the first hunk overlapping with or nearest to the line range
+        local range_start, range_end = line_range[1], line_range[2]
+        for _, change in ipairs(lines_diff.changes) do
+          local hunk_start = change.original.start_line
+          local hunk_end = change.original.end_line
+          if hunk_end >= range_start and hunk_start <= range_end then
+            target_line = hunk_start
+            break
+          end
+        end
+        -- No overlapping hunk found, scroll to range start
+        if not target_line then
+          target_line = range_start
+        end
+      else
+        target_line = lines_diff.changes[1].original.start_line
+      end
 
       pcall(vim.api.nvim_win_set_cursor, original_win, { target_line, 0 })
       pcall(vim.api.nvim_win_set_cursor, modified_win, { target_line, 0 })

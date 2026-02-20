@@ -14,13 +14,6 @@ local state = require("codediff.ui.lifecycle.state")
 local cleanup = require("codediff.ui.lifecycle.cleanup")
 local accessors = require("codediff.ui.lifecycle.accessors")
 
--- Wire up cross-module dependencies
-session._set_state_module(state)
-state._set_session_module(session)
-cleanup._set_session_module(session)
-cleanup._set_state_module(state)
-accessors._set_session_module(session)
-
 -- Delegate to state module
 M.clear_highlights = state.clear_buffer_highlights
 

@@ -2,10 +2,9 @@
 local M = {}
 local config = require("codediff.config")
 
--- Will be injected by init.lua
-local session = nil
-M._set_session_module = function(s)
-  session = s
+-- Lazy require to avoid circular dependency: init → session → accessors → session
+local function get_active_diffs()
+  return require("codediff.ui.lifecycle.session").get_active_diffs()
 end
 
 -- Check if a revision represents a virtual buffer
@@ -21,20 +20,20 @@ end
 --- @param tabpage number
 --- @return table|nil
 function M.get_session(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   return active_diffs[tabpage]
 end
 
 --- Get mode
 function M.get_mode(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   return sess and sess.mode or nil
 end
 
 --- Get git context
 function M.get_git_context(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return nil
@@ -49,7 +48,7 @@ end
 
 --- Get buffer IDs
 function M.get_buffers(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return nil, nil
@@ -59,7 +58,7 @@ end
 
 --- Get window IDs
 function M.get_windows(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return nil, nil
@@ -69,7 +68,7 @@ end
 
 --- Get paths
 function M.get_paths(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return nil, nil
@@ -79,7 +78,7 @@ end
 
 --- Find tabpage containing a buffer
 function M.find_tabpage_by_buffer(bufnr)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   for tabpage, sess in pairs(active_diffs) do
     if sess.original_bufnr == bufnr or sess.modified_bufnr == bufnr or sess.result_bufnr == bufnr then
       return tabpage
@@ -90,7 +89,7 @@ end
 
 --- Check if original buffer is virtual
 function M.is_original_virtual(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -100,7 +99,7 @@ end
 
 --- Check if modified buffer is virtual
 function M.is_modified_virtual(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -110,28 +109,28 @@ end
 
 --- Check if suspended
 function M.is_suspended(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   return sess and sess.suspended or false
 end
 
 --- Get explorer reference (for explorer mode)
 function M.get_explorer(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   return sess and sess.explorer
 end
 
 --- Get BASE lines for result buffer diff
 function M.get_result_base_lines(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   return sess and sess.result_base_lines
 end
 
 --- Get result buffer and window
 function M.get_result(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return nil, nil
@@ -143,14 +142,14 @@ end
 --- @param tabpage number
 --- @return table|nil List of conflict blocks
 function M.get_conflict_blocks(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   return sess and sess.conflict_blocks
 end
 
 --- Get all conflict files for a session
 function M.get_conflict_files(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return {}
@@ -161,7 +160,7 @@ end
 --- Check if any conflict files have unsaved changes
 --- Returns list of unsaved file paths
 function M.get_unsaved_conflict_files(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess or not sess.conflict_files then
     return {}
@@ -186,7 +185,7 @@ end
 
 --- Update suspended state
 function M.update_suspended(tabpage, suspended)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -198,7 +197,7 @@ end
 
 --- Update diff result (cached)
 function M.update_diff_result(tabpage, diff_lines)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -210,7 +209,7 @@ end
 
 --- Update changedtick
 function M.update_changedtick(tabpage, original_tick, modified_tick)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -223,7 +222,7 @@ end
 
 --- Update mtime
 function M.update_mtime(tabpage, original_mtime, modified_mtime)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -236,7 +235,7 @@ end
 
 --- Update paths (for file switching/sync)
 function M.update_paths(tabpage, original_path, modified_path)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -250,7 +249,7 @@ end
 --- Update buffer numbers (for file switching/sync when buffers change)
 --- Also updates buffer states (for suspend/resume to work correctly)
 function M.update_buffers(tabpage, original_bufnr, modified_bufnr)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -270,7 +269,7 @@ end
 
 --- Update git root (for file switching when changing repos)
 function M.update_git_root(tabpage, git_root)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -282,7 +281,7 @@ end
 
 --- Update revisions (for file switching/sync)
 function M.update_revisions(tabpage, original_revision, modified_revision)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -295,7 +294,7 @@ end
 
 --- Set explorer reference (for explorer mode)
 function M.set_explorer(tabpage, explorer)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -307,7 +306,7 @@ end
 
 --- Set result buffer and window (for conflict mode)
 function M.set_result(tabpage, result_bufnr, result_win)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -326,7 +325,7 @@ end
 
 --- Store BASE lines for result buffer diff (for conflict mode)
 function M.set_result_base_lines(tabpage, base_lines)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -339,7 +338,7 @@ end
 --- @param tabpage number
 --- @param blocks table List of conflict blocks from compute_mapping_alignments
 function M.set_conflict_blocks(tabpage, blocks)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -350,7 +349,7 @@ end
 
 --- Track a file opened in conflict mode (for unsaved warning)
 function M.track_conflict_file(tabpage, file_path)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -408,7 +407,7 @@ end
 --- @param opts? table Optional keymap options (will be merged with buffer-local defaults)
 --- @return boolean success True if keymaps were set
 function M.set_tab_keymap(tabpage, mode, lhs, rhs, opts)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
@@ -446,7 +445,7 @@ end
 
 --- Remove codediff keymaps from a session's buffers
 function M.clear_tab_keymaps(tabpage)
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return
@@ -489,7 +488,7 @@ function M.setup_auto_sync_on_file_switch(tabpage, original_is_virtual, modified
     return -- Both virtual or both real - no sync needed
   end
 
-  local active_diffs = session.get_active_diffs()
+  local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     vim.notify("[codediff] No session found for auto-sync setup", vim.log.levels.ERROR)

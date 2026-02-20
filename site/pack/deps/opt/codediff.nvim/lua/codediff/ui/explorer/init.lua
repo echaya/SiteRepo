@@ -3,25 +3,9 @@
 local M = {}
 
 -- Import submodules
-local nodes = require("codediff.ui.explorer.nodes")
-local tree_module = require("codediff.ui.explorer.tree")
 local render = require("codediff.ui.explorer.render")
 local refresh = require("codediff.ui.explorer.refresh")
 local actions = require("codediff.ui.explorer.actions")
-local keymaps = require("codediff.ui.explorer.keymaps")
--- filter is already standalone, no wiring needed
-
--- Wire up cross-module dependencies
-tree_module._set_nodes_module(nodes)
-render._set_nodes_module(nodes)
-render._set_tree_module(tree_module)
-render._set_refresh_module(refresh)
-render._set_keymaps_module(keymaps)
-refresh._set_tree_module(tree_module)
-actions._set_refresh_module(refresh)
-keymaps._set_actions_module(actions)
-keymaps._set_refresh_module(refresh)
-keymaps._set_render_module(render)
 
 -- Delegate to render module
 M.create = render.create

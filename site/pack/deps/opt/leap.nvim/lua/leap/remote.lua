@@ -126,27 +126,24 @@ local function action(kwargs)
    to_normal_mode()  -- (feedkeys...)
    -- Wait for `feedkeys`.
    vim.schedule(function()
-      -- API note: `jumper` could of course call `feedkeys` itself,
-      -- but then we would need an independent parameter that tells
-      -- whether to wait for `CmdlineLeave`.
-      if type(jumper) == 'string' then
-         api.nvim_feedkeys(jumper, 'n', false)
-      else
+      if type(jumper) == 'function' then
          jumper()
-      end
-      -- Wait for `jumper` to finish its business.
-      vim.schedule(function()
-         if type(jumper) == 'string' then
-            -- Wait for finishing the search command (event), and then
-            -- for actually leaving the command line (schedule).
+         -- Wait for `jumper` to finish its business.
+         vim.schedule(function() after_jump() end)
+      elseif type(jumper) == 'string' then
+         -- API note: `jumper` could of course call `feedkeys` itself,
+         -- but then we would need an independent parameter that tells
+         -- whether to wait for `CmdlineLeave`.
+         api.nvim_feedkeys(jumper, 'n', false)
+         vim.schedule(function()
+            -- Wait for finishing the search command (autocmd), and then
+            -- for actually leaving the command line (schedule wrap).
             api.nvim_create_autocmd('CmdlineLeave', {
                once = true,
                callback = vim.schedule_wrap(after_jump)
             })
-         else
-            after_jump()
-         end
-      end)
+         end)
+      end
    end)
 end
 

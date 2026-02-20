@@ -4,12 +4,6 @@ local M = {}
 
 local highlights = require("codediff.ui.highlights")
 
--- Will be injected by init.lua
-local session = nil
-M._set_session_module = function(s)
-  session = s
-end
-
 -- Save buffer state before modifications
 local function save_buffer_state(bufnr)
   if not vim.api.nvim_buf_is_valid(bufnr) then
@@ -85,6 +79,7 @@ end
 -- Suspend diff view (when leaving tab)
 -- @param tabpage number: Tab page ID
 local function suspend_diff(tabpage)
+  local session = require("codediff.ui.lifecycle.session")
   local active_diffs = session.get_active_diffs()
   local diff = active_diffs[tabpage]
   if not diff or diff.suspended then
@@ -115,6 +110,7 @@ M.suspend_diff = suspend_diff
 -- Resume diff view (when entering tab)
 -- @param tabpage number: Tab page ID
 local function resume_diff(tabpage)
+  local session = require("codediff.ui.lifecycle.session")
   local active_diffs = session.get_active_diffs()
   local diff = active_diffs[tabpage]
   if not diff or not diff.suspended then

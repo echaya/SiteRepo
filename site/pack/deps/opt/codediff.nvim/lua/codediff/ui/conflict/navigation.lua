@@ -2,12 +2,7 @@
 local M = {}
 
 local lifecycle = require("codediff.ui.lifecycle")
-
--- Will be injected by init.lua
-local tracking = nil
-M._set_tracking_module = function(t)
-  tracking = t
-end
+local tracking = require("codediff.ui.conflict.tracking")
 
 --- Navigate to next conflict
 --- @param tabpage number

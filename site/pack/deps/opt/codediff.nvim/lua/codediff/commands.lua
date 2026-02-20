@@ -239,6 +239,7 @@ local function handle_history(range, file_path, flags, line_range)
             range = range,
             file_path = history_opts.path,
             base_revision = flags.base,
+            line_range = line_range,
           },
         }
 

@@ -224,15 +224,24 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     end
 
     local is_virtual = (side == "original" and lifecycle.is_original_virtual(tabpage)) or (side == "modified" and lifecycle.is_modified_virtual(tabpage))
-    if is_virtual then
-      vim.notify("Current buffer is virtual; nothing to open in a tab", vim.log.levels.WARN)
-      return
-    end
 
-    local buf_name = vim.api.nvim_buf_get_name(current_buf)
-    if buf_name == "" then
-      vim.notify("Buffer has no name; cannot open in previous tab", vim.log.levels.WARN)
-      return
+    -- For virtual buffers, resolve the real file on disk
+    local target_file
+    if is_virtual then
+      local original_path, modified_path = lifecycle.get_paths(tabpage)
+      local rel_path = side == "original" and original_path or modified_path
+      if not rel_path or rel_path == "" then
+        vim.notify("Buffer has no associated file path", vim.log.levels.WARN)
+        return
+      end
+      local git_root = session.git_root
+      target_file = git_root .. "/" .. rel_path
+    else
+      target_file = vim.api.nvim_buf_get_name(current_buf)
+      if target_file == "" then
+        vim.notify("Buffer has no name; cannot open in previous tab", vim.log.levels.WARN)
+        return
+      end
     end
 
     local cursor = vim.api.nvim_win_get_cursor(0)
@@ -266,7 +275,12 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
       return
     end
 
-    local ok, err = pcall(vim.api.nvim_win_set_buf, target_win, current_buf)
+    local ok, err
+    if is_virtual then
+      ok, err = pcall(vim.cmd, "edit " .. vim.fn.fnameescape(target_file))
+    else
+      ok, err = pcall(vim.api.nvim_win_set_buf, target_win, current_buf)
+    end
     if not ok then
       vim.notify("Failed to open buffer in previous tab: " .. err, vim.log.levels.ERROR)
       return
@@ -595,6 +609,14 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     if toggle_stage_key then
       lifecycle.set_tab_keymap(tabpage, "n", toggle_stage_key, toggle_stage, { desc = "Toggle stage/unstage" })
     end
+  end
+
+  -- Help keymap (g?) - show floating window with available keymaps
+  if keymaps.show_help then
+    local help = require("codediff.ui.keymap_help")
+    lifecycle.set_tab_keymap(tabpage, "n", keymaps.show_help, function()
+      help.toggle(tabpage)
+    end, { desc = "Show keymap help" })
   end
 
   -- File navigation (]f, [f) - works in both explorer and history mode

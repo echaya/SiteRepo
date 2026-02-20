@@ -10,18 +10,6 @@ local diffget = require("codediff.ui.conflict.diffget")
 local navigation = require("codediff.ui.conflict.navigation")
 local keymaps = require("codediff.ui.conflict.keymaps")
 
--- Wire up cross-module dependencies
-signs._set_tracking_module(tracking)
-actions._set_tracking_module(tracking)
-actions._set_signs_module(signs)
-diffget._set_tracking_module(tracking)
-diffget._set_signs_module(signs)
-navigation._set_tracking_module(tracking)
-keymaps._set_tracking_module(tracking)
-keymaps._set_actions_module(actions)
-keymaps._set_diffget_module(diffget)
-keymaps._set_navigation_module(navigation)
-
 -- Delegate to tracking module
 M.run_repeatable_action = tracking.run_repeatable_action
 M.initialize_tracking = tracking.initialize_tracking

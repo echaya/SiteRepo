@@ -1,29 +1,16 @@
 *leap.txt*	Neovim's answer to the mouse
+*leap.nvim*
 
-For Neovim version 0.10.0
-
-==============================================================================
-CONTENTS                                                         *leap-contents*
-
-  Introduction ············································· |leap-introduction|
-  Usage ··························································· |leap-usage|
-  Mappings ····················································· |leap-mappings|
-  Features ····················································· |leap-features|
-  Configuration ·················································· |leap-config|
-  Highlighting ················································ |leap-highlight|
-  Events ························································· |leap-events|
-  Extending Leap ············································· |leap-extensions|
-
-==============================================================================
-INTRODUCTION                                  *leap* *leap.nvim* *leap-introduction*
-
+                                                                        *leap*
 Leap is a general-purpose motion plugin for Neovim, building and improving
 primarily on vim-sneak (https://github.com/justinmk/vim-sneak). Using some
 clever ideas, it allows you to jump to any position in the visible editor area
 very quickly, with near-zero mental overhead.
 
+                                      Type |gO| to see the table of contents.
+
 ==============================================================================
-USAGE                                                               *leap-usage*
+USAGE                                                             *leap-usage*
 
 • Initiate the search in a given scope (|leap-mappings|), and start typing a
   2-character pattern ({char1}{char2}). For the last character on a line, type
@@ -40,30 +27,31 @@ USAGE                                                               *leap-usage*
   will disappear on the next keypress. |leap.opts.safe_labels| *leap-autojump*
 
 • Else: type the label character to jump. If there are more matches than
-  available labels, use <space> and <backspace> to move between groups.
-  |leap.opts.keys|
+  available labels, use <space> and <backspace> to move between groups
+  (|leap.opts.keys|). Labels in subsequent target groups are concealed with an
+  empty block or a middle dot, depending on the color scheme, and have a
+  dimmed color. *leap-concealed-labels*
 
 See |leap-features| for lots of additional details.
 
 ==============================================================================
-MAPPINGS                                                         *leap-mappings*
+MAPPINGS                                                       *leap-mappings*
 
-Leap provides some predefined <Plug> keys, aliasing calls to |leap.leap()|:
+|leap.leap()| is the single entry point for all actions: >lua
+    require('leap').leap { windows = { vim.fn.win_getid() } }
+
+There are some predefined <Plug> keys provided, aliasing calls with the most
+common/useful argument tables:
 
     Key                         |  Search scope    |  Offset  |  |inclusive|
     ----------------------------|------------------|----------|-------------
-    *<Plug>(leap-forward)*        |  After cursor    |          |  *
-    *<Plug>(leap-backward)*       |  Before cursor   |          |
-    *<Plug>(leap-forward-till)*   |  After cursor    |  -1      |  *
-    *<Plug>(leap-backward-till)*  |  Before cursor   |  +1      |
-    *<Plug>(leap)*                |  Current window  |          |  * (forward)
-    *<Plug>(leap-from-window)*    |  Other windows   |          |
-    *<Plug>(leap-anywhere)*       |  All windows     |          |
-
-For custom motions, call `leap()` with your preferred arguments instead: >lua
-    vim.keymap.set({'x', 'o'}, 's', function()
-      require('leap').leap { offset = 1, inclusive = true }
-    end)
+    <Plug>(leap-forward)        |  After cursor    |          |  *
+    <Plug>(leap-forward-till)   |  After cursor    |  -1      |  *
+    <Plug>(leap-backward)       |  Before cursor   |          |
+    <Plug>(leap-backward-till)  |  Before cursor   |  +1      |
+    <Plug>(leap)                |  Current window  |          |  * (forward)
+    <Plug>(leap-from-window)    |  Other windows   |          |
+    <Plug>(leap-anywhere)       |  All windows     |          |
 
 See also: |leap-target-ordering|.
 
@@ -82,8 +70,8 @@ You might add a pair of keys for exclusive selection to any of the above: >lua
     vim.keymap.set({'x', 'o'},      'x', '<Plug>(leap-forward-till)')
     vim.keymap.set({'x', 'o'},      'X', '<Plug>(leap-backward-till)')
 
-Note that each overridden native editing command has an alias:
-|s| = `cl`, |S| = |cc|, |v_s| = |v_c|, |v_S| = |v_c| in |V|, |v_x| = |v_d|,
+Note that each native editing command overridden above has an alias:
+|s| = `cl`; |S| = |cc|; |v_s| = |v_c|; |v_S| = |v_c| in |V|; |v_x| = |v_d|;
 |v_X| = |v_D|.
 
 `<Plug>(leap-anywhere)` is only recommended if you are okay with its
@@ -93,64 +81,90 @@ intentional restriction to avoid confusing behaviour and implementation
 problems).
 
 ==============================================================================
-FEATURES                                                         *leap-features*
+FEATURES                                                       *leap-features*
 
-Input methods and modifiers ~
+Modifiers and input methods ~
 
-Directional motions (like |<Plug>(leap-forward)|) can be preceded with
-|[count]|, skipping labeling, and jumping directly to the n-th match. Also
-works with |leap-shortcut| (`2s{char}<enter>`).
+• |[count]| can be given to skip labeling and jump directly to the n-th match
+  when the search is directional. Also works with |leap-shortcut|.
 
-|forced-motion|s work, including |o_v| as inclusive/exclusive toggle.
-|V| and |o_V| will make the search skip the current line.
+• |forced-motion|s work, including |o_v| as inclusive/exclusive toggle.
 
-If a |language-mapping| ('keymap') is active, Leap waits for keymapped
-sequences as needed and searches for the keymapped result.
+• If a |language-mapping| ('keymap') is active, Leap waits for keymapped
+  sequences as needed and searches for the keymapped result.
 
 Search ~
 
-Case sensitivity is determined by 'ignorecase' and 'smartcase'. If you want
-specific settings for Leap motions, you can set these to temporary values in
-|leap.opts.vim_opts|.
+• The last character on a line can be targeted by pressing <space> after it.
+  There is nothing special going on here: <space> is simply an alias for `\n`
+  and `\r`, set in |leap.opts.equivalence_classes| by default. *leap-till-eol*
+  To target actual EOL positions, including empty lines, press a newline alias
+  twice (pretend that each newline character is duplicated). *leap-to-eol*
 
-NOTE: 'smartcase' is experimentally supported for |leap-preview| too, but
-there are serious caveats: it can only be applied on the first input
-character, by design, since the second one just filters the already acquired
-and _labeled_ targets (see |leap-wildcard-problem|). A related issue is that
-while an `Ab` input with 'smartcase' will match both `Ab` and `AB`, the
-repeated invocation will only match `Ab`-s, like a regular search command
-would (|leap-repeat| is not implemented as a step-by-step replay of the
-original invocation's phases). *leap-smartcase*
+• Case sensitivity is determined by 'ignorecase' and 'smartcase'. If you want
+  specific settings for Leap motions, you can set these to temporary values in
+  |leap.opts.vim_opts|.
+  NOTE: 'smartcase' is experimentally supported for |leap-preview| too, but
+  it can only be applied on the first input character, by design, since the
+  second one just filters the already acquired and _labeled_ targets (see
+  |leap-wildcard-problem|). A related issue is that while an `Ab` input with
+  'smartcase' will match both `Ab` and `AB`, the repeated invocation will only
+  match `Ab`-s, like a regular search command would (|leap-repeat| is not
+  implemented as a step-by-step replay of the original invocation's phases).
+  *leap-smartcase*
 
-The last character on a line can be targeted by pressing <space> after it.
-There is nothing special going on here: <space> is simply an alias for `\n`
-and `\r`, set in |leap.opts.equivalence_classes| by default. *leap-till-eol*
+• |V| and |o_V| modes make the search skip the current line.
 
-To target actual EOL positions, including empty lines, press a newline alias
-twice (pretend that each newline character is duplicated). *leap-to-eol*
+• A same-character pair (`==`) will match a longer such sequence (`=====`)
+  only at the beginning, so that e.g. separator lines will not create
+  unnecessary noise and eat up all the labels.
 
-A same-character pair (`==`) will match a longer such sequence (`=====`) only
-at the beginning, so that e.g. separator lines will not create unnecessary
-noise and eat up all the labels.
+• The search can go horizontally offscreen for directional motions (those
+  targets can only be reached via |leap-traversal|).
 
-The search can go horizontally offscreen for directional motions (those
-targets can only be reached via |leap-traversal|).
+Sorting matches ~
 
-                                                          *leap-target-ordering*
 When searching bidirectionally (e.g., |<Plug>(leap)|), matches are sorted by
 Euclidean (beeline) distance from the cursor, but the current line you're on,
 and on that line, forward direction is prioritized. That is, you can be sure
 that the targets right in front of you will be the first ones.
+*leap-target-ordering*
+
+Handling preview conflicts ~
+
+In |leap-preview| phase, |leap-concealed-labels| might appear in the first
+label group too, marking that there is a conflict or potential source of
+confusion (to be resolved in the next step): *leap-preview-conflicts*
+
+1. Two overlapping matches at window edge or EOL, where at least one of them
+   is labeled. (A label beyond the edge would be shifted left a column, so
+   there is no way to know which match is the owner.) >
+
+    text        ...aab|
+    match-1        aa?|
+    match-2         a?|
+    preview     ...aa█|
+<
+2. A label on top of another, unlabeled match. When typing quickly, this is
+   in any case unsafe and unacceptable. >
+
+    text        ...abac...
+    match-1        abL
+    match-2          ac
+    preview     ...ab█c...
+<
+See also: |leap.init_hl()|
 
 Jump, repeat, traversal ~
-                                                           *leap-smart-autojump*
+
 |leap-autojump| is only triggered if the remaining matches can be covered by a
 set of "safe" target labels (keys never used right after leaping), otherwise
 the cursor stays put, and an extended label set is loaded. To fine-tune or
 disable this behaviour, see |leap.opts.safe_labels| and |leap.opts.labels|.
+*leap-smart-autojump*
 
-At any stage, <enter> (|leap.opts.keys.next_target|) jumps to the next/closest
-available target:
+At any stage, <enter> (|leap.opts.keys.next_target|) forces jumping to the
+next/closest available target:
 
 • Pressing <enter> right away repeats the previous search. *leap-repeat*
 
@@ -167,43 +181,18 @@ available target:
 • `{char}<enter>` accepts the closest `{char}` match (can be used as a
   multiline substitute for `fFtT` motions). *leap-shortcut*
 
-In case of directional search, <enter> can continue traversing through the
-rest of the targets (`s<enter><enter>...`, `s{char}<enter><enter>...`, etc.).
-If you overshoot, <backspace> (|leap.opts.keys.prev_target|) steps back.
-*leap-traversal*
+• In case of directional search, <enter> can continue traversing through the
+  rest of the targets (`s<enter><enter>...`, `s{char}<enter><enter>...`,
+  etc.). If you overshoot, <backspace> (|leap.opts.keys.prev_target|) steps
+  back. *leap-traversal*
 
-                                                               *leap-dot-repeat*
 Operations can be repeated with |.|, if vim-repeat
 (https://github.com/tpope/vim-repeat) is installed. Dot-repeat works as you
 would expect, e.g., if you aimed for the 2nd target backwards, `.` will do the
-same (the "beeline" |leap-target-ordering| is ignored).
-
-Handling preview conflicts ~
-                                  *leap-concealed-labels* *leap-preview-conflicts*
-Labels in subsequent target groups are concealed with an empty block or a
-middle dot, depending on the color scheme, and have a dimmed color.
-
-In |leap-preview| phase, certain labels might be concealed in the first group
-too, marking that there is a conflict or potential source of confusion (to be
-resolved in the next step):
-
-1. Two overlapping matches at window edge or EOL, where at least one of them
-   is labeled. (A label beyond the edge would be shifted left a column, so
-   there is no way to know which match is the owner.)
-
-2. A label on top of another, unlabeled match. When typing quickly, this is
-   in any case unsafe and unacceptable. >
-
-                   #1           #2
-    text        ...aab|     ...abac...
-    match-1        aa?|        abL         L = label
-    match-2         a?|          ac        ? = potential label
-    preview     ...aa█|     ...ab█c...
-<
-See also: |leap.init_hl()|
+same (the "beeline" |leap-target-ordering| is ignored). *leap-dot-repeat*
 
 ==============================================================================
-CONFIGURATION                                            *leap-config* *leap.opts*
+CONFIGURATION                                        *leap-config* *leap.opts*
 
 Below is the description of all configurable values in the `opts` table, with
 their defaults.
@@ -213,7 +202,7 @@ Example configuration: >lua
     leap.opts.vim_opts['go.ignorecase'] = false
     leap.opts.keys.prev_target = '<s-enter>'
 <
-                                                             *leap.opts.preview*
+                                                           *leap.opts.preview*
 `preview = true`
 
     Enable |leap-preview|. Can also be a function that only lets through
@@ -235,7 +224,7 @@ Example configuration: >lua
     name it), but keep in mind that this function will be called for every
     single match, so efficiency is something to consider.
 
-                          *leap-equivalence-class* *leap.opts.equivalence_classes*
+                      *leap-equivalence-class* *leap.opts.equivalence_classes*
 `equivalence_classes = { ' \t\r\n' }`
 
     Mutual alias groups for input characters: members will match any other in
@@ -256,7 +245,7 @@ Example configuration: >lua
     are no shortcuts anymore. |smartcase| is a specific instance of this
     issue: `x` -> `x|X`.) *leap-wildcard-problem*
 
-                                                         *leap.opts.safe_labels*
+                                                       *leap.opts.safe_labels*
 `safe_labels = 'sfnut/SFNLHMUGTZ?'`
 
     These should be keys that you never use right after leaping (e.g. a search
@@ -267,7 +256,7 @@ Example configuration: >lua
     Note: Operator-pending mode only checks this if |leap.opts.labels| is
     empty, since we should select the final target right away.
 
-                                                              *leap.opts.labels*
+                                                            *leap.opts.labels*
 `labels = 'sfnjklhodweimbuyvrgtaqpcxz/SFNJKLHODWEIMBUYVRGTAQPCXZ?'`
 
     Target labels to be used when there are more matches than
@@ -279,7 +268,7 @@ A heuristic behind the default label lists: since the commands invoking the
 motions are mapped to left-hand keys by default, we tend to prioritize
 right-hand keys to get a better balance for the whole sequence on average.
 
-                                                                *leap.opts.keys*
+                                                              *leap.opts.keys*
 `keys =` >
     {
       next_target = '<enter>',
@@ -311,7 +300,7 @@ Example ("clever-s"): >lua
 <
 Note: <esc> is hardcoded to exit Leap at any stage cleanly.
 
-                                                            *leap.opts.vim_opts*
+                                                          *leap.opts.vim_opts*
 `vim_opts =` >
     {
       ['wo.scrolloff'] = 0,
@@ -323,28 +312,56 @@ Note: <esc> is hardcoded to exit Leap at any stage cleanly.
 Temporary |options| to be set on |LeapEnter|, and restored to their original
 value upon |LeapLeave|. The keys should follow the above pattern, the prefix
 corresponding to |vim.wo|, |vim.bo|, or |vim.go|.
-Example - turning off |hlsearch| while leaping: >lua
-    require('leap').opts.vim_opts['go.hlsearch'] = false
+
+Example: >lua
+    local vim_opts = require('leap').opts.vim_opts
+    vim_opts['go.hlsearch'] = false
+    -- The right-hand side can also be a function that evaluates to the
+    -- desired value. The window or buffer id will be passed as argument
+    -- for the corresponding scopes.
+    vim_opts['wo.conceallevel'] = function(win)
+      local buf = vim.fn.winbufnr(win)
+      if
+        vim.bo[buf].buftype == 'help'
+        or vim.fn.bufname(buf):match('^oil:///')  -- oil.nvim buffers
+      then
+        return vim.wo[win].conceallevel  -- keep the current value
+      else
+        return 0
+      end
+    end
 <
 ==============================================================================
-HIGHLIGHTING                                                    *leap-highlight*
+HIGHLIGHTING                                                  *leap-highlight*
 
-Leap uses the following highlight groups that you can configure to your own
-liking (using |:hi| or |nvim_set_hl()|):
-
-                                                                  *hl-LeapLabel*
+Highlight groups ~
+                                                                *hl-LeapLabel*
 LeapLabel	Target labels. |hi-link|ed to |hl-IncSearch| by default.
                 Note: When set manually (not loaded as part of a color
                 scheme), you should call |leap.init_hl()| afterwards, to
                 update the look of |leap-concealed-labels|, derived from this
                 group.
 
-                                                                  *hl-LeapMatch*
+                                                                *hl-LeapMatch*
 LeapMatch	Search matches when doing |leap-traversal| without labels.
                 Linked to |hl-Search| by default.
                 To disable match highlights: >lua
                     vim.cmd 'hi! link LeapMatch None'
 <
+Functions ~
+
+leap.init_hl({force})                                         *leap.init_hl()*
+    Sets the highlight groups to their defaults (without `force`, only as
+    fallback). It also updates the look of |leap-concealed-labels|, based on
+    the actual settings of |hl-LeapLabel|. Automatically called the first time
+    Leap is loaded, and then on |ColorScheme| events.
+
+    Parameters: ~
+      • {force}  (boolean) optional: defaults to false. Set the groups without
+                 |hi-default|.
+
+Customization ~
+
 To preserve your custom settings, wrap them in a function, and define an
 autocommand for |ColorScheme|: >lua
 
@@ -365,18 +382,92 @@ autocommand for |ColorScheme|: >lua
       end
     })
 <
-leap.init_hl({force})                                           *leap.init_hl()*
-    Sets the highlight groups to their defaults (without `force`, only as
-    fallback). It also updates the look of |leap-concealed-labels|, based on
-    the actual settings of |hl-LeapLabel|. Automatically called the first time
-    Leap is loaded, and then on |ColorScheme| events.
+==============================================================================
+FUNCTIONS                                                     *leap-functions*
+
+Instead of using the provided <Plug> keys (|leap-mappings|), you can also call
+`leap()` directly:
+
+leap({opts})                                                     *leap.leap()*
+    Entry point for all |leap.nvim| actions.
 
     Parameters: ~
-      • {force}  (boolean) optional: defaults to false. Set the groups without
-                 |hi-default|.
+        {opts} Optional keyword arguments:
+               • {backward}? (`boolean`, default: `false`) Search backward
+                 instead of forward in the current window.
+               • {windows}? (`table`) A list of windows (as |winid|s) to be
+                 searched.
+               • {offset}? (`-1|0|1`, default: `0`) Where to land with the
+                 cursor compared to the target position.
+               • {inclusive}? (`boolean`, default: `false`) Make operations
+                 |inclusive| for forward jumps.
+               • {opts}? (`table`) A table like |leap.opts|, to override any
+                 default setting for the specific call. Example: >lua
+                    require('leap').leap { opts = { safe_labels = '' } }
+<
+                 For map-like subtables it is also enough to specify only the
+                 values to be overridden: >lua
+                    require('leap').leap {
+                      opts = { vim_opts = { ['go.ignorecase'] = false } }
+                    }
+<
+                                                                     *leap-ft*
+               • {inputlen}? (`0|1|2`, default: `2`) Set to 1 for |f|-like
+                 motions. See an example of a full setup in the README.
+
+                                                         *leap-custom-pattern*
+               • {pattern}?
+                 (`string | fun(pattern: string, typed: string[]): string`)
+                 A |regexp| pattern to be consumed by |search()|, or a
+                 function returning such a pattern. (Remember to use raw
+                 strings, or escape backslashes, as you want to pass those
+                 literally to the Vim function from Lua.)
+
+                 If user input is expected, the function gets the raw input
+                 characters {typed}, as well as the prepared {pattern},
+                 allowing you to modify it. Keep in mind, however, that in
+                 case of |leap-preview|, the actual search pattern is based on
+                 the first input character only - the second part is
+                 substituted by a catch-all pattern. This means that regexp
+                 modifiers that affect each character individually (e.g.
+                 |/\c|) will not work with preview - such features need to be
+                 implemented as black-box magic by the plugin. (Related:
+                 |leap-wildcard-problem|.)
+
+                 Examples: >lua
+                    -- Search only for word beginnings:
+                    pattern = function(pat) return '\\<' .. pat end
+
+                    -- Limit search scope to the current line:
+                    pattern = function(pat)
+                      -- It is best to hardcode line numbers, as `leap()`
+                      -- might move the cursor before the search starts.
+                      return '\\%'..vim.fn.line('.')..'l' .. pat
+                    end
+<
+                                                         *leap-custom-targets*
+               • {targets}? (`table|fun():table?`) A list of targets, or a
+                 function returning such a list. The advantage of the latter
+                 is that the function will be evaluated after |LeapEnter|
+                 (that is, after setting temporary editor options, etc.), so
+                 that you can even prompt the user for keyboard input while
+                 already "in" Leap.
+                 Targets are tables of arbitrary structure, with the only
+                 mandatory field being `pos` - a (1,1)-indexed tuple; this is
+                 the position of the label, and also the jump target, if no
+                 custom {action} is provided. If you have targets in multiple
+                 windows, you also need to provide a `wininfo` field for each
+                 (|getwininfo()|).
+                                                          *leap-custom-action*
+               • {action}? (`fun(target):any?`) A callback to be executed by
+                 Leap in place of the jump, taking the selected target as its
+                 argument. (You can obviously implement some custom jump logic
+                 here too.)
+
+See also: |leap.init_hl()|.
 
 ==============================================================================
-EVENTS                                                             *leap-events*
+EVENTS                                                           *leap-events*
 
 The |User| event is triggered with the following patterns on entering/exiting
 Leap:
@@ -412,96 +503,6 @@ define custom behaviours for it: >lua
         end
       end
     })
-
-==============================================================================
-EXTENDING LEAP                                                 *leap-extensions*
-
-There is more to Leap than meets the eye. On a general level, you should think
-of it as less of a motion plugin and more of an engine for selecting visible
-targets on the screen (acquired by arbitrary means), and doing arbitrary things
-with them.
-
-There are lots of ways you can extend the plugin and bend it to your will, and
-the combinations of them give you almost infinite possibilities.
-
-Instead of using the provided <Plug> keys (|leap-mappings|), you can also call
-`leap()` directly:
-
-leap({opts})                                                       *leap.leap()*
-    Entry point for all |leap.nvim| actions.
-
-    Parameters: ~
-        {opts} Optional keyword arguments:
-               • {backward}? (`boolean`, default: `false`) Search backward
-                 instead of forward in the current window.
-               • {windows}? (`table`) A list of windows (as |winid|s) to be
-                 searched.
-               • {offset}? (`-1|0|1`, default: `0`) Where to land with the
-                 cursor compared to the target position.
-               • {inclusive}? (`boolean`, default: `false`) Make operations
-                 |inclusive| for forward jumps.
-               • {opts}? (`table`) A table like |leap.opts|, to override any
-                 default setting for the specific call. Example: >lua
-                    require('leap').leap { opts = { safe_labels = '' } }
-<
-                 For map-like subtables it is also enough to specify only the
-                 values to be overridden: >lua
-                    require('leap').leap {
-                      opts = { vim_opts = { ['go.ignorecase'] = false } }
-                    }
-<
-                                                                       *leap-ft*
-               • {inputlen}? (`0|1|2`, default: `2`) Set to 1 for |f|-like
-                 motions. See an example of a full setup in the README.
-
-                                                           *leap-custom-pattern*
-               • {pattern}?
-                 (`string | fun(pattern: string, typed: string[]): string`)
-                 A |regexp| pattern to be consumed by |search()|, or a
-                 function returning such a pattern. (Remember to use raw
-                 strings, or escape backslashes, as you want to pass those
-                 literally to the Vim function from Lua.)
-
-                 If user input is expected, the function gets the raw input
-                 characters {typed}, as well as the prepared {pattern},
-                 allowing you to modify it. Keep in mind, however, that in
-                 case of |leap-preview|, the actual search pattern is based on
-                 the first input character only - the second part is
-                 substituted by a catch-all pattern. This means that regexp
-                 modifiers that affect each character individually (e.g.
-                 |/\c|) will not work with preview - such features need to be
-                 implemented as black-box magic by the plugin. (Related:
-                 |leap-wildcard-problem|.)
-
-                 Examples: >lua
-                    -- Search only for word beginnings:
-                    pattern = function(pat) return '\\<' .. pat end
-
-                    -- Limit search scope to the current line:
-                    pattern = function(pat)
-                      -- It is best to hardcode line numbers, as `leap()`
-                      -- might move the cursor before the search starts.
-                      return '\\%'..vim.fn.line('.')..'l' .. pat
-                    end
-<
-                                                           *leap-custom-targets*
-               • {targets}? (`table|fun():table?`) A list of targets, or a
-                 function returning such a list. The advantage of the latter
-                 is that the function will be evaluated after |LeapEnter|
-                 (that is, after setting temporary editor options, etc.), so
-                 that you can even prompt the user for keyboard input while
-                 already "in" Leap.
-                 Targets are tables of arbitrary structure, with the only
-                 mandatory field being `pos` - a (1,1)-indexed tuple; this is
-                 the position of the label, and also the jump target, if no
-                 custom {action} is provided. If you have targets in multiple
-                 windows, you also need to provide a `wininfo` field for each
-                 (|getwininfo()|).
-                                                            *leap-custom-action*
-               • {action}? (`fun(target):any?`) A callback to be executed by
-                 Leap in place of the jump, taking the selected target as its
-                 argument. (You can obviously implement some custom jump logic
-                 here too.)
 
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:

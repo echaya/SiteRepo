@@ -1,24 +1,9 @@
 -- Keymaps for explorer panel
 local config = require("codediff.config")
+local actions_module = require("codediff.ui.explorer.actions")
+local refresh_module = require("codediff.ui.explorer.refresh")
 
 local M = {}
-
--- Will be injected by init.lua
-local actions_module = nil
-local refresh_module = nil
-local render_module = nil
-
-M._set_actions_module = function(a)
-  actions_module = a
-end
-
-M._set_refresh_module = function(r)
-  refresh_module = r
-end
-
-M._set_render_module = function(r)
-  render_module = r
-end
 
 -- Setup keymaps for explorer panel
 -- @param explorer: explorer object with tree, split, git_root, on_file_select, etc.

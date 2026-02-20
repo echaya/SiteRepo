@@ -2,12 +2,7 @@
 local M = {}
 
 local config = require("codediff.config")
-
--- Will be injected by init.lua
-local tree_module = nil
-M._set_tree_module = function(t)
-  tree_module = t
-end
+local tree_module = require("codediff.ui.explorer.tree")
 
 -- Setup auto-refresh triggers for explorer
 -- Returns a cleanup function that should be called when the explorer is destroyed

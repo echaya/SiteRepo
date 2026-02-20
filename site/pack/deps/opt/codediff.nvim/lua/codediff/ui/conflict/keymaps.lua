@@ -3,24 +3,10 @@ local M = {}
 
 local lifecycle = require("codediff.ui.lifecycle")
 local config = require("codediff.config")
-
--- Will be injected by init.lua
-local tracking = nil
-local actions = nil
-local diffget = nil
-local navigation = nil
-M._set_tracking_module = function(t)
-  tracking = t
-end
-M._set_actions_module = function(a)
-  actions = a
-end
-M._set_diffget_module = function(d)
-  diffget = d
-end
-M._set_navigation_module = function(n)
-  navigation = n
-end
+local tracking = require("codediff.ui.conflict.tracking")
+local actions = require("codediff.ui.conflict.actions")
+local diffget = require("codediff.ui.conflict.diffget")
+local navigation = require("codediff.ui.conflict.navigation")
 
 --- Setup conflict keymaps for a session
 --- @param tabpage number

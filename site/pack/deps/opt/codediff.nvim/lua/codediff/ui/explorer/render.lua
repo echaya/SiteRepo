@@ -4,24 +4,10 @@ local M = {}
 local Tree = require("nui.tree")
 local Split = require("nui.split")
 local config = require("codediff.config")
-
--- Will be injected by init.lua
-local nodes_module = nil
-local tree_module = nil
-local refresh_module = nil
-local keymaps_module = nil
-M._set_nodes_module = function(n)
-  nodes_module = n
-end
-M._set_tree_module = function(t)
-  tree_module = t
-end
-M._set_refresh_module = function(r)
-  refresh_module = r
-end
-M._set_keymaps_module = function(k)
-  keymaps_module = k
-end
+local nodes_module = require("codediff.ui.explorer.nodes")
+local tree_module = require("codediff.ui.explorer.tree")
+local keymaps_module = require("codediff.ui.explorer.keymaps")
+local refresh_module = require("codediff.ui.explorer.refresh")
 
 function M.create(status_result, git_root, tabpage, width, base_revision, target_revision, opts)
   opts = opts or {}

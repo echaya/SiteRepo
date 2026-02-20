@@ -112,6 +112,14 @@ function M.setup(history, opts)
       vim.notify("History view: " .. new_mode, vim.log.levels.INFO)
     end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Toggle list/tree view" }))
   end
+
+  -- Refresh (R key) - re-fetch commits
+  if history_keymaps.refresh then
+    vim.keymap.set("n", history_keymaps.refresh, function()
+      local refresh_module = require("codediff.ui.history.refresh")
+      refresh_module.refresh(history)
+    end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Refresh history" }))
+  end
 end
 
 return M
