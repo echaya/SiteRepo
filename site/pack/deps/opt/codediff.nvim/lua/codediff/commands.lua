@@ -7,6 +7,7 @@ M.SUBCOMMANDS = { "merge", "file", "dir", "history", "install" }
 local git = require("codediff.core.git")
 local lifecycle = require("codediff.ui.lifecycle")
 local config = require("codediff.config")
+local view = require("codediff.ui.view")
 
 --- Parse triple-dot syntax for merge-base comparisons.
 -- @param arg string: The argument to parse
@@ -70,7 +71,6 @@ local function handle_git_diff(revision, revision2)
           end
 
           vim.schedule(function()
-            local view = require("codediff.ui.view")
             ---@type SessionConfig
             local session_config = {
               mode = "standalone",
@@ -86,7 +86,6 @@ local function handle_git_diff(revision, revision2)
       else
         -- Compare revision vs working tree
         vim.schedule(function()
-          local view = require("codediff.ui.view")
           ---@type SessionConfig
           local session_config = {
             mode = "standalone",
@@ -108,7 +107,6 @@ local function handle_file_diff(file_a, file_b)
   local filetype = vim.filetype.match({ filename = file_a }) or ""
 
   -- Create diff view (no pre-reading needed, :edit will load content)
-  local view = require("codediff.ui.view")
   ---@type SessionConfig
   local session_config = {
     mode = "standalone",
@@ -145,7 +143,6 @@ local function handle_dir_diff(dir1, dir2)
     return
   end
 
-  local view = require("codediff.ui.view")
 
   ---@type SessionConfig
   local session_config = {
@@ -224,7 +221,6 @@ local function handle_history(range, file_path, flags, line_range)
       end
 
       vim.schedule(function()
-        local view = require("codediff.ui.view")
 
         ---@type SessionConfig
         local session_config = {
@@ -307,7 +303,6 @@ local function handle_explorer(revision, revision2)
         end
 
         -- Create explorer view with empty diff panes initially
-        local view = require("codediff.ui.view")
 
         ---@type SessionConfig
         local session_config = {
@@ -502,7 +497,6 @@ function M.vscode_merge(opts)
 
   -- Ensure all required modules are loaded before we start vim.wait
   -- This prevents issues with lazy-loading during the wait loop
-  local view = require("codediff.ui.view")
 
   -- For synchronous execution (required by git mergetool), we need to block
   -- until the view is ready. Use vim.wait which processes the event loop.

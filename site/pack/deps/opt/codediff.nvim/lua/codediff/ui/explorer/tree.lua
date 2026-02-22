@@ -2,7 +2,7 @@
 -- Handles creating the tree hierarchy from git status
 local M = {}
 
-local Tree = require("nui.tree")
+local Tree = require("codediff.ui.lib.tree")
 local config = require("codediff.config")
 local filter = require("codediff.ui.explorer.filter")
 local nodes = require("codediff.ui.explorer.nodes")

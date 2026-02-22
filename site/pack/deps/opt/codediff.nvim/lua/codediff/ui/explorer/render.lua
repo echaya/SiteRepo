@@ -1,8 +1,8 @@
 -- UI rendering for explorer (create split, tree, keymaps)
 local M = {}
 
-local Tree = require("nui.tree")
-local Split = require("nui.split")
+local Tree = require("codediff.ui.lib.tree")
+local Split = require("codediff.ui.lib.split")
 local config = require("codediff.config")
 local nodes_module = require("codediff.ui.explorer.nodes")
 local tree_module = require("codediff.ui.explorer.tree")
@@ -85,7 +85,7 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
     end
   end
 
-  -- nui.tree get_child_ids returns IDs, need to get actual nodes
+  -- get_child_ids returns IDs, need to get actual nodes
   for _, node in ipairs(tree_data) do
     if node.data and node.data.type == "group" then
       node:expand()

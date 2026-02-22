@@ -2,8 +2,8 @@
 -- Handles file/directory nodes, icons, status symbols, and tree structure
 local M = {}
 
-local Tree = require("nui.tree")
-local NuiLine = require("nui.line")
+local Tree = require("codediff.ui.lib.tree")
+local Line = require("codediff.ui.lib.line")
 local config = require("codediff.config")
 
 -- Merge artifact patterns (created by git mergetool)
@@ -217,7 +217,7 @@ end
 
 -- Prepare node for rendering (format display)
 function M.prepare_node(node, max_width, selected_path, selected_group)
-  local line = NuiLine()
+  local line = Line()
   local data = node.data or {}
   local explorer_config = config.options.explorer or {}
   local use_indent_markers = explorer_config.indent_markers ~= false -- default true

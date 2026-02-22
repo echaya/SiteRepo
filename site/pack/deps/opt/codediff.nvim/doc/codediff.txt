@@ -146,7 +146,7 @@ Setup entry point:
       },
       view_mode = "list",
       file_filter = {
-        ignore = {},
+        ignore = { ".git/**", ".jj/**" },
       },
     },
     keymaps = {

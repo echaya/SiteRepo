@@ -140,8 +140,14 @@ function M.create_session(
     })
   end
 
-  -- Force disable winbar to prevent alignment issues
+  -- Force disable winbar to prevent alignment issues (except in conflict mode)
   local function ensure_no_winbar()
+    local sess = active_diffs[tabpage]
+    -- In conflict mode, preserve existing winbar titles (set by conflict_window.lua)
+    if sess and sess.result_win and vim.api.nvim_win_is_valid(sess.result_win) then
+      return
+    end
+    -- Normal diff mode: disable winbar
     if vim.api.nvim_win_is_valid(original_win) then
       vim.wo[original_win].winbar = ""
     end

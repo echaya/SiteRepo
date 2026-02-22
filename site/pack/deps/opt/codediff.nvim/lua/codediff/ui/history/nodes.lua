@@ -2,8 +2,8 @@
 -- Handles commit nodes, file nodes, icons, and tree structure
 local M = {}
 
-local Tree = require("nui.tree")
-local NuiLine = require("nui.line")
+local Tree = require("codediff.ui.lib.tree")
+local Line = require("codediff.ui.lib.line")
 local config = require("codediff.config")
 
 -- Status symbols and colors (reuse from explorer)
@@ -217,7 +217,7 @@ end
 -- Prepare node for rendering (format display)
 -- Match diffview format: [fold] [file count] | [adds] [dels] | hash subject author, date
 function M.prepare_node(node, max_width, selected_commit, selected_file, is_single_file_mode)
-  local line = NuiLine()
+  local line = Line()
   local data = node.data or {}
 
   if data.type == "title" then

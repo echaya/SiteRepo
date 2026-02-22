@@ -140,7 +140,7 @@ function M.toggle_visibility(explorer)
     explorer.is_hidden = false
 
     -- Update winid after show() creates a new window
-    -- NUI creates a new window with a new winid when showing
+    -- show() creates a new window with a new winid
     explorer.winid = explorer.split.winid
 
     -- Equalize diff windows after showing explorer
@@ -159,6 +159,11 @@ function M.toggle_visibility(explorer)
       -- Equalize the diff windows (typically 2 windows)
       if #diff_wins >= 2 then
         vim.cmd("wincmd =")
+      end
+
+      -- Restore explorer width after equalize
+      if explorer.split.winid and vim.api.nvim_win_is_valid(explorer.split.winid) then
+        vim.api.nvim_win_set_width(explorer.split.winid, explorer.split._size)
       end
     end)
   else

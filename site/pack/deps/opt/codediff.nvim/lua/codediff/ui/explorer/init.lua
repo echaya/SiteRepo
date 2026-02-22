@@ -1,4 +1,4 @@
--- Git status explorer using nui.nvim
+-- Git status explorer
 -- Public API for explorer module
 local M = {}
 

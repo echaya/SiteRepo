@@ -3,6 +3,7 @@ local M = {}
 
 local lifecycle = require("codediff.ui.lifecycle")
 local auto_refresh = require("codediff.ui.auto_refresh")
+local config = require("codediff.config")
 
 -- Common logic: Setup conflict result window at bottom
 -- Creates the result window layout and loads the real file with BASE content
@@ -79,17 +80,36 @@ function M.setup_conflict_result_window(tabpage, session_config, original_win, m
   -- Set window options for result
   vim.wo[result_win].wrap = false
   vim.wo[result_win].cursorline = true
-  vim.wo[result_win].winbar = ""
 
   -- Enable scrollbind for result window
   vim.api.nvim_win_set_cursor(result_win, { 1, 0 })
   vim.wo[result_win].scrollbind = true
 
-  -- Update lifecycle with result buffer/window
+  -- Update lifecycle with result buffer/window FIRST
+  -- (This must happen before setting winbar so ensure_no_winbar knows we're in conflict mode)
   lifecycle.set_result(tabpage, result_bufnr, result_win)
   lifecycle.set_result_base_lines(tabpage, base_lines)
   lifecycle.set_conflict_blocks(tabpage, conflict_diffs.conflict_blocks)
   lifecycle.track_conflict_file(tabpage, abs_path)
+
+  -- Now set winbar titles for conflict windows based on conflict_ours_position
+  -- (After set_result so ensure_no_winbar can detect conflict mode)
+  vim.wo[result_win].winbar = " Result"
+  local ours_position = config.options.diff.conflict_ours_position or "right"
+  if vim.api.nvim_win_is_valid(original_win) then
+    if ours_position == "left" then
+      vim.wo[original_win].winbar = " Ours (Current)"
+    else
+      vim.wo[original_win].winbar = " Theirs (Incoming)"
+    end
+  end
+  if vim.api.nvim_win_is_valid(modified_win) then
+    if ours_position == "left" then
+      vim.wo[modified_win].winbar = " Theirs (Incoming)"
+    else
+      vim.wo[modified_win].winbar = " Ours (Current)"
+    end
+  end
 
   -- Enable auto-refresh for result buffer
   auto_refresh.enable_for_result(result_bufnr)

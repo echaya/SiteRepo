@@ -1,6 +1,7 @@
 -- Virtual file scheme for git revisions
 -- Inspired by vim-fugitive's fugitive:// URL scheme
--- This allows LSP to attach to git historical content
+-- LSP attachment is prevented via LspAttach guard; semantic tokens
+-- are handled separately via semantic_tokens.lua
 
 local M = {}
 
@@ -49,11 +50,20 @@ local function load_virtual_buffer_content(buf, git_root, commit, filepath)
       vim.bo[buf].modifiable = false
       vim.bo[buf].readonly = true
 
-      -- Detect filetype from the original file path (for TreeSitter only)
-      -- Pass buf for proper detection of some filetypes like .ts
+      -- Start TreeSitter highlighting directly without setting filetype.
+      -- Setting filetype fires FileType autocmd, which triggers LSP plugins
+      -- to attach and send textDocument/didOpen with codediff:// URI,
+      -- crashing language servers that can't handle custom URI schemes.
       local ft = vim.filetype.match({ filename = filepath, buf = buf })
       if ft then
-        vim.bo[buf].filetype = ft
+        local lang = vim.treesitter.language.get_lang(ft) or ft
+        if pcall(vim.treesitter.start, buf, lang) then
+          -- Store filetype for semantic_tokens without firing autocmds
+          vim.bo[buf].syntax = ""
+        else
+          -- TreeSitter parser not available, fall back to syntax highlighting
+          vim.bo[buf].syntax = ft
+        end
       end
 
       -- Disable diagnostics for this buffer completely
@@ -151,6 +161,12 @@ function M.setup()
       vim.bo[buf].buftype = "nowrite"
       vim.bo[buf].bufhidden = "wipe"
 
+      -- Clear any auto-detected filetype without firing FileType autocmd.
+      -- Neovim's built-in filetype detection matches the .js/.ts/.tf extension
+      -- in codediff:// URLs and sets filetype, which triggers LSP plugins to
+      -- attach and crash on the custom URI scheme.
+      vim.cmd("noautocmd setlocal filetype=")
+
       -- Load content using the shared helper
       load_virtual_buffer_content(buf, git_root, commit, filepath)
     end,
@@ -164,6 +180,7 @@ function M.setup()
       vim.notify("Cannot write to git revision buffer", vim.log.levels.WARN)
     end,
   })
+
 end
 
 return M

@@ -36,8 +36,6 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
 - Neovim >= 0.7.0 (for Lua FFI support; 0.10+ recommended for vim.system)
 - Git (for git diff features)
 - `curl` or `wget` (for automatic binary download)
-- `nui.nvim` (for explorer UI)
-
 **No compiler required!** The plugin automatically downloads pre-built binaries from GitHub releases.
 
 ### Using lazy.nvim
@@ -46,7 +44,6 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
 ```lua
 {
   "esmuellert/codediff.nvim",
-  dependencies = { "MunifTanjim/nui.nvim" },
   cmd = "CodeDiff",
 }
 ```
@@ -57,7 +54,6 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
 ```lua
 {
   "esmuellert/codediff.nvim",
-  dependencies = { "MunifTanjim/nui.nvim" },
   cmd = "CodeDiff",
   opts = {
     -- Highlight configuration
@@ -111,7 +107,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
       },
       view_mode = "list",    -- "list" or "tree"
       file_filter = {
-        ignore = {},  -- Glob patterns to hide (e.g., {"*.lock", "dist/*"})
+        ignore = { ".git/**", ".jj/**" },  -- Glob patterns to hide (e.g., {"*.lock", "dist/*"})
       },
       focus_on_select = false,  -- Jump to modified pane after selecting a file (default: stay in explorer)
     },

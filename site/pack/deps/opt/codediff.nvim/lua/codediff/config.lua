@@ -54,7 +54,7 @@ M.defaults = {
       folder_open = "\u{e5fe}", -- Nerd Font: folder-open
     },
     file_filter = {
-      ignore = {}, -- Glob patterns to hide (e.g., {"*.lock", "dist/*"})
+      ignore = { ".git/**", ".jj/**" }, -- Glob patterns to hide (e.g., {"*.lock", "dist/*"})
     },
     focus_on_select = false, -- Jump to modified pane after selecting a file (default: stay in explorer)
   },
