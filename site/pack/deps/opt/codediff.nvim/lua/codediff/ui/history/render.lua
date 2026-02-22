@@ -133,6 +133,7 @@ function M.create(commits, git_root, tabpage, width, opts)
   })
 
   split:mount()
+  pcall(vim.api.nvim_buf_set_name, split.bufnr, "CodeDiff History [" .. tabpage .. "]")
 
   -- Track selected commit and file
   local selected_commit = nil
@@ -295,7 +296,7 @@ function M.create(commits, git_root, tabpage, width, opts)
         modified_revision = commit_hash,
         line_range = line_range,
       }
-      view.update(tabpage, session_config, true)
+      view.update(tabpage, session_config, config.options.diff.jump_to_first_change)
     end)
   end
 
@@ -450,6 +451,8 @@ function M.navigate_next(history)
   if current_index >= #all_files and not config.options.diff.cycle_next_file then
     vim.api.nvim_echo({ { string.format("Last file (%d of %d)", #all_files, #all_files), "WarningMsg" } }, false, {})
     return
+  else
+    vim.api.nvim_echo({}, false, {})
   end
 
   local next_index = current_index % #all_files + 1
@@ -494,6 +497,8 @@ function M.navigate_prev(history)
   if current_index <= 1 and not config.options.diff.cycle_next_file then
     vim.api.nvim_echo({ { string.format("First file (1 of %d)", #all_files), "WarningMsg" } }, false, {})
     return
+  else
+    vim.api.nvim_echo({}, false, {})
   end
 
   local prev_index = current_index - 2

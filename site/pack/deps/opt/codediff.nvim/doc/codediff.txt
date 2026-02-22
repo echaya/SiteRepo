@@ -132,6 +132,8 @@ Setup entry point:
       disable_inlay_hints = true,
       max_computation_time_ms = 5000,
       hide_merge_artifacts = false,
+      jump_to_first_change = true,
+      highlight_priority = 100,
     },
     explorer = {
       position = "left",

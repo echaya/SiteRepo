@@ -1,6 +1,7 @@
 -- Core diff rendering algorithm
 local M = {}
 
+local config = require("codediff.config")
 local highlights = require("codediff.ui.highlights")
 
 -- Namespace references
@@ -72,7 +73,7 @@ local function apply_line_highlights(bufnr, line_range, hl_group)
       end_col = 0,
       hl_group = hl_group,
       hl_eol = true,
-      priority = 100,
+      priority = config.options.diff.highlight_priority,
     })
   end
 end

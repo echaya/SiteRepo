@@ -37,6 +37,8 @@ M.defaults = {
     conflict_ours_position = "right", -- Position of ours (:2) in conflict view: "left" or "right" (independent of original_position)
     cycle_next_hunk = true, -- Wrap around when navigating hunks (]c/[c): true = cycle, false = stop at first/last
     cycle_next_file = true, -- Wrap around when navigating files (]f/[f): true = cycle, false = stop at first/last
+    jump_to_first_change = true, -- Auto-scroll to first change when opening a diff: true = jump to first hunk, false = stay at same line
+    highlight_priority = 100, -- Priority for line-level diff highlights (increase to override LSP highlights)
   },
 
   -- Explorer panel configuration

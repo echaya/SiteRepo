@@ -114,7 +114,7 @@ function M.create_session(
   vim.w[original_win].codediff_restore = 1
   vim.w[modified_win].codediff_restore = 1
 
-  -- Apply inlay hint settings if configured
+  -- Continuously enforce inlay hint settings via LspAttach (handles LazyVim re-enabling)
   if config.options.diff.disable_inlay_hints and vim.lsp.inlay_hint then
     vim.lsp.inlay_hint.enable(false, { bufnr = original_bufnr })
     vim.lsp.inlay_hint.enable(false, { bufnr = modified_bufnr })
@@ -122,6 +122,23 @@ function M.create_session(
 
   -- Setup tab autocmds
   local tab_augroup = vim.api.nvim_create_augroup("codediff_lifecycle_tab_" .. tabpage, { clear = true })
+
+  -- Re-disable inlay hints when LSP attaches (LazyVim/distributions may re-enable them)
+  if config.options.diff.disable_inlay_hints then
+    vim.api.nvim_create_autocmd("LspAttach", {
+      group = tab_augroup,
+      callback = function(ev)
+        if not active_diffs[tabpage] then
+          return
+        end
+        vim.schedule(function()
+          if vim.api.nvim_get_current_tabpage() == tabpage then
+            pcall(vim.lsp.inlay_hint.enable, false, { bufnr = ev.buf })
+          end
+        end)
+      end,
+    })
+  end
 
   -- Force disable winbar to prevent alignment issues
   local function ensure_no_winbar()
