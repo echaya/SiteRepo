@@ -346,6 +346,7 @@ You can view this list in vim with `:help conform-formatters`
 - [pretty-php](https://github.com/lkrms/pretty-php) - The opinionated PHP code formatter.
 - [prettypst](https://github.com/antonWetzel/prettypst) - Formatter for Typst.
 - [prolog](https://github.com/jamesnvc/lsp_server) - Language Server Protocol server and formatter for SWI-Prolog.
+- [pruner](https://github.com/pruner-formatter/pruner) - A language-agnostic, treesitter powered formatter.
 - [puppet-lint](https://github.com/puppetlabs/puppet-lint) - Check that your Puppet manifests conform to the style guide.
 - [purs-tidy](https://github.com/natefaubion/purescript-tidy) - A syntax tidy-upper for PureScript.
 - [pycln](https://github.com/hadialqattan/pycln) - A Python formatter for finding and removing unused import statements.
@@ -412,6 +413,7 @@ You can view this list in vim with `:help conform-formatters`
 - [trim_whitespace](https://github.com/stevearc/conform.nvim/blob/master/lua/conform/formatters/trim_whitespace.lua) - Trim trailing whitespace.
 - [trunk](https://docs.trunk.io/code-quality/overview/getting-started/commands-reference/code-quality#trunk-check-run-format) - Trunk universal formatter.
 - [twig-cs-fixer](https://github.com/VincentLanglet/Twig-CS-Fixer) - Automatically fix Twig Coding Standards issues
+- [txtpbfmt](https://github.com/protocolbuffers/txtpbfmt) - txtpbfmt parses, edits and formats text proto files in a way that preserves comments.
 - [typespec](https://github.com/microsoft/typespec) - TypeSpec compiler and CLI.
 - [typos](https://github.com/crate-ci/typos) - Source code spell checker
 - [typstyle](https://github.com/Enter-tainer/typstyle) - Beautiful and reliable typst code formatter.

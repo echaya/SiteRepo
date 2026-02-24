@@ -35,6 +35,9 @@ M.defaults = {
     hide_merge_artifacts = false, -- Hide merge tool temp files (*.orig, *.BACKUP.*, *.BASE.*, *.LOCAL.*, *.REMOTE.*)
     original_position = "left", -- Position of original (old) content: "left" or "right"
     conflict_ours_position = "right", -- Position of ours (:2) in conflict view: "left" or "right" (independent of original_position)
+    conflict_result_position = "bottom", -- Position of result buffer in conflict view: "bottom" or "center"
+    conflict_result_height = 30, -- Height of result buffer in bottom layout (percentage of total height)
+    conflict_result_width_ratio = { 1, 1, 1 }, -- Width ratio for center layout panes {left, center, right} (e.g., {1, 2, 1} for wider result)
     cycle_next_hunk = true, -- Wrap around when navigating hunks (]c/[c): true = cycle, false = stop at first/last
     cycle_next_file = true, -- Wrap around when navigating files (]f/[f): true = cycle, false = stop at first/last
     jump_to_first_change = true, -- Auto-scroll to first change when opening a diff: true = jump to first hunk, false = stay at same line
@@ -57,6 +60,12 @@ M.defaults = {
       ignore = { ".git/**", ".jj/**" }, -- Glob patterns to hide (e.g., {"*.lock", "dist/*"})
     },
     focus_on_select = false, -- Jump to modified pane after selecting a file (default: stay in explorer)
+    flatten_dirs = true, -- Flatten single-child directory chains in tree view (e.g., src/components/ui/)
+    visible_groups = { -- Which groups to show in explorer (can be toggled at runtime)
+      staged = true,
+      unstaged = true,
+      conflicts = true,
+    },
   },
 
   -- History panel configuration (for :CodeDiff history)
@@ -73,6 +82,7 @@ M.defaults = {
     view = {
       quit = "q", -- Close diff tab
       toggle_explorer = "<leader>b", -- Toggle explorer visibility (explorer mode only)
+      focus_explorer = "<leader>e", -- Focus explorer panel (explorer mode only)
       next_hunk = "]c",
       prev_hunk = "[c",
       next_file = "]f",
@@ -84,6 +94,7 @@ M.defaults = {
       stage_hunk = "<leader>hs", -- Stage the hunk under cursor to git index
       unstage_hunk = "<leader>hu", -- Unstage the hunk under cursor from git index
       discard_hunk = "<leader>hr", -- Discard the hunk under cursor (working tree only)
+      hunk_textobject = "ih", -- Textobject for hunk (vih to select, yih to yank, etc.)
       show_help = "g?", -- Show floating window with available keymaps
     },
     explorer = {
@@ -94,6 +105,8 @@ M.defaults = {
       stage_all = "S", -- Stage all files
       unstage_all = "U", -- Unstage all files
       restore = "X", -- Discard changes to file (restore to index/HEAD)
+      toggle_changes = "gu", -- Toggle Changes (unstaged) group visibility
+      toggle_staged = "gs", -- Toggle Staged Changes group visibility
     },
     history = {
       select = "<CR>", -- Select commit/file or toggle expand

@@ -180,7 +180,6 @@ function M.setup()
       vim.notify("Cannot write to git revision buffer", vim.log.levels.WARN)
     end,
   })
-
 end
 
 return M

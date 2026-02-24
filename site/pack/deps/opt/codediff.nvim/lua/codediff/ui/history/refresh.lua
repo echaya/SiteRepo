@@ -71,11 +71,7 @@ function M.setup_auto_refresh(history, tabpage)
                 if watch_err then
                   return
                 end
-                if
-                  vim.api.nvim_get_current_tabpage() == tabpage
-                  and vim.api.nvim_tabpage_is_valid(tabpage)
-                  and not history.is_hidden
-                then
+                if vim.api.nvim_get_current_tabpage() == tabpage and vim.api.nvim_tabpage_is_valid(tabpage) and not history.is_hidden then
                   debounced_refresh()
                 end
               end)

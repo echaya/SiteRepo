@@ -132,6 +132,9 @@ Setup entry point:
       disable_inlay_hints = true,
       max_computation_time_ms = 5000,
       hide_merge_artifacts = false,
+      conflict_result_position = "bottom",
+      conflict_result_height = 30,
+      conflict_result_width_ratio = { 1, 1, 1 },
       jump_to_first_change = true,
       highlight_priority = 100,
     },
@@ -145,14 +148,21 @@ Setup entry point:
         folder_open = "",
       },
       view_mode = "list",
+      flatten_dirs = true,
       file_filter = {
         ignore = { ".git/**", ".jj/**" },
+      },
+      visible_groups = {
+        staged = true,
+        unstaged = true,
+        conflicts = true,
       },
     },
     keymaps = {
       view = {
         quit = "q",
         toggle_explorer = "<leader>b",
+        focus_explorer = "<leader>e",
         next_hunk = "]c",
         prev_hunk = "[c",
         next_file = "]f",
@@ -161,6 +171,7 @@ Setup entry point:
         diff_put = "dp",
         open_in_prev_tab = "gf",
         toggle_stage = "-",
+        hunk_textobject = "ih",
         show_help = "g?",
       },
       explorer = {
@@ -171,6 +182,8 @@ Setup entry point:
         stage_all = "S",
         unstage_all = "U",
         restore = "X",
+        toggle_changes = "gu",
+        toggle_staged = "gs",
       },
       history = {
         select = "<CR>",
@@ -226,6 +239,22 @@ Customization examples:
   }
 <
 
+Explorer & history git status highlights (customizable):
+
+- CodeDiffStatusAdded       Added files (links to DiagnosticOk)
+- CodeDiffStatusModified    Modified files (links to DiagnosticWarn)
+- CodeDiffStatusDeleted     Deleted files (links to DiagnosticError)
+- CodeDiffStatusRenamed     Renamed files (links to DiagnosticInfo)
+- CodeDiffStatusUntracked   Untracked files (links to DiagnosticInfo)
+- CodeDiffStatusConflict    Conflicting files (links to DiagnosticError)
+- CodeDiffExplorerSelected  Selected file background (links to Visual)
+
+Override in your config or colorscheme:
+>lua
+  vim.api.nvim_set_hl(0, "CodeDiffStatusModified", { fg = "#e2c08d" })
+  vim.api.nvim_set_hl(0, "CodeDiffStatusAdded", { fg = "#3fb950" })
+<
+
 ==============================================================================
 LUA API                                                   *codediff-lua-api*
 
@@ -239,6 +268,47 @@ Advanced usage (internal modules):
   local diff = require("codediff.diff")
   local render = require("codediff.ui")
   local git = require("codediff.git")
+<
+
+==============================================================================
+USER AUTOCMD EVENTS                                     *codediff-events*
+
+CodeDiff emits User autocmd events at key lifecycle points:
+
+*CodeDiffOpen*    Fired after the diff view is fully ready.
+*CodeDiffClose*   Fired before cleanup starts.
+*CodeDiffFileSelect*  Fired when a file is selected in explorer.
+
+All events pass a `data` table accessible via the autocmd callback's
+`args.data` field:
+
+  CodeDiffOpen / CodeDiffClose:
+    `tabpage`   Tab page ID of the diff session.
+    `mode`      One of "explorer", "standalone", or "history".
+
+  CodeDiffFileSelect:
+    `tabpage`   Tab page ID of the diff session.
+    `path`      Relative file path selected.
+    `status`    Git status code (e.g., "M", "A", "D").
+
+Example: Hide tabline while CodeDiff is open:
+>lua
+  vim.api.nvim_create_autocmd("User", {
+    pattern = "CodeDiffOpen",
+    callback = function()
+      vim.g.codediff_saved_showtabline = vim.o.showtabline
+      vim.o.showtabline = 0
+    end,
+  })
+  vim.api.nvim_create_autocmd("User", {
+    pattern = "CodeDiffClose",
+    callback = function()
+      if vim.g.codediff_saved_showtabline then
+        vim.o.showtabline = vim.g.codediff_saved_showtabline
+        vim.g.codediff_saved_showtabline = nil
+      end
+    end,
+  })
 <
 
 ==============================================================================

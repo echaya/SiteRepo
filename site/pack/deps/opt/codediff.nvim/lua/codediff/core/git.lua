@@ -711,13 +711,34 @@ end
 -- Restore/discard changes to a file (git checkout -- or git restore)
 -- git_root: absolute path to git repository root
 -- rel_path: relative path from git root
+-- source: optional revision to restore from (e.g. commit hash, "origin/HEAD")
 -- callback: function(err)
-function M.restore_file(git_root, rel_path, callback)
+function M.restore_file(git_root, rel_path, source, callback)
+  -- Support old 3-arg signature: restore_file(git_root, rel_path, callback)
+  if type(source) == "function" then
+    callback = source
+    source = nil
+  end
+
   -- git restore is preferred (Git 2.23+), fallback to checkout
-  run_git_async({ "restore", "--", rel_path }, { cwd = git_root }, function(err, _)
+  local restore_args = { "restore" }
+  if source then
+    table.insert(restore_args, "--source=" .. source)
+  end
+  table.insert(restore_args, "--")
+  table.insert(restore_args, rel_path)
+
+  run_git_async(restore_args, { cwd = git_root }, function(err, _)
     if err then
       -- Fallback to git checkout for older git versions
-      run_git_async({ "checkout", "--", rel_path }, { cwd = git_root }, function(err2, _)
+      local checkout_args = { "checkout" }
+      if source then
+        table.insert(checkout_args, source)
+      end
+      table.insert(checkout_args, "--")
+      table.insert(checkout_args, rel_path)
+
+      run_git_async(checkout_args, { cwd = git_root }, function(err2, _)
         if err2 then
           callback("Failed to restore file: " .. err2)
         else
@@ -730,12 +751,12 @@ function M.restore_file(git_root, rel_path, callback)
   end)
 end
 
--- Delete untracked file (git clean -f)
+-- Delete untracked file or directory (git clean -fd)
 -- git_root: absolute path to git repository root
 -- rel_path: relative path from git root
 -- callback: function(err)
 function M.delete_untracked(git_root, rel_path, callback)
-  run_git_async({ "clean", "-f", "--", rel_path }, { cwd = git_root }, function(err, _)
+  run_git_async({ "clean", "-fd", "--", rel_path }, { cwd = git_root }, function(err, _)
     if err then
       callback("Failed to delete untracked file: " .. err)
     else
@@ -939,6 +960,35 @@ function M.get_merge_base(rev1, rev2, git_root, callback)
       local merge_base = vim.trim(output)
       callback(nil, merge_base)
     end
+  end)
+end
+
+-- Resolve a file's path at a given revision, following renames/copies.
+-- If the file was renamed or copied between `revision` and HEAD, returns the old path.
+-- Otherwise, returns the current path unchanged.
+-- revision: the target commit hash
+-- git_root: absolute path to git repository root
+-- rel_path: current relative path of the file
+-- callback: function(err, resolved_path)
+function M.resolve_path_at_revision(revision, git_root, rel_path, callback)
+  run_git_async({ "log", "--follow", "--diff-filter=RC", "--format=", "--name-status", revision .. "..HEAD", "--", rel_path }, { cwd = git_root }, function(err, output)
+    if err or not output or output == "" then
+      callback(nil, rel_path)
+      return
+    end
+
+    -- Parse name-status output (last rename/copy entry gives the original name)
+    -- Format: "R100\told_path\tnew_path" or "C096\told_path\tnew_path"
+    local lines = vim.split(vim.trim(output), "\n")
+    for i = #lines, 1, -1 do
+      local old_path = lines[i]:match("^[RC]%d*\t(.-)\t")
+      if old_path then
+        callback(nil, old_path)
+        return
+      end
+    end
+
+    callback(nil, rel_path)
   end)
 end
 

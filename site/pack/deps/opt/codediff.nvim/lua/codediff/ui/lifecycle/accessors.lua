@@ -469,11 +469,6 @@ function M.clear_tab_keymaps(tabpage)
     end
   end
 
-  -- Also handle explorer keymaps separately (explorer buffer uses both view and explorer keymaps)
-  if sess.explorer and sess.explorer.bufnr then
-    del_buf_keymaps(sess.explorer.bufnr, config.options.keymaps.explorer or {})
-  end
-
   sess.keymap_buffers = nil
 end
 

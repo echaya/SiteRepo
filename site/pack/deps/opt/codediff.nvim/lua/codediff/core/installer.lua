@@ -105,7 +105,9 @@ local function get_installed_version()
         break
       end
 
-      if type == "file" then
+      -- type can be nil on network filesystems (e.g. NFS) where d_type
+      -- is not populated, so only exclude known non-file types
+      if type ~= "directory" and type ~= "link" then
         local version = name:match(pattern)
         if version then
           table.insert(versions, version)

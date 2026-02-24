@@ -146,6 +146,14 @@ function M.setup()
     default = true,
   })
 
+  -- Explorer git status highlights (customizable, like diffview.nvim)
+  vim.api.nvim_set_hl(0, "CodeDiffStatusAdded", { link = "DiagnosticOk", default = true })
+  vim.api.nvim_set_hl(0, "CodeDiffStatusModified", { link = "DiagnosticWarn", default = true })
+  vim.api.nvim_set_hl(0, "CodeDiffStatusDeleted", { link = "DiagnosticError", default = true })
+  vim.api.nvim_set_hl(0, "CodeDiffStatusRenamed", { link = "DiagnosticInfo", default = true })
+  vim.api.nvim_set_hl(0, "CodeDiffStatusUntracked", { link = "DiagnosticInfo", default = true })
+  vim.api.nvim_set_hl(0, "CodeDiffStatusConflict", { link = "DiagnosticError", default = true })
+
   -- Helper to check if a highlight group exists and has foreground color
   local function hl_exists(name)
     local ok, hl = pcall(vim.api.nvim_get_hl, 0, { name = name, link = false })

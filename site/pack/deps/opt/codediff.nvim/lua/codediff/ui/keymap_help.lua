@@ -55,55 +55,68 @@ local function build_sections(keymaps, is_explorer, is_history, is_conflict)
   end
   if is_explorer then
     table.insert(view_items, { km.toggle_explorer, "Toggle explorer" })
+    table.insert(view_items, { km.focus_explorer, "Focus explorer" })
     table.insert(view_items, { km.toggle_stage, "Stage/unstage current file" })
     table.insert(view_items, { km.stage_hunk, "Stage hunk under cursor" })
     table.insert(view_items, { km.unstage_hunk, "Unstage hunk under cursor" })
     table.insert(view_items, { km.discard_hunk, "Discard hunk under cursor" })
   end
+  table.insert(view_items, { km.hunk_textobject, "Hunk textobject (visual/operator)" })
   table.insert(view_items, { km.show_help, "Toggle this help" })
   table.insert(sections, section("VIEW", view_items))
 
   -- Explorer section
   if is_explorer then
     local ekm = keymaps.explorer
-    table.insert(sections, section("EXPLORER", {
-      { ekm.select, "Select / toggle expand" },
-      { ekm.hover, "Show full path" },
-      { ekm.refresh, "Refresh explorer" },
-      { ekm.toggle_view_mode, "Toggle list/tree view" },
-      { ekm.stage_all, "Stage all files" },
-      { ekm.unstage_all, "Unstage all files" },
-      { ekm.restore, "Discard changes to file" },
-    }))
+    table.insert(
+      sections,
+      section("EXPLORER", {
+        { ekm.select, "Select / toggle expand" },
+        { ekm.hover, "Show full path" },
+        { ekm.refresh, "Refresh explorer" },
+        { ekm.toggle_view_mode, "Toggle list/tree view" },
+        { ekm.stage_all, "Stage all files" },
+        { ekm.unstage_all, "Unstage all files" },
+        { ekm.restore, "Discard changes to file" },
+        { ekm.toggle_changes, "Toggle Changes visibility" },
+        { ekm.toggle_staged, "Toggle Staged visibility" },
+      })
+    )
   end
 
   -- History section
   if is_history then
     local hkm = keymaps.history
-    table.insert(sections, section("HISTORY", {
-      { hkm.select, "Select commit/file or toggle" },
-      { hkm.toggle_view_mode, "Toggle list/tree view" },
-      { hkm.refresh, "Refresh history" },
-    }))
+    table.insert(
+      sections,
+      section("HISTORY", {
+        { hkm.select, "Select commit/file or toggle" },
+        { hkm.toggle_view_mode, "Toggle list/tree view" },
+        { hkm.refresh, "Refresh history" },
+      })
+    )
   end
 
   -- Conflict section
   if is_conflict then
     local ckm = keymaps.conflict
-    table.insert(sections, section("CONFLICT", {
-      { ckm.accept_incoming, "Accept incoming (theirs)" },
-      { ckm.accept_current, "Accept current (ours)" },
-      { ckm.accept_both, "Accept both changes" },
-      { ckm.discard, "Discard both (keep base)" },
-      { ckm.accept_all_incoming, "Accept ALL incoming" },
-      { ckm.accept_all_current, "Accept ALL current" },
-      { ckm.accept_all_both, "Accept ALL both" },
-      { ckm.discard_all, "Discard ALL (reset to base)" },
-      { ckm.next_conflict, "Next conflict" },
-      { ckm.prev_conflict, "Previous conflict" },
-      { ckm.diffget_incoming, "Get hunk from incoming" },
-      { ckm.diffget_current, "Get hunk from current" },
-    }))
+    table.insert(
+      sections,
+      section("CONFLICT", {
+        { ckm.accept_incoming, "Accept incoming (theirs)" },
+        { ckm.accept_current, "Accept current (ours)" },
+        { ckm.accept_both, "Accept both changes" },
+        { ckm.discard, "Discard both (keep base)" },
+        { ckm.accept_all_incoming, "Accept ALL incoming" },
+        { ckm.accept_all_current, "Accept ALL current" },
+        { ckm.accept_all_both, "Accept ALL both" },
+        { ckm.discard_all, "Discard ALL (reset to base)" },
+        { ckm.next_conflict, "Next conflict" },
+        { ckm.prev_conflict, "Previous conflict" },
+        { ckm.diffget_incoming, "Get hunk from incoming" },
+        { ckm.diffget_current, "Get hunk from current" },
+      })
+    )
   end
 
   return sections
@@ -227,7 +240,6 @@ function M.toggle(tabpage)
       end
     end, { buffer = buf, nowait = true })
   end
-
 end
 
 return M

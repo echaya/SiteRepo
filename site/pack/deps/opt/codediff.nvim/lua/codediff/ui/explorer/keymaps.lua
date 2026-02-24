@@ -37,13 +37,13 @@ function M.setup(explorer)
           explorer.on_file_select(node.data)
           -- Optionally focus the modified (right) pane after file load
           if config.options.explorer.focus_on_select then
-            vim.defer_fn(function()
+            vim.schedule(function()
               local lifecycle = require("codediff.ui.lifecycle")
               local _, mod_win = lifecycle.get_windows(explorer.tabpage)
               if mod_win and vim.api.nvim_win_is_valid(mod_win) then
                 vim.api.nvim_set_current_win(mod_win)
               end
-            end, 200)
+            end)
           end
         end
       end
@@ -155,6 +155,20 @@ function M.setup(explorer)
     vim.keymap.set("n", explorer_keymaps.restore, function()
       actions_module.restore_entry(explorer, tree)
     end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Restore/discard changes" }))
+  end
+
+  -- Toggle Changes (unstaged) group visibility
+  if explorer_keymaps.toggle_changes then
+    vim.keymap.set("n", explorer_keymaps.toggle_changes, function()
+      actions_module.toggle_group(explorer, "unstaged")
+    end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Toggle Changes visibility" }))
+  end
+
+  -- Toggle Staged Changes group visibility
+  if explorer_keymaps.toggle_staged then
+    vim.keymap.set("n", explorer_keymaps.toggle_staged, function()
+      actions_module.toggle_group(explorer, "staged")
+    end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Toggle Staged Changes visibility" }))
   end
 
   -- Note: next_file/prev_file keymaps are set via view/keymaps.lua:setup_all_keymaps()

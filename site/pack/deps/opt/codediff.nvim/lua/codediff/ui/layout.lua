@@ -1,0 +1,107 @@
+-- Centralized layout manager for codediff windows
+-- Single source of truth for all window sizing decisions
+local M = {}
+
+local lifecycle = require("codediff.ui.lifecycle")
+local config = require("codediff.config")
+
+--- Arrange all windows in a codediff tabpage
+--- Call this after any structural window change (create, toggle, conflict setup)
+--- @param tabpage number
+function M.arrange(tabpage)
+  local session = lifecycle.get_session(tabpage)
+  if not session then
+    return
+  end
+
+  local original_win = session.original_win
+  local modified_win = session.modified_win
+  local result_win = session.result_win
+  local panel = session.explorer -- explorer or history panel object
+
+  -- Validate diff windows
+  if not original_win or not vim.api.nvim_win_is_valid(original_win) then
+    return
+  end
+  if not modified_win or not vim.api.nvim_win_is_valid(modified_win) then
+    return
+  end
+
+  local has_result = result_win and vim.api.nvim_win_is_valid(result_win)
+
+  -- Panel state
+  local panel_win = panel and panel.winid
+  local panel_visible = panel_win and vim.api.nvim_win_is_valid(panel_win) and not panel.is_hidden
+
+  -- Determine panel config (explorer or history)
+  local mode = session.mode
+  local panel_config
+  if mode == "history" then
+    panel_config = config.options.history or {}
+  else
+    panel_config = config.options.explorer or {}
+  end
+  local panel_position = panel_config.position or "left"
+
+  -- Step 1: Pin panel size (fixed element)
+  if panel_visible then
+    if panel_position == "left" then
+      vim.api.nvim_win_set_width(panel_win, panel_config.width)
+    else
+      vim.api.nvim_win_set_height(panel_win, panel_config.height)
+    end
+  end
+
+  -- Step 2: Collect diff windows and sum their current widths
+  -- In center layout, result is a sibling column — include it
+  -- In bottom layout, result is in a separate row — exclude it
+  local result_position = config.options.diff.conflict_result_position
+  local result_is_center = has_result and result_position == "center"
+
+  local available = vim.api.nvim_win_get_width(original_win) + vim.api.nvim_win_get_width(modified_win)
+  if result_is_center then
+    available = available + vim.api.nvim_win_get_width(result_win)
+  end
+
+  -- Step 3: Handle result window height (bottom layout)
+  if has_result and not result_is_center then
+    local pct = math.min(90, math.max(10, config.options.diff.conflict_result_height))
+    vim.api.nvim_win_set_height(result_win, math.floor(vim.o.lines * pct / 100))
+  end
+
+  -- Step 4: Distribute widths among diff panes
+  if result_is_center then
+    -- Three panes with configurable ratio
+    local r = config.options.diff.conflict_result_width_ratio
+    local total_r = r[1] + r[2] + r[3]
+
+    -- Determine left/right based on window column positions
+    local orig_col = vim.api.nvim_win_get_position(original_win)[2]
+    local mod_col = vim.api.nvim_win_get_position(modified_win)[2]
+    local left_win = orig_col <= mod_col and original_win or modified_win
+    local right_win = left_win == original_win and modified_win or original_win
+
+    local lw = math.floor(available * r[1] / total_r)
+    local cw = math.floor(available * r[2] / total_r)
+
+    vim.api.nvim_win_set_width(left_win, lw)
+    vim.api.nvim_win_set_width(result_win, cw)
+    vim.api.nvim_win_set_width(right_win, available - lw - cw)
+  else
+    -- Two diff panes, equal split
+    local half = math.floor(available / 2)
+    vim.api.nvim_win_set_width(original_win, half)
+    vim.api.nvim_win_set_width(modified_win, available - half)
+  end
+
+  -- Step 5: Re-pin panel size (undo disturbance from step 4)
+  if panel_visible then
+    if panel_position == "left" then
+      vim.api.nvim_win_set_width(panel_win, panel_config.width)
+    else
+      vim.api.nvim_win_set_height(panel_win, panel_config.height)
+    end
+  end
+end
+
+return M

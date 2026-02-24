@@ -4,6 +4,7 @@ local M = {}
 local config = require("codediff.config")
 local git = require("codediff.core.git")
 local refresh_module = require("codediff.ui.explorer.refresh")
+local layout = require("codediff.ui.layout")
 
 -- Find line number for a file node by scanning the tree
 -- Returns the line number or nil if not found
@@ -134,45 +135,22 @@ function M.toggle_visibility(explorer)
     return
   end
 
-  -- Track visibility state on the explorer object
+  local tabpage = vim.api.nvim_get_current_tabpage()
+
   if explorer.is_hidden then
     explorer.split:show()
     explorer.is_hidden = false
-
-    -- Update winid after show() creates a new window
-    -- show() creates a new window with a new winid
     explorer.winid = explorer.split.winid
 
-    -- Equalize diff windows after showing explorer
-    -- When explorer shows, the remaining space should be split equally between diff windows
     vim.schedule(function()
-      -- Find diff windows (exclude explorer window)
-      local all_wins = vim.api.nvim_tabpage_list_wins(0)
-      local diff_wins = {}
-
-      for _, win in ipairs(all_wins) do
-        if vim.api.nvim_win_is_valid(win) and win ~= explorer.split.winid then
-          table.insert(diff_wins, win)
-        end
-      end
-
-      -- Equalize the diff windows (typically 2 windows)
-      if #diff_wins >= 2 then
-        vim.cmd("wincmd =")
-      end
-
-      -- Restore explorer width after equalize
-      if explorer.split.winid and vim.api.nvim_win_is_valid(explorer.split.winid) then
-        vim.api.nvim_win_set_width(explorer.split.winid, explorer.split._size)
-      end
+      layout.arrange(tabpage)
     end)
   else
     explorer.split:hide()
     explorer.is_hidden = true
 
-    -- Equalize diff windows after hiding explorer
     vim.schedule(function()
-      vim.cmd("wincmd =")
+      layout.arrange(tabpage)
     end)
   end
 end
@@ -194,6 +172,20 @@ function M.toggle_view_mode(explorer)
   refresh_module.refresh(explorer)
 
   vim.notify("Explorer view: " .. new_mode, vim.log.levels.INFO)
+end
+
+-- Toggle visibility of a group (staged/unstaged/conflicts)
+function M.toggle_group(explorer, group_name)
+  if not explorer or not explorer.visible_groups then
+    return
+  end
+
+  explorer.visible_groups[group_name] = not explorer.visible_groups[group_name]
+  refresh_module.refresh(explorer)
+
+  local state = explorer.visible_groups[group_name] and "shown" or "hidden"
+  local label = ({ staged = "Staged Changes", unstaged = "Changes", conflicts = "Merge Changes" })[group_name] or group_name
+  vim.notify(label .. ": " .. state, vim.log.levels.INFO)
 end
 
 -- Stage/unstage a file by path and group (lower-level function)
@@ -386,7 +378,7 @@ function M.restore_entry(explorer, tree)
 
   if char == "d" then
     if is_untracked then
-      -- Delete untracked file (directories with untracked files need -fd flag)
+      -- Delete untracked file/directory
       git.delete_untracked(explorer.git_root, entry_path, function(err)
         if err then
           vim.schedule(function()
@@ -394,9 +386,21 @@ function M.restore_entry(explorer, tree)
           end)
         end
       end)
+    elseif is_directory then
+      -- Directory may contain both tracked and untracked files
+      -- Run git restore for tracked changes, then git clean for untracked
+      git.restore_file(explorer.git_root, entry_path, explorer.base_revision, function(restore_err)
+        git.delete_untracked(explorer.git_root, entry_path, function(clean_err)
+          if restore_err and clean_err then
+            vim.schedule(function()
+              vim.notify("Failed to restore: " .. restore_err, vim.log.levels.ERROR)
+            end)
+          end
+        end)
+      end)
     else
-      -- Restore tracked file/directory
-      git.restore_file(explorer.git_root, entry_path, function(err)
+      -- Restore tracked file
+      git.restore_file(explorer.git_root, entry_path, explorer.base_revision, function(err)
         if err then
           vim.schedule(function()
             vim.notify(err, vim.log.levels.ERROR)

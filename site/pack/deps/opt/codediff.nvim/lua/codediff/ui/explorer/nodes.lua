@@ -25,11 +25,11 @@ local MERGE_ARTIFACT_PATTERNS = {
 
 -- Status symbols and colors
 local STATUS_SYMBOLS = {
-  M = { symbol = "M", color = "DiagnosticWarn" },
-  A = { symbol = "A", color = "DiagnosticOk" },
-  D = { symbol = "D", color = "DiagnosticError" },
-  ["??"] = { symbol = "??", color = "DiagnosticInfo" },
-  ["!"] = { symbol = "!", color = "DiagnosticError" }, -- Merge conflict
+  M = { symbol = "M", color = "CodeDiffStatusModified" },
+  A = { symbol = "A", color = "CodeDiffStatusAdded" },
+  D = { symbol = "D", color = "CodeDiffStatusDeleted" },
+  ["??"] = { symbol = "??", color = "CodeDiffStatusUntracked" },
+  ["!"] = { symbol = "!", color = "CodeDiffStatusConflict" },
 }
 
 -- Indent marker characters (neo-tree style)
@@ -138,6 +138,32 @@ function M.create_tree_file_nodes(files, git_root, group)
       _is_dir = false,
       _file = file,
     }
+  end
+
+  -- Flatten single-child directory chains (e.g., src/ -> components/ -> ui/ becomes src/components/ui/)
+  local function flatten_tree(subtree)
+    for key, item in pairs(subtree) do
+      if item._is_dir then
+        flatten_tree(item._children)
+        -- Check if this dir has exactly one child and it's a directory
+        local children_keys = {}
+        for k in pairs(item._children) do
+          children_keys[#children_keys + 1] = k
+        end
+        if #children_keys == 1 and item._children[children_keys[1]]._is_dir then
+          local child_key = children_keys[1]
+          local child = item._children[child_key]
+          local merged_key = key .. "/" .. child_key
+          subtree[merged_key] = child
+          subtree[key] = nil
+        end
+      end
+    end
+  end
+
+  local explorer_config = config.options.explorer or {}
+  if explorer_config.flatten_dirs ~= false then
+    flatten_tree(dir_tree)
   end
 
   -- Convert to Tree.Node recursively

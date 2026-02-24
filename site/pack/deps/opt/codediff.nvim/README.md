@@ -88,6 +88,9 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
       hide_merge_artifacts = false,       -- Hide merge tool temp files (*.orig, *.BACKUP.*, *.BASE.*, *.LOCAL.*, *.REMOTE.*)
       original_position = "left",         -- Position of original (old) content: "left" or "right"
       conflict_ours_position = "right",   -- Position of ours (:2) in conflict view: "left" or "right"
+      conflict_result_position = "bottom", -- "bottom" (default): result below diff panes or "center": result between diff panes (three columns)
+      conflict_result_height = 30,         -- Height of result pane in bottom layout (% of total height)
+      conflict_result_width_ratio = { 1, 1, 1 }, -- Width ratio for center layout panes {left, center, right} (e.g., {1, 2, 1} for wider result)
       cycle_next_hunk = true,             -- Wrap around when navigating hunks (]c/[c): false to stop at first/last
       cycle_next_file = true,             -- Wrap around when navigating files (]f/[f): false to stop at first/last
       jump_to_first_change = true,        -- Auto-scroll to first change when opening a diff: false to stay at same line
@@ -106,10 +109,16 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
         folder_open = "",    -- Nerd Font folder-open icon
       },
       view_mode = "list",    -- "list" or "tree"
+      flatten_dirs = true,   -- Flatten single-child directory chains in tree view
       file_filter = {
         ignore = { ".git/**", ".jj/**" },  -- Glob patterns to hide (e.g., {"*.lock", "dist/*"})
       },
       focus_on_select = false,  -- Jump to modified pane after selecting a file (default: stay in explorer)
+      visible_groups = {       -- Which groups to show (can be toggled at runtime)
+        staged = true,
+        unstaged = true,
+        conflicts = true,
+      },
     },
 
     -- History panel configuration (for :CodeDiff history)
@@ -126,6 +135,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
       view = {
         quit = "q",                    -- Close diff tab
         toggle_explorer = "<leader>b",  -- Toggle explorer visibility (explorer mode only)
+        focus_explorer = "<leader>e",   -- Focus explorer panel (explorer mode only)
         next_hunk = "]c",   -- Jump to next change
         prev_hunk = "[c",   -- Jump to previous change
         next_file = "]f",   -- Next file in explorer/history mode
@@ -137,6 +147,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
         stage_hunk = "<leader>hs",   -- Stage hunk under cursor to git index
         unstage_hunk = "<leader>hu", -- Unstage hunk under cursor from git index
         discard_hunk = "<leader>hr", -- Discard hunk under cursor (working tree only)
+        hunk_textobject = "ih",      -- Textobject for hunk (vih to select, yih to yank, etc.)
         show_help = "g?",   -- Show floating window with available keymaps
       },
       explorer = {
@@ -147,6 +158,8 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
         stage_all = "S",    -- Stage all files
         unstage_all = "U",  -- Unstage all files
         restore = "X",      -- Discard changes (restore file)
+        toggle_changes = "gu",  -- Toggle Changes (unstaged) group visibility
+        toggle_staged = "gs",   -- Toggle Staged Changes group visibility
       },
       history = {
         select = "<CR>",    -- Select commit/file or toggle expand
@@ -452,6 +465,59 @@ git.get_git_root("/path/to/file.lua", function(err, git_root)
     -- File is in a git repository
   end
 end)
+```
+
+### User Autocmd Events
+
+CodeDiff emits `User` autocmd events at key lifecycle points, allowing you to customize behavior without config flags:
+
+| Event | When | Data |
+|-------|------|------|
+| `CodeDiffOpen` | After diff view is fully ready | `tabpage`, `mode` |
+| `CodeDiffClose` | Before cleanup starts | `tabpage`, `mode` |
+| `CodeDiffFileSelect` | When a file is selected in explorer | `tabpage`, `path`, `status` |
+
+`mode` is one of `"explorer"`, `"standalone"`, or `"history"`.
+
+<details>
+<summary>Example: Disable cursorline in diff windows</summary>
+
+```lua
+vim.api.nvim_create_autocmd("User", {
+  pattern = "CodeDiffOpen",
+  callback = function()
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      vim.wo[win].cursorline = false
+    end
+  end,
+})
+```
+
+</details>
+
+<details>
+<summary>Example: Hide tabline while CodeDiff is open</summary>
+
+```lua
+vim.api.nvim_create_autocmd("User", {
+  pattern = "CodeDiffOpen",
+  callback = function()
+    vim.g.codediff_saved_showtabline = vim.o.showtabline
+    vim.o.showtabline = 0
+  end,
+})
+vim.api.nvim_create_autocmd("User", {
+  pattern = "CodeDiffClose",
+  callback = function()
+    if vim.g.codediff_saved_showtabline then
+      vim.o.showtabline = vim.g.codediff_saved_showtabline
+      vim.g.codediff_saved_showtabline = nil
+    end
+  end,
+})
+```
+
+</details>
 ```
 
 ## Architecture

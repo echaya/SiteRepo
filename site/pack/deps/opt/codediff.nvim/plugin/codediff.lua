@@ -1,25 +1,23 @@
 -- Plugin entry point - auto-loaded by Neovim
+-- Only loads lightweight modules at startup; heavy modules (UI, diff engine,
+-- explorer, history) are deferred until first :CodeDiff invocation.
 if vim.g.loaded_codediff then
   return
 end
 vim.g.loaded_codediff = 1
 
-local render = require("codediff.ui")
-local commands = require("codediff.commands")
+-- Lightweight startup: highlights (~0.3ms) + virtual file scheme (~0.1ms)
+local highlights = require("codediff.ui.highlights")
 local virtual_file = require('codediff.core.virtual_file')
-local git = require('codediff.core.git')
 
--- Setup virtual file scheme
 virtual_file.setup()
-
--- Setup highlights
-render.setup_highlights()
+highlights.setup()
 
 -- Re-apply highlights on ColorScheme change
 vim.api.nvim_create_autocmd("ColorScheme", {
   group = vim.api.nvim_create_augroup("CodeDiffHighlights", { clear = true }),
   callback = function()
-    render.setup_highlights()
+    highlights.setup()
   end,
 })
 
@@ -32,6 +30,7 @@ local rev_cache = {
 }
 
 local function get_cached_rev_candidates(git_root)
+  local git = require('codediff.core.git')
   local now = vim.loop.now() / 1000  -- Convert to seconds
   if rev_cache.candidates
       and rev_cache.git_root == git_root
@@ -48,6 +47,8 @@ end
 
 -- Register user command with subcommand completion
 local function complete_codediff(arg_lead, cmd_line, _)
+  local git = require('codediff.core.git')
+  local commands = require("codediff.commands")
   local args = vim.split(cmd_line, "%s+", { trimempty = true })
 
   -- If no args or just ":CodeDiff", suggest subcommands and revisions
@@ -126,7 +127,9 @@ local function complete_codediff(arg_lead, cmd_line, _)
   return vim.fn.getcompletion(arg_lead, "file")
 end
 
-vim.api.nvim_create_user_command("CodeDiff", commands.vscode_diff, {
+vim.api.nvim_create_user_command("CodeDiff", function(opts)
+  require("codediff.commands").vscode_diff(opts)
+end, {
   nargs = "*",
   bang = true,
   range = true,

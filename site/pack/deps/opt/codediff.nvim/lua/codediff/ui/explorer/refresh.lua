@@ -214,7 +214,7 @@ function M.refresh(explorer)
       end
 
       -- Rebuild tree nodes using same structure as create_tree_data
-      local root_nodes = tree_module.create_tree_data(status_result, explorer.git_root, explorer.base_revision, not explorer.git_root)
+      local root_nodes = tree_module.create_tree_data(status_result, explorer.git_root, explorer.base_revision, not explorer.git_root, explorer.visible_groups)
 
       -- Expand all groups
       for _, node in ipairs(root_nodes) do

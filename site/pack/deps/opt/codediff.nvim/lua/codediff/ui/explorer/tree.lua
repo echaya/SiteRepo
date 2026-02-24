@@ -18,9 +18,10 @@ local function filter_files(files)
 end
 
 -- Create tree data structure from git status result
-function M.create_tree_data(status_result, git_root, base_revision, is_dir_mode)
+function M.create_tree_data(status_result, git_root, base_revision, is_dir_mode, visible_groups)
   local explorer_config = config.options.explorer or {}
   local view_mode = explorer_config.view_mode or "list"
+  visible_groups = visible_groups or explorer_config.visible_groups or {}
 
   -- Filter merge artifacts and apply file filter
   local unstaged = nodes.filter_merge_artifacts(filter_files(status_result.unstaged))
@@ -45,7 +46,7 @@ function M.create_tree_data(status_result, git_root, base_revision, is_dir_mode)
     local tree_nodes = {}
 
     -- Conflicts first (most important)
-    if #conflict_nodes > 0 then
+    if #conflict_nodes > 0 and visible_groups.conflicts ~= false then
       table.insert(
         tree_nodes,
         Tree.Node({
@@ -56,22 +57,26 @@ function M.create_tree_data(status_result, git_root, base_revision, is_dir_mode)
     end
 
     -- Unstaged changes
-    table.insert(
-      tree_nodes,
-      Tree.Node({
-        text = string.format("Changes (%d)", #unstaged),
-        data = { type = "group", name = "unstaged" },
-      }, unstaged_nodes)
-    )
+    if visible_groups.unstaged ~= false then
+      table.insert(
+        tree_nodes,
+        Tree.Node({
+          text = string.format("Changes (%d)", #unstaged),
+          data = { type = "group", name = "unstaged" },
+        }, unstaged_nodes)
+      )
+    end
 
     -- Staged changes
-    table.insert(
-      tree_nodes,
-      Tree.Node({
-        text = string.format("Staged Changes (%d)", #staged),
-        data = { type = "group", name = "staged" },
-      }, staged_nodes)
-    )
+    if visible_groups.staged ~= false then
+      table.insert(
+        tree_nodes,
+        Tree.Node({
+          text = string.format("Staged Changes (%d)", #staged),
+          data = { type = "group", name = "staged" },
+        }, staged_nodes)
+      )
+    end
 
     return tree_nodes
   end

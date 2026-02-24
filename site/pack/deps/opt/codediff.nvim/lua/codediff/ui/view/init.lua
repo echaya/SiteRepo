@@ -16,6 +16,7 @@ local conflict_window = require("codediff.ui.view.conflict_window")
 -- when CWD changes in vim.schedule callbacks
 local explorer_module = require("codediff.ui.explorer")
 local history_module = require("codediff.ui.history")
+local layout = require("codediff.ui.layout")
 
 -- Re-export helper functions for backward compatibility
 local is_virtual_revision = helpers.is_virtual_revision
@@ -25,6 +26,9 @@ local compute_and_render_conflict = render.compute_and_render_conflict
 local setup_auto_refresh = render.setup_auto_refresh
 local setup_conflict_result_window = conflict_window.setup_conflict_result_window
 local setup_all_keymaps = view_keymaps.setup_all_keymaps
+
+-- Once-guard: register lifecycle autocmds on first view creation
+local lifecycle_initialized = false
 
 ---@class SessionConfig
 ---@field mode "standalone"|"explorer"|"history"
@@ -43,6 +47,12 @@ local setup_all_keymaps = view_keymaps.setup_all_keymaps
 ---@param on_ready? function Optional callback when view is fully ready (for sync callers)
 ---@return table|nil Result containing diff metadata, or nil if deferred
 function M.create(session_config, filetype, on_ready)
+  -- Initialize lifecycle autocmds on first use
+  if not lifecycle_initialized then
+    lifecycle.setup()
+    lifecycle_initialized = true
+  end
+
   -- Create new tab (both modes create a tab)
   vim.cmd("tabnew")
 
@@ -412,19 +422,7 @@ function M.create(session_config, filetype, on_ready)
     -- Note: Keymaps will be set when first file is selected via update()
 
     -- Adjust diff window sizes based on explorer position
-    if position == "bottom" then
-      -- For bottom position, diff windows take full width, equalize them
-      vim.cmd("wincmd =")
-    else
-      -- For left position, calculate remaining width and split equally
-      local total_width = vim.o.columns
-      local explorer_width = explorer_config.width or 40
-      local remaining_width = total_width - explorer_width
-      local diff_width = math.floor(remaining_width / 2)
-
-      vim.api.nvim_win_set_width(original_win, diff_width)
-      vim.api.nvim_win_set_width(modified_win, diff_width)
-    end
+    layout.arrange(tabpage)
   end
 
   -- For history mode, create the history panel after diff windows are set up
@@ -456,21 +454,21 @@ function M.create(session_config, filetype, on_ready)
     end
 
     -- Adjust diff window sizes based on panel position
-    if position == "bottom" then
-      vim.cmd("wincmd =")
-    else
-      local total_width = vim.o.columns
-      local panel_width = history_config.width or 40
-      local remaining_width = total_width - panel_width
-      local diff_width = math.floor(remaining_width / 2)
-
-      vim.api.nvim_win_set_width(original_win, diff_width)
-      vim.api.nvim_win_set_width(modified_win, diff_width)
-    end
+    layout.arrange(tabpage)
 
     -- Setup keymaps for history mode (needs to be after session is created with mode="history")
     setup_all_keymaps(tabpage, original_info.bufnr, modified_info.bufnr, false)
   end
+
+  -- Emit CodeDiffOpen User autocmd
+  vim.api.nvim_exec_autocmds("User", {
+    pattern = "CodeDiffOpen",
+    modeline = false,
+    data = {
+      tabpage = tabpage,
+      mode = session_config.mode,
+    },
+  })
 
   return {
     original_buf = original_info.bufnr,
@@ -539,10 +537,7 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
       vim.w[modified_win].codediff_placeholder = nil
     end
     pcall(vim.api.nvim_del_augroup_by_name, "codediff_skip_placeholder_" .. tabpage)
-    local total_width = vim.api.nvim_win_get_width(original_win) + vim.api.nvim_win_get_width(modified_win)
-    local half_width = math.floor(total_width / 2)
-    vim.api.nvim_win_set_width(original_win, half_width)
-    vim.api.nvim_win_set_width(modified_win, half_width)
+    layout.arrange(tabpage)
   end
 
   -- Determine if new buffers are virtual
@@ -665,10 +660,7 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
             vim.w[modified_win].codediff_placeholder = nil
           end
           pcall(vim.api.nvim_del_augroup_by_name, "codediff_skip_placeholder_" .. tabpage)
-          local total_width = vim.api.nvim_win_get_width(original_win) + vim.api.nvim_win_get_width(modified_win)
-          local half_width = math.floor(total_width / 2)
-          vim.api.nvim_win_set_width(original_win, half_width)
-          vim.api.nvim_win_set_width(modified_win, half_width)
+          layout.arrange(tabpage)
         end
       end
     end

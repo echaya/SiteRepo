@@ -2,7 +2,7 @@
 *leap.nvim*
 
                                                                         *leap*
-Leap is a general-purpose motion plugin for Neovim, building and improving
+Leap is a motion and selection plugin for Neovim, building and improving
 primarily on vim-sneak (https://github.com/justinmk/vim-sneak). Using some
 clever ideas, it allows you to jump to any position in the visible editor area
 very quickly, with near-zero mental overhead.
@@ -12,10 +12,10 @@ very quickly, with near-zero mental overhead.
 ==============================================================================
 USAGE                                                             *leap-usage*
 
-• Initiate the search in a given scope (|leap-mappings|), and start typing a
-  2-character pattern ({char1}{char2}). For the last character on a line, type
-  {char}<space>; for empty lines, type <space><space>. |leap-till-eol|
-  |leap-to-eol|
+• Initiate the command in a given scope (|leap-mappings|), and start typing a
+  2-character search pattern ({char1}{char2}). For the last character on a
+  line, type {char}<space>; for empty lines, type <space><space>.
+  |leap-till-eol| |leap-to-eol|
 
 • After typing {char1}, you can see "labels" appearing next to some pairs.
   They are not active yet, but this preview allows you to process them in the
@@ -104,6 +104,7 @@ Search ~
 • Case sensitivity is determined by 'ignorecase' and 'smartcase'. If you want
   specific settings for Leap motions, you can set these to temporary values in
   |leap.opts.vim_opts|.
+
   NOTE: 'smartcase' is experimentally supported for |leap-preview| too, but
   it can only be applied on the first input character, by design, since the
   second one just filters the already acquired and _labeled_ targets (see
@@ -168,16 +169,6 @@ next/closest available target:
 
 • Pressing <enter> right away repeats the previous search. *leap-repeat*
 
-  There is a convenience function in the `user` module to set keys to repeat
-  the previous search without explicitly invoking Leap (`<enter><enter>...`
-  instead of `s<enter><enter>...`): >lua
-    require('leap.user').set_repeat_keys('<enter>', '<backspace>', {
-      -- When true, repeat in the direction of the last motion
-      -- (by default, <cr>/<bs> always goes forward/backward).
-      relative_directions = false,
-      modes = {'n', 'x', 'o'},
-    })
-<
 • `{char}<enter>` accepts the closest `{char}` match (can be used as a
   multiline substitute for `fFtT` motions). *leap-shortcut*
 
@@ -186,6 +177,16 @@ next/closest available target:
   etc.). If you overshoot, <backspace> (|leap.opts.keys.prev_target|) steps
   back. *leap-traversal*
 
+There is a convenience function in the `user` module to set keys to repeat the
+previous search without explicitly invoking Leap (`<enter><enter>...` instead
+of `s<enter><enter>...`): >lua
+    require('leap.user').set_repeat_keys('<enter>', '<backspace>', {
+      -- When true, repeat in the direction of the last motion
+      -- (by default, <cr>/<bs> always goes forward/backward).
+      relative_directions = false,
+      modes = {'n', 'x', 'o'},
+    })
+<
 Operations can be repeated with |.|, if vim-repeat
 (https://github.com/tpope/vim-repeat) is installed. Dot-repeat works as you
 would expect, e.g., if you aimed for the 2nd target backwards, `.` will do the
@@ -250,11 +251,13 @@ Example configuration: >lua
 
     These should be keys that you never use right after leaping (e.g. a search
     command), so that we can trigger |leap-autojump| whenever this list covers
-    the rest of the matches. Any other key "falls through" to Normal mode.
-    Setting the list to `''` effectively disables the autojump feature.
+    the rest of the matches. Input keys not matching a label are sent on to
+    Normal mode. Setting the list to `''` effectively disables the autojump
+    feature.
 
-    Note: Operator-pending mode only checks this if |leap.opts.labels| is
-    empty, since we should select the final target right away.
+    Note: Operator-pending mode only falls back to this when
+    |leap.opts.labels| is empty, since we should select the final target right
+    away.
 
                                                             *leap.opts.labels*
 `labels = 'sfnjklhodweimbuyvrgtaqpcxz/SFNJKLHODWEIMBUYVRGTAQPCXZ?'`
@@ -323,7 +326,7 @@ Example: >lua
       local buf = vim.fn.winbufnr(win)
       if
         vim.bo[buf].buftype == 'help'
-        or vim.fn.bufname(buf):match('^oil:///')  -- oil.nvim buffers
+        or vim.fn.bufname(buf):match('^oil://')  -- oil.nvim buffers
       then
         return vim.wo[win].conceallevel  -- keep the current value
       else
@@ -336,31 +339,29 @@ HIGHLIGHTING                                                  *leap-highlight*
 
 Highlight groups ~
                                                                 *hl-LeapLabel*
-LeapLabel	Target labels. |hi-link|ed to |hl-IncSearch| by default.
-                Note: When set manually (not loaded as part of a color
-                scheme), you should call |leap.init_hl()| afterwards, to
-                update the look of |leap-concealed-labels|, derived from this
-                group.
+LeapLabel       Target labels. |hi-link|ed to |hl-IncSearch| by default. Note:
+                When set manually (not loaded as part of a color scheme), you
+                should call |leap.init_hl()| afterwards, to update the look of
+                |leap-concealed-labels|, derived from this group.
 
                                                                 *hl-LeapMatch*
-LeapMatch	Search matches when doing |leap-traversal| without labels.
-                Linked to |hl-Search| by default.
-                To disable match highlights: >lua
-                    vim.cmd 'hi! link LeapMatch None'
-<
+LeapMatch       Search matches when doing |leap-traversal| without labels.
+                Linked to |hl-Search| by default. To disable: >lua
+                    vim.cmd 'highlight! link LeapMatch None'
+
 Functions ~
 
 leap.init_hl({force})                                         *leap.init_hl()*
     Sets the highlight groups to their defaults (without `force`, only as
-    fallback). It also updates the look of |leap-concealed-labels|, based on
-    the actual settings of |hl-LeapLabel|. Automatically called the first time
+    fallback), and updates the look of |leap-concealed-labels|, based on the
+    actual settings of |hl-LeapLabel|. Automatically called the first time
     Leap is loaded, and then on |ColorScheme| events.
 
     Parameters: ~
       • {force}  (boolean) optional: defaults to false. Set the groups without
                  |hi-default|.
 
-Customization ~
+Usage ~
 
 To preserve your custom settings, wrap them in a function, and define an
 autocommand for |ColorScheme|: >lua
@@ -373,11 +374,12 @@ autocommand for |ColorScheme|: >lua
           -- Force using the defaults of Leap for this scheme.
           require('leap').init_hl(true)
         elseif vim.g.colors_name == 'bar' then
-          vim.cmd 'hi! link LeapLabel Substitute'
+          vim.cmd 'highlight! link LeapLabel Substitute'
         end
         -- General settings (apply to all schemes)
-        vim.cmd 'hi! link LeapMatch None'
-        -- Call this last, to ensure updating concealed labels.
+        vim.cmd 'highlight! link LeapMatch None'
+        -- Ensure updating concealed labels, in case this autocommand
+        -- happens to be scheduled after Leap's default one.
         require('leap').init_hl()
       end
     })

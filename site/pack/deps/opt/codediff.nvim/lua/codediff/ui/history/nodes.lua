@@ -8,10 +8,10 @@ local config = require("codediff.config")
 
 -- Status symbols and colors (reuse from explorer)
 local STATUS_SYMBOLS = {
-  M = { symbol = "M", color = "DiagnosticWarn" },
-  A = { symbol = "A", color = "DiagnosticOk" },
-  D = { symbol = "D", color = "DiagnosticError" },
-  R = { symbol = "R", color = "DiagnosticInfo" },
+  M = { symbol = "M", color = "CodeDiffStatusModified" },
+  A = { symbol = "A", color = "CodeDiffStatusAdded" },
+  D = { symbol = "D", color = "CodeDiffStatusDeleted" },
+  R = { symbol = "R", color = "CodeDiffStatusRenamed" },
 }
 
 -- File icons (basic fallback)

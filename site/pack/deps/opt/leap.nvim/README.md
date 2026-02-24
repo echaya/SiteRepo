@@ -2,16 +2,16 @@
 
 # leap.nvim
 
-Leap is a general-purpose motion plugin for Neovim, building and improving
+Leap is a motion and selection plugin for Neovim, building and improving
 primarily on [vim-sneak](https://github.com/justinmk/vim-sneak). Using some
 clever ideas, it allows you to jump to any position in the visible editor area
 very quickly, with near-zero mental overhead.
 
 ### How to use it (TL;DR)
 
-* Initiate the search in a given scope, and start typing a 2-character pattern
-  (`{char1}{char2}`). For the last character on a line, type `{char}<space>`;
-  for empty lines, type `<space><space>`.
+* Initiate the command in a given scope, and start typing a 2-character search
+  pattern (`{char1}{char2}`). For the last character on a line, type
+  `{char}<space>`; for empty lines, type `<space><space>`.
 
 * After typing `{char1}`, you can see **labels** appearing next to some pairs.
   **They are not active yet, but this preview allows you to process them in the
@@ -157,9 +157,9 @@ Using the `keys` feature of lazy.nvim might even cause
 </details>
 
 Help files are not exactly page-turners, but [`:help leap`](doc/leap.txt) is
-written with considerable care, and I suggest at least skimming it, even if you
-don't have a specific question yet, as it contains lots of additional
-information and details.
+written with considerable care (by humans, for humans), and I suggest at least
+skimming it, even if you don't have a specific question yet, as it contains
+lots of additional information and details.
 
 ### Experimental modules
 
@@ -374,8 +374,6 @@ do
   local function ft(key_specific_args)
     require('leap').leap(
       vim.tbl_deep_extend('keep', key_specific_args, {
-        -- Uncomment to limit search scope to the current line:
-        -- pattern = function(pat) return '\\%.l' .. pat end,
         inputlen = 1,
         inclusive = true,
         opts = {
@@ -389,7 +387,7 @@ do
   end
 
   -- A helper function making it easier to set "clever-f" behavior
-  -- (use f/F or t/T instead of ;/, - see the plugin clever-f.vim).
+  -- (using f/F or t/T instead of ;/, - see the plugin clever-f.vim).
   local clever = require('leap.user').with_traversal_keys
   local clever_f, clever_t = clever('f', 'F'), clever('t', 'T')
 

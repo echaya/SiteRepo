@@ -35,6 +35,24 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     explorer.toggle_visibility(explorer_obj)
   end
 
+  -- Helper: Focus explorer panel (explorer mode only)
+  local function focus_explorer()
+    local explorer_obj = lifecycle.get_explorer(tabpage)
+    if not explorer_obj then
+      vim.notify("No explorer found for this tab", vim.log.levels.WARN)
+      return
+    end
+    local split = explorer_obj.split
+    if not split or not split.winid or not vim.api.nvim_win_is_valid(split.winid) then
+      -- Explorer is hidden, show it first then focus
+      local explorer = require("codediff.ui.explorer")
+      explorer.toggle_visibility(explorer_obj)
+    end
+    if split and split.winid and vim.api.nvim_win_is_valid(split.winid) then
+      vim.api.nvim_set_current_win(split.winid)
+    end
+  end
+
   -- Helper: Find hunk at cursor position
   -- Returns the hunk and its index, or nil if cursor is not in a hunk
   local function find_hunk_at_cursor()
@@ -580,6 +598,9 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
   if is_explorer_mode and keymaps.toggle_explorer then
     lifecycle.set_tab_keymap(tabpage, "n", keymaps.toggle_explorer, toggle_explorer, { desc = "Toggle explorer visibility" })
   end
+  if is_explorer_mode and keymaps.focus_explorer then
+    lifecycle.set_tab_keymap(tabpage, "n", keymaps.focus_explorer, focus_explorer, { desc = "Focus explorer panel" })
+  end
 
   -- Diff get/put (do, dp) - like vimdiff
   if keymaps.diff_get then
@@ -648,6 +669,26 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     end
     if keymaps.discard_hunk then
       vim.keymap.set("n", keymaps.discard_hunk, discard_hunk, vim.tbl_extend("force", hunk_opts, { buffer = bufnr, desc = "Discard hunk under cursor" }))
+    end
+
+    -- Hunk textobject (ih) - select hunk lines in visual/operator-pending mode
+    if keymaps.hunk_textobject then
+      local function select_hunk()
+        local mapping = find_hunk_at_cursor()
+        if not mapping then return end
+
+        local current_buf = vim.api.nvim_get_current_buf()
+        local is_original = current_buf == original_bufnr
+        local start_line = is_original and mapping.original.start_line or mapping.modified.start_line
+        local end_line = is_original and mapping.original.end_line or mapping.modified.end_line
+
+        -- end_line is exclusive, and empty ranges (deletions) can't be selected
+        if start_line >= end_line then return end
+
+        vim.cmd("normal! " .. start_line .. "GV" .. (end_line - 1) .. "G")
+      end
+
+      vim.keymap.set({ "o", "x" }, keymaps.hunk_textobject, select_hunk, vim.tbl_extend("force", hunk_opts, { buffer = bufnr, desc = "Hunk textobject" }))
     end
   end
 end

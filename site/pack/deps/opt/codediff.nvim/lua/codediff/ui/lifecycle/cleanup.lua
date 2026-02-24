@@ -22,6 +22,16 @@ local function cleanup_diff(tabpage)
     return
   end
 
+  -- Emit CodeDiffClose User autocmd
+  vim.api.nvim_exec_autocmds("User", {
+    pattern = "CodeDiffClose",
+    modeline = false,
+    data = {
+      tabpage = tabpage,
+      mode = diff.mode,
+    },
+  })
+
   -- Disable auto-refresh for both buffers
   local auto_refresh = require("codediff.ui.auto_refresh")
   auto_refresh.disable(diff.original_bufnr)

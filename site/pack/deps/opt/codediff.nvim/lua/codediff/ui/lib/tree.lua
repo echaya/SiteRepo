@@ -258,7 +258,9 @@ function Tree:render()
     end
   end
 
-  -- Write to buffer
+  -- Save and clear readonly/modifiable to avoid W10 warning
+  local was_readonly = vim.bo[self._bufnr].readonly
+  vim.bo[self._bufnr].readonly = false
   vim.bo[self._bufnr].modifiable = true
   vim.api.nvim_buf_set_lines(self._bufnr, 0, -1, false, lines)
 
@@ -274,6 +276,7 @@ function Tree:render()
   end
 
   vim.bo[self._bufnr].modifiable = false
+  vim.bo[self._bufnr].readonly = was_readonly
 end
 
 return Tree

@@ -58,7 +58,7 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
   local selected_group = nil
 
   -- Create tree with buffer number
-  local tree_data = tree_module.create_tree_data(status_result, git_root, base_revision, is_dir_mode)
+  local tree_data = tree_module.create_tree_data(status_result, git_root, base_revision, is_dir_mode, explorer_config.visible_groups)
   local tree = Tree({
     bufnr = split.bufnr,
     nodes = tree_data,
@@ -133,6 +133,7 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
     current_file_path = nil, -- Track currently selected file
     current_file_group = nil, -- Track currently selected file's group (staged/unstaged)
     is_hidden = false, -- Track visibility state
+    visible_groups = vim.deepcopy(explorer_config.visible_groups or { staged = true, unstaged = true, conflicts = true }),
   }
 
   -- File selection callback - manages its own lifecycle
@@ -144,6 +145,17 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
     local file_path = file_data.path
     local old_path = file_data.old_path -- For renames: path in original revision
     local group = file_data.group or "unstaged"
+
+    -- Emit CodeDiffFileSelect User autocmd
+    vim.api.nvim_exec_autocmds("User", {
+      pattern = "CodeDiffFileSelect",
+      modeline = false,
+      data = {
+        tabpage = tabpage,
+        path = file_path,
+        status = file_data.status,
+      },
+    })
 
     -- Dir mode: Compare files from dir1 vs dir2 (no git)
     if is_dir_mode then
@@ -508,7 +520,7 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
   end
 
   if initial_file then
-    vim.defer_fn(function()
+    vim.schedule(function()
       -- Scroll explorer to the selected file using tree:get_node(line) lookup
       if vim.api.nvim_win_is_valid(explorer.winid) and vim.api.nvim_buf_is_valid(explorer.bufnr) then
         local line_count = vim.api.nvim_buf_line_count(explorer.bufnr)
@@ -528,7 +540,7 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
         git_root = git_root,
         group = initial_file_group,
       })
-    end, 100)
+    end)
   end
 
   -- Setup auto-refresh
