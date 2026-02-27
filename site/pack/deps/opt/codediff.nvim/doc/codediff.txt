@@ -1,7 +1,7 @@
 codediff.nvim                                 *codediff.txt* *codediff.nvim* *codediff*
 
-CodeDiff provides VSCode-style side-by-side diff rendering with two-tier
-highlighting.
+CodeDiff provides VSCode-style diff rendering with two-tier highlighting,
+supporting both side-by-side and inline (unified) layouts.
 
 This help file is usage-focused. For installation, build, and development
 details, see README.md.
@@ -114,6 +114,22 @@ Git merge tool:
 ==============================================================================
 CONFIGURATION                                        *codediff-configuration*
 
+                                                      *codediff-layout*
+Diff layout~
+
+CodeDiff supports two diff layouts:
+
+  `"side-by-side"` (default): Two panes with synchronized scrolling.
+  `"inline"`: Single pane with deleted lines shown as virtual overlays.
+              Includes treesitter syntax highlighting on virtual lines.
+
+Set the layout in your config:
+>lua
+  require("codediff").setup({
+    diff = { layout = "inline" },
+  })
+<
+
 Setup entry point:
 >lua
   require("codediff").setup({
@@ -129,6 +145,7 @@ Setup entry point:
       conflict_sign_rejected = nil,
     },
     diff = {
+      layout = "side-by-side",
       disable_inlay_hints = true,
       max_computation_time_ms = 5000,
       hide_merge_artifacts = false,
@@ -170,6 +187,7 @@ Setup entry point:
         diff_get = "do",
         diff_put = "dp",
         open_in_prev_tab = "gf",
+        close_on_open_in_prev_tab = false,
         toggle_stage = "-",
         hunk_textobject = "ih",
         show_help = "g?",

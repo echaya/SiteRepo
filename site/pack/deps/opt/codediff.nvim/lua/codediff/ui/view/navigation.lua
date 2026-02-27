@@ -21,13 +21,17 @@ function M.next_hunk()
   local current_buf = vim.api.nvim_get_current_buf()
   local original_bufnr = session.original_bufnr
   local modified_bufnr = session.modified_bufnr
+  local is_inline = session.layout == "inline"
 
   local is_original = current_buf == original_bufnr
   local is_modified = current_buf == modified_bufnr
   local is_result = session.result_bufnr and current_buf == session.result_bufnr
 
+  -- Inline mode: always use modified line numbers
+  if is_inline then
+    is_original = false
   -- If cursor is in result buffer (conflict mode), use modified side line numbers
-  if is_result then
+  elseif is_result then
     is_original = false
   -- If cursor is not in any diff buffer, switch to modified window
   elseif not is_original and not is_modified then
@@ -83,13 +87,17 @@ function M.prev_hunk()
   local current_buf = vim.api.nvim_get_current_buf()
   local original_bufnr = session.original_bufnr
   local modified_bufnr = session.modified_bufnr
+  local is_inline = session.layout == "inline"
 
   local is_original = current_buf == original_bufnr
   local is_modified = current_buf == modified_bufnr
   local is_result = session.result_bufnr and current_buf == session.result_bufnr
 
+  -- Inline mode: always use modified line numbers
+  if is_inline then
+    is_original = false
   -- If cursor is in result buffer (conflict mode), use modified side line numbers
-  if is_result then
+  elseif is_result then
     is_original = false
   -- If cursor is not in any diff buffer, switch to modified window
   elseif not is_original and not is_modified then

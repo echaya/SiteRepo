@@ -155,9 +155,11 @@ function M.setup_autocmds()
         local active_diffs = session.get_active_diffs()
         for tabpage, diff in pairs(active_diffs) do
           if diff.original_win == closed_win or diff.modified_win == closed_win then
-            -- If we're down to 1 or 0 diff windows, cleanup
+            -- single_pane/inline mode: we expect only 1 diff window
+            local is_single_window = diff.single_pane == true or diff.layout == "inline"
             local diff_win_count = count_diff_windows()
-            if diff_win_count <= 1 then
+            local threshold = is_single_window and 0 or 1
+            if diff_win_count <= threshold then
               cleanup_diff(tabpage)
             end
             break
@@ -197,8 +199,9 @@ function M.setup_autocmds()
 
       if diff then
         local diff_win_count = count_diff_windows()
-        -- If only 1 diff window remains, the user likely closed the other side
-        if diff_win_count == 1 then
+        local is_single_window = diff.single_pane == true or diff.layout == "inline"
+        local threshold = is_single_window and 0 or 1
+        if diff_win_count <= threshold then
           cleanup_diff(current_tab)
         end
       end

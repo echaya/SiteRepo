@@ -19,16 +19,6 @@ function M.arrange(tabpage)
   local result_win = session.result_win
   local panel = session.explorer -- explorer or history panel object
 
-  -- Validate diff windows
-  if not original_win or not vim.api.nvim_win_is_valid(original_win) then
-    return
-  end
-  if not modified_win or not vim.api.nvim_win_is_valid(modified_win) then
-    return
-  end
-
-  local has_result = result_win and vim.api.nvim_win_is_valid(result_win)
-
   -- Panel state
   local panel_win = panel and panel.winid
   local panel_visible = panel_win and vim.api.nvim_win_is_valid(panel_win) and not panel.is_hidden
@@ -51,6 +41,36 @@ function M.arrange(tabpage)
       vim.api.nvim_win_set_height(panel_win, panel_config.height)
     end
   end
+
+  local orig_valid = original_win and vim.api.nvim_win_is_valid(original_win)
+  local mod_valid = modified_win and vim.api.nvim_win_is_valid(modified_win)
+
+  -- Single-pane mode: one diff window takes all available space
+  if session.single_pane or (orig_valid ~= mod_valid) then
+    local sole_win = orig_valid and original_win or (mod_valid and modified_win or nil)
+    if sole_win then
+      if panel_visible then
+        if panel_position == "left" then
+          vim.api.nvim_win_set_width(panel_win, panel_config.width)
+          -- Explicitly set diff window to fill remainder
+          local remainder = vim.o.columns - panel_config.width - 1
+          vim.api.nvim_win_set_width(sole_win, remainder)
+        else
+          vim.api.nvim_win_set_height(panel_win, panel_config.height)
+          -- Diff window takes full width
+          vim.api.nvim_win_set_width(sole_win, vim.o.columns)
+        end
+      end
+    end
+    return
+  end
+
+  -- Both windows must be valid for two-pane layout
+  if not orig_valid or not mod_valid then
+    return
+  end
+
+  local has_result = result_win and vim.api.nvim_win_is_valid(result_win)
 
   -- Step 2: Collect diff windows and sum their current widths
   -- In center layout, result is a sibling column — include it

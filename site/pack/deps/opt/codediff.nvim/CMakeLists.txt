@@ -119,7 +119,7 @@ test-c: build
 \tctest --test-dir build --output-on-failure -C Release
 
 test-lua:
-\tnvim --headless --noplugin -u tests/init.lua -c \"lua require('plenary.test_harness').test_directory('tests', { minimal_init = vim.fn.getcwd() .. '/tests/init.lua' })\"
+\ttests\\run_plenary_tests.cmd
 
 lint:
 \tstylua --check lua

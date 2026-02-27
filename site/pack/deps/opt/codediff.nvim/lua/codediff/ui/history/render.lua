@@ -213,6 +213,13 @@ function M.create(commits, git_root, tabpage, width, opts)
       end
 
       vim.schedule(function()
+        -- Apply file_filter.ignore patterns (same as explorer view)
+        local filter = require("codediff.ui.explorer.filter")
+        local explorer_config = config.options.explorer or {}
+        local file_filter = explorer_config.file_filter or {}
+        local ignore_patterns = file_filter.ignore or {}
+        files = filter.apply(files, ignore_patterns)
+
         -- Create file nodes based on view_mode
         local history_config = config.options.history or {}
         local view_mode = history_config.view_mode or "list"
@@ -287,6 +294,26 @@ function M.create(commits, git_root, tabpage, width, opts)
     end
 
     vim.schedule(function()
+      -- Handle added/deleted files: show single file instead of empty diff
+      local file_status = file_data.status
+      if file_status == "A" or file_status == "D" then
+        local sess = lifecycle.get_session(tabpage)
+        local is_inline = sess and sess.layout == "inline"
+
+        if is_inline then
+          local rev = file_status == "A" and commit_hash or target_hash
+          local path = file_status == "D" and (old_path or file_path) or file_path
+          require("codediff.ui.view.inline_view").show_single_file(tabpage, path, { revision = rev, git_root = git_root, rel_path = path })
+        else
+          if file_status == "A" then
+            require("codediff.ui.view.side_by_side").show_added_virtual_file(tabpage, git_root, file_path, commit_hash)
+          else
+            require("codediff.ui.view.side_by_side").show_deleted_virtual_file(tabpage, git_root, old_path or file_path, target_hash)
+          end
+        end
+        return
+      end
+
       ---@type SessionConfig
       local session_config = {
         mode = "history",

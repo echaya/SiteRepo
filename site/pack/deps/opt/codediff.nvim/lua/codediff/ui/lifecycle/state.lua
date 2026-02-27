@@ -43,10 +43,12 @@ local function clear_buffer_highlights(bufnr)
     return
   end
 
-  -- Clear highlight, filler, and conflict sign namespaces
+  -- Clear highlight, filler, conflict sign, and inline namespaces
   vim.api.nvim_buf_clear_namespace(bufnr, highlights.ns_highlight, 0, -1)
   vim.api.nvim_buf_clear_namespace(bufnr, highlights.ns_filler, 0, -1)
   vim.api.nvim_buf_clear_namespace(bufnr, highlights.ns_conflict, 0, -1)
+  local ns_inline = vim.api.nvim_create_namespace("codediff-inline")
+  vim.api.nvim_buf_clear_namespace(bufnr, ns_inline, 0, -1)
 end
 
 M.clear_buffer_highlights = clear_buffer_highlights
@@ -176,11 +178,16 @@ local function resume_diff(tabpage)
 
   -- Render with fresh content and (possibly reused) diff result
   if lines_diff then
-    local core = require("codediff.ui.core")
-    core.render_diff(diff.original_bufnr, diff.modified_bufnr, original_lines, modified_lines, lines_diff)
+    if diff.layout == "inline" then
+      local inline_mod = require("codediff.ui.inline")
+      inline_mod.render_inline_diff(diff.modified_bufnr, lines_diff, original_lines, modified_lines)
+    else
+      local core = require("codediff.ui.core")
+      core.render_diff(diff.original_bufnr, diff.modified_bufnr, original_lines, modified_lines, lines_diff)
+    end
 
-    -- Re-sync scrollbind ONLY if diff was recomputed (fillers may have changed)
-    if diff_was_recomputed and vim.api.nvim_win_is_valid(diff.original_win) and vim.api.nvim_win_is_valid(diff.modified_win) then
+    -- Re-sync scrollbind ONLY if diff was recomputed and not inline mode
+    if diff_was_recomputed and diff.layout ~= "inline" and vim.api.nvim_win_is_valid(diff.original_win) and vim.api.nvim_win_is_valid(diff.modified_win) then
       local current_win = vim.api.nvim_get_current_win()
       local result_win = diff.result_win and vim.api.nvim_win_is_valid(diff.result_win) and diff.result_win or nil
 

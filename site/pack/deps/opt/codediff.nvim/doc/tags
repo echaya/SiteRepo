@@ -8,6 +8,7 @@ codediff-events	codediff.txt	/*codediff-events*
 codediff-highlight-groups	codediff.txt	/*codediff-highlight-groups*
 codediff-history	codediff.txt	/*codediff-history*
 codediff-history-line-range	codediff.txt	/*codediff-history-line-range*
+codediff-layout	codediff.txt	/*codediff-layout*
 codediff-lua-api	codediff.txt	/*codediff-lua-api*
 codediff-quickstart	codediff.txt	/*codediff-quickstart*
 codediff-see-also	codediff.txt	/*codediff-see-also*

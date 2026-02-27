@@ -99,7 +99,15 @@ local function do_diff_update(bufnr, skip_watcher_check)
     -- Update stored diff result in lifecycle (critical for hunk navigation and do/dp)
     lifecycle.update_diff_result(tabpage, lines_diff)
 
-    -- Update decorations on both buffers
+    -- Check if this is an inline mode session
+    local session = lifecycle.get_session(tabpage)
+    if session and session.layout == "inline" then
+      local inline_mod = require("codediff.ui.inline")
+      inline_mod.render_inline_diff(modified_bufnr, lines_diff, original_lines, modified_lines)
+      return
+    end
+
+    -- Side-by-side mode: Update decorations on both buffers
     core.render_diff(original_bufnr, modified_bufnr, original_lines, modified_lines, lines_diff)
 
     -- Re-sync scrollbind after filler changes

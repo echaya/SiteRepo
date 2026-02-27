@@ -20,7 +20,7 @@ test-c: build
 	ctest --test-dir build --output-on-failure -C Release
 
 test-lua:
-	nvim --headless --noplugin -u tests/init.lua -c "lua require('plenary.test_harness').test_directory('tests', { minimal_init = vim.fn.getcwd() .. '/tests/init.lua' })"
+	tests\run_plenary_tests.cmd
 
 lint:
 	stylua --check lua
