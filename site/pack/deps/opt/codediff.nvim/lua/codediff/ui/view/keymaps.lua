@@ -5,6 +5,7 @@ local lifecycle = require("codediff.ui.lifecycle")
 local auto_refresh = require("codediff.ui.auto_refresh")
 local config = require("codediff.config")
 local navigation = require("codediff.ui.view.navigation")
+local render = require("codediff.ui.view.render")
 
 -- Centralized keymap setup for all diff view keymaps
 -- This function sets up ALL keymaps in one place for better maintainability
@@ -22,7 +23,14 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     if not lifecycle.confirm_close_with_unsaved(tabpage) then
       return -- User cancelled
     end
-    vim.cmd("tabclose")
+    if #vim.api.nvim_list_tabpages() == 1 then
+      -- Last tab: clean up diff session first so session-persistence plugins
+      -- don't save scratch/virtual buffers, then quit neovim entirely.
+      lifecycle.cleanup_for_quit(tabpage)
+      vim.cmd("qall")
+    else
+      vim.cmd("tabclose")
+    end
   end
 
   -- Helper: Toggle explorer visibility (explorer mode only)
@@ -675,9 +683,13 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
 
   -- Help keymap (g?) - show floating window with available keymaps
   if keymaps.show_help then
-    local help = require("codediff.ui.keymap_help")
     lifecycle.set_tab_keymap(tabpage, "n", keymaps.show_help, function()
-      help.toggle(tabpage)
+      local ok, help = pcall(require, "codediff.ui.keymap_help")
+      if ok and help then
+        help.toggle(tabpage)
+      else
+        vim.notify_once("[codediff] failed to load codediff.ui.keymap_help: " .. tostring(help), vim.log.levels.WARN)
+      end
     end, { desc = "Show keymap help" })
   end
 
@@ -736,7 +748,163 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
       vim.keymap.set({ "o", "x" }, keymaps.hunk_textobject, select_hunk, vim.tbl_extend("force", hunk_opts, { buffer = bufnr, desc = "Hunk textobject" }))
     end
   end
-end
 
+  -- ========================================================================
+  -- Align moved code (gm)
+  -- Temporarily align other pane to show paired move block
+  -- ========================================================================
+
+  local function align_move()
+    local session = lifecycle.get_session(tabpage)
+    if not session or not session.stored_diff_result or not session.stored_diff_result.moves then
+      return
+    end
+    if is_inline then
+      return
+    end -- Only works in side-by-side
+
+    local moves = session.stored_diff_result.moves
+    if #moves == 0 then
+      vim.notify("No moved code blocks in current diff", vim.log.levels.INFO)
+      return
+    end
+
+    local current_buf = vim.api.nvim_get_current_buf()
+    local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+
+    -- Read current buffers from session (not closure — may have changed via file switch)
+    local sess_orig_buf = session.original_bufnr
+    local sess_mod_buf = session.modified_bufnr
+
+    -- Find which move the cursor is in
+    local current_move = nil
+    local is_on_original = current_buf == sess_orig_buf
+    for _, move in ipairs(moves) do
+      local range = is_on_original and move.original or move.modified
+      if cursor_line >= range.start_line and cursor_line < range.end_line then
+        current_move = move
+        break
+      end
+    end
+
+    if not current_move then
+      vim.notify("Not on a moved code block", vim.log.levels.INFO)
+      return
+    end
+
+    local current_win = vim.api.nvim_get_current_win()
+    local other_win = is_on_original and session.modified_win or session.original_win
+    if not vim.api.nvim_win_is_valid(other_win) then
+      return
+    end
+
+    local my_range = is_on_original and current_move.original or current_move.modified
+    local other_range = is_on_original and current_move.modified or current_move.original
+
+    -- Save full view state of both windows
+    local current_view = vim.api.nvim_win_call(current_win, function()
+      return vim.fn.winsaveview()
+    end)
+    local other_view = vim.api.nvim_win_call(other_win, function()
+      return vim.fn.winsaveview()
+    end)
+    local saved_scrollbind_current = vim.wo[current_win].scrollbind
+    local saved_scrollbind_other = vim.wo[other_win].scrollbind
+
+    -- Disable scrollbind
+    vim.wo[current_win].scrollbind = false
+    vim.wo[other_win].scrollbind = false
+
+    -- Align using the annotation virt_line as anchor:
+    -- Both sides have "⇄ moved" above their first moved line.
+    -- Use winline() to get the actual visual row (accounts for virtual/filler lines).
+    local my_first = my_range.start_line
+    local other_first = other_range.start_line
+
+    -- Get actual visual row of the moved block start (accounts for filler virt_lines)
+    -- Save and restore cursor so the user's position is not disturbed.
+    local my_visual_row = vim.api.nvim_win_call(current_win, function()
+      local saved_pos = vim.api.nvim_win_get_cursor(current_win)
+      vim.api.nvim_win_set_cursor(current_win, { my_first, 0 })
+      local row = vim.fn.winline()
+      vim.api.nvim_win_set_cursor(current_win, saved_pos)
+      return row
+    end)
+
+    -- Set other pane: position other_first at the same visual row
+    -- winline() is 1-based from top of window
+    vim.api.nvim_win_call(other_win, function()
+      -- First scroll to the target line at top of window
+      vim.api.nvim_win_set_cursor(other_win, { other_first, 0 })
+      vim.cmd("normal! zt")
+      -- Now scroll down to match the visual offset (Ctrl-Y scrolls view up, line moves down)
+      if my_visual_row > 1 then
+        local keys = vim.api.nvim_replace_termcodes((my_visual_row - 1) .. "<C-y>", true, false, true)
+        vim.api.nvim_feedkeys(keys, "nx", false)
+      end
+    end)
+
+    -- Restore function — called when cursor leaves moved block or switches window
+    local augroup = vim.api.nvim_create_augroup("codediff_move_align_" .. tabpage, { clear = true })
+    local restored = false
+
+    local function restore()
+      if restored then
+        return
+      end
+      restored = true
+      pcall(vim.api.nvim_del_augroup_by_id, augroup)
+      if not vim.api.nvim_win_is_valid(current_win) or not vim.api.nvim_win_is_valid(other_win) then
+        return
+      end
+      -- Restore views first (before scrollbind)
+      vim.api.nvim_win_call(other_win, function()
+        vim.fn.winrestview(other_view)
+      end)
+      vim.api.nvim_win_call(current_win, function()
+        vim.fn.winrestview(current_view)
+      end)
+      -- Use the same anchor technique as initial render to establish scrollbind
+      local sess = lifecycle.get_session(tabpage)
+      local orig_win = sess and sess.original_win or current_win
+      local mod_win = sess and sess.modified_win or other_win
+      local orig_buf_nr = sess and sess.original_bufnr or vim.api.nvim_win_get_buf(orig_win)
+      local mod_buf_nr = sess and sess.modified_bufnr or vim.api.nvim_win_get_buf(mod_win)
+      local diff_result = sess and sess.stored_diff_result
+      local orig_cur = { current_view.lnum, current_view.col }
+      local mod_cur = { other_view.lnum, other_view.col }
+      if not is_on_original then
+        orig_cur, mod_cur = mod_cur, orig_cur
+      end
+      render.establish_scrollbind(orig_win, mod_win, orig_buf_nr, mod_buf_nr, diff_result, orig_cur, mod_cur)
+    end
+
+    -- Restore when cursor moves out of the moved block
+    vim.api.nvim_create_autocmd("CursorMoved", {
+      group = augroup,
+      buffer = current_buf,
+      callback = function()
+        local new_line = vim.api.nvim_win_get_cursor(0)[1]
+        if new_line < my_range.start_line or new_line >= my_range.end_line then
+          restore()
+        end
+      end,
+    })
+
+    -- Restore when user switches to another window (WinLeave)
+    -- Use vim.schedule to defer restore until after Neovim finishes
+    -- the window switch and cursor placement from the click event.
+    vim.api.nvim_create_autocmd("WinLeave", {
+      group = augroup,
+      callback = function()
+        vim.schedule(restore)
+      end,
+    })
+  end
+
+  if keymaps.align_move and not is_inline and config.options.diff.compute_moves then
+    lifecycle.set_tab_keymap(tabpage, "n", keymaps.align_move, align_move, { desc = "Align moved code block" })
+  end
+end
 
 return M

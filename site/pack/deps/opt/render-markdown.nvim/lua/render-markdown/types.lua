@@ -99,6 +99,7 @@
 ---@field language_name? boolean
 ---@field language_info? boolean
 ---@field language_pad? number
+---@field disable? string[]
 ---@field disable_background? boolean|string[]
 ---@field width? render.md.code.Width
 ---@field left_margin? number
@@ -213,6 +214,7 @@
 ---@class (exact) render.md.link.UserConfig: render.md.base.UserConfig
 ---@field footnote? render.md.link.footnote.UserConfig
 ---@field image? string
+---@field image_custom? boolean
 ---@field email? string
 ---@field hyperlink? string
 ---@field highlight? string

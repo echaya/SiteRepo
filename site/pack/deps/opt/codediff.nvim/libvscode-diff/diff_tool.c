@@ -233,7 +233,7 @@ int main(int argc, char* argv[]) {
     DiffOptions options = {
         .ignore_trim_whitespace = false,
         .max_computation_time_ms = timeout_ms,
-        .compute_moves = false,
+        .compute_moves = true,
         .extend_to_subwords = false
     };
 
@@ -275,7 +275,21 @@ int main(int argc, char* argv[]) {
     } else {
         printf("No differences found - files are identical.\n");
     }
-    
+
+    // Print moves
+    printf("\n");
+    if (diff->moves.count > 0) {
+        printf("  Moves: %d move(s)\n", diff->moves.count);
+        for (int i = 0; i < diff->moves.count; i++) {
+            MovedText* m = &diff->moves.moves[i];
+            printf("    [%d] Lines %d-%d -> Lines %d-%d\n", i,
+                m->original.start_line, m->original.end_line - 1,
+                m->modified.start_line, m->modified.end_line - 1);
+        }
+    } else {
+        printf("  Moves: 0 move(s)\n");
+    }
+
     printf("\n=================================================================\n");
     
     if (show_timing) {

@@ -135,6 +135,7 @@ set(DIFF_CORE_SOURCES
     src/utils.c
     src/print_utils.c
     src/utf8_utils.c
+    src/compute_moved_lines.c
 )
 
 # Add bundled utf8proc if using it
@@ -258,6 +259,7 @@ set(TEST_COMMON_SOURCES
     src/char_level.c
     src/range_mapping.c
     src/utf8_utils.c
+    src/compute_moved_lines.c
     default_lines_diff_computer.c
 )
 

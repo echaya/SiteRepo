@@ -29,6 +29,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
 - **Same implementation as VSCode's diff engine**, providing identical visual highlighting for most scenarios
 - **Fast C-based diff computation** using FFI with **multi-core parallelization** (OpenMP)
 - **Async git operations** - non-blocking file retrieval from git
+- **Moved code detection** — identifies blocks of code that moved within a file, with visual indicators (highlights, signs, annotations) matching VSCode's experimental `showMoves` feature (opt-in)
 
 ## Installation
 
@@ -97,6 +98,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
       cycle_next_file = true,             -- Wrap around when navigating files (]f/[f): false to stop at first/last
       jump_to_first_change = true,        -- Auto-scroll to first change when opening a diff: false to stay at same line
       highlight_priority = 100,           -- Priority for line-level diff highlights (increase to override LSP highlights)
+      compute_moves = false,              -- Detect moved code blocks (opt-in, matches VSCode experimental.showMoves)
     },
 
     -- Explorer panel configuration
@@ -152,6 +154,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
         discard_hunk = "<leader>hr", -- Discard hunk under cursor (working tree only)
         hunk_textobject = "ih",      -- Textobject for hunk (vih to select, yih to yank, etc.)
         show_help = "g?",   -- Show floating window with available keymaps
+        align_move = "gm", -- Temporarily align moved code blocks across panes
       },
       explorer = {
         select = "<CR>",    -- Open diff for selected file
@@ -275,6 +278,10 @@ Open an interactive file explorer showing changed files:
 
 " Compare two revisions (e.g. HEAD vs main)
 :CodeDiff main HEAD
+
+" Override layout for this invocation (works with all subcommands)
+:CodeDiff --inline
+:CodeDiff main --side-by-side
 ```
 
 #### PR-like Diff (Merge-base)
@@ -398,6 +405,7 @@ The history panel shows a list of commits. Each commit can be expanded to show i
 **Options:**
 - `--reverse` or `-r`: Show commits in chronological order (oldest first) instead of reverse chronological. Useful for following development story from beginning to end, or reviewing PR changes in the order they were made.
 - `--base` or `-b`: Compare each commit against a fixed revision instead of its parent. Accepts any git revision (`HEAD`, branch name, commit hash) or `WORKING` for the current working tree.
+- `--inline` / `--side-by-side`: Override the diff layout for this invocation. These flags work with all `:CodeDiff` subcommands.
 
 **Visual selection:** When called with a visual range (`:'<,'>CodeDiff history`), only commits that modified the selected lines are shown. This uses `git log -L` under the hood and is useful for tracing the evolution of a specific function or block in a large file.
 
@@ -566,6 +574,8 @@ The plugin defines highlight groups matching VSCode's diff colors:
 - `CodeDiffCharInsert` - Deep/dark green for inserted characters
 - `CodeDiffCharDelete` - Deep/dark red for deleted characters
 - `CodeDiffFiller` - Gray foreground for filler line slashes (`╱╱╱`)
+- `CodeDiffLineMove` - Background for moved code lines (derived from DiffChange)
+- `CodeDiffMoveTo` - Sign column and annotation color for move indicators
 
 <details open>
 <summary><b>📸 Visual Examples</b> (click to collapse)</summary>
@@ -692,7 +702,8 @@ codediff.nvim/
 
 ### Future Enhancements
 
-- [ ] Inline diff mode (single buffer view)
+- [x] Inline diff mode (single buffer view)
+- [x] Moved code detection (VSCode parity)
 - [ ] Fold support for large diffs
 
 ## VSCode Reference

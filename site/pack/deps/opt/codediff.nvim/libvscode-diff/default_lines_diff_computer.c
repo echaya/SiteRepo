@@ -15,6 +15,8 @@
 #include "line_level.h"
 #include "char_level.h"
 #include "range_mapping.h"
+#include "compute_moved_lines.h"
+#include "string_hash_map.h"
 #include "utils.h"
 #include <stdlib.h>
 #include <string.h>
@@ -665,20 +667,37 @@ LinesDiff* compute_diff(
         false  // dontAssertStartLine
     );
     
-    // VSCode: if (options.computeMoves) { moves = this.computeMoves(...); }
-    //
-    // SKIPPED: computeMoves is not implemented
-    //
-    // Reason: Neovim does not support moved block visualization in UI.
-    // The computeMoves algorithm exists in VSCode at:
-    //   src/vs/editor/common/diff/defaultLinesDiffComputer/computeMovedLines.ts
-    //
-    // When UI support is added, implement:
-    // 1. Port computeMovedLines() function
-    // 2. Port refineDiff for moved blocks
-    // 3. Populate moves array instead of leaving it empty
-    //
-    // For now, always return empty moves array.
+    // Compute moves if requested
+    MovedTextArray computed_moves = { NULL, 0, 0 };
+    if (options->compute_moves && changes && changes->count > 0) {
+        // Recompute line hashes (same algorithm as LineSequence: trimmed perfect hash)
+        StringHashMap *move_hash_map = string_hash_map_create();
+        uint32_t *hashed_orig = (uint32_t *)malloc((size_t)original_count * sizeof(uint32_t));
+        uint32_t *hashed_mod = (uint32_t *)malloc((size_t)modified_count * sizeof(uint32_t));
+
+        for (int i = 0; i < original_count; i++) {
+            char *trimmed = trim_string(original_lines[i]);
+            hashed_orig[i] = string_hash_map_get_or_create(move_hash_map, trimmed);
+            free(trimmed);
+        }
+        for (int i = 0; i < modified_count; i++) {
+            char *trimmed = trim_string(modified_lines[i]);
+            hashed_mod[i] = string_hash_map_get_or_create(move_hash_map, trimmed);
+            free(trimmed);
+        }
+
+        compute_moved_lines(
+            changes->mappings, changes->count,
+            original_lines, original_count,
+            modified_lines, modified_count,
+            hashed_orig, hashed_mod,
+            timeout.timeout_ms,
+            &computed_moves);
+
+        free(hashed_orig);
+        free(hashed_mod);
+        string_hash_map_destroy(move_hash_map);
+    }
     
     // Create LinesDiff result
     LinesDiff* result = (LinesDiff*)malloc(sizeof(LinesDiff));
@@ -699,10 +718,8 @@ LinesDiff* compute_diff(
         result->changes.capacity = 0;
     }
     
-    // No moves
-    result->moves.moves = NULL;
-    result->moves.count = 0;
-    result->moves.capacity = 0;
+    // Transfer moves
+    result->moves = computed_moves;
     
     result->hit_timeout = hit_timeout;
     

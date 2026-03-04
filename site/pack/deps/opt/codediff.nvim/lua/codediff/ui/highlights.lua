@@ -121,6 +121,29 @@ function M.setup()
   vim.api.nvim_set_hl(0, "CodeDiffCharInsert", char_insert_color)
   vim.api.nvim_set_hl(0, "CodeDiffCharDelete", char_delete_color)
 
+  -- Moved code highlights (derived from DiffChange — the standard "changed" color)
+  local diff_change_hl = vim.api.nvim_get_hl(0, { name = "DiffChange", link = false })
+  local move_fallback = diff_change_hl.bg or 0x4f5258
+  local line_move_color = resolve_color(opts.line_move, move_fallback, base256_color(0, 0, 2))
+  vim.api.nvim_set_hl(0, "CodeDiffLineMove", line_move_color)
+
+  local char_move_color = {
+    bg = adjust_brightness(line_move_color.bg, brightness) or 0x2a4f7a,
+    ctermbg = base256_color(0, 0, 3),
+  }
+  vim.api.nvim_set_hl(0, "CodeDiffCharMove", char_move_color)
+
+  vim.api.nvim_set_hl(0, "CodeDiffMoveFrom", {
+    fg = 0x6699cc,
+    ctermfg = base256_color(1, 2, 4),
+    default = true,
+  })
+  vim.api.nvim_set_hl(0, "CodeDiffMoveTo", {
+    fg = 0x6699cc,
+    ctermfg = base256_color(1, 2, 4),
+    default = true,
+  })
+
   -- Filler lines (no highlight, inherits editor default background)
   vim.api.nvim_set_hl(0, "CodeDiffFiller", {
     fg = "#444444", -- Subtle gray for the slash character

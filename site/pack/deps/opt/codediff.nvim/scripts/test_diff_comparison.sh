@@ -314,6 +314,8 @@ fi
 TOTAL_TESTS=0
 MISMATCHES=0
 MISMATCH_DETAILS=""
+FIRST_MISMATCH_C=""
+FIRST_MISMATCH_NODE=""
 
 # Timing arrays per file
 declare -A C_TIMES
@@ -333,20 +335,20 @@ test_pair() {
     BASE1=$(basename "$FILE1")
     BASE2=$(basename "$FILE2")
     
-    # Run C diff tool with timing
+    # Run C diff tool with timing (no timeout for accurate comparison)
     C_OUTPUT="$TEMP_DIR/c_output_${TEST_ID}.txt"
     C_START=$(($(date +%s%N)/1000000))
-    "$C_DIFF" "$FILE1" "$FILE2" > "$C_OUTPUT" 2>&1
+    "$C_DIFF" -T 0 "$FILE1" "$FILE2" > "$C_OUTPUT" 2>&1
     C_EXIT=$?
     C_END=$(($(date +%s%N)/1000000))
     C_TIME=$((C_END - C_START))
     # Sanity check: ensure non-negative timing
     [ $C_TIME -lt 0 ] && C_TIME=0
     
-    # Run Node diff tool with timing
+    # Run Node diff tool with timing (no timeout for accurate comparison)
     NODE_OUTPUT="$TEMP_DIR/node_output_${TEST_ID}.txt"
     NODE_START=$(($(date +%s%N)/1000000))
-    node "$NODE_DIFF" "$FILE1" "$FILE2" > "$NODE_OUTPUT" 2>&1
+    node "$NODE_DIFF" -T 0 "$FILE1" "$FILE2" > "$NODE_OUTPUT" 2>&1
     NODE_EXIT=$?
     NODE_END=$(($(date +%s%N)/1000000))
     NODE_TIME=$((NODE_END - NODE_START))
@@ -358,9 +360,13 @@ test_pair() {
     NODE_TIMES[$FILE_GROUP]=$((${NODE_TIMES[$FILE_GROUP]:-0} + NODE_TIME))
     TEST_COUNTS[$FILE_GROUP]=$((${TEST_COUNTS[$FILE_GROUP]:-0} + 1))
     
-    # Compare outputs
+    # Compare outputs (normalize trailing newlines to avoid false positives)
     if ! diff -q "$C_OUTPUT" "$NODE_OUTPUT" > /dev/null 2>&1; then
         MISMATCHES=$((MISMATCHES + 1))
+        if [ -z "$FIRST_MISMATCH_C" ]; then
+            FIRST_MISMATCH_C="$C_OUTPUT"
+            FIRST_MISMATCH_NODE="$NODE_OUTPUT"
+        fi
         MISMATCH_DETAILS="${MISMATCH_DETAILS}Mismatch #${MISMATCHES} (Test #${TOTAL_TESTS}):\n"
         MISMATCH_DETAILS="${MISMATCH_DETAILS}  Files: $BASE1 vs $BASE2\n"
         MISMATCH_DETAILS="${MISMATCH_DETAILS}  C exit: $C_EXIT, Node exit: $NODE_EXIT\n"
@@ -405,6 +411,24 @@ for FILE_IDX in "${!TOP_FILES[@]}"; do
     fi
 done
 
+# Test crafted move detection pairs
+PAIRS_DIR="$TOOL_REPO_ROOT/scripts/test_pairs"
+if [ -d "$PAIRS_DIR" ]; then
+    if [ $VERBOSITY -ge 1 ]; then
+        echo ""
+        echo "Testing crafted move detection pairs..."
+    fi
+    for PAIR_DIR in "$PAIRS_DIR"/*/; do
+        if [ -f "$PAIR_DIR/original.txt" ] && [ -f "$PAIR_DIR/modified.txt" ]; then
+            PAIR_NAME=$(basename "$PAIR_DIR")
+            test_pair "$PAIR_DIR/original.txt" "$PAIR_DIR/modified.txt" "pair_${PAIR_NAME}" "crafted"
+            if [ $VERBOSITY -ge 1 ]; then
+                echo "  Tested: $PAIR_NAME"
+            fi
+        fi
+    done
+fi
+
 # Output based on verbosity level
 if [ $VERBOSITY -eq 0 ]; then
     # Quiet mode: single line for easy comparison
@@ -428,22 +452,18 @@ else
             echo "Showing first mismatch in detail:"
             echo "========================================"
             
-            # Show first mismatch
-            FIRST_C=$(ls -1 "$TEMP_DIR"/c_output_*.txt 2>/dev/null | head -1)
-            FIRST_NODE="${FIRST_C/c_output/node_output}"
-            
-            if [ -f "$FIRST_C" ] && [ -f "$FIRST_NODE" ]; then
+            if [ -f "$FIRST_MISMATCH_C" ] && [ -f "$FIRST_MISMATCH_NODE" ]; then
                 echo "C diff output:"
                 echo "---"
-                head -50 "$FIRST_C"
+                head -50 "$FIRST_MISMATCH_C"
                 echo ""
                 echo "Node diff output:"
                 echo "---"
-                head -50 "$FIRST_NODE"
+                head -50 "$FIRST_MISMATCH_NODE"
                 echo ""
                 echo "Diff between outputs:"
                 echo "---"
-                diff -u "$FIRST_C" "$FIRST_NODE" | head -100
+                diff -u "$FIRST_MISMATCH_C" "$FIRST_MISMATCH_NODE" | head -100
             fi
         else
             echo "⚠ Mismatches detected. Run with -v or --verbose to see details."

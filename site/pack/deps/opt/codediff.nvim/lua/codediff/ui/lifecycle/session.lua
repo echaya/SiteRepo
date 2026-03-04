@@ -5,6 +5,7 @@ local M = {}
 local config = require("codediff.config")
 local virtual_file = require("codediff.core.virtual_file")
 local accessors = require("codediff.ui.lifecycle.accessors")
+local welcome_window = require("codediff.ui.view.welcome_window")
 
 -- Track active diff sessions
 -- Structure: {
@@ -110,6 +111,8 @@ function M.create_session(
     reapply_keymaps = reapply_keymaps,
   }
 
+  welcome_window.capture_session_profiles(active_diffs[tabpage])
+
   -- Mark windows with restore flag
   vim.w[original_win].codediff_restore = 1
   vim.w[modified_win].codediff_restore = 1
@@ -141,29 +144,33 @@ function M.create_session(
   end
 
   -- Force disable winbar to prevent alignment issues (except in conflict mode)
-  local function ensure_no_winbar()
-    local sess = active_diffs[tabpage]
+  local function sync_window_ui(sess, win)
     -- In conflict mode, preserve existing winbar titles (set by conflict_window.lua)
     if sess and sess.result_win and vim.api.nvim_win_is_valid(sess.result_win) then
       return
     end
     -- Normal diff mode: disable winbar
-    if vim.api.nvim_win_is_valid(original_win) then
-      vim.wo[original_win].winbar = ""
+    if sess and vim.api.nvim_win_is_valid(sess.original_win) then
+      vim.wo[sess.original_win].winbar = ""
     end
-    if vim.api.nvim_win_is_valid(modified_win) then
-      vim.wo[modified_win].winbar = ""
+    if sess and vim.api.nvim_win_is_valid(sess.modified_win) then
+      vim.wo[sess.modified_win].winbar = ""
     end
   end
 
-  vim.api.nvim_create_autocmd({ "BufWinEnter", "FileType" }, {
+  vim.api.nvim_create_autocmd({ "BufWinEnter", "BufEnter", "WinEnter", "FileType" }, {
     group = tab_augroup,
-    callback = function(args)
+    callback = function()
+      local sess = active_diffs[tabpage]
+      if not sess then
+        return
+      end
       local win = vim.api.nvim_get_current_win()
-      if win == original_win or win == modified_win then
-        ensure_no_winbar()
+      if win == sess.original_win or win == sess.modified_win then
+        sync_window_ui(sess, win)
         -- Re-apply critical window options that might get reset by ftplugins/autocmds
         vim.wo[win].wrap = false
+        welcome_window.sync(win)
       end
     end,
   })

@@ -3,6 +3,7 @@ local M = {}
 
 local config = require("codediff.config")
 local tree_module = require("codediff.ui.explorer.tree")
+local welcome = require("codediff.ui.welcome")
 
 -- Setup auto-refresh triggers for explorer
 -- Returns a cleanup function that should be called when the explorer is destroyed
@@ -252,14 +253,93 @@ function M.refresh(explorer)
       -- Update status result for file selection logic
       explorer.status_result = status_result
 
-      -- Try to restore selection
-      if current_path then
-        local nodes = explorer.tree:get_nodes()
-        for _, node in ipairs(nodes) do
-          if node.data and node.data.path == current_path then
-            explorer.tree:set_node(node:get_id())
-            break
+      local function clear_current_file()
+        explorer.current_file_path = nil
+        explorer.current_file_group = nil
+      end
+
+      -- Helper: show the welcome page in the diff panes
+      local function show_welcome_page()
+        local lifecycle = require("codediff.ui.lifecycle")
+        local session = lifecycle.get_session(explorer.tabpage)
+        if session and not welcome.is_welcome_buffer(session.modified_bufnr) then
+          local mod_win = session.modified_win
+          if mod_win and vim.api.nvim_win_is_valid(mod_win) then
+            if session.layout == "inline" then
+              local w = vim.api.nvim_win_get_width(mod_win)
+              local h = vim.api.nvim_win_get_height(mod_win)
+              local welcome_buf = welcome.create_buffer(w, h)
+              require("codediff.ui.view.inline_view").show_welcome(explorer.tabpage, welcome_buf)
+            else
+              local orig_win = session.original_win
+              if orig_win and vim.api.nvim_win_is_valid(orig_win) then
+                local w = vim.api.nvim_win_get_width(orig_win) + vim.api.nvim_win_get_width(mod_win) + 1
+                local h = vim.api.nvim_win_get_height(orig_win)
+                local welcome_buf = welcome.create_buffer(w, h)
+                require("codediff.ui.view.side_by_side").show_welcome(explorer.tabpage, welcome_buf)
+              end
+            end
           end
+        end
+      end
+
+      -- Show welcome page when all files are clean
+      local total_files = #(status_result.unstaged or {}) + #(status_result.staged or {}) + #(status_result.conflicts or {})
+      if total_files == 0 then
+        clear_current_file()
+        show_welcome_page()
+      end
+
+      -- Re-select the currently viewed file after refresh.
+      -- Search all file children across all groups for the current file.
+      -- If found (possibly in a new group), call on_file_select to update diff panes.
+      -- If not found (committed/removed), show welcome page.
+      if explorer.current_file_path and total_files > 0 then
+        local found_file = nil
+        local found_group = nil
+        -- Search helper: look in a specific status list
+        local function search_group(files, group_name)
+          for _, f in ipairs(files or {}) do
+            if f.path == explorer.current_file_path then
+              return f, group_name
+            end
+          end
+          return nil, nil
+        end
+        -- Search same group first (preferred — e.g. hunk staging keeps file in same group)
+        local current_group = explorer.current_file_group
+        if current_group then
+          local group_lists = {
+            unstaged = status_result.unstaged,
+            staged = status_result.staged,
+            conflicts = status_result.conflicts,
+          }
+          found_file, found_group = search_group(group_lists[current_group], current_group)
+        end
+        -- If not in same group, search all groups
+        if not found_file then
+          found_file, found_group = search_group(status_result.conflicts, "conflicts")
+        end
+        if not found_file then
+          found_file, found_group = search_group(status_result.unstaged, "unstaged")
+        end
+        if not found_file then
+          found_file, found_group = search_group(status_result.staged, "staged")
+        end
+
+        if found_file then
+          -- File still exists (possibly in a new group) — re-select it
+          explorer.on_file_select({
+            path = found_file.path,
+            old_path = found_file.old_path,
+            status = found_file.status,
+            git_root = explorer.git_root,
+            group = found_group,
+          })
+        else
+          -- File was committed/removed — show welcome
+          clear_current_file()
+          show_welcome_page()
         end
       end
     end)

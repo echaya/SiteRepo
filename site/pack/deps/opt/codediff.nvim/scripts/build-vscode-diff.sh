@@ -93,7 +93,7 @@ function main() {
     const result = diffComputer.computeDiff(file1Lines, file2Lines, {
         ignoreTrimWhitespace: false,
         maxComputationTimeMs: timeoutMs,
-        computeMoves: false,
+        computeMoves: true,
         extendToSubwords: false,
     });
     const endTime = performance.now();
@@ -135,7 +135,20 @@ function main() {
             }
         }
     }
-    
+
+    // Print moves
+    console.log('');
+    const moves = result.moves || [];
+    if (moves.length > 0) {
+        console.log(`  Moves: ${moves.length} move(s)`);
+        for (let i = 0; i < moves.length; i++) {
+            const m = moves[i];
+            console.log(`    [${i}] Lines ${m.lineRangeMapping.original.startLineNumber}-${m.lineRangeMapping.original.endLineNumberExclusive - 1} -> Lines ${m.lineRangeMapping.modified.startLineNumber}-${m.lineRangeMapping.modified.endLineNumberExclusive - 1}`);
+        }
+    } else {
+        console.log('  Moves: 0 move(s)');
+    }
+
     console.log('\n=================================================================');
     
     if (showTiming) {

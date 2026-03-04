@@ -10,7 +10,10 @@ local lifecycle_initialized = false
 
 -- Resolve effective layout: conflict always uses side-by-side
 local function get_layout(session_config)
-  if session_config.conflict then return "side-by-side" end
+  if session_config.conflict then
+    return "side-by-side"
+  end
+  if session_config.layout then return session_config.layout end
   return config.options.diff.layout
 end
 
@@ -22,6 +25,7 @@ end
 ---@field original_revision string?
 ---@field modified_revision string?
 ---@field conflict boolean? For merge conflict mode: render both sides against base
+---@field layout "side-by-side"|"inline"? Optional per-invocation layout override
 ---@field explorer_data table? For explorer mode: { status_result }
 ---@field history_data table? For history mode: { commits, range, file_path, line_range }
 ---@field line_range table? For history line-range mode: { start_line, end_line }

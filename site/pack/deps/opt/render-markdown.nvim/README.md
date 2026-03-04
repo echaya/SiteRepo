@@ -352,9 +352,10 @@ require('render-markdown').setup({
         -- | string[] | `cycle(value, context.level)` |
         icons = { '󰲡 ', '󰲣 ', '󰲥 ', '󰲧 ', '󰲩 ', '󰲫 ' },
         -- Determines how icons fill the available space.
-        -- | right   | '#'s are concealed and icon is appended to right side                      |
-        -- | inline  | '#'s are concealed and icon is inlined on left side                        |
-        -- | overlay | icon is left padded with spaces and inserted on left hiding additional '#' |
+        -- | eol     | '#'s are concealed and icon is placed at right most column   |
+        -- | right   | '#'s are concealed and icon is appended to right side        |
+        -- | inline  | '#'s are concealed and icon is inlined on left side          |
+        -- | overlay | icon is left padded with spaces and overlayed hiding all '#' |
         position = 'overlay',
         -- Added to the sign column if enabled.
         -- Output is evaluated by `cycle(value, context.level)`.
@@ -463,6 +464,8 @@ require('render-markdown').setup({
         -- Amount of padding to add around the language.
         -- If a float < 1 is provided it is treated as a percentage of available window space.
         language_pad = 0,
+        -- A list of language names for which rendering will be disabled.
+        disable = {},
         -- A list of language names for which background highlighting will be disabled.
         -- Likely because that language has background highlights itself.
         -- Use a boolean to make behavior apply to all languages.
@@ -798,6 +801,8 @@ require('render-markdown').setup({
         },
         -- Inlined with 'image' elements.
         image = '󰥶 ',
+        -- Check custom for 'image' elements.
+        image_custom = true,
         -- Inlined with 'email_autolink' elements.
         email = '󰀓 ',
         -- Fallback icon for 'inline_link' and 'uri_autolink' elements.
@@ -1023,9 +1028,10 @@ require('render-markdown').setup({
         -- | string[] | `cycle(value, context.level)` |
         icons = { '󰲡 ', '󰲣 ', '󰲥 ', '󰲧 ', '󰲩 ', '󰲫 ' },
         -- Determines how icons fill the available space.
-        -- | right   | '#'s are concealed and icon is appended to right side                      |
-        -- | inline  | '#'s are concealed and icon is inlined on left side                        |
-        -- | overlay | icon is left padded with spaces and inserted on left hiding additional '#' |
+        -- | eol     | '#'s are concealed and icon is placed at right most column   |
+        -- | right   | '#'s are concealed and icon is appended to right side        |
+        -- | inline  | '#'s are concealed and icon is inlined on left side          |
+        -- | overlay | icon is left padded with spaces and overlayed hiding all '#' |
         position = 'overlay',
         -- Added to the sign column if enabled.
         -- Output is evaluated by `cycle(value, context.level)`.
@@ -1164,6 +1170,8 @@ require('render-markdown').setup({
         -- Amount of padding to add around the language.
         -- If a float < 1 is provided it is treated as a percentage of available window space.
         language_pad = 0,
+        -- A list of language names for which rendering will be disabled.
+        disable = {},
         -- A list of language names for which background highlighting will be disabled.
         -- Likely because that language has background highlights itself.
         -- Use a boolean to make behavior apply to all languages.
@@ -1590,6 +1598,8 @@ require('render-markdown').setup({
         },
         -- Inlined with 'image' elements.
         image = '󰥶 ',
+        -- Check custom for 'image' elements.
+        image_custom = true,
         -- Inlined with 'email_autolink' elements.
         email = '󰀓 ',
         -- Fallback icon for 'inline_link' and 'uri_autolink' elements.

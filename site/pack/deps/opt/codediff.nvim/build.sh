@@ -86,6 +86,7 @@ src/string_hash_map.c \
 src/utils.c \
 src/print_utils.c \
 src/utf8_utils.c \
+src/compute_moved_lines.c \
 vendor/utf8proc.c"
 
 # Build

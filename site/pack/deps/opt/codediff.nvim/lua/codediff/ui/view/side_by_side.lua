@@ -18,6 +18,7 @@ local render = require("codediff.ui.view.render")
 local view_keymaps = require("codediff.ui.view.keymaps")
 local conflict_window = require("codediff.ui.view.conflict_window")
 local panel = require("codediff.ui.view.panel")
+local welcome_window = require("codediff.ui.view.welcome_window")
 
 local is_virtual_revision = helpers.is_virtual_revision
 local prepare_buffer = helpers.prepare_buffer
@@ -72,6 +73,8 @@ function M.create(session_config, filetype, on_ready)
     pcall(vim.api.nvim_buf_set_name, mod_scratch, "CodeDiff " .. tabpage .. ".2")
     vim.api.nvim_win_set_buf(original_win, orig_scratch)
     vim.api.nvim_win_set_buf(modified_win, mod_scratch)
+    welcome_window.sync(original_win)
+    welcome_window.sync(modified_win)
 
     -- Create placeholder buffer info (will be updated by explorer)
     original_info = { bufnr = orig_scratch }
@@ -107,6 +110,8 @@ function M.create(session_config, filetype, on_ready)
     else
       vim.api.nvim_win_set_buf(modified_win, modified_info.bufnr)
     end
+    welcome_window.sync(original_win)
+    welcome_window.sync(modified_win)
   end
 
   -- Clean up initial buffer
@@ -166,6 +171,15 @@ function M.create(session_config, filetype, on_ready)
       -- Guard: Check if buffers are still valid
       if not vim.api.nvim_buf_is_valid(original_info.bufnr) or not vim.api.nvim_buf_is_valid(modified_info.bufnr) then
         return
+      end
+
+      -- Ensure correct tab context — when called from vim.schedule in a batch
+      -- loop, the current tab may differ. Commands like syncbind operate on the
+      -- current tab, so we must switch to the target tab first.
+      local target_tab = vim.api.nvim_win_get_tabpage(modified_win)
+      local cur_tab = vim.api.nvim_get_current_tabpage()
+      if cur_tab ~= target_tab then
+        vim.api.nvim_set_current_tabpage(target_tab)
       end
 
       -- Always read from buffers (single source of truth)
@@ -653,6 +667,9 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
     end
   end
 
+  welcome_window.sync(original_win)
+  welcome_window.sync(modified_win)
+
   -- Update lifecycle session metadata
   lifecycle.update_paths(tabpage, session_config.original_path, session_config.modified_path)
 
@@ -683,7 +700,9 @@ end
 ---@param opts { keep: "original"|"modified", load_bufnr: number, original_path: string, modified_path: string, original_revision: string?, modified_revision: string? }
 local function show_single_file(tabpage, opts)
   local session = lifecycle.get_session(tabpage)
-  if not session then return end
+  if not session then
+    return
+  end
 
   local orig_win, mod_win = lifecycle.get_windows(tabpage)
   local highlights = require("codediff.ui.highlights")
@@ -718,6 +737,7 @@ local function show_single_file(tabpage, opts)
   -- Load the file into the kept window
   if keep_win and vim.api.nvim_win_is_valid(keep_win) then
     vim.api.nvim_win_set_buf(keep_win, opts.load_bufnr)
+    welcome_window.sync(keep_win)
 
     -- Create a scratch buffer as placeholder for the empty side
     local empty_buf = vim.api.nvim_create_buf(false, true)
@@ -736,6 +756,9 @@ local function show_single_file(tabpage, opts)
   end
 
   layout.arrange(tabpage)
+  if keep_win and vim.api.nvim_win_is_valid(keep_win) then
+    welcome_window.sync_later(keep_win)
+  end
 end
 
 -- Load a real file from disk, return bufnr
@@ -791,6 +814,14 @@ function M.show_deleted_virtual_file(tabpage, git_root, file_path, revision)
     load_bufnr = load_virtual_file(git_root, revision, file_path),
     original_path = file_path,
     original_revision = revision,
+  })
+end
+
+--- Show the welcome page in a single pane (modified side)
+function M.show_welcome(tabpage, load_bufnr)
+  show_single_file(tabpage, {
+    keep = "modified",
+    load_bufnr = load_bufnr,
   })
 end
 

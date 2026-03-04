@@ -388,6 +388,7 @@ M.code = {}
 ---@field language_name boolean
 ---@field language_info boolean
 ---@field language_pad number
+---@field disable string[]
 ---@field disable_background boolean|string[]
 ---@field width render.md.code.Width
 ---@field left_margin number
@@ -468,6 +469,8 @@ M.code.default = {
     -- Amount of padding to add around the language.
     -- If a float < 1 is provided it is treated as a percentage of available window space.
     language_pad = 0,
+    -- A list of language names for which rendering will be disabled.
+    disable = {},
     -- A list of language names for which background highlighting will be disabled.
     -- Likely because that language has background highlights itself.
     -- Use a boolean to make behavior apply to all languages.
@@ -546,6 +549,7 @@ function M.code.schema()
         language_name = { type = 'boolean' },
         language_info = { type = 'boolean' },
         language_pad = { type = 'number' },
+        disable = { list = { type = 'string' } },
         disable_background = {
             union = { { list = { type = 'string' } }, { type = 'boolean' } },
         },
@@ -802,6 +806,7 @@ M.heading.position = {
     overlay = 'overlay',
     inline = 'inline',
     right = 'right',
+    eol = 'eol',
 }
 
 ---@enum render.md.heading.Width
@@ -838,9 +843,10 @@ M.heading.default = {
     -- | string[] | `cycle(value, context.level)` |
     icons = { '󰲡 ', '󰲣 ', '󰲥 ', '󰲧 ', '󰲩 ', '󰲫 ' },
     -- Determines how icons fill the available space.
-    -- | right   | '#'s are concealed and icon is appended to right side                      |
-    -- | inline  | '#'s are concealed and icon is inlined on left side                        |
-    -- | overlay | icon is left padded with spaces and inserted on left hiding additional '#' |
+    -- | eol     | '#'s are concealed and icon is placed at right most column   |
+    -- | right   | '#'s are concealed and icon is appended to right side        |
+    -- | inline  | '#'s are concealed and icon is inlined on left side          |
+    -- | overlay | icon is left padded with spaces and overlayed hiding all '#' |
     position = 'overlay',
     -- Added to the sign column if enabled.
     -- Output is evaluated by `cycle(value, context.level)`.
@@ -1221,6 +1227,7 @@ M.link = {}
 ---@class (exact) render.md.link.Config: render.md.base.Config
 ---@field footnote render.md.link.footnote.Config
 ---@field image string
+---@field image_custom boolean
 ---@field email string
 ---@field hyperlink string
 ---@field highlight string
@@ -1293,6 +1300,8 @@ M.link.default = {
     },
     -- Inlined with 'image' elements.
     image = '󰥶 ',
+    -- Check custom for 'image' elements.
+    image_custom = true,
     -- Inlined with 'email_autolink' elements.
     email = '󰀓 ',
     -- Fallback icon for 'inline_link' and 'uri_autolink' elements.
@@ -1374,6 +1383,7 @@ function M.link.schema()
             },
         },
         image = { type = 'string' },
+        image_custom = { type = 'boolean' },
         email = { type = 'string' },
         hyperlink = { type = 'string' },
         highlight = { type = 'string' },

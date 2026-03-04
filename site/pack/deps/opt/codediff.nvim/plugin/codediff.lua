@@ -45,6 +45,20 @@ local function get_cached_rev_candidates(git_root)
   return candidates
 end
 
+-- Filter a list of flag candidates by prefix match against arg_lead
+local function complete_flags(candidates, arg_lead)
+  local filtered = {}
+  for _, flag in ipairs(candidates) do
+    if flag:find(arg_lead, 1, true) == 1 then
+      table.insert(filtered, flag)
+    end
+  end
+  if #filtered > 0 then
+    return filtered
+  end
+  return nil
+end
+
 -- Register user command with subcommand completion
 local function complete_codediff(arg_lead, cmd_line, _)
   local git = require('codediff.core.git')
@@ -69,22 +83,16 @@ local function complete_codediff(arg_lead, cmd_line, _)
     return vim.fn.getcompletion(arg_lead, "file")
   end
 
-  -- Special handling for history subcommand flags
-  if first_arg == "history" then
-    -- If arg_lead starts with -, complete flags
-    if arg_lead:match("^%-") then
-      local flag_candidates = { "--reverse", "-r", "--base", "-b" }
-      local filtered = {}
-      for _, flag in ipairs(flag_candidates) do
-        if flag:find(arg_lead, 1, true) == 1 then
-          table.insert(filtered, flag)
-        end
-      end
-      if #filtered > 0 then
-        return filtered
-      end
+  -- Flag completion for subcommands
+  if arg_lead:match("^%-") then
+    if first_arg == "history" then
+      local result = complete_flags({ "--reverse", "-r", "--base", "-b", "--inline", "--side-by-side" }, arg_lead)
+      if result then return result end
     end
-    -- Otherwise fall through to default completion (files, revisions)
+
+    -- Layout flags available for all subcommands
+    local result = complete_flags({ "--inline", "--side-by-side" }, arg_lead)
+    if result then return result end
   end
 
   -- For revision arguments, suggest git refs filtered by arg_lead

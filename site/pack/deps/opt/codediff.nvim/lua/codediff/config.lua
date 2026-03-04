@@ -43,6 +43,7 @@ M.defaults = {
     cycle_next_file = true, -- Wrap around when navigating files (]f/[f): true = cycle, false = stop at first/last
     jump_to_first_change = true, -- Auto-scroll to first change when opening a diff: true = jump to first hunk, false = stay at same line
     highlight_priority = 100, -- Priority for line-level diff highlights (increase to override LSP highlights)
+    compute_moves = false, -- Detect moved code blocks (opt-in, may increase diff computation time)
   },
 
   -- Explorer panel configuration
@@ -97,6 +98,7 @@ M.defaults = {
       unstage_hunk = "<leader>hu", -- Unstage the hunk under cursor from git index
       discard_hunk = "<leader>hr", -- Discard the hunk under cursor (working tree only)
       hunk_textobject = "ih", -- Textobject for hunk (vih to select, yih to yank, etc.)
+      align_move = "gm", -- Temporarily align other pane to show paired moved code
       show_help = "g?", -- Show floating window with available keymaps
     },
     explorer = {

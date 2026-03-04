@@ -33,8 +33,11 @@ local function insert_filler_lines(bufnr, after_line_0idx, count)
     return
   end
 
+  local above = false
   if after_line_0idx < 0 then
+    -- Deletion at start of file: place fillers ABOVE line 1
     after_line_0idx = 0
+    above = true
   end
 
   local virt_lines_content = {}
@@ -46,7 +49,7 @@ local function insert_filler_lines(bufnr, after_line_0idx, count)
 
   vim.api.nvim_buf_set_extmark(bufnr, ns_filler, after_line_0idx, 0, {
     virt_lines = virt_lines_content,
-    virt_lines_above = false,
+    virt_lines_above = above,
   })
 end
 
@@ -357,6 +360,16 @@ function M.render_diff(left_bufnr, right_bufnr, original_lines, modified_lines, 
         insert_filler_lines(right_bufnr, filler.after_line - 1, filler.count)
         total_right_fillers = total_right_fillers + filler.count
       end
+    end
+  end
+
+  -- Render moved code indicators (separate module)
+  if lines_diff.moves and #lines_diff.moves > 0 then
+    local ok, move = pcall(require, "codediff.ui.move")
+    if ok and move then
+      move.render_moves(left_bufnr, right_bufnr, lines_diff)
+    else
+      vim.notify_once("[codediff] failed to load codediff.ui.move: " .. tostring(move), vim.log.levels.WARN)
     end
   end
 

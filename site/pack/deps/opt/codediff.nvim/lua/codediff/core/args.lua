@@ -23,7 +23,7 @@ function M.parse_args(args, flag_spec)
       for long_name, spec in pairs(flag_spec) do
         if arg == long_name or (spec.short and arg == spec.short) then
           is_flag = true
-          local flag_key = long_name:gsub("^%-%-", "")
+          local flag_key = long_name:gsub("^%-%-", ""):gsub("%-", "_")
 
           if spec.type == "boolean" then
             flags[flag_key] = true

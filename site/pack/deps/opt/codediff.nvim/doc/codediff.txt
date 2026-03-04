@@ -130,6 +130,29 @@ Set the layout in your config:
   })
 <
 
+                                                      *codediff-moved-code*
+Moved code detection~
+
+CodeDiff can detect blocks of code that moved within a file, similar to
+VSCode's experimental `diffEditor.experimental.showMoves` feature.
+
+Enable in your config:
+>lua
+  require("codediff").setup({
+    diff = { compute_moves = true },
+  })
+<
+
+When enabled:
+- Moved lines get a distinct background highlight (CodeDiffLineMove)
+- Sign column shows box-drawing characters (┌│└) marking the moved block
+- Annotation lines (⇄ moved: L3-8 → L11-16) appear above each moved block
+- Press `gm` on a moved block to temporarily align it with its counterpart
+
+The `gm` keymap disables scrollbind and positions both panes so the moved
+block appears at the same visual row. Moving the cursor outside the block
+or switching windows restores normal scrollbind.
+
 Setup entry point:
 >lua
   require("codediff").setup({
@@ -154,6 +177,7 @@ Setup entry point:
       conflict_result_width_ratio = { 1, 1, 1 },
       jump_to_first_change = true,
       highlight_priority = 100,
+      compute_moves = false,
     },
     explorer = {
       position = "left",
@@ -191,6 +215,7 @@ Setup entry point:
         toggle_stage = "-",
         hunk_textobject = "ih",
         show_help = "g?",
+        align_move = "gm",
       },
       explorer = {
         select = "<CR>",
@@ -230,6 +255,10 @@ CodeDiff defines highlight groups matching VSCode's diff colors:
 - CodeDiffCharInsert - deep/dark green for inserted characters
 - CodeDiffCharDelete - deep/dark red for deleted characters
 - CodeDiffFiller - gray foreground for filler line slashes (///)
+- CodeDiffLineMove - background for moved lines (derived from DiffChange)
+- CodeDiffCharMove - character-level highlight for moved text
+- CodeDiffMoveFrom - sign/annotation color for move source
+- CodeDiffMoveTo - sign/annotation color for move destination
 - CodeDiffHelpSection - section headings in keymap help (links to Statement)
 - CodeDiffHelpKey - key bindings in keymap help (links to Special)
 - CodeDiffHelpSep - separators in keymap help (links to NonText)

@@ -86,14 +86,18 @@ function M.compute_syntax_highlights(lines, filetype)
     -- Handle single-line captures
     if r1 == r2 then
       local line_num = r1 + 1 -- 1-based
-      if not result[line_num] then result[line_num] = {} end
+      if not result[line_num] then
+        result[line_num] = {}
+      end
       table.insert(result[line_num], { start_col = c1 + 1, end_col = c2, hl_group = hl_group })
     else
       -- Multi-line capture: split across lines
       for row = r1, r2 do
         local line_num = row + 1
         local line_text = lines[line_num] or ""
-        if not result[line_num] then result[line_num] = {} end
+        if not result[line_num] then
+          result[line_num] = {}
+        end
 
         local sc = (row == r1) and (c1 + 1) or 1
         local ec = (row == r2) and c2 or #line_text
@@ -106,7 +110,9 @@ function M.compute_syntax_highlights(lines, filetype)
 
   -- Sort each line's highlights by start_col
   for _, line_hls in pairs(result) do
-    table.sort(line_hls, function(a, b) return a.start_col < b.start_col end)
+    table.sort(line_hls, function(a, b)
+      return a.start_col < b.start_col
+    end)
   end
 
   return result
@@ -136,7 +142,8 @@ end
 -- char_ranges: sorted list of {start_col, end_col} (1-based, byte positions)
 -- syntax_hls: sorted list of {start_col, end_col, hl_group} for this line (optional)
 -- Returns: array of {text, hl_group} chunks suitable for virt_lines
-local function build_highlighted_virt_line(line_text, char_ranges, syntax_hls)
+local function build_highlighted_virt_line(line_text, char_ranges, syntax_hls, base_hl)
+  base_hl = base_hl or "CodeDiffLineDelete"
   -- Build position-to-syntax-hl map for quick lookup
   local syntax_at = {}
   if syntax_hls then
@@ -162,8 +169,8 @@ local function build_highlighted_virt_line(line_text, char_ranges, syntax_hls)
   -- with the same effective highlight
   if #line_text == 0 then
     return {
-      { "", "CodeDiffLineDelete" },
-      { string.rep(" ", 300), "CodeDiffLineDelete" },
+      { "", base_hl },
+      { string.rep(" ", 300), base_hl },
     }
   end
 
@@ -172,7 +179,7 @@ local function build_highlighted_virt_line(line_text, char_ranges, syntax_hls)
   local prev_hl = nil
 
   local function get_hl_at(col)
-    local diff_hl = char_delete_at[col] and "CodeDiffCharDelete" or "CodeDiffLineDelete"
+    local diff_hl = char_delete_at[col] and "CodeDiffCharDelete" or base_hl
     local syn_hl = syntax_at[col]
     if syn_hl then
       return get_merged_hl(syn_hl, diff_hl)
@@ -197,7 +204,7 @@ local function build_highlighted_virt_line(line_text, char_ranges, syntax_hls)
   end
 
   -- Pad for full-width background color (simulates hl_eol for virt_lines)
-  table.insert(chunks, { string.rep(" ", 300), "CodeDiffLineDelete" })
+  table.insert(chunks, { string.rep(" ", 300), base_hl })
 
   return chunks
 end

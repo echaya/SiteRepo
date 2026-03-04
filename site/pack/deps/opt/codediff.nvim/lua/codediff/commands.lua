@@ -26,8 +26,9 @@ end
 --- Handles diffing the current buffer against a given git revision.
 -- @param revision string: The git revision (e.g., "HEAD", commit hash, branch name) to compare the current file against.
 -- @param revision2 string?: Optional second revision. If provided, compares revision vs revision2.
+-- @param global_opts table?: Global options (e.g., { layout = "inline" })
 -- This function chains async git operations to get git root, resolve revision to hash, and get file content.
-local function handle_git_diff(revision, revision2)
+local function handle_git_diff(revision, revision2, global_opts)
   local current_file = vim.api.nvim_buf_get_name(0)
 
   if current_file == "" then
@@ -83,6 +84,7 @@ local function handle_git_diff(revision, revision2)
                   modified_path = modified_path,
                   original_revision = commit_hash,
                   modified_revision = commit_hash2,
+                  layout = global_opts.layout,
                 }
                 view.create(session_config, filetype)
               end)
@@ -99,6 +101,7 @@ local function handle_git_diff(revision, revision2)
               modified_path = relative_path,
               original_revision = commit_hash,
               modified_revision = "WORKING",
+              layout = global_opts.layout,
             }
             view.create(session_config, filetype)
           end)
@@ -108,9 +111,14 @@ local function handle_git_diff(revision, revision2)
   end)
 end
 
-local function handle_file_diff(file_a, file_b)
+local function handle_file_diff(file_a, file_b, global_opts)
   -- Determine filetype from first file
   local filetype = vim.filetype.match({ filename = file_a }) or ""
+
+  -- Snapshot state before creating diff tab (for argv cleanup below)
+  local prev_tab = vim.api.nvim_get_current_tabpage()
+  local prev_tab_bufs = vim.api.nvim_tabpage_list_wins(prev_tab)
+  local is_single_win_tab = #prev_tab_bufs == 1
 
   -- Create diff view (no pre-reading needed, :edit will load content)
   ---@type SessionConfig
@@ -121,11 +129,37 @@ local function handle_file_diff(file_a, file_b)
     modified_path = file_b,
     original_revision = nil,
     modified_revision = nil,
+    layout = global_opts.layout,
   }
   view.create(session_config, filetype)
+
+  -- Clean up leftover tab from command-line args (git difftool scenario).
+  -- When invoked as `nvim "$LOCAL" "$REMOTE" +"CodeDiff file ..."`, neovim
+  -- creates a tab with the first argv file. Now that the diff tab exists,
+  -- that original tab is redundant. Close it remotely (without switching to
+  -- it) and defer to avoid interfering with startup autocmds / persistence.
+  -- Guard: only trigger when argv files match the diff files (so running
+  -- `:CodeDiff file a b` from an existing session won't close unrelated tabs).
+  local argc = vim.fn.argc()
+  if argc == 2 and is_single_win_tab then
+    local argv0 = vim.fn.fnamemodify(vim.fn.argv(0), ":p")
+    local argv1 = vim.fn.fnamemodify(vim.fn.argv(1), ":p")
+    local abs_a = vim.fn.fnamemodify(file_a, ":p")
+    local abs_b = vim.fn.fnamemodify(file_b, ":p")
+    local argv_matches = (argv0 == abs_a and argv1 == abs_b) or (argv0 == abs_b and argv1 == abs_a)
+    if argv_matches then
+      vim.schedule(function()
+        if vim.api.nvim_tabpage_is_valid(prev_tab) and prev_tab ~= vim.api.nvim_get_current_tabpage() then
+          local tab_nr = vim.api.nvim_tabpage_get_number(prev_tab)
+          vim.cmd(tab_nr .. "tabclose")
+        end
+        pcall(vim.cmd, "%argdelete")
+      end)
+    end
+  end
 end
 
-local function handle_dir_diff(dir1, dir2)
+local function handle_dir_diff(dir1, dir2, global_opts)
   local dir_mod = require("codediff.core.dir")
 
   -- Expand ~ and environment variables in paths
@@ -157,6 +191,7 @@ local function handle_dir_diff(dir1, dir2)
     modified_path = diff.root2,
     original_revision = nil,
     modified_revision = nil,
+    layout = global_opts.layout,
     explorer_data = {
       status_result = status_result,
     },
@@ -169,7 +204,7 @@ end
 -- range: git range (e.g., "origin/main..HEAD", "HEAD~10")
 -- file_path: optional file path to filter history
 -- line_range: optional {start, end} for line-range history (git log -L)
-local function handle_history(range, file_path, flags, line_range)
+local function handle_history(range, file_path, flags, line_range, global_opts)
   flags = flags or {} -- Default to empty table for backward compat
   local current_buf = vim.api.nvim_get_current_buf()
   local current_file = vim.api.nvim_buf_get_name(current_buf)
@@ -234,6 +269,7 @@ local function handle_history(range, file_path, flags, line_range)
           modified_path = "",
           original_revision = nil,
           modified_revision = nil,
+          layout = global_opts.layout,
           history_data = {
             commits = commits,
             range = range,
@@ -279,7 +315,7 @@ local function handle_history(range, file_path, flags, line_range)
   end
 end
 
-local function handle_explorer(revision, revision2)
+local function handle_explorer(revision, revision2, global_opts)
   -- Try buffer path first (consistent with original behavior), fallback to cwd
   local current_buf = vim.api.nvim_get_current_buf()
   local current_file = vim.api.nvim_buf_get_name(current_buf)
@@ -316,6 +352,7 @@ local function handle_explorer(revision, revision2)
           modified_path = "",
           original_revision = original_rev,
           modified_revision = modified_rev,
+          layout = global_opts.layout,
           explorer_data = {
             status_result = status_result,
             focus_file = focus_file, -- Focus on current file if changed
@@ -410,7 +447,7 @@ local function handle_explorer(revision, revision2)
 end
 
 -- Wrapper for merge-base explorer mode: computes merge-base first, then opens explorer
-local function handle_explorer_merge_base(base_rev, target_rev)
+local function handle_explorer_merge_base(base_rev, target_rev, global_opts)
   local current_buf = vim.api.nvim_get_current_buf()
   local current_file = vim.api.nvim_buf_get_name(current_buf)
   local cwd = vim.fn.getcwd()
@@ -438,9 +475,9 @@ local function handle_explorer_merge_base(base_rev, target_rev)
       -- Schedule the explorer call to run in main context (handle_explorer uses nvim_get_current_buf)
       vim.schedule(function()
         if target_rev then
-          handle_explorer(merge_base_hash, target_rev)
+          handle_explorer(merge_base_hash, target_rev, global_opts)
         else
-          handle_explorer(merge_base_hash) -- vs working tree
+          handle_explorer(merge_base_hash, nil, global_opts)
         end
       end)
     end)
@@ -448,7 +485,7 @@ local function handle_explorer_merge_base(base_rev, target_rev)
 end
 
 -- Wrapper for merge-base single-file diff: computes merge-base first, then opens diff
-local function handle_git_diff_merge_base(base_rev, target_rev)
+local function handle_git_diff_merge_base(base_rev, target_rev, global_opts)
   local current_file = vim.api.nvim_buf_get_name(0)
   if current_file == "" then
     vim.notify("Current buffer is not a file", vim.log.levels.ERROR)
@@ -474,7 +511,7 @@ local function handle_git_diff_merge_base(base_rev, target_rev)
 
       -- Schedule the diff call to run in main context (handle_git_diff uses nvim_buf_get_name)
       vim.schedule(function()
-        handle_git_diff(merge_base_hash, target_rev)
+        handle_git_diff(merge_base_hash, target_rev, global_opts)
       end)
     end)
   end)
@@ -574,15 +611,31 @@ function M.vscode_diff(opts)
     if not lifecycle.confirm_close_with_unsaved(current_tab) then
       return -- User cancelled
     end
-    vim.cmd("tabclose")
+    if #vim.api.nvim_list_tabpages() == 1 then
+      lifecycle.cleanup_for_quit(current_tab)
+      vim.cmd("qall")
+    else
+      vim.cmd("tabclose")
+    end
     return
   end
 
-  local args = opts.fargs
+  -- Pre-parse global flags; strip them so subcommand dispatch sees clean args
+  local global_opts = {}
+  local args = {}
+  for _, arg in ipairs(opts.fargs) do
+    if arg == "--inline" then
+      global_opts.layout = "inline"
+    elseif arg == "--side-by-side" then
+      global_opts.layout = "side-by-side"
+    else
+      table.insert(args, arg)
+    end
+  end
 
   if #args == 0 then
     -- :CodeDiff without arguments opens explorer mode
-    handle_explorer()
+    handle_explorer(nil, nil, global_opts)
     return
   end
 
@@ -591,7 +644,7 @@ function M.vscode_diff(opts)
     local expanded1 = vim.fn.expand(args[1])
     local expanded2 = vim.fn.expand(args[2])
     if vim.fn.isdirectory(expanded1) == 1 and vim.fn.isdirectory(expanded2) == 1 then
-      handle_dir_diff(expanded1, expanded2)
+      handle_dir_diff(expanded1, expanded2, global_opts)
       return
     end
   end
@@ -610,10 +663,10 @@ function M.vscode_diff(opts)
       -- Check for triple-dot syntax: :CodeDiff file main...
       local base, target = parse_triple_dot(args[2])
       if base then
-        handle_git_diff_merge_base(base, target)
+        handle_git_diff_merge_base(base, target, global_opts)
       else
         -- :CodeDiff file HEAD
-        handle_git_diff(args[2])
+        handle_git_diff(args[2], nil, global_opts)
       end
     elseif #args == 3 then
       -- Check if arguments are files or revisions
@@ -623,10 +676,10 @@ function M.vscode_diff(opts)
       -- If both are readable files, treat as file diff
       if vim.fn.filereadable(arg1) == 1 and vim.fn.filereadable(arg2) == 1 then
         -- :CodeDiff file file_a.txt file_b.txt
-        handle_file_diff(arg1, arg2)
+        handle_file_diff(arg1, arg2, global_opts)
       else
         -- Assume revisions: :CodeDiff file main HEAD
-        handle_git_diff(arg1, arg2)
+        handle_git_diff(arg1, arg2, global_opts)
       end
     else
       vim.notify("Usage: :CodeDiff file <revision> [revision2] OR :CodeDiff file <file_a> <file_b>", vim.log.levels.ERROR)
@@ -637,7 +690,7 @@ function M.vscode_diff(opts)
       vim.notify("Usage: :CodeDiff dir <dir1> <dir2>", vim.log.levels.ERROR)
       return
     end
-    handle_dir_diff(args[2], args[3])
+    handle_dir_diff(args[2], args[3], global_opts)
   elseif subcommand == "history" then
     -- :CodeDiff history [range] [file] [--reverse|-r]
     -- :'<,'>CodeDiff history                  - line-range history for selection
@@ -715,7 +768,7 @@ function M.vscode_diff(opts)
       end
     end
 
-    handle_history(range, file_path, flags, line_range)
+    handle_history(range, file_path, flags, line_range, global_opts)
   elseif subcommand == "install" or subcommand == "install!" then
     -- :CodeDiff install or :CodeDiff install!
     -- Handle both :CodeDiff! install and :CodeDiff install!
@@ -738,11 +791,11 @@ function M.vscode_diff(opts)
     -- Check for triple-dot syntax: :CodeDiff main...
     local base, target = parse_triple_dot(subcommand)
     if base then
-      handle_explorer_merge_base(base, target)
+      handle_explorer_merge_base(base, target, global_opts)
     elseif #args == 2 then
-      handle_explorer(args[1], args[2])
+      handle_explorer(args[1], args[2], global_opts)
     else
-      handle_explorer(subcommand)
+      handle_explorer(subcommand, nil, global_opts)
     end
   end
 end
