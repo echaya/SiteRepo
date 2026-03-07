@@ -44,9 +44,10 @@ function M.arrange(tabpage)
 
   local orig_valid = original_win and vim.api.nvim_win_is_valid(original_win)
   local mod_valid = modified_win and vim.api.nvim_win_is_valid(modified_win)
+  local is_single_diff_window = session.layout == "inline" or original_win == modified_win
 
   -- Single-pane mode: one diff window takes all available space
-  if session.single_pane or (orig_valid ~= mod_valid) then
+  if session.single_pane or is_single_diff_window or (orig_valid ~= mod_valid) then
     local sole_win = orig_valid and original_win or (mod_valid and modified_win or nil)
     if sole_win then
       if panel_visible then

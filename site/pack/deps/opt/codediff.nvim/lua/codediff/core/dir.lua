@@ -38,8 +38,8 @@ local function scan_dir(root)
         local stat = uv.fs_stat(abs) or {}
         files[rel] = {
           path = rel,
+          abs = abs,
           size = stat.size,
-          mtime = stat.mtime and stat.mtime.sec or nil,
         }
       end
     end
@@ -56,16 +56,52 @@ local function is_modified(a, b)
   if a.size ~= b.size then
     return true
   end
-  if a.mtime ~= b.mtime then
+
+  local fd_a = uv.fs_open(a.abs, "r", 0)
+  if not fd_a then
     return true
   end
+
+  local fd_b = uv.fs_open(b.abs, "r", 0)
+  if not fd_b then
+    uv.fs_close(fd_a)
+    return true
+  end
+
+  local offset = 0
+  local chunk_size = 65536
+
+  while true do
+    local chunk_a = uv.fs_read(fd_a, chunk_size, offset)
+    local chunk_b = uv.fs_read(fd_b, chunk_size, offset)
+
+    if chunk_a == nil or chunk_b == nil then
+      uv.fs_close(fd_a)
+      uv.fs_close(fd_b)
+      return true
+    end
+
+    if chunk_a ~= chunk_b then
+      uv.fs_close(fd_a)
+      uv.fs_close(fd_b)
+      return true
+    end
+
+    if #chunk_a == 0 then
+      break
+    end
+
+    offset = offset + #chunk_a
+  end
+
+  uv.fs_close(fd_a)
+  uv.fs_close(fd_b)
   return false
 end
 
 -- Compare two directories and return a git-like status_result.
 -- dir1 = "original", dir2 = "modified"
--- NOTE: Modification detection is metadata-based (size and mtime only),
---       not a content hash; this is a fast, best-effort diff.
+-- NOTE: Modification detection compares file content with readblob.
 function M.diff_directories(dir1, dir2)
   local root1 = normalize_dir(dir1)
   local root2 = normalize_dir(dir2)

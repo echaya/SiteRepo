@@ -178,6 +178,7 @@ function M.create(commits, git_root, tabpage, width, opts)
     on_file_select = nil,
     current_commit = nil,
     current_file = nil,
+    current_selection = nil,
     is_hidden = false,
     is_single_file_mode = is_single_file_mode,
   }
@@ -266,7 +267,8 @@ function M.create(commits, git_root, tabpage, width, opts)
   end
 
   -- File selection callback
-  local function on_file_select(file_data)
+  local function on_file_select(file_data, opts)
+    opts = opts or {}
     local view = require("codediff.ui.view")
     local lifecycle = require("codediff.ui.lifecycle")
 
@@ -287,7 +289,7 @@ function M.create(commits, git_root, tabpage, width, opts)
     -- Check if already displaying same file
     local target_hash = base_revision or (commit_hash .. "^")
     local session = lifecycle.get_session(tabpage)
-    if session and session.original_revision == target_hash and session.modified_revision == commit_hash then
+    if not opts.force and session and session.original_revision == target_hash and session.modified_revision == commit_hash then
       if session.modified_path == file_path or session.original_path == file_path then
         return
       end
@@ -303,7 +305,12 @@ function M.create(commits, git_root, tabpage, width, opts)
         if is_inline then
           local rev = file_status == "A" and commit_hash or target_hash
           local path = file_status == "D" and (old_path or file_path) or file_path
-          require("codediff.ui.view.inline_view").show_single_file(tabpage, path, { revision = rev, git_root = git_root, rel_path = path })
+          require("codediff.ui.view.inline_view").show_single_file(tabpage, path, {
+            revision = rev,
+            git_root = git_root,
+            rel_path = path,
+            side = file_status == "D" and "original" or "modified",
+          })
         else
           if file_status == "A" then
             require("codediff.ui.view.side_by_side").show_added_virtual_file(tabpage, git_root, file_path, commit_hash)
@@ -328,13 +335,14 @@ function M.create(commits, git_root, tabpage, width, opts)
     end)
   end
 
-  history.on_file_select = function(file_data)
+  history.on_file_select = function(file_data, opts)
     history.current_commit = file_data.commit_hash
     history.current_file = file_data.path
+    history.current_selection = vim.deepcopy(file_data)
     selected_commit = file_data.commit_hash
     selected_file = file_data.path
     tree:render()
-    on_file_select(file_data)
+    on_file_select(file_data, opts)
   end
 
   -- Store load_commit_files for refresh to re-expand commits
@@ -417,6 +425,19 @@ function M.create(commits, git_root, tabpage, width, opts)
   })
 
   return history
+end
+
+function M.rerender_current(history)
+  if not history then
+    return false
+  end
+
+  if history.current_selection then
+    history.on_file_select(vim.deepcopy(history.current_selection), { force = true })
+    return true
+  end
+
+  return false
 end
 
 -- Get all file nodes from tree (for navigation)

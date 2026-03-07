@@ -31,6 +31,13 @@ function M.get_mode(tabpage)
   return sess and sess.mode or nil
 end
 
+--- Get current session layout
+function M.get_layout(tabpage)
+  local active_diffs = get_active_diffs()
+  local sess = active_diffs[tabpage]
+  return sess and sess.layout or nil
+end
+
 --- Get git context
 function M.get_git_context(tabpage)
   local active_diffs = get_active_diffs()
@@ -192,6 +199,18 @@ function M.update_suspended(tabpage, suspended)
   end
 
   sess.suspended = suspended
+  return true
+end
+
+--- Update session layout
+function M.update_layout(tabpage, layout)
+  local active_diffs = get_active_diffs()
+  local sess = active_diffs[tabpage]
+  if not sess then
+    return false
+  end
+
+  sess.layout = layout
   return true
 end
 

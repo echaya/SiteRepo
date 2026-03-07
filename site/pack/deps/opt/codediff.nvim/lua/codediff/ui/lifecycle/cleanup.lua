@@ -92,11 +92,11 @@ local function cleanup_diff(tabpage)
   end
 
   -- Clear window variables if windows still exist
-  if vim.api.nvim_win_is_valid(diff.original_win) then
+  if diff.original_win and vim.api.nvim_win_is_valid(diff.original_win) then
     welcome_window.apply_normal(diff.original_win)
     vim.w[diff.original_win].codediff_restore = nil
   end
-  if vim.api.nvim_win_is_valid(diff.modified_win) then
+  if diff.modified_win and vim.api.nvim_win_is_valid(diff.modified_win) then
     welcome_window.apply_normal(diff.modified_win)
     vim.w[diff.modified_win].codediff_restore = nil
   end

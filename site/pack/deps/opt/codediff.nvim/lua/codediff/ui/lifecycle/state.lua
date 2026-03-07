@@ -188,7 +188,14 @@ local function resume_diff(tabpage)
     end
 
     -- Re-sync scrollbind ONLY if diff was recomputed and not inline mode
-    if diff_was_recomputed and diff.layout ~= "inline" and vim.api.nvim_win_is_valid(diff.original_win) and vim.api.nvim_win_is_valid(diff.modified_win) then
+    if
+      diff_was_recomputed
+      and diff.layout ~= "inline"
+      and diff.original_win
+      and diff.modified_win
+      and vim.api.nvim_win_is_valid(diff.original_win)
+      and vim.api.nvim_win_is_valid(diff.modified_win)
+    then
       local current_win = vim.api.nvim_get_current_win()
       local result_win = diff.result_win and vim.api.nvim_win_is_valid(diff.result_win) and diff.result_win or nil
 

@@ -153,6 +153,23 @@ The `gm` keymap disables scrollbind and positions both panes so the moved
 block appears at the same visual row. Moving the cursor outside the block
 or switching windows restores normal scrollbind.
 
+TOGGLING LAYOUT                                   *codediff-toggle-layout*
+
+Press `t` in a diff view to toggle between side-by-side and inline layout.
+The current file is re-rendered in the new layout automatically. This works
+in all modes (explorer, history, standalone).
+
+The toggle keymap can be customized:
+>lua
+  require("codediff").setup({
+    keymaps = {
+      view = {
+        toggle_layout = "t",  -- or false to disable
+      },
+    },
+  })
+<
+
 Setup entry point:
 >lua
   require("codediff").setup({
@@ -216,6 +233,7 @@ Setup entry point:
         hunk_textobject = "ih",
         show_help = "g?",
         align_move = "gm",
+        toggle_layout = "t",
       },
       explorer = {
         select = "<CR>",
@@ -227,10 +245,26 @@ Setup entry point:
         restore = "X",
         toggle_changes = "gu",
         toggle_staged = "gs",
+        fold_open = "zo",
+        fold_open_recursive = "zO",
+        fold_close = "zc",
+        fold_close_recursive = "zC",
+        fold_toggle = "za",
+        fold_toggle_recursive = "zA",
+        fold_open_all = "zR",
+        fold_close_all = "zM",
       },
       history = {
         select = "<CR>",
         toggle_view_mode = "i",
+        fold_open = "zo",
+        fold_open_recursive = "zO",
+        fold_close = "zc",
+        fold_close_recursive = "zC",
+        fold_toggle = "za",
+        fold_toggle_recursive = "zA",
+        fold_open_all = "zR",
+        fold_close_all = "zM",
       },
       conflict = {
         accept_incoming = "<leader>ct",

@@ -41,6 +41,15 @@ end
 
 -- Node methods
 
+local function set_expanded_recursively(node, expanded)
+  if node:is_foldable() then
+    node._expanded = expanded
+  end
+  for _, child in ipairs(node._children) do
+    set_expanded_recursively(child, expanded)
+  end
+end
+
 function Node:get_id()
   return self._id
 end
@@ -49,12 +58,24 @@ function Node:is_expanded()
   return self._expanded
 end
 
+function Node:is_foldable()
+  return self.data and (self.data.type == "group" or self.data.type == "directory") or false
+end
+
 function Node:expand()
   self._expanded = true
 end
 
+function Node:expand_recursively()
+  set_expanded_recursively(self, true)
+end
+
 function Node:collapse()
   self._expanded = false
+end
+
+function Node:collapse_recursively()
+  set_expanded_recursively(self, false)
 end
 
 function Node:has_children()

@@ -9,6 +9,8 @@ local actions = require("codediff.ui.explorer.actions")
 
 -- Delegate to render module
 M.create = render.create
+M.rerender_current = render.rerender_current
+M.show_welcome_page = render.show_welcome_page
 
 -- Delegate to refresh module
 M.setup_auto_refresh = refresh.setup_auto_refresh

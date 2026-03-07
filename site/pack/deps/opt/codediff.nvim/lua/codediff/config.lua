@@ -99,6 +99,7 @@ M.defaults = {
       discard_hunk = "<leader>hr", -- Discard the hunk under cursor (working tree only)
       hunk_textobject = "ih", -- Textobject for hunk (vih to select, yih to yank, etc.)
       align_move = "gm", -- Temporarily align other pane to show paired moved code
+      toggle_layout = "t", -- Toggle diff layout for the current codediff session
       show_help = "g?", -- Show floating window with available keymaps
     },
     explorer = {
@@ -111,11 +112,29 @@ M.defaults = {
       restore = "X", -- Discard changes to file (restore to index/HEAD)
       toggle_changes = "gu", -- Toggle Changes (unstaged) group visibility
       toggle_staged = "gs", -- Toggle Staged Changes group visibility
+      -- Fold keymaps (Vim-style)
+      fold_open = "zo", -- Open fold (expand current node)
+      fold_open_recursive = "zO", -- Open fold recursively (expand current node and all descendants)
+      fold_close = "zc", -- Close fold (collapse current node)
+      fold_close_recursive = "zC", -- Close fold recursively (collapse current node and all descendants)
+      fold_toggle = "za", -- Toggle fold (expand/collapse current node)
+      fold_toggle_recursive = "zA", -- Toggle fold recursively
+      fold_open_all = "zR", -- Open all folds in tree
+      fold_close_all = "zM", -- Close all folds in tree
     },
     history = {
       select = "<CR>", -- Select commit/file or toggle expand
       toggle_view_mode = "i", -- Toggle between 'list' and 'tree' views
       refresh = "R", -- Refresh history (re-fetch commits)
+      -- Fold keymaps (Vim-style, apply to directory nodes only)
+      fold_open = "zo",
+      fold_open_recursive = "zO",
+      fold_close = "zc",
+      fold_close_recursive = "zC",
+      fold_toggle = "za",
+      fold_toggle_recursive = "zA",
+      fold_open_all = "zR",
+      fold_close_all = "zM",
     },
     -- Conflict mode keymaps (only active in merge conflict views)
     conflict = {

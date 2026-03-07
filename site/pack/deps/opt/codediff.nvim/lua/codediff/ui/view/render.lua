@@ -231,17 +231,11 @@ function M.compute_and_render_conflict(original_buf, modified_buf, base_lines, o
   }
 end
 
--- Common logic: Setup auto-refresh for real file buffers
+-- Common logic: Setup auto-refresh for all diff buffers (real and virtual)
 function M.setup_auto_refresh(original_buf, modified_buf, original_is_virtual, modified_is_virtual)
   local auto_refresh = require("codediff.ui.auto_refresh")
-
-  if not original_is_virtual then
-    auto_refresh.enable(original_buf)
-  end
-
-  if not modified_is_virtual then
-    auto_refresh.enable(modified_buf)
-  end
+  auto_refresh.enable(original_buf)
+  auto_refresh.enable(modified_buf)
 end
 
 return M

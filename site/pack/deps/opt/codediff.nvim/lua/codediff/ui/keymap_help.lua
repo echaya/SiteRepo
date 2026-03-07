@@ -80,6 +80,14 @@ local function build_sections(keymaps, is_explorer, is_history, is_conflict)
         { ekm.restore, "Discard changes to file" },
         { ekm.toggle_changes, "Toggle Changes visibility" },
         { ekm.toggle_staged, "Toggle Staged visibility" },
+        { ekm.fold_open, "Open fold" },
+        { ekm.fold_open_recursive, "Open fold recursively" },
+        { ekm.fold_close, "Close fold" },
+        { ekm.fold_close_recursive, "Close fold recursively" },
+        { ekm.fold_toggle, "Toggle fold" },
+        { ekm.fold_toggle_recursive, "Toggle fold recursively" },
+        { ekm.fold_open_all, "Open all folds" },
+        { ekm.fold_close_all, "Close all folds" },
       })
     )
   end
@@ -93,6 +101,14 @@ local function build_sections(keymaps, is_explorer, is_history, is_conflict)
         { hkm.select, "Select commit/file or toggle" },
         { hkm.toggle_view_mode, "Toggle list/tree view" },
         { hkm.refresh, "Refresh history" },
+        { hkm.fold_open, "Open fold" },
+        { hkm.fold_open_recursive, "Open fold recursively" },
+        { hkm.fold_close, "Close fold" },
+        { hkm.fold_close_recursive, "Close fold recursively" },
+        { hkm.fold_toggle, "Toggle fold" },
+        { hkm.fold_toggle_recursive, "Toggle fold recursively" },
+        { hkm.fold_open_all, "Open all folds" },
+        { hkm.fold_close_all, "Close all folds" },
       })
     )
   end

@@ -2,6 +2,7 @@
 local config = require("codediff.config")
 local actions_module = require("codediff.ui.explorer.actions")
 local refresh_module = require("codediff.ui.explorer.refresh")
+local tree_utils = require("codediff.ui.lib.tree_utils")
 
 local M = {}
 
@@ -170,6 +171,13 @@ function M.setup(explorer)
       actions_module.toggle_group(explorer, "staged")
     end, vim.tbl_extend("force", map_options, { buffer = split.bufnr, desc = "Toggle Staged Changes visibility" }))
   end
+
+  -- Fold keymaps (Vim-style: zo/zO/zc/zC/za/zA/zR/zM)
+  tree_utils.setup_fold_keymaps({
+    tree = tree,
+    keymaps = explorer_keymaps,
+    bufnr = split.bufnr,
+  })
 
   -- Note: next_file/prev_file keymaps are set via view/keymaps.lua:setup_all_keymaps()
   -- which uses set_tab_keymap to set them on all buffers including explorer

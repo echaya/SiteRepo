@@ -9,6 +9,17 @@ function M.is_virtual_revision(revision)
   return revision ~= nil and revision ~= "WORKING"
 end
 
+-- Exact buffer name lookup (vim.fn.bufnr uses pattern matching which
+-- causes prefix collisions, e.g. "Makefile" matching "Makefile.win")
+local function bufnr_exact(name)
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_get_name(buf) == name then
+      return buf
+    end
+  end
+  return -1
+end
+
 -- Prepare buffer information for loading
 -- Returns: { bufnr = number?, target = string?, needs_edit = boolean }
 -- - If buffer already exists: { bufnr = 123, target = nil, needs_edit = false }
@@ -17,8 +28,8 @@ function M.prepare_buffer(is_virtual, git_root, revision, path)
   if is_virtual then
     -- Virtual file: generate URL
     local virtual_url = virtual_file.create_url(git_root, revision, path)
-    -- Check if buffer already exists
-    local existing_buf = vim.fn.bufnr(virtual_url)
+    -- Check if buffer already exists (exact match to avoid prefix collisions)
+    local existing_buf = bufnr_exact(virtual_url)
 
     -- For :0 (staged index), always force reload because index can change
     -- when user runs git add/reset. For commits (immutable), we can cache.
@@ -41,8 +52,8 @@ function M.prepare_buffer(is_virtual, git_root, revision, path)
       }
     end
   else
-    -- Real file: check if already loaded
-    local existing_buf = vim.fn.bufnr(path)
+    -- Real file: use exact match for buffer lookup
+    local existing_buf = bufnr_exact(path)
     if existing_buf ~= -1 then
       -- Buffer already exists, reuse it
       return {

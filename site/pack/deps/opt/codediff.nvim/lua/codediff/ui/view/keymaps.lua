@@ -70,7 +70,7 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
       return nil, nil
     end
     local diff_result = session.stored_diff_result
-    if #diff_result.changes == 0 then
+    if not diff_result.changes or #diff_result.changes == 0 then
       return nil, nil
     end
 
@@ -404,6 +404,12 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
       return
     end
 
+    -- Only allow staging from unstaged views (working tree changes)
+    if session.modified_revision ~= nil then
+      vim.notify("Stage only works on unstaged changes", vim.log.levels.WARN)
+      return
+    end
+
     local hunk, hunk_idx = find_hunk_at_cursor()
     if not hunk then
       vim.notify("No hunk at cursor position", vim.log.levels.WARN)
@@ -417,15 +423,17 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
       return
     end
 
+    local stage_orig_buf, stage_mod_buf = lifecycle.get_buffers(tabpage)
+    if not stage_orig_buf or not stage_mod_buf or not vim.api.nvim_buf_is_valid(stage_orig_buf) or not vim.api.nvim_buf_is_valid(stage_mod_buf) then
+      vim.notify("Diff buffers are no longer available", vim.log.levels.WARN)
+      return
+    end
+
     -- Read lines from both buffers for this hunk
-    local orig_lines = vim.api.nvim_buf_get_lines(original_bufnr, hunk.original.start_line - 1, hunk.original.end_line - 1, false)
-    local mod_lines = vim.api.nvim_buf_get_lines(modified_bufnr, hunk.modified.start_line - 1, hunk.modified.end_line - 1, false)
+    local orig_lines = vim.api.nvim_buf_get_lines(stage_orig_buf, hunk.original.start_line - 1, hunk.original.end_line - 1, false)
+    local mod_lines = vim.api.nvim_buf_get_lines(stage_mod_buf, hunk.modified.start_line - 1, hunk.modified.end_line - 1, false)
 
     local patch = build_hunk_patch(file_path, orig_lines, mod_lines, hunk.original.start_line, hunk.modified.start_line)
-
-    -- Capture hunk count before async call (stored_diff_result may change)
-    local total_hunks = session.stored_diff_result and #session.stored_diff_result.changes or 0
-    local is_unstaged_view = session.modified_revision == nil
 
     local git = require("codediff.core.git")
     git.apply_patch(session.git_root, patch, false, function(err)
@@ -433,48 +441,7 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
         vim.notify("Failed to stage hunk: " .. err, vim.log.levels.ERROR)
         return
       end
-
-      -- Refresh explorer to reflect staging change
-      local explorer_obj = lifecycle.get_explorer(tabpage)
-      if explorer_obj then
-        local explorer = require("codediff.ui.explorer")
-        explorer.refresh(explorer_obj)
-      end
-
-      if total_hunks == 1 and is_unstaged_view and explorer_obj and explorer_obj.on_file_select then
-        -- Last unstaged hunk staged: switch to staged view
-        explorer_obj.on_file_select({
-          path = file_path,
-          group = "staged",
-          status = "M",
-        })
-        vim.notify("All hunks staged — switched to staged view", vim.log.levels.INFO)
-      else
-        vim.notify(string.format("Staged hunk %d", hunk_idx), vim.log.levels.INFO)
-
-        -- Refresh diff view: reload virtual buffers and recompute diff
-        -- For unstaged views where original was HEAD, switch to :0 (index)
-        -- so the staged hunk disappears from the diff (matches VS Code behavior)
-        local view = require("codediff.ui.view")
-        local refresh_config = {
-          mode = session.mode,
-          git_root = session.git_root,
-          original_path = session.original_path,
-          modified_path = session.modified_path,
-          original_revision = session.original_revision,
-          modified_revision = session.modified_revision,
-        }
-        if is_unstaged_view and session.original_revision ~= ":0" then
-          refresh_config.original_revision = ":0"
-        end
-        -- Save current window so view.update() doesn't move cursor
-        -- (creating a new virtual buffer uses :edit! which switches window)
-        local current_win = vim.api.nvim_get_current_win()
-        view.update(tabpage, refresh_config, false)
-        if vim.api.nvim_win_is_valid(current_win) then
-          vim.api.nvim_set_current_win(current_win)
-        end
-      end
+      vim.notify(string.format("Staged hunk %d", hunk_idx), vim.log.levels.INFO)
     end)
   end
 
@@ -483,6 +450,12 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     local session = lifecycle.get_session(tabpage)
     if not session or not session.git_root then
       vim.notify("Not in a git repository", vim.log.levels.WARN)
+      return
+    end
+
+    -- Only allow unstaging from staged views
+    if session.modified_revision ~= ":0" then
+      vim.notify("Unstage only works on staged changes", vim.log.levels.WARN)
       return
     end
 
@@ -498,15 +471,17 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
       return
     end
 
+    local unstage_orig_buf, unstage_mod_buf = lifecycle.get_buffers(tabpage)
+    if not unstage_orig_buf or not unstage_mod_buf or not vim.api.nvim_buf_is_valid(unstage_orig_buf) or not vim.api.nvim_buf_is_valid(unstage_mod_buf) then
+      vim.notify("Diff buffers are no longer available", vim.log.levels.WARN)
+      return
+    end
+
     -- Read lines from both buffers for this hunk
-    local orig_lines = vim.api.nvim_buf_get_lines(original_bufnr, hunk.original.start_line - 1, hunk.original.end_line - 1, false)
-    local mod_lines = vim.api.nvim_buf_get_lines(modified_bufnr, hunk.modified.start_line - 1, hunk.modified.end_line - 1, false)
+    local orig_lines = vim.api.nvim_buf_get_lines(unstage_orig_buf, hunk.original.start_line - 1, hunk.original.end_line - 1, false)
+    local mod_lines = vim.api.nvim_buf_get_lines(unstage_mod_buf, hunk.modified.start_line - 1, hunk.modified.end_line - 1, false)
 
     local patch = build_hunk_patch(file_path, orig_lines, mod_lines, hunk.original.start_line, hunk.modified.start_line)
-
-    -- Capture hunk count before async call (stored_diff_result may change)
-    local total_hunks = session.stored_diff_result and #session.stored_diff_result.changes or 0
-    local is_staged_view = session.modified_revision == ":0"
 
     local git = require("codediff.core.git")
     git.apply_patch(session.git_root, patch, true, function(err)
@@ -514,40 +489,7 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
         vim.notify("Failed to unstage hunk: " .. err, vim.log.levels.ERROR)
         return
       end
-
-      -- Refresh explorer to reflect unstaging change
-      local explorer_obj = lifecycle.get_explorer(tabpage)
-      if explorer_obj then
-        local explorer = require("codediff.ui.explorer")
-        explorer.refresh(explorer_obj)
-      end
-
-      if total_hunks == 1 and is_staged_view and explorer_obj and explorer_obj.on_file_select then
-        -- Last staged hunk unstaged: switch to unstaged view
-        explorer_obj.on_file_select({
-          path = file_path,
-          group = "unstaged",
-          status = "M",
-        })
-        vim.notify("All hunks unstaged — switched to unstaged view", vim.log.levels.INFO)
-      else
-        vim.notify(string.format("Unstaged hunk %d", hunk_idx), vim.log.levels.INFO)
-
-        -- Refresh diff view: reload virtual buffers and recompute diff
-        local view = require("codediff.ui.view")
-        local current_win = vim.api.nvim_get_current_win()
-        view.update(tabpage, {
-          mode = session.mode,
-          git_root = session.git_root,
-          original_path = session.original_path,
-          modified_path = session.modified_path,
-          original_revision = session.original_revision,
-          modified_revision = session.modified_revision,
-        }, false)
-        if vim.api.nvim_win_is_valid(current_win) then
-          vim.api.nvim_set_current_win(current_win)
-        end
-      end
+      vim.notify(string.format("Unstaged hunk %d", hunk_idx), vim.log.levels.INFO)
     end)
   end
 
@@ -584,9 +526,15 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
         return
       end
 
+      local discard_orig_buf, discard_mod_buf = lifecycle.get_buffers(tabpage)
+      if not discard_orig_buf or not discard_mod_buf or not vim.api.nvim_buf_is_valid(discard_orig_buf) or not vim.api.nvim_buf_is_valid(discard_mod_buf) then
+        vim.notify("Diff buffers are no longer available", vim.log.levels.WARN)
+        return
+      end
+
       -- Read lines from both buffers for this hunk
-      local orig_lines = vim.api.nvim_buf_get_lines(original_bufnr, hunk.original.start_line - 1, hunk.original.end_line - 1, false)
-      local mod_lines = vim.api.nvim_buf_get_lines(modified_bufnr, hunk.modified.start_line - 1, hunk.modified.end_line - 1, false)
+      local orig_lines = vim.api.nvim_buf_get_lines(discard_orig_buf, hunk.original.start_line - 1, hunk.original.end_line - 1, false)
+      local mod_lines = vim.api.nvim_buf_get_lines(discard_mod_buf, hunk.modified.start_line - 1, hunk.modified.end_line - 1, false)
 
       local patch = build_hunk_patch(file_path, orig_lines, mod_lines, hunk.original.start_line, hunk.modified.start_line)
 
@@ -596,30 +544,7 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
           vim.notify("Failed to discard hunk: " .. err, vim.log.levels.ERROR)
           return
         end
-
-        -- Refresh explorer to reflect discard
-        local explorer_obj = lifecycle.get_explorer(tabpage)
-        if explorer_obj then
-          local explorer = require("codediff.ui.explorer")
-          explorer.refresh(explorer_obj)
-        end
-
         vim.notify(string.format("Discarded hunk %d", hunk_idx), vim.log.levels.INFO)
-
-        -- Refresh diff view: reload virtual buffers and recompute diff
-        local view = require("codediff.ui.view")
-        local current_win = vim.api.nvim_get_current_win()
-        view.update(tabpage, {
-          mode = session.mode,
-          git_root = session.git_root,
-          original_path = session.original_path,
-          modified_path = session.modified_path,
-          original_revision = session.original_revision,
-          modified_revision = session.modified_revision,
-        }, false)
-        if vim.api.nvim_win_is_valid(current_win) then
-          vim.api.nvim_set_current_win(current_win)
-        end
       end)
     end)
   end
@@ -660,6 +585,11 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
   end
   if keymaps.open_in_prev_tab then
     lifecycle.set_tab_keymap(tabpage, "n", keymaps.open_in_prev_tab, open_in_prev_tab, { desc = "Open buffer in previous tab" })
+  end
+  if keymaps.toggle_layout then
+    lifecycle.set_tab_keymap(tabpage, "n", keymaps.toggle_layout, function()
+      require("codediff.ui.view").toggle_layout(tabpage)
+    end, { desc = "Toggle diff layout" })
   end
 
   -- Toggle stage/unstage (- key) - only in explorer mode

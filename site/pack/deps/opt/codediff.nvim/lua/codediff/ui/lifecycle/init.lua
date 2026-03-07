@@ -30,6 +30,7 @@ M.setup = cleanup.setup
 -- Delegate all accessors (getters)
 M.get_session = accessors.get_session
 M.get_mode = accessors.get_mode
+M.get_layout = accessors.get_layout
 M.get_git_context = accessors.get_git_context
 M.get_buffers = accessors.get_buffers
 M.get_windows = accessors.get_windows
@@ -47,6 +48,7 @@ M.get_unsaved_conflict_files = accessors.get_unsaved_conflict_files
 
 -- Delegate all accessors (setters)
 M.update_suspended = accessors.update_suspended
+M.update_layout = accessors.update_layout
 M.update_diff_result = accessors.update_diff_result
 M.update_changedtick = accessors.update_changedtick
 M.update_mtime = accessors.update_mtime

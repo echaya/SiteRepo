@@ -25,6 +25,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
   - Deep/dark character-level highlights showing exact changes within lines
 - **Side-by-side diff view** in a new tab with synchronized scrolling
 - **Inline (unified) diff view** — single-window layout with deleted lines as virtual overlays, with treesitter syntax highlighting
+- **Toggle layout** — switch between side-by-side and inline layout at runtime with `t`
 - **Git integration**: Compare between any git revision (HEAD, commits, branches, tags)
 - **Same implementation as VSCode's diff engine**, providing identical visual highlighting for most scenarios
 - **Fast C-based diff computation** using FFI with **multi-core parallelization** (OpenMP)
@@ -155,6 +156,7 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
         hunk_textobject = "ih",      -- Textobject for hunk (vih to select, yih to yank, etc.)
         show_help = "g?",   -- Show floating window with available keymaps
         align_move = "gm", -- Temporarily align moved code blocks across panes
+        toggle_layout = "t", -- Toggle between side-by-side and inline layout
       },
       explorer = {
         select = "<CR>",    -- Open diff for selected file
@@ -166,16 +168,40 @@ https://github.com/user-attachments/assets/64c41f01-dffe-4318-bce4-16eec8de356e
         restore = "X",      -- Discard changes (restore file)
         toggle_changes = "gu",  -- Toggle Changes (unstaged) group visibility
         toggle_staged = "gs",   -- Toggle Staged Changes group visibility
+        -- Fold keymaps (Vim-style)
+        fold_open = "zo",           -- Open fold (expand current node)
+        fold_open_recursive = "zO", -- Open fold recursively (expand all descendants)
+        fold_close = "zc",          -- Close fold (collapse current node)
+        fold_close_recursive = "zC", -- Close fold recursively (collapse all descendants)
+        fold_toggle = "za",         -- Toggle fold (expand/collapse current node)
+        fold_toggle_recursive = "zA", -- Toggle fold recursively
+        fold_open_all = "zR",       -- Open all folds in tree
+        fold_close_all = "zM",      -- Close all folds in tree
       },
       history = {
         select = "<CR>",    -- Select commit/file or toggle expand
         toggle_view_mode = "i",  -- Toggle between 'list' and 'tree' views
+        refresh = "R",      -- Refresh history (re-fetch commits)
+        -- Fold keymaps (Vim-style, apply to directory nodes only)
+        fold_open = "zo",           -- Open fold (expand current node)
+        fold_open_recursive = "zO", -- Open fold recursively (expand all descendants)
+        fold_close = "zc",          -- Close fold (collapse current node)
+        fold_close_recursive = "zC", -- Close fold recursively (collapse all descendants)
+        fold_toggle = "za",         -- Toggle fold (expand/collapse current node)
+        fold_toggle_recursive = "zA", -- Toggle fold recursively
+        fold_open_all = "zR",       -- Open all folds in tree
+        fold_close_all = "zM",      -- Close all folds in tree
       },
       conflict = {
         accept_incoming = "<leader>ct",  -- Accept incoming (theirs/left) change
         accept_current = "<leader>co",   -- Accept current (ours/right) change
         accept_both = "<leader>cb",      -- Accept both changes (incoming first)
         discard = "<leader>cx",          -- Discard both, keep base
+        -- Accept all (whole file) - uppercase versions
+        accept_all_incoming = "<leader>cT",  -- Accept ALL incoming changes
+        accept_all_current = "<leader>cO",   -- Accept ALL current changes
+        accept_all_both = "<leader>cB",      -- Accept ALL both changes
+        discard_all = "<leader>cX",          -- Discard ALL, reset to base
         next_conflict = "]x",            -- Jump to next conflict
         prev_conflict = "[x",            -- Jump to previous conflict
         diffget_incoming = "2do",        -- Get hunk from incoming (left/theirs) buffer
@@ -360,7 +386,7 @@ Compare two directories without git:
 :CodeDiff dir /path/to/dir1 /path/to/dir2
 ```
 
-Shows files as Added (A), Deleted (D), or Modified (M) based on file size and modification time. Select a file to view its diff.
+Shows files as Added (A), Deleted (D), or Modified (M) using file size plus byte-level content comparison. Select a file to view its diff.
 
 ### File History Mode
 

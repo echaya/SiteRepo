@@ -11,6 +11,7 @@ local render = require("codediff.ui.history.render")
 -- width: optional width override
 -- opts: { range, path, ... } original options
 M.create = render.create
+M.rerender_current = render.rerender_current
 
 -- Navigation (files within expanded commits)
 M.navigate_next = render.navigate_next

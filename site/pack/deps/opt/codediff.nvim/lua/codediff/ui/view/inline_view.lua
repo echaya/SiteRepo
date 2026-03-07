@@ -66,10 +66,7 @@ end
 
 -- Helper: mark session as inline layout after creation
 local function mark_inline(tabpage)
-  local session = lifecycle.get_session(tabpage)
-  if session then
-    session.layout = "inline"
-  end
+  lifecycle.update_layout(tabpage, "inline")
 end
 
 -- Helper: setup keymaps (uses the shared setup_all_keymaps which is layout-aware)
@@ -140,7 +137,6 @@ function M.create(session_config, filetype, on_ready)
     )
 
     mark_inline(tabpage)
-
     -- Setup panels via shared module
     panel.setup_explorer(tabpage, session_config, modified_win, modified_win)
     panel.setup_history(tabpage, session_config, modified_win, modified_win, orig_scratch, mod_scratch, function(tp, ob, mb)
@@ -241,9 +237,8 @@ function M.create(session_config, filetype, on_ready)
 
       mark_inline(tabpage)
 
-      if not modified_is_virtual then
-        auto_refresh.enable(modified_info.bufnr)
-      end
+      auto_refresh.enable(original_info.bufnr)
+      auto_refresh.enable(modified_info.bufnr)
 
       setup_keymaps(tabpage, original_info.bufnr, modified_info.bufnr)
 
@@ -340,10 +335,11 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
     return false
   end
 
-  -- Disable auto-refresh and clear old highlights
+  -- Disable auto-refresh and clear old highlights from ALL namespaces.
+  -- ns_highlight/ns_filler may linger after toggling from side-by-side.
   if old_modified_buf and vim.api.nvim_buf_is_valid(old_modified_buf) then
     auto_refresh.disable(old_modified_buf)
-    inline.clear(old_modified_buf)
+    lifecycle.clear_highlights(old_modified_buf)
   end
 
   lifecycle.update_diff_result(tabpage, nil)
@@ -406,11 +402,11 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
       lifecycle.update_changedtick(tabpage, vim.api.nvim_buf_get_changedtick(orig_buf), vim.api.nvim_buf_get_changedtick(mod_buf))
       lifecycle.update_paths(tabpage, session_config.original_path or "", session_config.modified_path or "")
 
-      if not modified_is_virtual then
-        auto_refresh.enable(mod_buf)
-      end
+      auto_refresh.enable(orig_buf)
+      auto_refresh.enable(mod_buf)
 
       setup_keymaps(tabpage, orig_buf, mod_buf)
+      layout.arrange(tabpage)
 
       if saved_current_win and vim.api.nvim_win_is_valid(saved_current_win) then
         vim.api.nvim_set_current_win(saved_current_win)
@@ -532,7 +528,9 @@ function M.show_single_file(tabpage, file_path, opts)
   if not session then
     return
   end
+  local side = opts.side or "modified"
 
+  lifecycle.update_layout(tabpage, "inline")
   local mod_win = session.modified_win
   if not mod_win or not vim.api.nvim_win_is_valid(mod_win) then
     return
@@ -587,13 +585,22 @@ function M.show_single_file(tabpage, file_path, opts)
   local empty_buf = vim.api.nvim_create_buf(false, true)
   vim.bo[empty_buf].buftype = "nofile"
 
-  lifecycle.update_buffers(tabpage, empty_buf, file_bufnr)
-  lifecycle.update_paths(tabpage, "", file_path)
-  lifecycle.update_revisions(tabpage, nil, opts.revision)
-  lifecycle.update_diff_result(tabpage, {})
+  local session_path = (opts.revision and opts.rel_path) and opts.rel_path or file_path
+  local orig_bufnr = side == "original" and file_bufnr or empty_buf
+  local mod_bufnr = side == "modified" and file_bufnr or empty_buf
+  local original_path = side == "original" and session_path or ""
+  local modified_path = side == "modified" and session_path or ""
+  local original_revision = side == "original" and opts.revision or nil
+  local modified_revision = side == "modified" and opts.revision or nil
+
+  lifecycle.update_buffers(tabpage, orig_bufnr, mod_bufnr)
+  lifecycle.update_paths(tabpage, original_path, modified_path)
+  lifecycle.update_revisions(tabpage, original_revision, modified_revision)
+  lifecycle.update_diff_result(tabpage, { changes = {}, moves = {} })
 
   local view_keymaps = require("codediff.ui.view.keymaps")
-  view_keymaps.setup_all_keymaps(tabpage, empty_buf, file_bufnr, true)
+  view_keymaps.setup_all_keymaps(tabpage, orig_bufnr, mod_bufnr, session.mode == "explorer")
+  layout.arrange(tabpage)
   welcome_window.sync_later(mod_win)
 end
 
@@ -606,6 +613,7 @@ function M.show_welcome(tabpage, load_bufnr)
     return
   end
 
+  lifecycle.update_layout(tabpage, "inline")
   local mod_win = session.modified_win
   if not mod_win or not vim.api.nvim_win_is_valid(mod_win) then
     return
@@ -625,10 +633,11 @@ function M.show_welcome(tabpage, load_bufnr)
   lifecycle.update_buffers(tabpage, empty_buf, load_bufnr)
   lifecycle.update_paths(tabpage, "", "")
   lifecycle.update_revisions(tabpage, nil, nil)
-  lifecycle.update_diff_result(tabpage, {})
+  lifecycle.update_diff_result(tabpage, { changes = {}, moves = {} })
 
   local view_keymaps = require("codediff.ui.view.keymaps")
-  view_keymaps.setup_all_keymaps(tabpage, empty_buf, load_bufnr, true)
+  view_keymaps.setup_all_keymaps(tabpage, empty_buf, load_bufnr, session.mode == "explorer")
+  layout.arrange(tabpage)
   welcome_window.sync_later(mod_win)
 end
 

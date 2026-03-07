@@ -367,6 +367,67 @@ function M.refresh_result_now(bufnr)
   do_result_diff_update(bufnr)
 end
 
+-- Sync mutable revision buffers (:0-:3) with current git index content.
+-- Called when .git directory changes. Only writes if content actually changed,
+-- which triggers TextChanged → auto_refresh recomputes diff automatically.
+-- @param tabpage number: Tabpage whose session buffers to sync
+function M.sync_mutable_buffers(tabpage)
+  local lifecycle = require("codediff.ui.lifecycle")
+  local session = lifecycle.get_session(tabpage)
+  if not session then
+    return
+  end
+
+  local git = require("codediff.core.git")
+
+  local function is_mutable(revision)
+    return revision and revision:match("^:[0-3]$")
+  end
+
+  local function sync_buffer(bufnr, revision, path)
+    if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
+      return
+    end
+    if not is_mutable(revision) or not path or path == "" then
+      return
+    end
+
+    git.get_file_content(revision, session.git_root, path, function(err, lines)
+      vim.schedule(function()
+        if err or not lines then
+          return
+        end
+        if not vim.api.nvim_buf_is_valid(bufnr) then
+          return
+        end
+
+        -- Only write if content actually changed
+        local current_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+        if #current_lines == #lines then
+          local same = true
+          for i = 1, #lines do
+            if current_lines[i] ~= lines[i] then same = false; break end
+          end
+          if same then return end
+        end
+
+        local was_modifiable = vim.bo[bufnr].modifiable
+        local was_readonly = vim.bo[bufnr].readonly
+        vim.bo[bufnr].readonly = false
+        vim.bo[bufnr].modifiable = true
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+        vim.bo[bufnr].modifiable = was_modifiable
+        vim.bo[bufnr].readonly = was_readonly
+        -- TextChanged doesn't fire on nowrite/nofile buffers, trigger explicitly
+        M.trigger(bufnr)
+      end)
+    end)
+  end
+
+  sync_buffer(session.original_bufnr, session.original_revision, session.original_path)
+  sync_buffer(session.modified_bufnr, session.modified_revision, session.modified_path)
+end
+
 -- Cleanup all watched buffers
 function M.cleanup_all()
   for bufnr, _ in pairs(watched_buffers) do
