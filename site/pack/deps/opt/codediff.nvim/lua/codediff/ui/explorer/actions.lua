@@ -362,21 +362,12 @@ function M.restore_entry(explorer, tree)
   local is_untracked = not is_directory and status == "??"
   local display_name = entry_path .. (is_directory and "/" or "")
 
-  -- Two-line confirmation prompt
+  -- Confirmation prompt
   local action_word = is_directory and "Discard all changes in " or (is_untracked and "Delete " or "Discard changes to ")
-  vim.api.nvim_echo({
-    { action_word, "WarningMsg" },
-    { display_name, "WarningMsg" },
-    { "?\n", "WarningMsg" },
-    { "(D)", "WarningMsg" },
-    { is_untracked and "elete, " or "iscard, ", "WarningMsg" },
-    { "[C]", "WarningMsg" },
-    { "ancel: ", "WarningMsg" },
-  }, false, {})
+  local prompt = action_word .. display_name .. "?"
+  local choice = vim.fn.confirm(prompt, "&Discard\n&Cancel", 2, "Warning")
 
-  local char = vim.fn.getcharstr():lower()
-
-  if char == "d" then
+  if choice == 1 then
     if is_untracked then
       -- Delete untracked file/directory
       git.delete_untracked(explorer.git_root, entry_path, function(err)

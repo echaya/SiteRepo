@@ -15,21 +15,21 @@ local M = {
 
 local custom_def_maps = {
    label_light = {
-      fg = '#eef1f0',
-      bg = '#5588aa',
-      bold = true,
+      fg = 'NvimDarkGrey2',
+      bg = '#ffaf3f',
       nocombine = true,
       ctermfg = 'red'
+   },
+   match_light = {
+      fg = 'NvimDarkGrey1',
+      bg = 'NvimLightYellow',
+      ctermfg = 'black',
+      ctermbg = 'red'
    },
    label_dark = {
       fg = 'black',
       bg = '#ccff88',
       nocombine = true,
-      ctermfg = 'black',
-      ctermbg = 'red'
-   },
-   match_light = {
-      bg = '#eef1f0',
       ctermfg = 'black',
       ctermbg = 'red'
    },

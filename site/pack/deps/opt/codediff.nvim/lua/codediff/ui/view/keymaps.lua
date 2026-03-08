@@ -520,32 +520,31 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     end
 
     -- Prompt for confirmation before discarding (destructive operation)
-    local prompt = string.format("Discard hunk %d? This cannot be undone.", hunk_idx)
-    vim.ui.select({ "Yes", "No" }, { prompt = prompt }, function(choice)
-      if choice ~= "Yes" then
+    local prompt = string.format("Discard hunk %d?", hunk_idx)
+    local choice = vim.fn.confirm(prompt, "&Discard\n&Cancel", 2, "Warning")
+    if choice ~= 1 then
+      return
+    end
+
+    local discard_orig_buf, discard_mod_buf = lifecycle.get_buffers(tabpage)
+    if not discard_orig_buf or not discard_mod_buf or not vim.api.nvim_buf_is_valid(discard_orig_buf) or not vim.api.nvim_buf_is_valid(discard_mod_buf) then
+      vim.notify("Diff buffers are no longer available", vim.log.levels.WARN)
+      return
+    end
+
+    -- Read lines from both buffers for this hunk
+    local orig_lines = vim.api.nvim_buf_get_lines(discard_orig_buf, hunk.original.start_line - 1, hunk.original.end_line - 1, false)
+    local mod_lines = vim.api.nvim_buf_get_lines(discard_mod_buf, hunk.modified.start_line - 1, hunk.modified.end_line - 1, false)
+
+    local patch = build_hunk_patch(file_path, orig_lines, mod_lines, hunk.original.start_line, hunk.modified.start_line)
+
+    local git = require("codediff.core.git")
+    git.discard_hunk_patch(session.git_root, patch, function(err)
+      if err then
+        vim.notify("Failed to discard hunk: " .. err, vim.log.levels.ERROR)
         return
       end
-
-      local discard_orig_buf, discard_mod_buf = lifecycle.get_buffers(tabpage)
-      if not discard_orig_buf or not discard_mod_buf or not vim.api.nvim_buf_is_valid(discard_orig_buf) or not vim.api.nvim_buf_is_valid(discard_mod_buf) then
-        vim.notify("Diff buffers are no longer available", vim.log.levels.WARN)
-        return
-      end
-
-      -- Read lines from both buffers for this hunk
-      local orig_lines = vim.api.nvim_buf_get_lines(discard_orig_buf, hunk.original.start_line - 1, hunk.original.end_line - 1, false)
-      local mod_lines = vim.api.nvim_buf_get_lines(discard_mod_buf, hunk.modified.start_line - 1, hunk.modified.end_line - 1, false)
-
-      local patch = build_hunk_patch(file_path, orig_lines, mod_lines, hunk.original.start_line, hunk.modified.start_line)
-
-      local git = require("codediff.core.git")
-      git.discard_hunk_patch(session.git_root, patch, function(err)
-        if err then
-          vim.notify("Failed to discard hunk: " .. err, vim.log.levels.ERROR)
-          return
-        end
-        vim.notify(string.format("Discarded hunk %d", hunk_idx), vim.log.levels.INFO)
-      end)
+      vim.notify(string.format("Discarded hunk %d", hunk_idx), vim.log.levels.INFO)
     end)
   end
 

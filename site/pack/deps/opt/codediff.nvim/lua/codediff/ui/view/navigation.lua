@@ -52,6 +52,7 @@ function M.next_hunk()
     local target_line = is_original and mapping.original.start_line or mapping.modified.start_line
     if target_line > current_line then
       pcall(vim.api.nvim_win_set_cursor, 0, { target_line, 0 })
+      vim.cmd("normal! zz")
       vim.api.nvim_echo({ { string.format("Hunk %d of %d", i, #diff_result.changes), "None" } }, false, {})
       return true
     end
@@ -62,6 +63,7 @@ function M.next_hunk()
     local first_hunk = diff_result.changes[1]
     local target_line = is_original and first_hunk.original.start_line or first_hunk.modified.start_line
     pcall(vim.api.nvim_win_set_cursor, 0, { target_line, 0 })
+    vim.cmd("normal! zz")
     vim.api.nvim_echo({ { string.format("Hunk 1 of %d", #diff_result.changes), "None" } }, false, {})
     return true
   else
@@ -119,6 +121,7 @@ function M.prev_hunk()
     local target_line = is_original and mapping.original.start_line or mapping.modified.start_line
     if target_line < current_line then
       pcall(vim.api.nvim_win_set_cursor, 0, { target_line, 0 })
+      vim.cmd("normal! zz")
       vim.api.nvim_echo({ { string.format("Hunk %d of %d", i, #diff_result.changes), "None" } }, false, {})
       return true
     end
@@ -129,6 +132,7 @@ function M.prev_hunk()
     local last_hunk = diff_result.changes[#diff_result.changes]
     local target_line = is_original and last_hunk.original.start_line or last_hunk.modified.start_line
     pcall(vim.api.nvim_win_set_cursor, 0, { target_line, 0 })
+    vim.cmd("normal! zz")
     vim.api.nvim_echo({ { string.format("Hunk %d of %d", #diff_result.changes, #diff_result.changes), "None" } }, false, {})
     return true
   else

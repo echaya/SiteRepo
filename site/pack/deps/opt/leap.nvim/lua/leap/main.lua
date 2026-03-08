@@ -545,6 +545,7 @@ local function leap(kwargs)
    -- We need to save the mode here, because the `:normal` command in
    -- `jump.jump_to()` can change the state. See vim/vim#9332.
    local mode = api.nvim_get_mode().mode
+   local is_visual_mode = mode:match('^[vV\22]')
    local is_op_mode = mode:match('o')
    local is_change_op = is_op_mode and (vim.v.operator == 'c')
 
@@ -967,9 +968,13 @@ local function leap(kwargs)
                loop(new_idx, false)
             else
                -- We still want the labels (if there are) to function.
-               local target = get_target_with_active_label(targets, input)
+               local target, new_idx = get_target_with_active_label(targets, input)
                if target then
                   do_action(target)
+                  -- Especially for treesitter selection, make it easier to correct.
+                  if is_visual_mode then
+                     loop(new_idx, false)
+                  end
                else
                   vim.fn.feedkeys(input, 'i')
                end
@@ -1200,7 +1205,13 @@ local function leap(kwargs)
    -- Otherwise try to get a labeled target, and if no success, feed the key.
    local target, idx = get_target_with_active_label(targets2, in_final)
    if target and idx then
-      return exit_with_action_on(idx)
+      if is_visual_mode and can_traverse(targets2) then
+         do_action(targets2[idx])
+         traverse(targets2, idx)  -- REDRAW (LOOP)
+         return exit()
+      else
+         return exit_with_action_on(idx)
+      end
    else
       vim.fn.feedkeys(in_final, 'i')
       return exit()

@@ -406,9 +406,14 @@ function M.sync_mutable_buffers(tabpage)
         if #current_lines == #lines then
           local same = true
           for i = 1, #lines do
-            if current_lines[i] ~= lines[i] then same = false; break end
+            if current_lines[i] ~= lines[i] then
+              same = false
+              break
+            end
           end
-          if same then return end
+          if same then
+            return
+          end
         end
 
         local was_modifiable = vim.bo[bufnr].modifiable
