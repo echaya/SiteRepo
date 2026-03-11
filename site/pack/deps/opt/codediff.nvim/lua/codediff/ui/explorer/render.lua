@@ -327,6 +327,13 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
       local is_same_file = (session.modified_path == abs_path or session.modified_path == file_path or (session.git_root and session.original_path == file_path))
 
       if is_same_file and not opts.force then
+        -- Conflict mode: skip if already showing the same conflict file
+        -- (revisions :2/:3 are mutable so the staged-base-change logic below
+        --  would incorrectly force a re-render on every refresh cycle)
+        if group == "conflicts" and session.result_win and vim.api.nvim_win_is_valid(session.result_win) then
+          return
+        end
+
         -- Check if it's the same diff comparison
         local is_staged_diff = group == "staged"
         local current_is_staged = session.modified_revision == ":0"

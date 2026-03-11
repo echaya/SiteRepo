@@ -114,8 +114,6 @@ local function do_diff_update(bufnr, skip_watcher_check)
     -- Re-sync scrollbind after filler changes
     -- This ensures all windows stay aligned even if fillers were added/removed
     local original_win, modified_win, result_win = nil, nil, nil
-    local lifecycle = require("codediff.ui.lifecycle")
-    local tabpage = vim.api.nvim_get_current_tabpage()
     local _, stored_result_win = lifecycle.get_result(tabpage)
 
     for _, win in ipairs(vim.api.nvim_list_wins()) do
