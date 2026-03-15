@@ -147,6 +147,49 @@ completion = {
 }
 ```
 
+### Accept a completion without visual feedback
+
+Full discussion: https://github.com/saghen/blink.cmp/discussions/2304
+
+You can accept a completion item without visual feedback (when the menu or ghost
+text is not visible) by using the `force` option.
+
+**Option 1: Select the first item if nothing is selected, then accept it**
+
+```lua
+['<C-y>'] = {
+  function(cmp)
+    return cmp.select_and_accept({ force = true })
+  end,
+  'fallback',
+}
+```
+
+**Option 2: Accept the first item in the list**
+
+```lua
+['<C-y>'] = {
+  function(cmp)
+    return cmp.accept({ index = 1, force = true })
+  end,
+  'fallback',
+}
+```
+
+**Option 3: If there is only one completion candidate, select and accept it without showing the completion menu; otherwise, open the completion menu and select the first candidate** 
+
+```lua
+['<C-y>'] = {
+  function(cmp)
+    return cmp.show_and_insert_or_accept_single({ force = true })
+  end,
+  'fallback',
+}
+```
+
+Note that if you already pre-select the first item in the list (see
+[`completion.list`](./configuration/completion.md#list)), the `index` option is not needed.
+
 ### Hide Copilot on suggestion
 
 ```lua
@@ -392,7 +435,9 @@ completion = {
 }
 ```
 
-### `mini.icons`
+### Icons
+
+<details><summary><code>mini.icons</code></summary>
 
 [Original discussion](https://github.com/Saghen/blink.cmp/discussions/458)
 
@@ -425,7 +470,62 @@ completion = {
 }
 ```
 
-### `nvim-web-devicons` + `lspkind`
+</details>
+
+<details><summary><code>mini.icons</code> with file types</summary>
+
+[Original discussion](https://github.com/saghen/blink.cmp/issues/2366)
+
+```lua
+local function get_mini_icon(ctx)
+  if ctx.source_name == "Path" then
+    local is_unknown_type = vim.tbl_contains(
+        { "link", "socket", "fifo", "char", "block", "unknown" },
+        ctx.item.data.type
+    )
+    local mini_icon, mini_hl, _ = require("mini.icons").get(
+        is_unknown_type and "os" or ctx.item.data.type,
+        is_unknown_type and "" or ctx.label
+    )
+    if mini_icon then
+        return mini_icon, mini_hl
+    end
+  end
+  local mini_icon, mini_hl, _ = require("mini.icons").get("lsp", ctx.kind)
+  return mini_icon, mini_hl
+end
+
+completion = {
+  menu = {
+    draw = {
+      components = {
+        kind_icon = {
+          text = function(ctx)
+            local kind_icon, kind_hl = get_mini_icon(ctx)
+            return kind_icon
+          end,
+          -- (optional) use highlights from mini.icons
+          highlight = function(ctx)
+            local _, hl = get_mini_icon(ctx)
+            return hl
+          end,
+        },
+        kind = {
+          -- (optional) use highlights from mini.icons
+          highlight = function(ctx)
+            local _, hl = get_mini_icon(ctx)
+            return hl
+          end,
+        }
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details><summary><code>nvim-web-devicons</code> + <code>lspkind</code></summary>
 
 [Original discussion](https://github.com/Saghen/blink.cmp/discussions/1146)
 
@@ -443,9 +543,7 @@ completion = {
                     icon = dev_icon
                 end
             else
-                icon = require("lspkind").symbolic(ctx.kind, {
-                    mode = "symbol",
-                })
+                icon = require("lspkind").symbol_map[ctx.kind] or ""
             end
 
             return icon .. ctx.icon_gap
@@ -471,7 +569,9 @@ completion = {
 }
 ```
 
-### `mini.icons` + `lspkind`
+</details>
+
+<details><summary><code>mini.icons</code> + <code>lspkind</code></summary>
 
 Uses [mini.icons](https://github.com/echasnovski/mini.icons) to display icons for filetypes and [lspkind](https://github.com/onsails/lspkind-nvim) for LSP kinds.
 
@@ -483,7 +583,7 @@ completion = {
         kind_icon = {
           text = function(ctx)
             if ctx.source_name ~= "Path" then
-              return require("lspkind").symbolic(ctx.kind, { mode = "symbol" }) .. ctx.icon_gap
+              return require("lspkind").symbol_map[ctx.kind] or "" .. ctx.icon_gap
             end
 
             local is_unknown_type = vim.tbl_contains({ "link", "socket", "fifo", "char", "block", "unknown" }, ctx.item.data.type)
@@ -511,6 +611,8 @@ completion = {
   }
 }
 ```
+
+</details>
 
 ## For writers
 

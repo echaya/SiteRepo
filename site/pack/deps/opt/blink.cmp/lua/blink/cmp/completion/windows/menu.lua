@@ -23,6 +23,7 @@
 
 local config = require('blink.cmp.config').completion.menu
 local event_emitter = require('blink.cmp.lib.event_emitter')
+local utils = require('blink.cmp.lib.utils')
 
 --- @type blink.cmp.CompletionMenu
 --- @diagnostic disable-next-line: missing-fields
@@ -109,6 +110,11 @@ end
 function menu.open()
   if menu.win:is_open() then return end
 
+  -- Disable auto text wrapping (formatoptions 't' and 'c') to prevent issues
+  -- with preview undo when text wrapping occurs during completion.
+  -- These options will be restored when the menu closes.
+  utils.disable_auto_wrap()
+
   menu.win:open()
   menu.win:set_option_value('cursorline', menu.selected_item_idx ~= nil)
   if menu.selected_item_idx ~= nil then
@@ -124,6 +130,9 @@ function menu.close()
   if not menu.win:is_open() then return end
 
   menu.win:close()
+
+  utils.restore_auto_wrap()
+
   menu.close_emitter:emit()
 end
 
@@ -149,17 +158,23 @@ function menu.queue_auto_show(context, items)
   local delay_ms = math.max(0, menu.auto_show.delay_ms(context, items) - (vim.uv.now() - context.timestamp))
 
   -- no delay, show immediately
+  -- only start a new timer if the cursor has moved or the id has changed.
   if delay_ms == 0 then
     menu.open()
     menu.update_position()
     return
   end
 
-  -- only start a new timer if the cursor has moved or the id has changed
+  -- only start a new timer if the cursor has moved or the id has changed.
+  -- note we should use timer, even for 0ms, to prevent synchronous geometry races
   local timer_key = string.format('%d|%d|%d', context.id, context.cursor[1], context.cursor[2])
   if menu.auto_show.timer:is_active() and menu.auto_show.timer_key == timer_key then return end
 
   menu.auto_show.timer_key = timer_key
+  -- TODO: this can race:
+  --  - timer fires, scheduling the function
+  --  - timer stopped by reset_auto_show()
+  --  - scheduled function runs (race!!)
   menu.auto_show.timer:start(
     delay_ms,
     0,

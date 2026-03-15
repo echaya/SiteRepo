@@ -1,4 +1,4 @@
-*blink-cmp.txt*         For NVIM v0.10.0         Last change: 2025 November 12
+*blink-cmp.txt*           For NVIM v0.10.0          Last change: 2026 March 13
 
 ==============================================================================
 Table of Contents                                *blink-cmp-table-of-contents*
@@ -12,6 +12,7 @@ Table of Contents                                *blink-cmp-table-of-contents*
   - Requirements                         |blink-cmp-installation-requirements|
   - lazy.nvim                               |blink-cmp-installation-lazy.nvim|
   - mini.deps                               |blink-cmp-installation-mini.deps|
+  - vim-plug                                 |blink-cmp-installation-vim-plug|
 3. Recipes                                                 |blink-cmp-recipes|
   - General                                        |blink-cmp-recipes-general|
   - Fuzzy (sorting/filtering)    |blink-cmp-recipes-fuzzy-(sorting/filtering)|
@@ -120,7 +121,7 @@ REQUIREMENTS                             *blink-cmp-installation-requirements*
     - curl
     - git
 - Building from source:
-    - Rust nightly or rustup <https://rustup.rs/>
+    - Rust toolchain <https://rustup.rs/>
 
 Note: By default, Blink will attempt to use the rust implementation of the
 fuzzy matcher. However, the lua implementation does not require any of these
@@ -138,9 +139,9 @@ LAZY.NVIM                                   *blink-cmp-installation-lazy.nvim*
     
       -- use a release tag to download pre-built binaries
       version = '1.*',
-      -- AND/OR build from source, requires nightly: https://rust-lang.github.io/rustup/concepts/channels.html#working-with-nightly-rust
+      -- AND/OR build from source
       -- build = 'cargo build --release',
-      -- If you use nix, you can build from source using latest nightly rust with:
+      -- If you use nix, you can build from source with:
       -- build = 'nix run .#build-plugin',
     
       ---@module 'blink.cmp'
@@ -280,7 +281,7 @@ configuration options and setting up `nvim-lspconfig`.
       checkout = "some.version", -- check releases for latest tag
     })
     
-    -- OR build from source, requires nightly: https://rust-lang.github.io/rustup/concepts/channels.html#working-with-nightly-rust
+    -- OR build from source
     local function build_blink(params)
       vim.notify('Building blink.cmp', vim.log.levels.INFO)
       local obj = vim.system({ 'cargo', 'build', '--release' }, { cwd = params.path }):wait()
@@ -297,6 +298,86 @@ configuration options and setting up `nvim-lspconfig`.
         post_install = build_blink,
         post_checkout = build_blink,
       },
+    })
+<
+
+
+VIM-PLUG                                     *blink-cmp-installation-vim-plug*
+
+This section shows how to perform the equivalent default setup as demonstrated
+in the |blink-cmp-lazy.nvim| section using `vim-plug`. To install, add
+`blink.cmp` and its optional dependencies, then manually call `setup()` for
+further configuration:
+
+VimScript:
+
+>vim
+    call plug#begin()
+    " use a release tag to download pre-built binaries.
+    " To build from source, use { 'do': 'cargo build --release' } instead
+    " If you use nix, use { 'do': 'nix run .#build-plugin' }
+    Plug 'saghen/blink.cmp', { 'tag': 'v1.*' }
+    
+    " optional: provides snippets for the snippet source
+    Plug 'rafamadriz/friendly-snippets'
+    call plug#end()
+    
+    lua << EOF
+    require('blink.cmp').setup({
+      keymap = { preset = 'default' },
+      appearance = {
+        nerd_font_variant = 'mono'
+      },
+      completion = {
+        documentation = { auto_show = false }
+      },
+      sources = {
+        default = { 'lsp', 'path', 'snippets', 'buffer' },
+      },
+      fuzzy = {
+        implementation = "prefer_rust_with_warning"
+      }
+    })
+    EOF
+<
+
+Lua:
+
+>lua
+    local Plug = vim.fn['plug#']
+    
+    -- Plugin installation
+    vim.call('plug#begin')
+    
+    -- use a release tag to download pre-built binaries.
+    -- To build from source, use { ['do'] = 'cargo build --release' } instead
+    -- If you use nix, use { ['do'] = 'nix run .#build-plugin' }
+    Plug('saghen/blink.cmp', { ['tag'] = 'v1.*' })
+    
+    -- optional: provides snippets for the snippet source
+    Plug('rafamadriz/friendly-snippets')
+    
+    vim.call('plug#end')
+    
+    -- Plugin configuration
+    require('blink.cmp').setup({
+      keymap = { preset = 'default' },
+    
+      appearance = {
+        nerd_font_variant = 'mono'
+      },
+    
+      completion = {
+        documentation = { auto_show = false }
+      },
+    
+      sources = {
+        default = { 'lsp', 'path', 'snippets', 'buffer' },
+      },
+    
+      fuzzy = {
+        implementation = "prefer_rust_with_warning"
+      }
     })
 <
 
@@ -465,6 +546,53 @@ Based on #382 <https://github.com/Saghen/blink.cmp/issues/382>
       }
     }
 <
+
+
+ACCEPT A COMPLETION WITHOUT VISUAL FEEDBACK ~
+
+Full discussion: https://github.com/saghen/blink.cmp/discussions/2304
+
+You can accept a completion item without visual feedback (when the menu or
+ghost text is not visible) by using the `force` option.
+
+**Option 1: Select the first item if nothing is selected, then accept it**
+
+>lua
+    ['<C-y>'] = {
+      function(cmp)
+        return cmp.select_and_accept({ force = true })
+      end,
+      'fallback',
+    }
+<
+
+**Option 2: Accept the first item in the list**
+
+>lua
+    ['<C-y>'] = {
+      function(cmp)
+        return cmp.accept({ index = 1, force = true })
+      end,
+      'fallback',
+    }
+<
+
+**Option 3: If there is only one completion candidate, select and accept it
+without showing the completion menu; otherwise, open the completion menu and
+select the first candidate**
+
+>lua
+    ['<C-y>'] = {
+      function(cmp)
+        return cmp.show_and_insert_or_accept_single({ force = true })
+      end,
+      'fallback',
+    }
+<
+
+Note that if you already pre-select the first item in the list (see
+`completion.list` <./configuration/completion.md#list>), the `index` option is
+not needed.
 
 
 HIDE COPILOT ON SUGGESTION ~
@@ -746,7 +874,9 @@ You’ll need to configure your highlights (`BlinkCmpKind` or
 <
 
 
-MINI.ICONS ~
+ICONS ~
+
+mini.icons ~
 
 Original discussion <https://github.com/Saghen/blink.cmp/discussions/458>
 
@@ -779,8 +909,58 @@ Original discussion <https://github.com/Saghen/blink.cmp/discussions/458>
     }
 <
 
+mini.icons with file types ~
 
-NVIM-WEB-DEVICONS + LSPKIND ~
+Original discussion <https://github.com/saghen/blink.cmp/issues/2366>
+
+>lua
+    local function get_mini_icon(ctx)
+      if ctx.source_name == "Path" then
+        local is_unknown_type = vim.tbl_contains(
+            { "link", "socket", "fifo", "char", "block", "unknown" },
+            ctx.item.data.type
+        )
+        local mini_icon, mini_hl, _ = require("mini.icons").get(
+            is_unknown_type and "os" or ctx.item.data.type,
+            is_unknown_type and "" or ctx.label
+        )
+        if mini_icon then
+            return mini_icon, mini_hl
+        end
+      end
+      local mini_icon, mini_hl, _ = require("mini.icons").get("lsp", ctx.kind)
+      return mini_icon, mini_hl
+    end
+    
+    completion = {
+      menu = {
+        draw = {
+          components = {
+            kind_icon = {
+              text = function(ctx)
+                local kind_icon, kind_hl = get_mini_icon(ctx)
+                return kind_icon
+              end,
+              -- (optional) use highlights from mini.icons
+              highlight = function(ctx)
+                local _, hl = get_mini_icon(ctx)
+                return hl
+              end,
+            },
+            kind = {
+              -- (optional) use highlights from mini.icons
+              highlight = function(ctx)
+                local _, hl = get_mini_icon(ctx)
+                return hl
+              end,
+            }
+          }
+        }
+      }
+    }
+<
+
+nvim-web-devicons + lspkind ~
 
 Original discussion <https://github.com/Saghen/blink.cmp/discussions/1146>
 
@@ -798,9 +978,7 @@ Original discussion <https://github.com/Saghen/blink.cmp/discussions/1146>
                         icon = dev_icon
                     end
                 else
-                    icon = require("lspkind").symbolic(ctx.kind, {
-                        mode = "symbol",
-                    })
+                    icon = require("lspkind").symbol_map[ctx.kind] or ""
                 end
     
                 return icon .. ctx.icon_gap
@@ -826,8 +1004,7 @@ Original discussion <https://github.com/Saghen/blink.cmp/discussions/1146>
     }
 <
 
-
-MINI.ICONS + LSPKIND ~
+mini.icons + lspkind ~
 
 Uses mini.icons <https://github.com/echasnovski/mini.icons> to display icons
 for filetypes and lspkind <https://github.com/onsails/lspkind-nvim> for LSP
@@ -841,7 +1018,7 @@ kinds.
             kind_icon = {
               text = function(ctx)
                 if ctx.source_name ~= "Path" then
-                  return require("lspkind").symbolic(ctx.kind, { mode = "symbol" }) .. ctx.icon_gap
+                  return require("lspkind").symbol_map[ctx.kind] or "" .. ctx.icon_gap
                 end
     
                 local is_unknown_type = vim.tbl_contains({ "link", "socket", "fifo", "char", "block", "unknown" }, ctx.item.data.type)
@@ -1412,6 +1589,11 @@ implementation.
     fuzzy = { implementation = "prefer_rust_with_warning" }
 <
 
+Prebuilt binaries are available for the following systems: - Linux (glibc):
+x86_64 and aarch64 - Linux (musl): x86_64 and aarch64 - Linux (android /
+Termux): aarch64 - macOS: x86_64 and aarch64 - Windows: x86_64 - FreeBSD:
+x86_64 and aarch64 - OpenBSD: x86_64 and aarch64
+
 
 ADVANTAGES OF RUST IMPLEMENTATION
 
@@ -1433,8 +1615,9 @@ PREBUILT BINARIES (DEFAULT ON A RELEASE TAG)
 
 By default, Blink will download a prebuilt binary from the latest release, when
 you’re on a release tag (via `version = '1.*'` on `lazy.nvim` for example).
-If you’re not on a release tag, you may force a specific version via
-`fuzzy.prebuilt_binaries.force_version`. See the latest release
+If you’re not on a release tag (tracking `main` or some branch), you may
+force a specific version via `fuzzy.prebuilt_binaries.force_version = 'v1.9.1'`
+or glob `'v*'`. See the latest release
 <https://github.com/saghen/blink.cmp/releases/latest> for supported systems.
 See `prebuilt_binaries` section of the reference configuration
 <./reference.md#fuzzy> for more options.
@@ -1467,9 +1650,7 @@ linux, you very likely want `-gnu`.
 BUILD FROM SOURCE (RECOMMENDED FOR MAIN)
 
 When on `main`, it’s highly recommended to build from source via `cargo build
---release` (via `build = '...'` on `lazy.nvim` for example). This requires a
-nightly rust toolchain, which will be automatically downloaded when using
-`rustup`.
+--release` (via `build = '...'` on `lazy.nvim` for example).
 
 You may also build with nix via `nix run .#build-plugin`.
 
@@ -1631,6 +1812,7 @@ COMMANDS ~
 - `cancel`: Reverts `completion.list.selection.auto_insert` and hides the completion menu
 - `accept`: Accepts the currently selected item
     - Optionally pass an index to select a specific item in the list: `function(cmp) cmp.accept({ index = 1 }) end`
+    - Optionally force accept without visual feedback (no menu, no ghost text visible): `function(cmp) cmp.accept({ force = true }) end`
     - Optionally pass a `callback` to run after the item is accepted: `function(cmp) cmp.accept({ callback = function() some_function() end`
 - `accept_and_enter`: Accepts the currently selected item and feeds an enter key to neovim
     - Useful in `cmdline` mode to accept the current item and run the command
@@ -1840,6 +2022,26 @@ use `extended_filetypes`.
     }
 <
 
+To filter which snippets are shown, use `filter_snippets` which provides the
+filetype and name of the snippets file. This function returns `true` if the
+snippet should be included in completion results, and `false` if it should be
+filtered out.
+
+>lua
+    sources = {
+      providers = {
+        snippets = {
+          opts = {
+            -- disable friendly-snippets frameworks
+            filter_snippets = function(ft, file)
+              return not (string.match(file, "friendly.snippets") and string.match(file, "framework"))
+            end,
+          }
+        }
+      }
+    }
+<
+
 
 CUSTOM SNIPPETS ~
 
@@ -1965,11 +2167,16 @@ LSP specific options while setting them up. Some examples:
     
     -- For `rust-analyzer`
     lspconfig['rust-analyzer'].setup({
-      completion = {
-        callable = {
-          snippets = 'add_parenthesis'
-        }
-      }
+      settings = {
+        ['rust-analyzer'] = {
+          completion = {
+            callable = {
+              -- https://rust-analyzer.github.io/book/configuration.html#completion.callable.snippets
+              snippets = 'add_parentheses', -- or 'none'
+            },
+          },
+        },
+      },
     })
     
     -- For `lua_ls`
@@ -1994,10 +2201,9 @@ SOURCES                                             *blink-cmp-config-sources*
 
 Blink provides a sources interface, modelled after LSPs, for getting completion
 items, trigger characters, documentation and signature help. The `lsp`, `path`,
-`snippets`, `luasnip`, `buffer`, and `omni` sources are built-in. You may add
-additional |blink-cmp-community-sources| as well. Check out the source
-boilerplate <../development/source-boilerplate.md> to learn how to write your
-own!
+`snippets`, `buffer`, and `omni` sources are built-in. You may add additional
+|blink-cmp-community-sources| as well. Check out the source boilerplate
+<../development/source-boilerplate.md> to learn how to write your own!
 
 
 PROVIDERS ~
@@ -2099,43 +2305,50 @@ enabled or not enabled.
 
 COMMUNITY SOURCES ~
 
-See blink.compat <https://github.com/Saghen/blink.compat> for using `nvim-cmp`
-sources
 
-- lazydev <https://github.com/folke/lazydev.nvim>
-- vim-dadbod-completion <https://github.com/kristijanhusak/vim-dadbod-completion>
-- blink-ripgrep <https://github.com/mikavilpas/blink-ripgrep.nvim>
-- blink-cmp-ripgrep <https://github.com/niuiic/blink-cmp-rg.nvim>
-- blink-cmp-ctags <https://github.com/netmute/blink-cmp-ctags>
-- blink-copilot <https://github.com/fang2hou/blink-copilot>
-- blink-cmp-supermaven <https://github.com/Huijiro/blink-cmp-supermaven>
-- blink-cmp-copilot <https://github.com/giuxtaposition/blink-cmp-copilot>
-- minuet-ai.nvim <https://github.com/milanglacier/minuet-ai.nvim>
-- blink-emoji.nvim <https://github.com/moyiz/blink-emoji.nvim>
-- blink-nerdfont.nvim <https://github.com/MahanRahmati/blink-nerdfont.nvim>
-- blink-cmp-dictionary <https://github.com/Kaiser-Yang/blink-cmp-dictionary>
-- blink-cmp-git <https://github.com/Kaiser-Yang/blink-cmp-git>
-- blink-cmp-spell <https://github.com/ribru17/blink-cmp-spell.git>
-- blink-cmp-tmux <https://github.com/mgalliou/blink-cmp-tmux>
-- blink-cmp-wezterm <https://github.com/junkblocker/blink-cmp-wezterm>
-- css-vars.nvim <https://github.com/jdrupal-dev/css-vars.nvim>
-- blink-cmp-env <https://github.com/bydlw98/blink-cmp-env>
-- blink-cmp-avante <https://github.com/Kaiser-Yang/blink-cmp-avante>
-- blink-cmp-conventional-commits <https://github.com/disrupted/blink-cmp-conventional-commits>
-- cmp-pandoc-references <https://github.com/jmbuhr/cmp-pandoc-references>
-- blink-cmp-im <https://github.com/yehuohan/blink-cmp-im>: Input Method source
-- ecolog.nvim <https://github.com/philosofonusus/ecolog.nvim>
-- gitmoji.nvim <https://github.com/Dynge/gitmoji.nvim/>: Completion for gitmojis <https://gitmoji.dev/>
-- blink-cmp-agda-symbols <https://github.com/4e554c4c/blink-cmp-agda-symbols>: Completion for Agda <https://wiki.portal.chalmers.se/agda/pmwiki.php>
-- blink-cmp-latex <https://github.com/erooke/blink-cmp-latex>: Completion for unicode symbols via latex macros
-- blink-cmp-npm <https://github.com/alexandre-abrioux/blink-cmp-npm.nvim>: Completion for NPM package names and versions
-- blink-cmp-kitty <https://github.com/garyhurtz/blink_cmp_kitty>: Kitty terminal completion source
-- blink-cmp-yanky <https://github.com/marcoSven/blink-cmp-yanky>: Completion for yanky.nvim <https://github.com/gbprod/yanky.nvim>
-- blink-cmp-register <https://github.com/phanen/blink-cmp-register>
-- blink-cmp-sshconfig <https://github.com/bydlw98/blink-cmp-sshconfig>
-- blink-cmp-words <https://github.com/archie-judd/blink-cmp-words>: Definitions and synonyms
-- blink-cmp-vsnip <https://codeberg.org/FelipeLema/blink-cmp-vsnip>
-- blink-cmp-dat-word <https://github.com/xieyonn/blink-cmp-dat-word>: Word completion
+Here is a non-exhaustive list of third-party plugins providing additional
+completion sources. Please open a PR to add yours.
+
+- blink-cmp-agda-symbols <https://github.com/4e554c4c/blink-cmp-agda-symbols> by `4e554c4c`: Agda <https://wiki.portal.chalmers.se/agda/pmwiki.php> symbols
+- blink-cmp-avante <https://github.com/Kaiser-Yang/blink-cmp-avante> by `Kaiser-Yang`: Avante <https://github.com/yetone/avante.nvim>
+- blink-cmp-conventional-commits <https://github.com/disrupted/blink-cmp-conventional-commits> by `disrupted`: Git conventional commits <https://www.conventionalcommits.org>
+- blink-cmp-copilot-chat <https://github.com/pxwg/blink-cmp-copilot-chat> by `pxwg`: CopilotChat.nvim <https://github.com/CopilotC-Nvim/CopilotChat.nvim>
+- blink-cmp-copilot <https://github.com/giuxtaposition/blink-cmp-copilot> by `giuxtaposition`: Github Copilot
+- blink-cmp-ctags <https://github.com/netmute/blink-cmp-ctags> by `netmute`: Ctags
+- blink-cmp-dap <https://github.com/mayromr/blink-cmp-dap> by `mayromr`: DAP repl
+- blink-cmp-dat-word <https://github.com/xieyonn/blink-cmp-dat-word> by `xieyonn`: Word
+- blink-cmp-dictionary <https://github.com/Kaiser-Yang/blink-cmp-dictionary> by `Kaiser-Yang`: Word
+- blink-cmp-env <https://github.com/bydlw98/blink-cmp-env> by `bydlw98`: Environment variables
+- blink-cmp-ghostty <https://github.com/barrettruth/blink-cmp-ghostty> by `barrettruth`: Ghostty <https://ghostty.org/> terminal
+- blink-cmp-git <https://github.com/Kaiser-Yang/blink-cmp-git> by `Kaiser-Yang`: Git commits
+- blink-cmp-im <https://github.com/yehuohan/blink-cmp-im> by `yehuohan`: Input Method
+- blink-cmp-kitty <https://github.com/garyhurtz/blink_cmp_kitty> by `garyhurtz`: Kitty <https://sw.kovidgoyal.net/kitty> terminal
+- blink-cmp-latex <https://github.com/erooke/blink-cmp-latex> by `erooke`: Unicode symbols via latex macros
+- blink-cmp-luasnip-choice <https://github.com/becknik/blink-cmp-luasnip-choice> by `becknik`: LuaSnip <https://github.com/L3MON4D3/LuaSnip> choice node
+- blink-cmp-npm <https://github.com/alexandre-abrioux/blink-cmp-npm.nvim> by `alexandre-abrioux`: NPM package names and versions
+- blink-cmp-register <https://github.com/phanen/blink-cmp-register> by `phanen`: Registers
+- blink-cmp-rg <https://github.com/niuiic/blink-cmp-rg.nvim> by `niuiic`: Ripgrep
+- blink-cmp-spell <https://github.com/ribru17/blink-cmp-spell.git> by `ribru17`: Spell (based on Neovim’s spellsuggest)
+- blink-cmp-sshconfig <https://github.com/bydlw98/blink-cmp-sshconfig> by `bydlw98`: SSH config files
+- blink-cmp-supermaven <https://github.com/Huijiro/blink-cmp-supermaven> by `Huijiro`: supermaven-nvim <https://github.com/supermaven-inc/supermaven-nvim>
+- blink-cmp-tmux <https://github.com/barrettruth/blink-cmp-tmux> by `barrettruth`: Tmux <https://github.com/tmux/tmux>
+- blink-cmp-tmux <https://github.com/mgalliou/blink-cmp-tmux> by `mgalliou`: Tmux <https://github.com/tmux/tmux>
+- blink-cmp-vsnip <https://codeberg.org/FelipeLema/blink-cmp-vsnip> by `FelipeLema`: vim-vsnip <https://github.com/hrsh7th/vim-vsnip>
+- blink-cmp-wezterm <https://github.com/junkblocker/blink-cmp-wezterm> by `junkblocker`: WezTerm <https://wezterm.org> terminal
+- blink-cmp-words <https://github.com/archie-judd/blink-cmp-words> by `archie-judd`: Words and synonyms
+- blink-cmp-yanky <https://github.com/marcoSven/blink-cmp-yanky> by `marcoSven`: yanky.nvim <https://github.com/gbprod/yanky.nvim>
+- blink-copilot <https://github.com/fang2hou/blink-copilot> by `fang2hou`: Github Copilot
+- blink-emoji.nvim <https://github.com/moyiz/blink-emoji.nvim> by `moyiz`: Emojis
+- blink-nerdfont.nvim <https://github.com/MahanRahmati/blink-nerdfont.nvim> by `MahanRahmati`: Nerd Fonts <https://www.nerdfonts.com>
+- blink-ripgrep <https://github.com/mikavilpas/blink-ripgrep.nvim> by `mikavilpas`: Ripgrep
+- cmp-pandoc-references <https://github.com/jmbuhr/cmp-pandoc-references> by `jmbuhr`: Bibliography, reference and cross-ref items
+- css-vars.nvim <https://github.com/jdrupal-dev/css-vars.nvim> by `jdrupal-dev`: CSS variables
+- ecolog.nvim <https://github.com/ph1losof/ecolog.nvim> by `ph1losof`: Environment variables
+- gitmoji.nvim <https://github.com/Dynge/gitmoji.nvim> by `Dynge`: gitmojis <https://gitmoji.dev>
+- lazydev <https://github.com/folke/lazydev.nvim> by `folke`: LuaLS <https://luals.github.io>
+- minuet-ai.nvim <https://github.com/milanglacier/minuet-ai.nvim> by `milanglacier`: AI
+- vim-dadbod-completion <https://github.com/kristijanhusak/vim-dadbod-completion> by `kristijanhusak`: vim-dadbod <https://github.com/tpope/vim-dadbod>
+- hex-cmp <https://github.com/dbernheisel/hex-cmp> by `dbernheisel`: Hex.pm <https://hex.pm> package completion for Elixir `mix.exs` files.
 
 
 REFERENCE                                         *blink-cmp-config-reference*
@@ -2601,6 +2814,9 @@ FUZZY ~
     
         -- When downloading a prebuilt binary, force the downloader to resolve this version. If this is unset
         -- then the downloader will attempt to infer the version from the checked out git tag (if any).
+        --
+        -- You may set this to any pattern that `git describe --tags --match <pattern>` supports. For example,
+        -- to track the latest release, you may set this to `v*`.
         --
         -- Beware that if the fuzzy matcher changes while tracking main then this may result in blink breaking.
         force_version = nil,

@@ -16,6 +16,7 @@ blink-cmp-installation	blink-cmp.txt	/*blink-cmp-installation*
 blink-cmp-installation-lazy.nvim	blink-cmp.txt	/*blink-cmp-installation-lazy.nvim*
 blink-cmp-installation-mini.deps	blink-cmp.txt	/*blink-cmp-installation-mini.deps*
 blink-cmp-installation-requirements	blink-cmp.txt	/*blink-cmp-installation-requirements*
+blink-cmp-installation-vim-plug	blink-cmp.txt	/*blink-cmp-installation-vim-plug*
 blink-cmp-introduction	blink-cmp.txt	/*blink-cmp-introduction*
 blink-cmp-introduction-compared-to-nvim-cmp	blink-cmp.txt	/*blink-cmp-introduction-compared-to-nvim-cmp*
 blink-cmp-introduction-features	blink-cmp.txt	/*blink-cmp-introduction-features*
