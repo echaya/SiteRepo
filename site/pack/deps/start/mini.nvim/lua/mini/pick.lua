@@ -203,6 +203,7 @@
 ---   control over their side effects. As a result, regular mappings don't work
 ---   here and picker's window needs to be current as long as it is shown.
 ---   Changing window focus leads to automatic picker stop (after small delay).
+---   Not picker related screen changes require explicit |:redraw|.
 --- - Any picker is non-blocking but waits to return the chosen item. Example:
 ---   `file = MiniPick.builtin.files()` allows other actions to be executed when
 ---   picker is shown while still assigning `file` with value of the chosen item.
@@ -518,16 +519,16 @@
 --- Move is a fundamental action of changing which item is current.
 ---
 --- - `mappings.move_down` - change focus to the item below.
---- - `mappings.move_start` change focus to the first currently matched item
+--- - `mappings.move_start` change focus to the first currently matched item.
 --- - `mappings.move_up` - change focus to the item above.
 ---
 --- Notes:
 --- - Up and down wrap around edges: `move_down` on last item moves to first,
 ---   `move_up` on first moves to last.
 --- - Moving when preview or info view is shown updates the view with new item.
---- - These also work with non-overridable alternatives:
+--- - There are also hard-coded alternative keys (can be used for other actions):
 ---     - `<Down>` moves down.
----     - `<Home>` moves to first matched.
+---     - `<Home>` moves to first currently matched item.
 ---     - `<Up>` moves up.
 ---
 --- ## Paste ~
@@ -743,7 +744,8 @@ end
 --- `config.delay` defines plugin delays (in ms). All should be strictly positive.
 ---
 --- `delay.async` is a delay between forcing asynchronous behavior. This usually
---- means making screen redraws and utilizing |MiniPick.poke_is_picker_active()|
+--- means forcing |:redraw| in preview (several but limited number of times to
+--- ensure visible async highlighting) and using |MiniPick.poke_is_picker_active()|
 --- (for example, to stop current matching if query has updated).
 --- Smaller values give smoother user experience at the cost of more computations.
 ---
@@ -929,6 +931,8 @@ end
 MiniPick.refresh = function()
   if not MiniPick.is_picker_active() then return end
   H.picker_update(H.pickers.active, false, true)
+  -- Needed for something like `VimResized` (as `getcharstr` blocks redraw)
+  H.ensure_redraw(H.pickers.active)
 end
 
 --- Default match
@@ -1610,7 +1614,7 @@ end
 ---@return table|nil Picker items or `nil` if no active picker.
 ---
 ---@seealso |MiniPick.set_picker_items()| and |MiniPick.set_picker_items_from_cli()|
-MiniPick.get_picker_items = function() return vim.deepcopy((H.pickers.active or {}).items) end
+MiniPick.get_picker_items = function() return H.copy_tables((H.pickers.active or {}).items) end
 
 --- Get stritems of active picker
 ---
@@ -1911,7 +1915,7 @@ H.ns_id = {
 H.timers = {
   busy = vim.loop.new_timer(),
   focus = vim.loop.new_timer(),
-  getcharstr = vim.loop.new_timer(),
+  redraw = vim.loop.new_timer(),
 }
 
 -- Pickers
@@ -2084,7 +2088,7 @@ H.validate_picker_opts = function(opts)
   opts = opts or {}
   if type(opts) ~= 'table' then H.error('Picker options should be table.') end
 
-  opts = vim.deepcopy(H.get_config(opts))
+  opts = H.copy_tables(H.get_config(opts))
 
   local validate_callable = function(x, x_name)
     if not vim.is_callable(x) then H.error(string.format('`%s` should be callable.', x_name)) end
@@ -2217,7 +2221,7 @@ H.picker_advance = function(picker)
     if H.cache.is_force_stop_advance then break end
     H.picker_update(picker, do_match)
 
-    local char = H.getcharstr(picker.opts.delay.async, lmap)
+    local char = H.getcharstr(lmap)
     if H.cache.is_force_stop_advance then break end
 
     is_aborted = char == nil
@@ -2252,7 +2256,7 @@ H.picker_update = function(picker, do_match, update_window)
   end
   H.picker_set_bordertext(picker)
   H.picker_set_lines(picker)
-  H.redraw()
+  vim.cmd('redraw')
 end
 
 H.picker_new_buf = function()
@@ -2530,27 +2534,28 @@ H.query_is_ignorecase = function(query)
   return prompt == vim.fn.tolower(prompt)
 end
 
-H.normalize_mappings = function(mappings, skip_alternatives)
-  local res = {}
-  local add_to_res = function(char, data)
-    local key = H.replace_termcodes(char)
-    -- Omit disabled keys and prefer custom actions over built-ins
-    if (key == nil or key == '') or (res[key] ~= nil and res[key].is_custom) then return end
-    res[key] = data
+H.normalize_mappings = function(mappings)
+  local make_data = function(char, name, func, is_custom)
+    return { char = char, name = name, func = is_custom and func or H.actions[name], is_custom = is_custom }
   end
 
-  -- Use alternative keys for some common actions
-  local alt_chars = {}
-  if not skip_alternatives then alt_chars = { move_down = '<Down>', move_start = '<Home>', move_up = '<Up>' } end
-
-  -- Process
+  local res = {}
   for name, rhs in pairs(mappings) do
     local is_custom = type(rhs) == 'table'
     local char = is_custom and rhs.char or rhs
-    local data = { char = char, name = name, func = is_custom and rhs.func or H.actions[name], is_custom = is_custom }
-    add_to_res(char, data)
-    add_to_res(alt_chars[name], data)
+    local key = H.replace_termcodes(char)
+    -- Omit disabled keys and prefer custom actions over built-ins
+    if key ~= '' and (res[key] == nil or not res[key].is_custom) then
+      if res[key] ~= nil then H.notify('Duplicating mapping keys: ' .. name .. ' and ' .. res[key].name, 'WARN') end
+      res[key] = make_data(char, name, rhs.func, is_custom)
+    end
   end
+
+  -- Populate alternative keys, but not force them
+  local home, up, down = H.replace_termcodes('<Home>'), H.replace_termcodes('<Up>'), H.replace_termcodes('<Down>')
+  res[home] = res[home] or make_data('<Home>', 'move_start', nil, false)
+  res[up] = res[up] or make_data('<Up>', 'move_up', nil, false)
+  res[down] = res[down] or make_data('<Down>', 'move_down', nil, false)
 
   return res
 end
@@ -2654,7 +2659,7 @@ H.picker_stop = function(picker, abort)
   if abort then
     H.pickers = {}
   else
-    local new_latest = vim.deepcopy(picker)
+    local new_latest = H.copy_tables(picker)
     H.picker_free(H.pickers.latest)
     H.pickers = { active = nil, latest = new_latest }
   end
@@ -2879,7 +2884,7 @@ H.picker_get_current_item = function(picker)
 end
 
 H.picker_get_register_contents = function(picker)
-  local register = H.getcharstr(picker.opts.delay.async, {})
+  local register = H.getcharstr({})
   -- Mimic some "insert object under cursor" behavior of Command-line mode
   local expand_var = ({ ['\1'] = '<cWORD>', ['\6'] = '<cfile>', ['\23'] = '<cword>' })[register]
   if expand_var then
@@ -2925,14 +2930,14 @@ H.picker_show_info = function(picker)
       t.width = vim.fn.strchars(t.desc)
       width_max = math.max(width_max, t.width)
     end
-    table.sort(data, function(a, b) return a.desc < b.desc end)
+    table.sort(data, function(a, b) return a.desc < b.desc or (a.desc == b.desc and a.char < b.char) end)
 
     for _, t in ipairs(data) do
       table.insert(lines, string.format('%s%s │ %s', t.desc, string.rep(' ', width_max - t.width), t.char))
     end
   end
 
-  local action_keys = H.normalize_mappings(picker.opts.mappings, true)
+  local action_keys = H.normalize_mappings(picker.opts.mappings)
   append_char_data(vim.tbl_filter(function(x) return x.is_custom end, action_keys), 'Mappings (custom)')
   append_char_data(vim.tbl_filter(function(x) return not x.is_custom end, action_keys), 'Mappings (built-in)')
 
@@ -2976,6 +2981,7 @@ H.picker_show_preview = function(picker)
   preview(buf_id, item)
   picker.buffers.preview = vim.api.nvim_win_get_buf(win_id)
   picker.view_state = 'preview'
+  H.ensure_redraw(picker)
 end
 
 -- Default match --------------------------------------------------------------
@@ -3547,7 +3553,7 @@ H.poke_picker_throttle = function(querytick_ref)
   end
 
   local latest_time, dont_check_querytick = vim.loop.hrtime(), querytick_ref == nil
-  local threshold = 1000000 * H.get_config().delay.async
+  local threshold = 1000000 * H.pickers.active.opts.delay.async
   local hrtime = vim.loop.hrtime
   local poke_is_picker_active = MiniPick.poke_is_picker_active
   return function()
@@ -3630,10 +3636,7 @@ end
 
 H.clear_namespace = function(buf_id, ns_id) pcall(vim.api.nvim_buf_clear_namespace, buf_id, ns_id, 0, -1) end
 
-H.replace_termcodes = function(x)
-  if x == nil then return nil end
-  return vim.api.nvim_replace_termcodes(x, true, true, true)
-end
+H.replace_termcodes = function(x) return vim.api.nvim_replace_termcodes(x, true, true, true) end
 
 H.expand_callable = function(x, ...)
   if vim.is_callable(x) then return x(...) end
@@ -3645,17 +3648,10 @@ H.expandcmd = function(x)
   return ok and res or x
 end
 
-H.redraw = function() vim.cmd('redraw') end
-
-H.redraw_scheduled = vim.schedule_wrap(H.redraw)
-
-H.getcharstr = function(delay_async, lmap)
-  -- Ensure that redraws still happen
-  H.timers.getcharstr:start(0, delay_async, H.redraw_scheduled)
+H.getcharstr = function(lmap)
   H.cache.is_in_getcharstr = true
   local ok, char = pcall(vim.fn.getcharstr)
   H.cache.is_in_getcharstr = nil
-  H.timers.getcharstr:stop()
 
   -- Terminate if no input, on hard-coded <C-c>, or outside mouse click
   local main_win_id
@@ -3664,6 +3660,19 @@ H.getcharstr = function(delay_async, lmap)
   if not ok or char == '' or char == '\3' or is_bad_mouse_click then return end
   -- Respect language mappings only if needed
   return vim.o.iminsert == 0 and char or (lmap[char] or char)
+end
+
+H.ensure_redraw = function(picker)
+  -- Ensure only one sequence of scheduled redraws
+  H.timers.redraw:stop()
+  local n = 0
+  local f = function()
+    vim.cmd('redraw')
+    -- Do several (but limited) `:redraw` for slow async changes
+    n = n + 1
+    if n >= 100 then H.timers.redraw:stop() end
+  end
+  H.timers.redraw:start(0, picker.opts.delay.async, vim.schedule_wrap(f))
 end
 
 H.tolower = (function()
@@ -3775,5 +3784,8 @@ H.get_lmap = function()
   return lmap
 end
 if vim.fn.has('nvim-0.10') == 0 then H.get_lmap = function() return {} end end
+
+-- A copy of `vim.deepcopy()` that doesn't error on userdata and threads
+H.copy_tables = function(x) return type(x) == 'table' and vim.tbl_map(H.copy_tables, x) or x end
 
 return MiniPick

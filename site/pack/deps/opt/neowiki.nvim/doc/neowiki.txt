@@ -1,6 +1,6 @@
 *neowiki.nvim*
 
-MIT License Copyright (c) 2025 echaya
+MIT License Copyright (c) 2026 echaya
 
 ==============================================================================
 

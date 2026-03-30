@@ -207,6 +207,7 @@ milliseconds of idle time.
   control over their side effects. As a result, regular mappings don't work
   here and picker's window needs to be current as long as it is shown.
   Changing window focus leads to automatic picker stop (after small delay).
+  Not picker related screen changes require explicit |:redraw|.
 - Any picker is non-blocking but waits to return the chosen item. Example:
   `file = MiniPick.builtin.files()` allows other actions to be executed when
   picker is shown while still assigning `file` with value of the chosen item.
@@ -524,16 +525,16 @@ Notes:
 Move is a fundamental action of changing which item is current.
 
 - `mappings.move_down` - change focus to the item below.
-- `mappings.move_start` change focus to the first currently matched item
+- `mappings.move_start` change focus to the first currently matched item.
 - `mappings.move_up` - change focus to the item above.
 
 Notes:
 - Up and down wrap around edges: `move_down` on last item moves to first,
   `move_up` on first moves to last.
 - Moving when preview or info view is shown updates the view with new item.
-- These also work with non-overridable alternatives:
+- There are also hard-coded alternative keys (can be used for other actions):
     - `<Down>` moves down.
-    - `<Home>` moves to first matched.
+    - `<Home>` moves to first currently matched item.
     - `<Up>` moves up.
 
 ## Paste ~
@@ -793,7 +794,8 @@ Defaults ~
 `config.delay` defines plugin delays (in ms). All should be strictly positive.
 
 `delay.async` is a delay between forcing asynchronous behavior. This usually
-means making screen redraws and utilizing |MiniPick.poke_is_picker_active()|
+means forcing |:redraw| in preview (several but limited number of times to
+ensure visible async highlighting) and using |MiniPick.poke_is_picker_active()|
 (for example, to stop current matching if query has updated).
 Smaller values give smoother user experience at the cost of more computations.
 

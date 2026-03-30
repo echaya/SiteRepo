@@ -2947,7 +2947,10 @@ H.set_extmark = function(...) pcall(vim.api.nvim_buf_set_extmark, ...) end
 
 H.win_set_buf = function(win_id, buf_id)
   vim.wo[win_id].winfixbuf = false
-  vim.api.nvim_win_set_buf(win_id, buf_id)
+  -- Prevent `BufEnter,BufLeave` that come from `nvim_win_set_buf` and conflict
+  -- with other modules (like 'mini.jump'). Use 'mini.files' events if needed.
+  local cmd = string.format('noautocmd call nvim_win_set_buf(%d, %d)', win_id, buf_id)
+  vim.cmd(cmd)
   vim.wo[win_id].winfixbuf = true
 end
 if vim.fn.has('nvim-0.10') == 0 then H.win_set_buf = vim.api.nvim_win_set_buf end

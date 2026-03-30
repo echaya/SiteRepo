@@ -4,7 +4,7 @@
 
 # neowiki.nvim
 
-**Modern Vimwiki Successor for Instant Notes & GTD** 🚀📝
+**Full-featured minimalist Vimwiki Successor for Instant Notes & GTD** 🚀📝
 
 -----
 

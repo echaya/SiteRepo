@@ -3,20 +3,31 @@
 --- Returns a table that can be used as or merged with `opts`,
 --- with `keys.next_target` and `keys.prev_target` set appropriately.
 local function with_traversal_keys(fwd_key, bwd_key, opts)
-   local function with_key(t, key)
+   local function with(key, t)
       return { type(t) == 'table' and t[1] or t, key }
+   end
+
+   local function without(key, t)  -- `t` must be a table now
+      -- Iterate backwards so that we can safely remove the item while looping.
+      for i = #t, 1, -1 do
+         if vim.keycode(t[i]) == vim.keycode(key) then
+            table.remove(t, i)
+         end
+      end
+      return t
    end
 
    local keys = vim.deepcopy(require('leap').opts.keys)
 
    return vim.tbl_deep_extend('error', opts or {}, {
       keys = {
-         next_target = with_key(keys.next_target, fwd_key),
-         prev_target = with_key(keys.prev_target, bwd_key)
+         next_target = without(bwd_key, with(fwd_key, keys.next_target)),
+         prev_target = without(fwd_key, with(bwd_key, keys.prev_target)),
       }
    })
 end
 
+--- @deprecated
 local function set_repeat_keys(fwd_key, bwd_key, kwargs)
    kwargs = kwargs or {}
    local modes = kwargs.modes or { 'n', 'x', 'o' }
@@ -179,11 +190,11 @@ end
 
 return {
    with_traversal_keys = with_traversal_keys,
-   set_repeat_keys = set_repeat_keys,
    get_enterable_windows = get_enterable_windows,
    get_focusable_windows = get_focusable_windows,
    set_backdrop_highlight = set_backdrop_highlight,
    -- deprecated --
+   set_repeat_keys = set_repeat_keys,
    add_repeat_mappings = set_repeat_keys,
    add_default_mappings = add_default_mappings,
    setup = setup,

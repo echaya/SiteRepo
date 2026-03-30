@@ -70,6 +70,14 @@ local validate_subject = function(line)
   return true, nil
 end
 
+local is_details = function(line, line_next) return line == 'Details:' and vim.startswith(line_next or '', '- ') end
+
+local is_forge_directive = function(line)
+  return line:find('^Resolve [%a%p]*#%d+$') ~= nil or line:find('^Related to [%a%p]*#%d+$') ~= nil
+end
+
+local is_git_footer = function(line) return vim.startswith(line, 'Co-authored-by: ') end
+
 local validate_body = function(parts)
   if #parts == 1 then return true, nil end
 
@@ -77,11 +85,32 @@ local validate_body = function(parts)
   if parts[3] == nil then return false, 'If first line is not enough, body should be present' end
   if string.find(parts[3], '^%S') == nil then return false, 'First body line should not start with whitespace.' end
 
+  local is_good_body_start = is_details(parts[3], parts[4]) or is_forge_directive(parts[3]) or is_git_footer(parts[3])
+  if not is_good_body_start then
+    local msg = table.concat({
+      'First body line should be one of:',
+      '- Details: start with "Details:" and follow with a "- ..." to list extra info about the change.',
+      '- Forge directive: "Resolve #XXXX" / "Related to #XXXX" to show which issue/PR/discussion is resolved/related.',
+      '- Git footer: "Co-authored-by: " to show commit co-authors.',
+    }, '\n')
+    return false, msg
+  end
+
+  local details_lnum, forge_lnum, git_lnum
   for i = 3, #parts do
     if vim.fn.strdisplaywidth(parts[i]) > 80 and not vim.startswith(parts[i], 'Co-authored-by:') then
       return false, 'Body line is longer than 80 characters: ' .. vim.inspect(parts[i])
     end
+    details_lnum = is_details(parts[i], parts[i + 1]) and i or details_lnum
+    forge_lnum = is_forge_directive(parts[i]) and i or forge_lnum
+    git_lnum = is_git_footer(parts[i]) and i or git_lnum
   end
+
+  --stylua: ignore start
+  if forge_lnum and details_lnum and forge_lnum < details_lnum then return false, 'Forge directives should go after "Details:"' end
+  if git_lnum and details_lnum and git_lnum < details_lnum then return false, 'Git footer should go after "Details:"' end
+  if git_lnum and forge_lnum and git_lnum < forge_lnum then return false, 'Git footer should go after forge directives' end
+  --stylua: ignore end
 
   if string.find(parts[#parts], '^%s*$') ~= nil then return false, 'Body should not end with blank line.' end
 
@@ -89,12 +118,12 @@ local validate_body = function(parts)
 end
 
 local validate_bad_wording = function(msg)
-  local has_fix = msg:find('[Ff]ix #') or msg:find('[Ff]ixes #') or msg:find('[Ff]ixed #')
+  local has_fix = msg:find('[Ff]ix [%a%p]*#') or msg:find('[Ff]ixes [%a%p]*#') or msg:find('[Ff]ixed [%a%p]*#')
   local has_bad_close = msg:find('[Cc]lose[sd]? #') ~= nil
   local has_bad_resolve = msg:find('[Rr]esolve[sd] #') ~= nil
   if has_fix or has_bad_close or has_bad_resolve then
     return false,
-      'Use "Resolve #" GitHub keyword to resolve issue/PR '
+      'Use "Resolve #" Git forge directive to resolve issue/PR '
         .. '(not "Fix(/es/ed)", not "Close(/s/d)", not "Resolve(s/d)").'
   end
   return true, nil
@@ -229,24 +258,45 @@ local test_cases = {
   ['ci: very very very very very very very very very very very looong subject'] = false,
 
   -- Body
-  ['ci: desc\n\nBody'] = true,
-  ['ci: desc\n\nBody\n\nwith\n   \nempty and blank lines'] = true,
+  ['ci: desc\n\nDetails:\n- Body'] = true,
+  ['ci: desc\n\nDetails:\n- Body\n\nwith\n   \nempty and blank lines'] = true,
 
   ['ci: desc\nSecond line is not empty'] = false,
   ['ci: desc\n\n First body line starts with whitespace'] = false,
 
   -- Line width should be checked only in not cleaned up lines
-  ['ci: desc\n\nBody\nwith\nVery very very very very very very very very very very very very looong body line'] = false,
-  ['ci: desc\n\nBody\nwith\n# Comment with very very very very very very very very very very looong body line'] = true,
-  ['ci: desc\n\nBody\nwith\n# ------------------------ >8 ------------------------\nVery very very very very very very very very very very very very looong body line'] = true,
+  ['ci: desc\n\nDetails:\n- Body\nwith\nVery very very very very very very very very very very very very looong body line'] = false,
+  ['ci: desc\n\nDetails:\n- Body\nwith\n# Comment with very very very very very very very very very very looong body line'] = true,
+  ['ci: desc\n\nDetails:\n- Body\nwith\n# ------------------------ >8 ------------------------\nVery very very very very very very very very very very very very looong body line'] = true,
 
   -- Trailing blank lines are allowed in not strict context
   ['ci: only two lines\n\n'] = true,
-  ['ci: desc\n\nLast line is empty\n\n'] = true,
-  ['ci: desc\n\nLast line is blank\n  '] = true,
+  ['ci: desc\n\nDetails:\n- Last line is empty\n\n'] = true,
+  ['ci: desc\n\nDetails:\n- Last line is blank\n  '] = true,
 
-  -- Footer
-  -- No validation for footer
+  -- Forge directives should follow specific template
+  ['ci: desc\n\nResolve #1'] = true,
+  ['ci: desc\n\nResolve nvim-mini/MiniMax#1'] = true,
+  ['ci: desc\n\nRelated to #1'] = true,
+  ['ci: desc\n\nRelated to nvim-mini/MiniMax#1'] = true,
+
+  -- Git footer
+  ['ci: desc\n\nCo-authored-by: Neo McVim <neo.mcvim@gmail.com>'] = true,
+
+  -- Special body lines should go in specific order
+  ['ci: desc\n\nDetails:\n- Body\n\nResolve #1'] = true,
+  ['ci: desc\n\nResolve #1\n\nDetails:\n- Body'] = false,
+  ['ci: desc\n\nDetails:\n- Body\n\nCo-authored-by: Neo McVim <neo.mcvim@gmail.com>'] = true,
+  ['ci: desc\n\nCo-authored-by: Neo McVim <neo.mcvim@gmail.com>\n\nDetails:\n- Body'] = false,
+  ['ci: desc\n\nResolve #1\n\nCo-authored-by: Neo McVim <neo.mcvim@gmail.com>'] = true,
+  ['ci: desc\n\nCo-authored-by: Neo McVim <neo.mcvim@gmail.com>\n\nResolve #1'] = false,
+
+  ['ci: desc\n\nDetails:\n- Body\n\nResolve #1\n\nCo-authored-by: Neo McVim <neo.mcvim@gmail.com>'] = true,
+  ['ci: desc\n\nResolve #1\n\nDetails:\n- Body\n\nCo-authored-by: Neo McVim <neo.mcvim@gmail.com>'] = false,
+  ['ci: desc\n\nResolve #1\n\nCo-authored-by: Neo McVim <neo.mcvim@gmail.com>\n\nDetails:\n- Body'] = false,
+  ['ci: desc\n\nCo-authored-by: Neo McVim <neo.mcvim@gmail.com>\n\nResolve #1\n\nDetails:\n- Body'] = false,
+  ['ci: desc\n\nDetails:\n- Body\n\nCo-authored-by: Neo McVim <neo.mcvim@gmail.com>\n\nResolve #1'] = false,
+  ['ci: desc\n\nCo-authored-by: Neo McVim <neo.mcvim@gmail.com>\n\nDetails:\n- Body\n\nResolve #1'] = false,
 
   -- Bad wordings
   ['ci: this has Fixed #1'] = false,
@@ -286,7 +336,7 @@ local test_cases = {
   -- Comments are allowed in not strict context
   ['# Comment\nci: desc'] = true,
   [' # Comment\nci: desc'] = true,
-  ['ci: desc\n# Comment\n\nBody'] = true,
+  ['ci: desc\n# Comment\n\nDetails:\n- Body'] = true,
 
   -- Allow all empty lines
   [''] = true,
@@ -299,9 +349,9 @@ _G.test_cases_failed = {}
 vim.loop.os_unsetenv('LINTCOMMIT_STRICT')
 for message, expected in pairs(test_cases) do
   local lines = vim.split(message, '\n')
-  local is_valid = validate_commit_msg(lines)
+  local is_valid, reason = validate_commit_msg(lines)
   if is_valid ~= expected then
-    table.insert(_G.test_cases_failed, { msg = message, expected = expected, actual = is_valid })
+    table.insert(_G.test_cases_failed, { msg = message, expected = expected, actual = is_valid, reason = reason })
   end
 end
 
@@ -313,14 +363,14 @@ local strict_test_cases = {
   ['fixup! should fail'] = false,
 
   -- - Should only matter in subject
-  ['ci: desc\n\nfixup'] = true,
+  ['ci: desc\n\nDetails:\n- fixup'] = true,
 
   -- Do not allow comments outside of commit body
   ['# Comment\nci: desc'] = false,
   [' # Comment\nci: desc'] = false,
   ['ci: desc\n# Comment\n\nBody'] = false,
 
-  ['ci: desc\n\nBody\n# Comment in body'] = true,
+  ['ci: desc\n\nDetails:\n- Body\n# Comment in body'] = true,
 
   -- Check line width even in previously ignored contexts
   ['ci: desc\n\nBody\nwith\n# Comment with very very very very very very very very very very looong body line'] = false,

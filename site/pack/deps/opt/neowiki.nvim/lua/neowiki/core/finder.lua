@@ -8,6 +8,17 @@ local M = {}
 -- Variable to ensure the fallback notification is only shown once per session.
 local native_fallback_notified = false
 
+
+local tools = {
+  fd  = { name = "fd", binaries = { "fd", "fdfind" } },
+  git = { name = "git" },
+  rg  = { name = "rg" },
+}
+
+local rg = util.check_binary_installed(tools.rg)
+local fd = util.check_binary_installed(tools.fd)
+local git = util.check_binary_installed(tools.git)
+
 ---
 -- Generic file finder that uses fast command-line tools if available.
 -- It prioritizes rg > fd > git, falling back to a native vim glob.
@@ -22,13 +33,13 @@ local find_files = function(search_path, search_term, search_type)
   local files
   local glob_pattern
 
-  if vim.fn.executable("rg") == 1 then
+  if rg then
     if search_type == "ext" then
       glob_pattern = "*" .. search_term
     else -- 'name'
       glob_pattern = search_term
     end
-    command = { "rg", "--files", "--no-follow", "--crlf", "--iglob", glob_pattern, search_path }
+    command = { rg.binary, "--files", "--no-follow", "--crlf", "--iglob", glob_pattern, search_path }
     files = vim.fn.systemlist(command)
     if vim.v.shell_error == 0 then
       -- rg can return relative paths; ensure they are absolute.
@@ -41,12 +52,12 @@ local find_files = function(search_path, search_term, search_type)
     end
   end
 
-  if vim.fn.executable("fd") == 1 then
+  if fd then
     if search_type == "ext" then
       -- fd expects the extension without the dot.
-      command = { "fd", "--type=f", "--no-follow", "-e", search_term:sub(2), ".", search_path }
+      command = { fd.binary, "--type=f", "--no-follow", "-e", search_term:sub(2), ".", search_path }
     else -- 'name'
-      command = { "fd", "--type=f", "--no-follow", "--glob", search_term, ".", search_path }
+      command = { fd.binary, "--type=f", "--no-follow", "--glob", search_term, ".", search_path }
     end
     files = vim.fn.systemlist(command)
     if vim.v.shell_error == 0 then
@@ -56,8 +67,8 @@ local find_files = function(search_path, search_term, search_type)
     end
   end
 
-  if vim.fn.executable("git") == 1 and vim.fn.isdirectory(util.join_path(search_path, ".git")) then
-    command = { "git", "-C", search_path, "ls-files", "--cached", "--others", "--exclude-standard" }
+  if git and vim.fn.isdirectory(util.join_path(search_path, ".git")) then
+    command = { git.binary, "-C", search_path, "ls-files", "--cached", "--others", "--exclude-standard" }
     local all_files = vim.fn.systemlist(command)
     if vim.v.shell_error == 0 then
       local results = {}
@@ -192,7 +203,7 @@ end
 -- @return (table|nil) A list of match objects, or nil if rg is not available or finds nothing.
 --   Each object contains: { file = absolute_path, lnum = line_number, text = text_of_line }
 M.find_backlinks = function(search_path, target_filename)
-  if vim.fn.executable("rg") ~= 1 then
+  if not rg then
     return nil -- Ripgrep is required for this enhanced search.
   end
 
@@ -210,7 +221,7 @@ M.find_backlinks = function(search_path, target_filename)
   local pattern = wikilink_part .. "|" .. mdlink_part
 
   local command = {
-    "rg",
+    rg.binary,
     "--vimgrep",
     "--type",
     "markdown",

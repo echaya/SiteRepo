@@ -1,20 +1,20 @@
 local M = {
    default = {
       preview = true,
-      equivalence_classes = {" \t\r\n"},
-      safe_labels = "sfnut/SFNLHMUGTZ?",
-      labels = "sfnjklhodweimbuyvrgtaqpcxz/SFNJKLHODWEIMBUYVRGTAQPCXZ?",
+      equivalence_classes = { ' \t\r\n', '([{', ')]}', '\'"`' },
+      safe_labels = 'sfnut/SFNLHMUGTZ?',
+      labels = 'sfnjklhodweimbuyvrgtaqpcxz/SFNJKLHODWEIMBUYVRGTAQPCXZ?',
       keys = {
-         next_target = "<enter>",
-         prev_target = "<backspace>",
-         next_group = "<space>",
-         prev_group = "<backspace>"
+         next_target = '<enter>',
+         prev_target = '<backspace>',
+         next_group = '<space>',
+         prev_group = '<backspace>'
       },
       vim_opts = {
-         ["wo.scrolloff"] = 0,  -- keep the view when auto-jumping
-         ["wo.sidescrolloff"] = 0,
-         ["wo.conceallevel"] = 0,
-         ["bo.modeline"] = false  -- see lightspeed#81
+         ['wo.scrolloff'] = 0,  -- keep the view when auto-jumping
+         ['wo.sidescrolloff'] = 0,
+         ['wo.conceallevel'] = 0,
+         ['bo.modeline'] = false  -- see lightspeed#81
       },
       -- Deprecated options.
       case_sensitive = nil,

@@ -177,15 +177,24 @@ next/closest available target:
   etc.). If you overshoot, <backspace> (|leap.opts.keys.prev_target|) steps
   back. *leap-traversal*
 
-There is a convenience function in the `user` module to set keys to repeat the
-previous search without explicitly invoking Leap (`<enter><enter>...` instead
-of `s<enter><enter>...`): >lua
-    require('leap.user').set_repeat_keys('<enter>', '<backspace>', {
-      -- When true, repeat in the direction of the last motion
-      -- (by default, <cr>/<bs> always goes forward/backward).
-      relative_directions = false,
-      modes = {'n', 'x', 'o'},
-    })
+It is worth enabling the traversal keys to repeat the previous search without
+explicitly invoking Leap (so that you can `<enter><enter>...` instead of
+`s<enter><enter>...`): >lua
+    do
+      local clever = require('leap.user').with_traversal_keys
+      -- For relative directions, set the `backward` flags according to:
+      -- local prev_backward = require('leap').state['repeat'].backward
+      vim.keymap.set({ 'n', 'x', 'o' }, '<cr>', function()
+        require('leap').leap {
+          ['repeat'] = true, opts = clever('<cr>', '<bs>'),
+        }
+      end)
+      vim.keymap.set({ 'n', 'x', 'o' }, '<bs>', function()
+        require('leap').leap {
+          ['repeat'] = true, opts = clever('<bs>', '<cr>'), backward = true,
+        }
+      end)
+    end
 <
 Operations can be repeated with |.|, if vim-repeat
 (https://github.com/tpope/vim-repeat) is installed. Dot-repeat works as you
@@ -208,33 +217,29 @@ Example configuration: >lua
 
     Enable |leap-preview|. Can also be a function that only lets through
     selected matches, to reduce visual noise. It gets three characters as
-    arguments: the character preceding the match, and the matched pair itself.
-    Missing characters are represented by empty strings. Example: >lua
-
-    -- Exclude whitespace and the middle of alphabetic words from preview:
-    --   foobar[baaz] = quux
-    --   ^----^^^--^^-^-^--^
-    function(ch0, ch1, ch2)
-      return not (
-        ch1:match('%s') or
-        ch0:match('%a') and ch1:match('%a') and ch2:match('%a')
-      )
-    end
+    arguments: the character preceding the match, and the matched pair itself
+    (missing characters are represented by empty strings).
+    Example: >lua
+        -- Skip preview for matches starting with whitespace or an
+        -- alphabetic mid-word character: foobar[baaz] = quux
+        --                                *    ***  ** * *  *
+        function(ch0, ch1, ch2)
+          return not (
+            ch1:match('%s')
+            or (ch0:match('%a') and ch1:match('%a') and ch2:match('%a'))
+          )
+        end
 <
     You can implement more involved checks here (camel case, keywords, you
     name it), but keep in mind that this function will be called for every
     single match, so efficiency is something to consider.
 
-                      *leap-equivalence-class* *leap.opts.equivalence_classes*
-`equivalence_classes = { ' \t\r\n' }`
-
+                                               *leap.opts.equivalence_classes*
+`equivalence_classes =` >
+    { ' \t\r\n', '([{', ')]}', '\'"`' }
+<
     Mutual alias groups for input characters: members will match any other in
     their equivalence class. Can be strings or tables.
-    Example - whitespace, brackets, and quotes: >lua
-        { ' \t\r\n', '([{', ')]}', '\'"`' }
-<
-    Note: If you want to be able to target empty lines and characters at the
-    end of a line, keep an alias for `\n` and `\r`. |leap-till-eol|
 
     Note: Non-mutual aliases (wildcard characters), at least ones that work
     for the whole pattern, are not possible in Leap, because we cannot read
@@ -245,6 +250,9 @@ Example configuration: >lua
     `?` next. But then `?xyz` is, by definition, a mutual alias group, there
     are no shortcuts anymore. |smartcase| is a specific instance of this
     issue: `x` -> `x|X`.) *leap-wildcard-problem*
+
+    Note: If you want to be able to target empty lines and characters at the
+    end of a line, keep an alias for `\n` and `\r`. |leap-till-eol|
 
                                                        *leap.opts.safe_labels*
 `safe_labels = 'sfnut/SFNLHMUGTZ?'`
@@ -279,29 +287,31 @@ right-hand keys to get a better balance for the whole sequence on average.
       next_group = '<space>',
       prev_group = '<backspace>',
     }
-
-*leap.opts.keys.next_target*
-Jump to the next available target (use the previous search pattern if no input
-has been given). |leap-repeat|
-
-*leap.opts.keys.prev_target*
-Jump to the previous target (revert `next_target`).
-
-*leap.opts.keys.next_group*
-Shift to the next group of labeled targets.
-
-*leap.opts.keys.prev_group*
-Shift to the previous group of labeled targets (revert `next_group`).
-
-Each value can be a table too, with alternatives. In `next_target` and
-`prev_target`, subsequent keys only get active once we have the full search
-pattern (no more input characters are needed). *leap-clever-repeat*
-Example ("clever-s"): >lua
-    local keys = require('leap').opts.keys
-    keys.next_target = { '<enter>', 's' }
-    keys.prev_target = { '<backspace>', 'S' }
 <
-Note: <esc> is hardcoded to exit Leap at any stage cleanly.
+    Special key mappings active during execution:
+
+    *leap.opts.keys.next_target*
+    Jump to the next available target (use the previous search pattern if no
+    input has been given). |leap-repeat|
+
+    *leap.opts.keys.prev_target*
+    Jump to the previous target (revert `next_target`).
+
+    *leap.opts.keys.next_group*
+    Shift to the next group of labeled targets.
+
+    *leap.opts.keys.prev_group*
+    Shift to the previous group of labeled targets (revert `next_group`).
+
+    Each value can be a table too, with alternatives. In `next_target` and
+    `prev_target`, subsequent keys only get active once we have the full
+    search pattern (no more input characters are needed). *leap-clever-repeat*
+    Example ("clever-s"): >lua
+        local keys = require('leap').opts.keys
+        keys.next_target = { '<enter>', 's' }
+        keys.prev_target = { '<backspace>', 'S' }
+<
+    Note: <esc> is hardcoded to exit Leap at any stage cleanly.
 
                                                           *leap.opts.vim_opts*
 `vim_opts =` >
@@ -311,28 +321,28 @@ Note: <esc> is hardcoded to exit Leap at any stage cleanly.
       ['wo.conceallevel'] = 0,
       ['bo.modeline'] = false,
     }
+<
+    Temporary |options| to be set on |LeapEnter|, and restored to their
+    original value upon |LeapLeave|. The keys should follow the above pattern,
+    the prefix corresponding to |vim.wo|, |vim.bo|, or |vim.go|.
 
-Temporary |options| to be set on |LeapEnter|, and restored to their original
-value upon |LeapLeave|. The keys should follow the above pattern, the prefix
-corresponding to |vim.wo|, |vim.bo|, or |vim.go|.
-
-Example: >lua
-    local vim_opts = require('leap').opts.vim_opts
-    vim_opts['go.hlsearch'] = false
-    -- The right-hand side can also be a function that evaluates to the
-    -- desired value. The window or buffer id will be passed as argument
-    -- for the corresponding scopes.
-    vim_opts['wo.conceallevel'] = function(win)
-      local buf = vim.fn.winbufnr(win)
-      if
-        vim.bo[buf].buftype == 'help'
-        or vim.fn.bufname(buf):match('^oil://')  -- oil.nvim buffers
-      then
-        return vim.wo[win].conceallevel  -- keep the current value
-      else
-        return 0
-      end
-    end
+    Example: >lua
+        local vim_opts = require('leap').opts.vim_opts
+        vim_opts['go.hlsearch'] = false
+        -- The right-hand side can also be a function that evaluates to
+        -- the desired value. The window or buffer id will be passed as
+        -- argument for the corresponding scopes.
+        vim_opts['wo.conceallevel'] = function(win)
+          local buf = vim.fn.winbufnr(win)
+          if
+            vim.bo[buf].buftype == 'help'
+            or vim.fn.bufname(buf):match('^oil://')  -- oil.nvim buffers
+          then
+            return vim.wo[win].conceallevel  -- keep the current value
+          else
+            return 0
+          end
+        end
 <
 ==============================================================================
 HIGHLIGHTING                                                  *leap-highlight*
@@ -403,6 +413,9 @@ leap({opts})                                                     *leap.leap()*
                  cursor compared to the target position.
                • {inclusive}? (`boolean`, default: `false`) Make operations
                  |inclusive| for forward jumps.
+               • {repeat}? (`boolean`, default: `false`) Leap again with the
+                 previous inputs and arguments.
+
                • {opts}? (`table`) A table like |leap.opts|, to override any
                  default setting for the specific call. Example: >lua
                     require('leap').leap { opts = { safe_labels = '' } }
@@ -465,8 +478,6 @@ leap({opts})                                                     *leap.leap()*
                  Leap in place of the jump, taking the selected target as its
                  argument. (You can obviously implement some custom jump logic
                  here too.)
-
-See also: |leap.init_hl()|.
 
 ==============================================================================
 EVENTS                                                           *leap-events*

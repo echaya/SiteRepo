@@ -334,4 +334,25 @@ M.sanitize_filename = function(name)
   return sanitized
 end
 
+-- Get correct binary name on every system and distribution that uses different names for various reasons.
+-- Adapted binary check from:
+-- https://github.com/nvim-telescope/telescope.nvim/blob/5255aa27c422de944791318024167ad5d40aad20/lua/telescope/health.lua#L35-L50
+--
+-- @param program (table) Program table with name and optional binaries table
+-- @return (table) Table content: {exists, binary}
+--
+M.check_binary_installed = function(program)
+  local binaries = program.binaries or { program.name }
+  for _, binary in ipairs(binaries) do
+    local found = vim.fn.executable(binary) == 1
+    if not found and is_windows then
+      binary = binary .. ".exe"
+      found = vim.fn.executable(binary) == 1
+    end
+    if found then
+      return { exists = true, binary = binary }
+    end
+  end
+end
+
 return M
