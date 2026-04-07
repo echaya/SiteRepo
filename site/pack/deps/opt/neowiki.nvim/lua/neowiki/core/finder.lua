@@ -8,23 +8,17 @@ local M = {}
 -- Variable to ensure the fallback notification is only shown once per session.
 local native_fallback_notified = false
 
-
 local tools = {
-  fd  = { name = "fd", binaries = { "fd", "fdfind" } },
-  git = { name = "git" },
-  rg  = { name = "rg" },
+  rg = { name = "rg" },
 }
 
 local rg = util.check_binary_installed(tools.rg)
-local fd = util.check_binary_installed(tools.fd)
-local git = util.check_binary_installed(tools.git)
 
 ---
--- Generic file finder that uses fast command-line tools if available.
--- It prioritizes rg > fd > git, falling back to a native vim glob.
+-- Generic file finder that uses fast command-line tool (rg) if available.
 -- All returned paths are made absolute.
 -- @param search_path (string) The absolute path of the directory to search.
--- @param search_term (string) The filename or extension to find.
+-- @param search_term (string|table) The filename string (for 'name') or table of patterns (for 'ext').
 -- @param search_type (string) 'name' to find by exact filename, or 'ext' for extension.
 -- @return (table) A list of absolute paths to the found files.
 --
@@ -34,14 +28,20 @@ local find_files = function(search_path, search_term, search_type)
   local glob_pattern
 
   if rg then
+    command = { rg.binary, "--files", "--no-follow", "--crlf" }
     if search_type == "ext" then
-      glob_pattern = "*" .. search_term
+      for _, pat in ipairs(search_term) do
+        table.insert(command, "--iglob")
+        table.insert(command, pat)
+      end
     else -- 'name'
-      glob_pattern = search_term
+      table.insert(command, "--iglob")
+      table.insert(command, search_term)
     end
-    command = { rg.binary, "--files", "--no-follow", "--crlf", "--iglob", glob_pattern, search_path }
+    table.insert(command, search_path)
+
     files = vim.fn.systemlist(command)
-    if vim.v.shell_error == 0 then
+    if vim.v.shell_error == 0 or vim.v.shell_error == 1 then
       -- rg can return relative paths; ensure they are absolute.
       local absolute_files = {}
       for _, file in ipairs(files) do
@@ -51,53 +51,10 @@ local find_files = function(search_path, search_term, search_type)
       return absolute_files
     end
   end
-
-  if fd then
-    if search_type == "ext" then
-      -- fd expects the extension without the dot.
-      command = { fd.binary, "--type=f", "--no-follow", "-e", search_term:sub(2), ".", search_path }
-    else -- 'name'
-      command = { fd.binary, "--type=f", "--no-follow", "--glob", search_term, ".", search_path }
-    end
-    files = vim.fn.systemlist(command)
-    if vim.v.shell_error == 0 then
-      -- fd with a base directory returns absolute paths.
-      -- vim.notify("fd is used")
-      return files
-    end
-  end
-
-  if git and vim.fn.isdirectory(util.join_path(search_path, ".git")) then
-    command = { git.binary, "-C", search_path, "ls-files", "--cached", "--others", "--exclude-standard" }
-    local all_files = vim.fn.systemlist(command)
-    if vim.v.shell_error == 0 then
-      local results = {}
-      for _, file in ipairs(all_files) do
-        local should_add = false
-        if search_type == "ext" then
-          if file:match(vim.pesc(search_term) .. "$") then
-            should_add = true
-          end
-        else -- 'name'
-          if vim.fn.fnamemodify(file, ":t") == search_term then
-            should_add = true
-          end
-        end
-
-        if should_add then
-          -- git ls-files returns paths relative to `search_path`, so join them to make them absolute.
-          table.insert(results, util.join_path(search_path, file))
-        end
-      end
-      -- vim.notify("git is used")
-      return results
-    end
-  end
-
-  -- 4. Fallback to native globpath if all CLI tools failed.
+  -- Fallback to native globpath if all CLI tools failed.
   if not native_fallback_notified then
     vim.notify(
-      "rg, fd, and git not available or failed. Falling back to slower native search.",
+      "rg is not available or failed. Falling back to slower native search.",
       vim.log.levels.INFO,
       { title = "neowiki" }
     )
@@ -105,23 +62,28 @@ local find_files = function(search_path, search_term, search_type)
   end
 
   if search_type == "ext" then
-    glob_pattern = "**/*" .. search_term
+    local results = {}
+    for _, pat in ipairs(search_term) do
+      glob_pattern = "**/" .. pat
+      local matches = vim.fn.globpath(search_path, glob_pattern, false, true)
+      vim.list_extend(results, matches)
+    end
+    return results
   else -- 'name'
     glob_pattern = "**/" .. search_term
+    -- globpath returns absolute paths when the base path is absolute.
+    return vim.fn.globpath(search_path, glob_pattern, false, true)
   end
-  -- globpath returns absolute paths when the base path is absolute.
-  return vim.fn.globpath(search_path, glob_pattern, false, true)
 end
 
 ---
 -- Finds all wiki pages within a directory by calling the generic file finder.
 -- @param search_path (string) The absolute path of the directory to search.
--- @param extension (string) The file extension to look for (e.g., ".md").
 -- @return (table) A list of absolute paths to the found wiki pages.
 --
-M.find_wiki_pages = function(search_path, extension)
-  -- Delegate to the main file-finding function with 'ext' type.
-  return find_files(search_path, extension, "ext")
+M.find_wiki_pages = function(search_path)
+  -- Delegate to the main file-finding function with 'ext' type and dynamic patterns.
+  return find_files(search_path, config.markdown_patterns, "ext")
 end
 
 ---
@@ -210,10 +172,17 @@ M.find_backlinks = function(search_path, target_filename)
   local fname_no_ext = vim.fn.fnamemodify(target_filename, ":t:r")
   local fname_pattern = fname_no_ext:gsub("([%(%)%.%+%[%]])", "\\%1"):gsub("/", "[\\/]")
 
-  local ext = state.markdown_extension or ".md"
-  local ext_pattern = ext:gsub("%.", "\\.") -- Turns ".md" into "\.md"
+  -- Dynamically build the regex group for all valid extensions
+  local valid_exts = {}
+  for _, pattern in ipairs(config.markdown_patterns) do
+    local ext_part = pattern:match("%*%.(.+)")
+    if ext_part then
+      table.insert(valid_exts, "\\." .. ext_part)
+    end
+  end
 
-  local strict_target_content = "(?:[\\w./\\\\]*)" .. fname_pattern .. "(?:" .. ext_pattern .. ")?"
+  local dynamic_ext_pattern = "(?:" .. table.concat(valid_exts, "|") .. ")?"
+  local strict_target_content = "(?:[\\w./\\\\]*)" .. fname_pattern .. dynamic_ext_pattern
   local wikilink_format = "\\[\\[%s\\]\\]"
   local mdlink_format = "\\[[^\\]]+\\]\\(%s\\)"
   local wikilink_part = string.format(wikilink_format, strict_target_content)
@@ -231,7 +200,7 @@ M.find_backlinks = function(search_path, target_filename)
   }
 
   local results = vim.fn.systemlist(command)
-  if vim.v.shell_error ~= 0 or not results or vim.tbl_isempty(results) then
+  if vim.v.shell_error ~= 0 and vim.v.shell_error ~= 1 then
     return nil -- rg command failed or returned no results.
   end
 

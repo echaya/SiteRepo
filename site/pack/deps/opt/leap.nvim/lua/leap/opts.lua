@@ -17,10 +17,8 @@ local M = {
          ['bo.modeline'] = false  -- see lightspeed#81
       },
       -- Deprecated options.
-      case_sensitive = nil,
       max_highlighted_traversal_targets = 10,
       substitute_chars = {},
-      highlight_unlabeled_phase_one_targets = false
    },
    -- Will be updated by `leap()` on invocation.
    current_call = {},

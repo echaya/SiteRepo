@@ -40,7 +40,7 @@ local function set_beacon_for_labeled(target, group_offset, phase)
    -- in that case it is mandatory to show all labeled positions in some
    -- way. (Note: We're keeping this on even after phase one - sudden
    -- visual changes should be avoided as much as possible.)
-   local show_all = phase and not opts.highlight_unlabeled_phase_one_targets
+   local show_all = phase
    local virt_text =
       relative_group == 1
       and { { label .. pad, hl.group.label } }
@@ -78,12 +78,6 @@ function M.set_beacons(targets, kwargs)
             if phase ~= 1 or target.is_previewable then
                set_beacon_for_labeled(target, group_offset, phase)
             end
-         elseif
-            phase == 1
-            and target.is_previewable
-            and opts.highlight_unlabeled_phase_one_targets
-         then
-            set_beacon_to_match_hl(target)
          end
       end
    end

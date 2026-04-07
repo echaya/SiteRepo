@@ -68,6 +68,19 @@ Plugin to improve viewing Markdown files in Neovim
 
 # Install
 
+## vim.pack
+
+```lua
+vim.pack.add({
+    'https://github.com/nvim-treesitter/nvim-treesitter',
+    'https://github.com/nvim-mini/mini.nvim',            -- if you use the mini.nvim suite
+    -- 'https://github.com/nvim-mini/mini.icons',        -- if you use standalone mini plugins
+    -- 'https://github.com/nvim-tree/nvim-web-devicons', -- if you prefer nvim-web-devicons
+    'https://github.com/MeanderingProgrammer/render-markdown.nvim',
+})
+require('render-markdown').setup({}) -- only mandatory if you want to set custom options
+```
+
 ## lazy.nvim
 
 ```lua
@@ -103,19 +116,6 @@ use({
         require('render-markdown').setup({})
     end,
 })
-```
-
-## vim.pack
-
-```lua
-vim.pack.add({
-    'https://github.com/nvim-treesitter/nvim-treesitter',
-    'https://github.com/nvim-mini/mini.nvim',            -- if you use the mini.nvim suite
-    -- 'https://github.com/nvim-mini/mini.icons',        -- if you use standalone mini plugins
-    -- 'https://github.com/nvim-tree/nvim-web-devicons', -- if you prefer nvim-web-devicons
-    'https://github.com/MeanderingProgrammer/render-markdown.nvim',
-})
-require('render-markdown').setup({}) -- only mandatory if you want to set custom options
 ```
 
 # Commands
@@ -525,6 +525,10 @@ require('render-markdown').setup({
         highlight_fallback = 'RenderMarkdownCodeFallback',
         -- Highlight for inline code.
         highlight_inline = 'RenderMarkdownCodeInline',
+        -- Highlight for inline code left icon, default to reverse of highlight_inline.
+        highlight_inline_left = nil,
+        -- Highlight for inline code right icon, default to reverse of highlight_inline.
+        highlight_inline_right = nil,
         -- Determines how code blocks & inline code are rendered.
         -- | none     | { enabled = false }                           |
         -- | normal   | { language = false }                          |
@@ -1229,6 +1233,10 @@ require('render-markdown').setup({
         highlight_fallback = 'RenderMarkdownCodeFallback',
         -- Highlight for inline code.
         highlight_inline = 'RenderMarkdownCodeInline',
+        -- Highlight for inline code left icon, default to reverse of highlight_inline.
+        highlight_inline_left = nil,
+        -- Highlight for inline code right icon, default to reverse of highlight_inline.
+        highlight_inline_right = nil,
         -- Determines how code blocks & inline code are rendered.
         -- | none     | { enabled = false }                           |
         -- | normal   | { language = false }                          |

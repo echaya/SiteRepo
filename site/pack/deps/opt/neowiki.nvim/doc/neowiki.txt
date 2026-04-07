@@ -103,33 +103,14 @@ lua vim.keymap.set("n", "<leader>wT", require("neowiki").open_wiki_new_tab, { de
 
 4. External Dependencies                                  *neowiki-dependencies*
 
-neowiki.nvim is designed to be fast and efficient by leveraging modern
-command-line tools for file searching. While these dependencies are optional,
-installing them is highly recommended for the best performance and to enable
-all features.
+neowiki.nvim is designed to be fast and efficient by leveraging `ripgrep` (`rg`) for file searching. While optional, installing them is highly recommended for the best
+performance and to enable all features.
 
 Run `:checkhealth neowiki` to see which tools are currently active.
 
-SEARCH TOOLS (Priority: rg > fd > git > native)
 -----------------------------------------------
-If none of the following tools are found in your PATH, neowiki.nvim will
-automatically use a slower, native Lua-based search method.
-
-- ***ripgrep*** (`rg`)
-  The primary and fastest search tool used by the plugin. It is **required**
-  for the global backlink search feature used when **renaming or deleting
-  pages**. Without `rg`, backlink updates will fall back to searching only
-  within a limited scope (such as the parent wiki's index file).
-
-- ***fd***
-  A fast and simple alternative for finding files. It is used as the second
-  choice if `rg` is not available. Its responsibilities include listing wiki
-  pages for insertion and detecting nested wiki structures.
-
-- ***git***
-  If `rg` and `fd` are not found, neowiki.nvim can use `git ls-files` to find
-  files within a git repository. It is used as the third choice for listing
-  wiki pages.
+If `rg` is not found in your PATH, neowiki.nvim will automatically use a slower,
+native Lua-based search method.
 
 OTHER DEPENDENCIES
 ------------------

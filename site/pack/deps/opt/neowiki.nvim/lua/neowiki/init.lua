@@ -6,13 +6,6 @@ local api = require("neowiki.api")
 local state = require("neowiki.state")
 
 local M = {}
-local markdown_patterns = {
-  "*.md",
-  "*.markdown",
-  "*.mdown",
-  "*.mkd",
-  "*.qmd",
-}
 
 --- Public API ---
 
@@ -101,7 +94,7 @@ local function process_index_file()
     )
   else
     local user_pattern = "*." .. ext_part:lower()
-    for _, pattern in ipairs(markdown_patterns) do
+    for _, pattern in ipairs(config.markdown_patterns) do
       if pattern == user_pattern then
         is_supported = true
         break
@@ -154,7 +147,7 @@ M.setup = function(opts)
   local neowiki_augroup = vim.api.nvim_create_augroup("neowiki", { clear = true })
   vim.api.nvim_create_autocmd("BufEnter", {
     group = neowiki_augroup,
-    pattern = markdown_patterns,
+    pattern = config.markdown_patterns,
     callback = function()
       api.setup_buffer()
       if vim.b.wiki_root then

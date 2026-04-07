@@ -82,8 +82,7 @@ end
 -- (see |:help leap-wildcard-problem|).
 local function get_equivalence_class(ch, consider_smartcase)
    if
-      opts.case_sensitive  -- deprecated
-      or not vim.go.ignorecase
+      not vim.go.ignorecase
       or (consider_smartcase and vim.go.smartcase and lower(ch) ~= ch)
    then
       return opts.eqv_class_of[ch]
@@ -99,8 +98,7 @@ local function get_representative_char(ch)
    -- Choosing the first one from an equivalence class (arbitrary).
    local eqclass = get_equivalence_class(ch)
    ch = eqclass and eqclass[1] or ch
-           -- deprecated
-   return (opts.case_sensitive or not vim.go.ignorecase) and ch or lower(ch)
+   return vim.go.ignorecase and lower(ch) or ch
 end
 
 
@@ -148,9 +146,6 @@ end
 ---
 local function prepare_pattern(in1, in2, inputlen)
    local prefix = '\\V'
-   -- deprecated
-   if opts.case_sensitive == true then prefix = prefix .. '\\C' end
-   if opts.case_sensitive == false then prefix = prefix .. '\\c' end
    if vim.fn.mode(1):match('V') then
       -- Skip the current line in linewise modes. (Hardcode the number,
       -- we might set the cursor before starting the search.)
@@ -426,6 +421,43 @@ end
 
 -- Leap ///1
 
+local function notify_user_about_removed_opts()
+   if opts.highlight_unlabeled_phase_one_targets == true then
+      vim.notify(
+         [[
+leap.nvim: the option `highlight_unlabeled_phase_one_targets` has been removed.
+
+If really necessary, the following workaround can be used:
+
+   require('leap').opts.on_beacons = function(targets)
+     for _, t in ipairs(targets) do
+       if not t.label and not t.beacon and t.chars and t.is_previewable ~= false then
+         t.beacon = { 0, { virt_text = { { table.concat(t.chars), 'LeapMatch' } } }, }
+       end
+     end
+   end
+
+To view this message again, type `:messages` and navigate to the bottom.
+]],
+         vim.log.levels.WARN
+      )
+   elseif opts.case_sensitive == true then
+      vim.notify(
+            [[
+leap.nvim: the option `case_sensitive` has been removed.
+
+Instead, you can set `ignorecase` for leap() calls:
+   require('leap').opts.vim_opts['go.ignorecase'] = false
+
+See `:help leap-features`, `:help leap.opts.vim_opts`.
+
+To view this message again, type `:messages` and navigate to the bottom.
+]],
+         vim.log.levels.WARN
+      )
+   end
+end
+
 -- State persisted between invocations.
 local state = {
    ['repeat'] = {
@@ -528,6 +560,8 @@ local function leap(kwargs)
             end
          end
       end
+
+      notify_user_about_removed_opts()
    end
 
    local is_directional = not windows

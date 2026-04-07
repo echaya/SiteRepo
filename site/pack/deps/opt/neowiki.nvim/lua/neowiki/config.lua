@@ -86,7 +86,16 @@ local config = {
     -- Left empty by default.
     style = {},
   },
+
+  -- Internal list of supported markdown file patterns.
+  -- Not yet exposed in the public documentation.
+  markdown_patterns = {
+    "*.md",
+    "*.markdown",
+    "*.mdown",
+    "*.mkd",
+    "*.qmd",
+  },
 }
 
 return config
-

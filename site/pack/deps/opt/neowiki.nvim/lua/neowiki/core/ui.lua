@@ -165,7 +165,7 @@ end
 -- @return (table|nil) A list of filtered page paths, or nil if no pages were found initially.
 local function get_filtered_pages(root, current_path)
   -- Step 1: Find all pages in the given root directory.
-  local all_pages = finder.find_wiki_pages(root, state.markdown_extension)
+  local all_pages = finder.find_wiki_pages(root)
   if not all_pages or vim.tbl_isempty(all_pages) then
     vim.notify("No wiki pages found in: " .. root, vim.log.levels.INFO, { title = "neowiki" })
     return nil -- Indicate that the initial search found no pages.
@@ -313,9 +313,7 @@ M.prompt_rename_input = function(default_name, callback)
       return callback(nil) -- Abort cleanly
     end
     local sanitized_input = util.sanitize_filename(input)
-    local new_filename = (vim.fn.fnamemodify(sanitized_input, ":e") == "")
-        and (input .. state.markdown_extension)
-      or input
+    local new_filename = util.ensure_extension(sanitized_input, state.markdown_extension)
     callback({ new_filename = new_filename })
   end)
 end

@@ -82,11 +82,7 @@ lua vim.keymap.set("n", "<leader>wT", require("neowiki").open_wiki_new_tab, { de
 
 ### File Search
 
-`neowiki.nvim` enhances file searching with modern command-line tools for optimal performance. While optional, installing them is highly recommended for efficient page listing and backlink updates. If none are found, the plugin falls back to a native Lua search.
-
-- *ripgrep* (`rg`): The primary search tool. It is required for global backlink search when renaming or deleting pages. Without `rg`, backlink updates will search a limited scope.
-- *fd*: A fast file finder, used as the second choice if `rg` is not available for listing pages.
-- *git*: If `rg` and `fd` are unavailable, `git ls-files` is used as a fallback for finding files within a git repository.
+`neowiki.nvim` enhances file searching with modern command-line tools for optimal performance. While optional, installing `ripgrep` (`rg`) is highly recommended for efficient page listing and backlink updates. If not found, the plugin falls back to a native Lua search.
 
 ### Functional Enhancements
 * `nvim-treesitter`: Strongly recommended. `neowiki.nvim` uses the `markdown` and `markdown_inline` parsers to robustly detect and parse links, ensuring that links inside code blocks or other ignored regions are handled correctly.

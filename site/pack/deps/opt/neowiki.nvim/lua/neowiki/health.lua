@@ -18,47 +18,16 @@ local info = vim.health.info
 M.check = function()
   start("neowiki: External Tools")
 
-  local tools = {
-    fd  = { name = "fd", binaries = { "fd", "fdfind" } },
-    git = { name = "git" },
-    rg  = { name = "rg" },
-  }
-
-  local tool_status = {
-    rg = util.check_binary_installed(tools.rg),
-    fd = util.check_binary_installed(tools.fd),
-    git = util.check_binary_installed(tools.git),
-  }
+  local tools = { rg = { name = "rg" } }
+  local tool_status = { rg = util.check_binary_installed(tools.rg) }
 
   if tool_status.rg then
     ok("ripgrep (rg): Installed")
   else
-    warn("ripgrep (rg): Not found")
-  end
-
-  if tool_status.fd then
-    ok("fd (" .. tool_status.fd.binary .. "): Installed")
-  else
-    warn("fd: Not found")
-  end
-
-  if tool_status.git then
-    ok("git: Installed")
-  else
-    warn("git: Not found")
-  end
-
-  if tool_status.rg then
-    ok("Active Tool: [rg] (Optimal performance)")
-  elseif tool_status.fd then
-    ok("Active Tool: [fd] (Good performance)")
-    info("'fd' is faster than native search but lacks content-searching optimizations of 'rg'.")
-  elseif tool_status.git then
-    warn("Active Tool: [git] (Restricted performance)")
-    info("Performance relies on git ls-files. Only works inside git repositories.")
-  else
-    error("Active Tool: [Native Glob] (Slow)")
-    info("No external tools found. Large wikis may experience significant lag.")
+    info("active tool: [Native Glob] (Slow)")
+    warn(
+      "ripgrep (rg) not found. Performance may degrade on large wikis during search and file operations."
+    )
   end
 
   start("neowiki: Dependencies")

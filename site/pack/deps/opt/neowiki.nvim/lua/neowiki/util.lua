@@ -1,8 +1,42 @@
 -- lua/neowiki/util.lua
+local config = require("neowiki.config")
+
 local M = {}
 local is_windows = vim.fn.has("win32") == 1
 local is_case_insensitive = (vim.loop.os_uname().sysname == "Windows_NT")
   or (vim.loop.os_uname().sysname == "Darwin")
+local valid_extensions_cache = nil
+
+---
+-- Ensures a filename has a valid markdown extension.
+-- @param filename (string) The filename to check.
+-- @param default_ext (string) The default extension to append (e.g., ".md").
+-- @return (string) The filename with a guaranteed valid extension.
+--
+M.ensure_extension = function(filename, default_ext)
+  if not filename or filename == "" then
+    return ""
+  end
+  local ext = vim.fn.fnamemodify(filename, ":e"):lower()
+
+  -- build the cache on the first call.
+  if not valid_extensions_cache then
+    valid_extensions_cache = {}
+    for _, pattern in ipairs(config.markdown_patterns) do
+      local ext_part = pattern:match("%*%.(.+)")
+      if ext_part then
+        valid_extensions_cache[ext_part] = true
+      end
+    end
+  end
+
+  if ext == "" or not valid_extensions_cache[ext] then
+    return filename .. default_ext
+  end
+
+  return filename
+end
+
 ---
 -- Filters a table by applying a predicate function to each item.
 -- This is a pure function that does not depend on any external state or modules.
@@ -295,11 +329,7 @@ M.process_link_target = function(target, ext)
     return clean_target
   end
 
-  -- For local files, ensure an extension exists.
-  local has_extension = clean_target:match("%.%w+$")
-  if not has_extension then
-    clean_target = clean_target .. ext
-  end
+  clean_target = M.ensure_extension(clean_target, ext)
 
   -- Prepend "./" if it's not already a relative path.
   if not clean_target:match("^%./") then

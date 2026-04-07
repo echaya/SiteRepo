@@ -328,7 +328,7 @@ end
 yarepl.completions.aider = aider_completions
 
 -------------------------------------
--- New <Plug>(yarepl-aider-*) keymaps
+-- New <Plug(yarepl-aider-*) keymaps
 -------------------------------------
 
 for _, shortcut in ipairs(shortcuts) do

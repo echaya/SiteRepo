@@ -123,7 +123,9 @@ M.gen_link_from_selection = function()
     return
   end
 
-  local filename = util.sanitize_filename(link_display_text) .. state.markdown_extension
+  -- Sanitize the text, then check against markdown_patterns
+  local sanitized_text = util.sanitize_filename(link_display_text)
+  local filename = util.ensure_extension(sanitized_text, state.markdown_extension)
   local filename_link = "[" .. link_display_text .. "](" .. "./" .. filename .. ")"
   vim.api.nvim_buf_set_text(0, start_row, start_col, end_row, end_col, { filename_link })
   return filename

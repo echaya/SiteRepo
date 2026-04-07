@@ -174,7 +174,7 @@ end
 yarepl.completions.codex = codex_completions
 
 -------------------------------------
--- New <Plug>(yarepl-codex-*) keymaps
+-- New <Plug(yarepl-codex-*) keymaps
 -------------------------------------
 
 for _, shortcut in ipairs(shortcuts) do

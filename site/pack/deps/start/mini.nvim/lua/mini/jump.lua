@@ -82,6 +82,15 @@ local H = {}
 ---   require('mini.jump').setup({}) -- replace {} with your config table
 --- <
 MiniJump.setup = function(config)
+  -- TODO: Remove after Neovim=0.9 support is dropped
+  if vim.fn.has('nvim-0.10') == 0 then
+    vim.notify(
+      '(mini.jump) Neovim<0.10 is soft deprecated (module works but is not supported).'
+        .. " It will be deprecated after the next 'mini.nvim' release (module might not work)."
+        .. ' Please update your Neovim version.'
+    )
+  end
+
   -- Export module
   _G.MiniJump = MiniJump
 
@@ -205,6 +214,9 @@ MiniJump.jump = function(target, backward, till, n_times)
   H.timers.idle_stop:stop()
   H.timers.idle_stop:start(config.delay.idle_stop, 0, vim.schedule_wrap(function() MiniJump.stop_jumping() end))
 
+  -- Force charwise selection in Operator-pending expression mapping
+  if is_expr then vim.cmd('normal! v') end
+
   -- Make jump(s)
   H.cache.n_cursor_moved = 0
   local was_jumping = MiniJump.state.jumping
@@ -224,15 +236,21 @@ MiniJump.jump = function(target, backward, till, n_times)
   -- Track cursor position to account for movement not caught by `CursorMoved`
   H.cache.latest_cursor = H.get_cursor_data()
 
-  -- Restore the state if needed. It should a jumping state if there was jump
+  -- Restore the state if needed. The jumping state is applied if there was jump
   -- or if it is possible to jump in other direction (i.e. target is present).
   MiniJump.state = is_dot_repeat and state_snapshot or MiniJump.state
   local search_pattern = '\\V' .. vim.fn.escape(MiniJump.state.target, '\\')
   MiniJump.state.jumping = has_jumped or vim.fn.search(search_pattern, 'wn') ~= 0
 
-  -- Ensure to undo "consume a character" effect in Operator-pending expression
-  -- mapping if there is no target found. Do it here to also act on dot-repeat.
-  if is_expr and not has_jumped then vim.schedule(function() vim.cmd('undo!') end) end
+  -- Nothing else to do if there was a jump
+  if has_jumped then return end
+
+  -- Ensure to stop jumping on next non-jump movement
+  if MiniJump.state.jumping then H.cache.n_cursor_moved = H.cache.n_cursor_moved + 1 end
+
+  -- When in Operator-pending mapping, disable charwise selection to prevent
+  -- a character from being consumed (due to selection of a cursor cell)
+  if is_expr then vim.cmd('normal! v') end
 end
 
 --- Make smart jump
@@ -404,7 +422,7 @@ H.make_expr_jump = function(backward, till)
     -- for `repeat_jump` case to have it using latest jumping state during
     -- dot-repeat also (as does `nvim --clean`).
     local args = string.format('%s,%s,%s,%s', vim.inspect(target), backward, till, count)
-    return 'v<Cmd>lua MiniJump._is_expr=true; MiniJump.jump(' .. args .. ')<CR>'
+    return '<Cmd>lua MiniJump._is_expr=true; MiniJump.jump(' .. args .. ')<CR>'
   end
 end
 

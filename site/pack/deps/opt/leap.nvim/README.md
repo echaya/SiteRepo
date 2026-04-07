@@ -78,8 +78,8 @@ No setup is required, just define keybindings - our recommended
 arrangement is:
 
 ```lua
-vim.keymap.set({'n', 'x', 'o'}, 's', '<Plug>(leap)')
-vim.keymap.set('n',             'S', '<Plug>(leap-from-window)')
+vim.keymap.set({ 'n', 'x', 'o' }, 's', '<Plug>(leap)')
+vim.keymap.set('n', 'S', '<Plug>(leap-from-window)')
 ```
 
 See `:h leap-mappings` for more.
@@ -87,7 +87,7 @@ See `:h leap-mappings` for more.
 Treesitter node selection (`vRRR...y` or `yR{label}`):
 
 ```lua
-vim.keymap.set({'x', 'o'}, 'R',  function()
+vim.keymap.set({ 'x', 'o' }, 'R',  function()
   require('leap.treesitter').select {
     opts = require('leap.user').with_traversal_keys('R', 'r')
   }
@@ -98,7 +98,7 @@ Remote operations (`gs{leap}apy` or `ygs{leap}ap`, where `{leap}`, as usual,
 means `{char1}{char2}{label?}`):
 
 ```lua
-vim.keymap.set({'n', 'o'}, 'gs', function()
+vim.keymap.set({ 'n', 'o' }, 'gs', function()
   require('leap.remote').action {
     -- Automatically enter Visual mode when coming from Normal.
     input = vim.fn.mode(true):match('o') and '' or 'v'
@@ -190,7 +190,7 @@ redundant nodes (only the outermost are kept in a given line range), making the
 selection much more efficient.
 
 ```lua
-vim.keymap.set({'x', 'o'}, 'R',  function()
+vim.keymap.set({ 'x', 'o' }, 'R',  function()
   require('leap.treesitter').select {
     -- To increase/decrease the selection in a clever-f-like manner,
     -- with the trigger key itself (vRRRRrr...). The default keys
@@ -214,7 +214,7 @@ page, then continues where it left off. Once returning to Normal mode, it jumps
 back, as if you had operated from the distance.
 
 ```lua
-vim.keymap.set({'n', 'x', 'o'}, 'gs', function()
+vim.keymap.set({ 'n', 'x', 'o' }, 'gs', function()
   require('leap.remote').action()
 end)
 ```
@@ -247,7 +247,7 @@ The `input` parameter lets you feed keystrokes automatically after the jump:
 
 ```lua
 -- Trigger visual selection right away, so that you can `gs{leap}apy`:
-vim.keymap.set({'n', 'o'}, 'gs', function()
+vim.keymap.set({ 'n', 'o' }, 'gs', function()
   require('leap.remote').action { input = 'v' }
 end)
 ```
@@ -295,10 +295,10 @@ You can even use the native search commands, that is, target off-screen
 regions, with the special `jumper` values `/` and `?`:
 
 ```lua
-vim.keymap.set({'n', 'o'}, 'g/', function()
+vim.keymap.set({ 'n', 'o' }, 'g/', function()
   require('leap.remote').action { jumper = '/' }
 end)
-vim.keymap.set({'n', 'o'}, 'g?', function()
+vim.keymap.set({ 'n', 'o' }, 'g?', function()
   require('leap.remote').action { jumper = '?' }
 end)
 ```
@@ -374,7 +374,7 @@ unique in that it
 * offers a smoother experience, by (somewhat) eliminating the pause before
   typing the label
 
-* feels natural to use for both distant _and_ close targets
+* feels natural to use for both distant _and close_ targets
 
 ## FAQ
 
@@ -542,6 +542,31 @@ end
 
 </details>
 
+
+<details>
+<summary>Show all labels as uppercase</summary>
+
+This might be helpful in case of having poorer eyesight or using relatively
+small font sizes. Obviously, only lowercase and non-alphabetic labels are
+expected in your label lists.
+
+Warning: `on_beacons` is an experimental escape hatch, and this workaround
+depends on implementation details.
+
+```lua
+require('leap').opts.on_beacons = function(targets)
+  for _, t in ipairs(targets) do
+    if t.label and t.beacon then
+      local vt = t.beacon[2].virt_text
+      if vt then vt[1][1] =  vim.fn.toupper(vt[1][1]) end
+    end
+  end
+end
+```
+
+</details>
+
+
 <details>
 <summary>Grey out the search area ("backdrop" highlight)</summary>
 
@@ -694,7 +719,7 @@ do
         backward = (is_reverse and vim.v.searchforward == 1)
                    or (not is_reverse and vim.v.searchforward == 0),
         opts = require('leap.user').with_traversal_keys(key, nil, {
-          -- Auto-jumping to the second match would be confusing without
+          -- Autojumping to the second match would be confusing without
           -- 'incsearch'.
           safe_labels = (cmdline_mode and not vim.o.incsearch) and ''
                         -- Keep n/N usable in any case.
@@ -706,11 +731,11 @@ do
     end)
   end
 
-  vim.keymap.set({'n', 'x', 'o', 'c'}, '<c-s>', function()
+  vim.keymap.set({ 'n', 'x', 'o', 'c' }, '<c-s>', function()
     leap_search('<c-s>', false)
   end, { desc = 'Leap to search matches' })
 
-  vim.keymap.set({'n', 'x', 'o', 'c'}, '<c-q>', function()
+  vim.keymap.set({ 'n', 'x', 'o', 'c' }, '<c-q>', function()
     leap_search('<c-q>', true)
   end, { desc = 'Leap to search matches (reverse)' })
 end
@@ -722,7 +747,7 @@ end
 <summary>Jump to lines</summary>
 
 ```lua
-vim.keymap.set({'n', 'x', 'o'}, '|', function()
+vim.keymap.set({ 'n', 'x', 'o' }, '|', function()
   local line = vim.fn.line('.')
   -- Skip 3-3 lines around the cursor.
   local top, bot = unpack { math.max(1, line - 3), line + 3 }

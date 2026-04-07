@@ -8,6 +8,12 @@ There are following change types:
 
 # Version 0.18.0-dev
 
+## All
+
+### Refine
+
+- Soft deprecate support for Neovim 0.9. It will be fully deprecated in next release.
+
 ## mini.base16
 
 ### Expand
