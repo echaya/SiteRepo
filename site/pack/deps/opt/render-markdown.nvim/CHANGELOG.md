@@ -2,11 +2,18 @@
 
 ## Pre-release
 
+### Features
+
+- allow inline code left and right icon highlight to be specified [e9d7409](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/e9d7409c2d604dc12589c00ef922e08e3998e000)
+- improve table start column tracking [2247dcd](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/2247dcd1ff0c223cfa7e317783f89b8d00457ce6)
+
 ### Bug Fixes
 
 - nested headings inside block quotes [#625](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/625)
   [c7188a8](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/c7188a8f9d2953696b6303caccbf39c51fa2c1b1)
 - heading padding column offset inside block quotes [#629](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/629)
+- handle footnotes in link_reference_definition nodes [#632](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/632)
+  [35c1925](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/35c19259bbb8ea0894fa525246c0a6b040314eaa)
 
 ### Collaborator Shoutouts
 

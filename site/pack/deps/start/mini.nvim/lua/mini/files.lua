@@ -795,6 +795,10 @@ MiniFiles.open = function(path, use_latest, opts)
   -- Track lost focus
   H.explorer_track_lost_focus()
 
+  -- Adjust some `vim.ui` methods to not track lost focus when they are active,
+  -- since most of their implementations use separate floating windows
+  H.explorer_adjust_vim_ui()
+
   -- Trigger appropriate event
   H.trigger_event('MiniFilesExplorerOpen')
 end
@@ -885,6 +889,11 @@ MiniFiles.close = function()
 
   -- Confirm close if there is modified buffer
   if not H.explorer_ignore_pending_fs_actions(explorer, 'Close') then return false end
+
+  -- Unadjust `vim.ui` methods
+  vim.ui.select = H.vim_ui.select or vim.ui.select
+  vim.ui.input = H.vim_ui.input or vim.ui.input
+  H.vim_ui = { select_active = false, input_active = false }
 
   -- Trigger appropriate event
   H.trigger_event('MiniFilesExplorerClose')
@@ -1286,6 +1295,9 @@ H.latest_paths = {}
 --   initial `buf_set_lines` (`noautocmd` doesn't quick work for this event).
 H.opened_buffers = {}
 
+-- Cache for `vim.ui` methods that are adjusted while explorer is open
+H.vim_ui = { select = nil, select_active = false, input = nil, input_active = false }
+
 -- File system information
 H.is_windows = vim.loop.os_uname().sysname == 'Windows_NT'
 
@@ -1548,6 +1560,7 @@ end
 
 H.explorer_track_lost_focus = function()
   local track = vim.schedule_wrap(function()
+    if H.vim_ui.select_active or H.vim_ui.input_active then return end
     local ft = vim.bo.filetype
     if ft == 'minifiles' or ft == 'minifiles-help' then return end
     local cur_win_id = vim.api.nvim_get_current_win()
@@ -1555,6 +1568,26 @@ H.explorer_track_lost_focus = function()
     pcall(vim.api.nvim_set_current_win, cur_win_id)
   end)
   H.timers.focus:start(1000, 1000, track)
+end
+
+H.explorer_adjust_vim_ui = function()
+  H.vim_ui.select = vim.ui.select
+  vim.ui.select = function(items, opts, on_choice)
+    H.vim_ui.select_active = true
+    H.vim_ui.select(items, opts, function(...)
+      H.vim_ui.select_active = false
+      on_choice(...)
+    end)
+  end
+
+  H.vim_ui.input = vim.ui.input
+  vim.ui.input = function(opts, on_confirm)
+    H.vim_ui.input_active = true
+    H.vim_ui.input(opts, function(...)
+      H.vim_ui.input_active = false
+      on_confirm(...)
+    end)
+  end
 end
 
 H.explorer_normalize = function(explorer)
