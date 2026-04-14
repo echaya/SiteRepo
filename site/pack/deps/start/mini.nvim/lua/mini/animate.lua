@@ -1739,17 +1739,10 @@ H.get_layout_windows = function(layout)
 end
 
 H.apply_resize_state = function(state, full_view)
-  -- Set window sizes while ensuring that 'cmdheight' will not change. Can
-  -- happen if changing height of window main row layout or increase terminal
-  -- height quickly (see #270)
-  local cache_cmdheight = vim.o.cmdheight
-
   for win_id, dims in pairs(state.sizes) do
     vim.api.nvim_win_set_height(win_id, dims.height)
     vim.api.nvim_win_set_width(win_id, dims.width)
   end
-
-  vim.o.cmdheight = cache_cmdheight
 
   -- Use `or {}` to allow states without `view` (mainly inside animation)
   for win_id, view in pairs(state.views or {}) do
@@ -1803,7 +1796,8 @@ H.make_openclose_step = function(action_type, win_id, config)
       end
 
       -- Empty buffer should always be valid (might have been closed by user command)
-      if H.empty_buf_id == nil or not vim.api.nvim_buf_is_valid(H.empty_buf_id) then
+      if H.empty_buf_id == nil or not vim.api.nvim_buf_is_loaded(H.empty_buf_id) then
+        pcall(vim.api.nvim_buf_delete, H.empty_buf_id, { force = true })
         H.empty_buf_id = vim.api.nvim_create_buf(false, true)
         H.set_buf_name(H.empty_buf_id, 'open-close-scratch')
       end

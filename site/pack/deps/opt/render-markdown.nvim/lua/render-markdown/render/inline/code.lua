@@ -1,5 +1,6 @@
 local Base = require('render-markdown.render.base')
 local colors = require('render-markdown.core.colors')
+local str = require('render-markdown.lib.str')
 
 ---@class render.md.render.inline.Code: render.md.Render
 ---@field private config render.md.code.Config
@@ -25,6 +26,7 @@ function Render:run()
     })
     self:padding(highlight, true)
     self:padding(highlight, false)
+    self:hide_spaces()
 end
 
 ---@private
@@ -54,6 +56,44 @@ function Render:padding(highlight, left)
             virt_text_pos = 'inline',
         })
     end
+end
+
+---@private
+function Render:hide_spaces()
+    local delimiters = {} ---@type render.md.Node[]
+    self.node:for_each_child(function(child)
+        if child.type == 'code_span_delimiter' then
+            delimiters[#delimiters + 1] = child
+        end
+    end)
+    if #delimiters ~= 2 then
+        return
+    end
+    local open, close = unpack(delimiters)
+    local opens = str.width(open.text)
+    local closes = str.width(close.text)
+    if opens == 0 or closes == 0 or opens ~= closes then
+        return
+    end
+    local body = self.node.text:sub(opens + 1, -(closes + 1))
+    local leading = str.spaces('start', body)
+    local trailing = str.spaces('end', body)
+    if leading == 0 or trailing == 0 or not body:match('%S') then
+        return
+    end
+    self:hide(open.end_row, open.end_col, 1)
+    self:hide(close.start_row, close.start_col - 1, 1)
+end
+
+---@private
+---@param row integer
+---@param col integer
+---@param length integer
+function Render:hide(row, col, length)
+    self.marks:add(self.config, true, row, col, {
+        end_col = col + length,
+        conceal = '',
+    })
 end
 
 return Render
