@@ -574,6 +574,7 @@ MiniHipatterns.gen_highlighter = {}
 ---     and return `false` or `nil` to not highlight inside this buffer.
 ---   - <inline_text> `(string)` - string to be placed and highlighted with color
 ---     to the right of match in case <style> is "inline". Default: "█".
+---   - <max_number> `(number)` - as in |MiniHipatterns.compute_hex_color_group()|.
 ---
 ---@return table Highlighter table ready to be used as part of `config.highlighters`.
 ---   Both `pattern` and `group` are callable.
@@ -587,7 +588,7 @@ MiniHipatterns.gen_highlighter = {}
 ---   })
 --- <
 MiniHipatterns.gen_highlighter.hex_color = function(opts)
-  local default_opts = { style = 'full', priority = 200, filter = H.always_true, inline_text = '█' }
+  local default_opts = { style = 'full', priority = 200, filter = H.always_true, inline_text = '█', max_number = nil }
   opts = vim.tbl_deep_extend('force', default_opts, opts or {})
 
   local style = opts.style
@@ -608,9 +609,10 @@ MiniHipatterns.gen_highlighter.hex_color = function(opts)
     end
   end
 
+  local hex_opts = { max_number = opts.max_number }
   return {
     pattern = H.wrap_pattern_with_filter(pattern, opts.filter),
-    group = function(_, _, data) return MiniHipatterns.compute_hex_color_group(data.full_match, hl_style) end,
+    group = function(_, _, data) return MiniHipatterns.compute_hex_color_group(data.full_match, hl_style, hex_opts) end,
     extmark_opts = extmark_opts,
   }
 end
@@ -630,9 +632,14 @@ end
 ---     white (whichever is more visible). Default.
 ---   - `'fg'` - highlight foreground with `hex_color`.
 ---   - `'line'` - highlight underline with `hex_color`.
+---@param opts table|nil Options. Possible fields:
+---   - <max_number> `(number)` - maximum number of different highlight groups
+---     this function is allowed to create. Useful to avoid |E849|.
+---     Default: 10000.
 ---
----@return string Name of created highlight group appropriate to show `hex_color`.
-MiniHipatterns.compute_hex_color_group = function(hex_color, style)
+---@return string|nil Name of created highlight group appropriate to show `hex_color`
+---   or `nil` if highlighted groups was not created.
+MiniHipatterns.compute_hex_color_group = function(hex_color, style, opts)
   style = style or 'bg'
   local hex = hex_color:lower():sub(2)
   local group_name = string.format('MiniHipatterns_%s_%s', hex, style)
@@ -641,21 +648,24 @@ MiniHipatterns.compute_hex_color_group = function(hex_color, style)
   -- latter still returns true for cleared highlights
   if H.hex_color_groups[group_name] then return group_name end
 
+  -- Limit
+  opts = vim.tbl_extend('force', { max_number = 10000 }, opts or {})
+  if H.n_hex_color_groups >= opts.max_number then return nil end
+
   -- Define highlight group if it is not already defined
-  if style == 'bg' then
-    -- Compute opposite color based on Oklab lightness (for better contrast)
-    local opposite = H.compute_opposite_color(hex)
-    vim.api.nvim_set_hl(0, group_name, { fg = opposite, bg = hex_color })
-  end
+  local hl_opts
+  -- - Compute opposite color based on Oklab lightness (for better contrast)
+  if style == 'bg' then hl_opts = { fg = H.compute_opposite_color(hex), bg = hex_color } end
+  if style == 'fg' then hl_opts = { fg = hex_color } end
+  if style == 'line' then hl_opts = { sp = hex_color, underline = true } end
 
-  if style == 'fg' then vim.api.nvim_set_hl(0, group_name, { fg = hex_color }) end
-
-  if style == 'line' then vim.api.nvim_set_hl(0, group_name, { sp = hex_color, underline = true }) end
+  local ok = pcall(vim.api.nvim_set_hl, 0, group_name, hl_opts)
 
   -- Keep track of created groups to properly react on `:hi clear`
-  H.hex_color_groups[group_name] = true
+  H.hex_color_groups[group_name] = ok
+  H.n_hex_color_groups = H.n_hex_color_groups + (ok and 1 or 0)
 
-  return group_name
+  return ok and group_name or nil
 end
 
 -- Helper data ================================================================
@@ -677,6 +687,7 @@ H.cache = {}
 
 -- Data about created highlight groups for hex colors
 H.hex_color_groups = {}
+H.n_hex_color_groups = 0
 
 -- Helper functionality =======================================================
 -- Settings -------------------------------------------------------------------
@@ -762,6 +773,7 @@ H.on_colorscheme = function()
   -- Reset created highlight groups for hex colors, as they are probably
   -- cleared after `:hi clear`
   H.hex_color_groups = {}
+  H.n_hex_color_groups = 0
 
   -- Reload all currently enabled buffers
   for buf_id, _ in pairs(H.cache) do
