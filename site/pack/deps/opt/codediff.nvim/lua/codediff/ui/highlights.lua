@@ -169,6 +169,11 @@ function M.setup()
     default = true,
   })
 
+  vim.api.nvim_set_hl(0, "CodeDiffExplorerTreeGroup", {
+    link = "Directory",
+    default = true,
+  })
+
   -- Explorer git status highlights (customizable, like diffview.nvim)
   vim.api.nvim_set_hl(0, "CodeDiffStatusAdded", { link = "DiagnosticOk", default = true })
   vim.api.nvim_set_hl(0, "CodeDiffStatusModified", { link = "DiagnosticWarn", default = true })

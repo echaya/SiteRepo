@@ -281,8 +281,8 @@ function M.prepare_node(node, max_width, selected_path, selected_group)
 
   if data.type == "group" then
     -- Group header
-    line:append(" ", "Directory")
-    line:append(node.text, "Directory")
+    line:append(" ", "CodeDiffExplorerTreeGroup")
+    line:append(node.text, "CodeDiffExplorerTreeGroup")
   elseif data.type == "directory" then
     -- Directory node (tree view mode) - with indent markers
     local indent = build_indent_markers(data.indent_state)

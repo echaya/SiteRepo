@@ -124,6 +124,7 @@ function M.create(session_config, filetype, on_ready)
   local win_opts = {
     cursorline = true,
     wrap = false,
+    list = false,
   }
 
   for opt, val in pairs(win_opts) do
