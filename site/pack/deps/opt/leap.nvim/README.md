@@ -79,34 +79,41 @@ arrangement is:
 
 ```lua
 vim.keymap.set({ 'n', 'x', 'o' }, 's', '<Plug>(leap)')
-vim.keymap.set('n', 'S', '<Plug>(leap-from-window)')
+vim.keymap.set('n',               'S', '<Plug>(leap-from-window)')
 ```
 
 See `:h leap-mappings` for more.
 
-Treesitter node selection (`vRRR...y` or `yR{label}`):
+Remote operations:
 
 ```lua
-vim.keymap.set({ 'x', 'o' }, 'R',  function()
+-- E.g., `gs{leap}$y` or `ygs{leap}$`, where {leap}, as usual, means
+-- {char1}{char2}{label?}.
+vim.keymap.set({ 'n', 'o' }, 'gs', '<Plug>(leap-remote)')
+-- Can also take [count], e.g. `d2gS{leap}` deletes two lines.
+vim.keymap.set({ 'n', 'o' }, 'gS', '<Plug>(leap-remote-linewise)')
+
+-- Set automatic paste after yanking:
+vim.api.nvim_create_autocmd('User', {
+  pattern = 'RemoteOperationDone',
+  group = vim.api.nvim_create_augroup('LeapRemote', {}),
+  callback = function(event)
+    if vim.v.operator == 'y' and event.data.register == '"' then
+      vim.cmd('normal! p')
+    end
+  end,
+})
+```
+
+Treesitter parent node selection (`vannnny` or `yan{label}`):
+
+```lua
+vim.keymap.set({ 'x', 'o' }, 'an', function()
   require('leap.treesitter').select {
-    opts = require('leap.user').with_traversal_keys('R', 'r')
+    opts = require('leap.user').with_traversal_keys('n', 'N')
   }
 end)
 ```
-
-Remote operations (`gs{leap}apy` or `ygs{leap}ap`, where `{leap}`, as usual,
-means `{char1}{char2}{label?}`):
-
-```lua
-vim.keymap.set({ 'n', 'o' }, 'gs', function()
-  require('leap.remote').action {
-    -- Automatically enter Visual mode when coming from Normal.
-    input = vim.fn.mode(true):match('o') and '' or 'v'
-  }
-end)
-```
-
-See below for more (e.g. setting up automatic paste after yanking).
 
 </details>
 
@@ -144,17 +151,6 @@ do
     }
   end)
 end
-
--- Set automatic paste after remote yank operations:
-vim.api.nvim_create_autocmd('User', {
-  pattern = 'RemoteOperationDone',
-  group = vim.api.nvim_create_augroup('LeapRemote', {}),
-  callback = function(event)
-    if vim.v.operator == 'y' and event.data.register == '"' then
-      vim.cmd('normal! p')
-    end
-  end,
-})
 ```
 
 </details>
@@ -180,22 +176,22 @@ lots of additional information and details.
 <details>
 <summary>Treesitter integration</summary>
 
-You can either choose a node directly (`vR{label}`), or, in Normal/Visual mode,
-use the traversal keys for incremental selection. The labels are forced to be
-safe, so you can operate on the selection right away then (`vRRRy`). Traversal
-can "wrap around" backwards (`vRr` selects the root node).
+You can either choose a node directly (`van{label}`), or, in Normal/Visual
+mode, use the traversal keys for incremental selection. The labels are forced
+to be safe, so you can operate on the selection right away then (`vannny`).
+Traversal can "wrap around" backwards (`vanN` selects the root node).
 
-It is also worth noting that linewise mode (`VRRR...`, `yVR`) filters out
+It is also worth noting that linewise mode (`Vannn...`, `yVan`) filters out
 redundant nodes (only the outermost are kept in a given line range), making the
 selection much more efficient.
 
 ```lua
-vim.keymap.set({ 'x', 'o' }, 'R',  function()
+vim.keymap.set({ 'x', 'o' }, 'an', function()
   require('leap.treesitter').select {
     -- To increase/decrease the selection in a clever-f-like manner,
-    -- with the trigger key itself (vRRRRrr...). The default keys
+    -- with the trigger key itself (vannnNN...). The default keys
     -- (<enter>/<backspace>) also work, so feel free to skip this.
-    opts = require('leap.user').with_traversal_keys('R', 'r')
+    opts = require('leap.user').with_traversal_keys('n', 'N')
   }
 end)
 ```
@@ -219,8 +215,20 @@ vim.keymap.set({ 'n', 'x', 'o' }, 'gs', function()
 end)
 ```
 
-Example: `gs{leap}yap`, `vgs{leap}apy`, or `ygs{leap}ap` yank the paragraph at
-the position specified by `{leap}`.
+Example: `gs{leap}yap` or `ygs{leap}ap` yank the paragraph at the
+position specified by `{leap}`.
+
+The recommended way though is automatically starting Visual mode after
+jumping (see "feeding input" below). The keys `<Plug>(leap-remote)` and
+`<Plug>(leap-remote-linewise)` do that by default, so that from Normal
+mode you can e.g. `gs{leap}apy`. In terms of keystrokes this is on par
+with the _op-leap-select_ method, but here you have visual feedback, can
+move around freely with arbitrary motion combinations, and correct
+mistakes.
+
+Note that this feature makes exchanging two regions of text moderately simple,
+without needing a custom plugin: delete region A + remotely select region B +
+`pP`. Example (swapping two words): `diw gs{leap}iw pP`.
 
 **Icing on the cake, no. 1 - automatic paste after yanking**
 
@@ -246,9 +254,13 @@ vim.api.nvim_create_autocmd('User', {
 The `input` parameter lets you feed keystrokes automatically after the jump:
 
 ```lua
--- Trigger visual selection right away, so that you can `gs{leap}apy`:
+-- When starting from Normal mode, trigger visual selection right away,
+-- so that you can `gs{leap}apy`. (This is the actual body of
+-- `<Plug>(leap-remote)`).
 vim.keymap.set({ 'n', 'o' }, 'gs', function()
-  require('leap.remote').action { input = 'v' }
+  require('leap.remote').action {
+    input = vim.fn.mode(true):match('o') and '' or 'v'
+  }
 end)
 ```
 
@@ -257,33 +269,23 @@ an even more intuitive workflow (`yarp{leap}` - "yank a remote paragraph
 at..."):
 
 ```lua
--- Create remote versions of all a/i text objects by inserting `r` into
--- the middle (`iw` becomes `irw`, etc.).
-for _, ai in ipairs { 'a', 'i' } do
-  vim.keymap.set({ 'x', 'o' }, ai .. 'r', function()
-    -- A trick to avoid having to create separate mappings for each text
-    -- object: when entering `ar`/`ir`, consume the next character, and
-    -- create the input from that character concatenated to `a`/`i`.
-    local ok, ch = pcall(vim.fn.getcharstr)  -- pcall for handling <C-c>
-    if not ok or (ch == vim.keycode('<esc>')) then return end
-    require('leap.remote').action { input = ai .. ch }
-  end)
+do
+  -- Create remote versions of all a/i text objects by inserting `r`
+  -- into the middle (`iw` -> `irw`).
+  -- To avoid having to create a bunch of hardcoded mappings, this
+  -- helper function expects another character as input before leaping,
+  -- and selects the corresponding text object at the destination.
+  local function remote_text_object(prefix)
+    local ok, c = pcall(vim.fn.getcharstr)  -- handling <C-c>
+    if not ok or (c == vim.keycode('<esc>')) then
+      return
+    end
+    require('leap.remote').action { input = prefix .. c }
+  end
+  vim.keymap.set({ 'x', 'o' }, 'ar', function() remote_text_object('a') end)
+  vim.keymap.set({ 'x', 'o' }, 'ir', function() remote_text_object('i') end)
 end
 ```
-
-**Swapping regions**
-
-This feature also makes exchanging two regions of text moderately simple,
-without needing a custom plugin: `d{region1} gs{leap} v{region2}p
-<jumping-back-here> P`.
-
-Example (swapping two words): `diw gs{leap} viwp P`.
-
-With remote text objects, the swap is even simpler, almost on par with
-[vim-exchange](https://github.com/tommcdo/vim-exchange): `diw virw{leap}p P`.
-
-Using remote text objects _and_ combining them with an exchange operator is
-pretty much unimprovable: `cxiw cxirw{leap}`.
 
 **Jumping to off-screen areas with native search commands**
 
@@ -658,11 +660,11 @@ vim.api.nvim_create_autocmd('CmdlineLeave', {
   callback = function()
     local ev = vim.v.event
     local is_search_cmd = (ev.cmdtype == '/') or (ev.cmdtype == '?')
-    local cnt = vim.fn.searchcount().total
-    if is_search_cmd and (not ev.abort) and (cnt > 1) then
-      -- Allow CmdLineLeave-related chores to be completed before
-      -- invoking Leap.
-      vim.schedule(function()
+    -- Allow CmdLineLeave-related chores to be completed before
+    -- invoking Leap.
+    vim.schedule(function()
+      local cnt = vim.fn.searchcount().total
+      if is_search_cmd and (not ev.abort) and (cnt > 1) then
         -- We want "safe" labels, but no autojump (as the search
         -- command already does that), so just use `safe_labels`
         -- as `labels`, with n/N removed.
@@ -676,8 +678,8 @@ vim.api.nvim_create_autocmd('CmdlineLeave', {
           windows = { vim.fn.win_getid() },
           opts = { safe_labels = '', labels = labels, vim_opts = vim_opts, }
         }
-      end)
-    end
+      end
+    end)
   end,
 })
 ```

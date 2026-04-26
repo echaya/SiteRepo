@@ -53,32 +53,34 @@ common/useful argument tables:
     <Plug>(leap-from-window)    |  Other windows   |          |
     <Plug>(leap-anywhere)       |  All windows     |          |
 
-See also: |leap-target-ordering|.
-
 Suggested arrangements ~
 
-1. Default: >lua
-    vim.keymap.set({'n', 'x', 'o'}, 's', '<Plug>(leap)')
-    vim.keymap.set('n',             'S', '<Plug>(leap-from-window)')
+1. Sneak-style >lua
+    vim.keymap.set({ 'n', 'x', 'o' }, 's',  '<Plug>(leap-forward)')
+    vim.keymap.set({ 'n', 'x', 'o' }, 'S',  '<Plug>(leap-backward)')
+    vim.keymap.set('n',               'gs', '<Plug>(leap-from-window)')
 
-2. Sneak-style: >lua
-    vim.keymap.set({'n', 'x', 'o'}, 's',  '<Plug>(leap-forward)')
-    vim.keymap.set({'n', 'x', 'o'}, 'S',  '<Plug>(leap-backward)')
-    vim.keymap.set('n',             'gs', '<Plug>(leap-from-window)')
+2. Bidirectional >lua
+    vim.keymap.set({ 'n', 'x', 'o' }, 's', '<Plug>(leap)')
+    vim.keymap.set('n',               'S', '<Plug>(leap-from-window)')
+
+3. One key for everything >lua
+    vim.keymap.set('n',               's', '<Plug>(leap-anywhere)')
+    vim.keymap.set({ 'x', 'o' },      's', '<Plug>(leap)')
+<
+    Note: The trade-off with `<Plug>(leap-anywhere)` is that whenever multiple
+    windows are open, you can rarely expect |leap-autojump|s, as it is only
+    allowed when all matches are in one window (this is an intentional
+    restriction to avoid confusing behaviour and implementation problems).
 
 You might add a pair of keys for exclusive selection to any of the above: >lua
-    vim.keymap.set({'x', 'o'},      'x', '<Plug>(leap-forward-till)')
-    vim.keymap.set({'x', 'o'},      'X', '<Plug>(leap-backward-till)')
+    vim.keymap.set({ 'x', 'o' },      'x', '<Plug>(leap-forward-till)')
+    vim.keymap.set({ 'x', 'o' },      'X', '<Plug>(leap-backward-till)')
 
-Note that each native editing command overridden above has an alias:
+Note that each native editing command overridden by the suggested mappings has
+an equivalent:
 |s| = `cl`; |S| = |cc|; |v_s| = |v_c|; |v_S| = |v_c| in |V|; |v_x| = |v_d|;
 |v_X| = |v_D|.
-
-`<Plug>(leap-anywhere)` is only recommended if you are okay with its
-trade-off: whenever multiple windows are open, you can rarely expect
-|leap-autojump|s, as it is only allowed when all matches are in one window (an
-intentional restriction to avoid confusing behaviour and implementation
-problems).
 
 ==============================================================================
 FEATURES                                                       *leap-features*
@@ -146,8 +148,7 @@ confusion (to be resolved in the next step): *leap-preview-conflicts*
     match-2         a?|
     preview     ...aa█|
 <
-2. A label on top of another, unlabeled match. When typing quickly, this is
-   in any case unsafe and unacceptable. >
+2. A label on top of another, unlabeled match. (Unsafe when typing quickly.) >
 
     text        ...abac...
     match-1        abL
@@ -260,8 +261,8 @@ Example configuration: >lua
     These should be keys that you never use right after leaping (e.g. a search
     command), so that we can trigger |leap-autojump| whenever this list covers
     the rest of the matches. Input keys not matching a label are sent on to
-    Normal mode. Setting the list to `''` effectively disables the autojump
-    feature.
+    Normal/Visual mode. Setting the list to `''` effectively disables the
+    autojump feature.
 
     Note: Operator-pending mode only falls back to this when
     |leap.opts.labels| is empty, since we should select the final target right
@@ -328,7 +329,9 @@ right-hand keys to get a better balance for the whole sequence on average.
 
     Example: >lua
         local vim_opts = require('leap').opts.vim_opts
+
         vim_opts['go.hlsearch'] = false
+
         -- The right-hand side can also be a function that evaluates to
         -- the desired value. The window or buffer id will be passed as
         -- argument for the corresponding scopes.
