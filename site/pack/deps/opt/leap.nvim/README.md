@@ -88,10 +88,14 @@ Remote operations:
 
 ```lua
 -- E.g., `gs{leap}$y` or `ygs{leap}$`, where {leap}, as usual, means
--- {char1}{char2}{label?}.
+-- {char1}{char2}{label?}. The linewise version can also take [count],
+-- e.g. `d2gS{leap}` deletes two lines.
 vim.keymap.set({ 'n', 'o' }, 'gs', '<Plug>(leap-remote)')
--- Can also take [count], e.g. `d2gS{leap}` deletes two lines.
 vim.keymap.set({ 'n', 'o' }, 'gS', '<Plug>(leap-remote-linewise)')
+-- These commands expect another character as input before leaping, and
+-- select the given text object at the destination (`yarp{leap}`).
+vim.keymap.set({ 'x', 'o' }, 'ar', '<Plug>(leap-remote-text-object)')
+vim.keymap.set({ 'x', 'o' }, 'ir', '<Plug>(leap-remote-inner-text-object)')
 
 -- Set automatic paste after yanking:
 vim.api.nvim_create_autocmd('User', {
@@ -114,6 +118,9 @@ vim.keymap.set({ 'x', 'o' }, 'an', function()
   }
 end)
 ```
+
+Tip: if you have set up remote text objects, `varn` or `Varn` will work as
+expected (selecting remotely).
 
 </details>
 
@@ -256,7 +263,7 @@ The `input` parameter lets you feed keystrokes automatically after the jump:
 ```lua
 -- When starting from Normal mode, trigger visual selection right away,
 -- so that you can `gs{leap}apy`. (This is the actual body of
--- `<Plug>(leap-remote)`).
+-- `<Plug>(leap-remote)`.)
 vim.keymap.set({ 'n', 'o' }, 'gs', function()
   require('leap.remote').action {
     input = vim.fn.mode(true):match('o') and '' or 'v'
@@ -264,28 +271,13 @@ vim.keymap.set({ 'n', 'o' }, 'gs', function()
 end)
 ```
 
-By feeding text objects as `input`, you can create _remote text objects_, for
-an even more intuitive workflow (`yarp{leap}` - "yank a remote paragraph
-at..."):
-
-```lua
-do
-  -- Create remote versions of all a/i text objects by inserting `r`
-  -- into the middle (`iw` -> `irw`).
-  -- To avoid having to create a bunch of hardcoded mappings, this
-  -- helper function expects another character as input before leaping,
-  -- and selects the corresponding text object at the destination.
-  local function remote_text_object(prefix)
-    local ok, c = pcall(vim.fn.getcharstr)  -- handling <C-c>
-    if not ok or (c == vim.keycode('<esc>')) then
-      return
-    end
-    require('leap.remote').action { input = prefix .. c }
-  end
-  vim.keymap.set({ 'x', 'o' }, 'ar', function() remote_text_object('a') end)
-  vim.keymap.set({ 'x', 'o' }, 'ir', function() remote_text_object('i') end)
-end
-```
+By giving text objects as `input`, you can create _remote text objects_, for an
+even more intuitive workflow (`yarp{leap}` - "yank a remote paragraph at...").
+For this, you can use the readily available `<Plug>(leap-remote-text-object)`
+and `<Plug>(leap-remote-inner-text-object)` keys - they simply consume an
+additional input character before triggering Leap, and later feed that
+character prefixed with `a` and `i`, respectively. (In the previous example
+`ar` is the hardcoded LHS of the mapping, and `p` is the additional input.)
 
 **Jumping to off-screen areas with native search commands**
 

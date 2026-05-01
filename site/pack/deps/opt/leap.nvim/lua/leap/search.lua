@@ -35,9 +35,9 @@ end
 
 local function get_match_positions(pattern, bounds, kwargs)
    local is_backward = kwargs.is_backward
-   local in_whole_window = kwargs.in_whole_window
+   local in_whole_win = kwargs.in_whole_win
    local left_bound, right_bound = unpack(bounds)
-   local use_bounds = in_whole_window and not vim.wo.wrap
+   local use_bounds = in_whole_win and not vim.wo.wrap
    local bounds_pat = use_bounds
       and '\\(\\%>' .. (left_bound - 1) .. 'v\\%<' .. (right_bound + 1) .. 'v\\)'
       or ''
@@ -47,10 +47,10 @@ local function get_match_positions(pattern, bounds, kwargs)
    local stopline = vim.fn.line(is_backward and 'w0' or 'w$')
    local saved_view = vim.fn.winsaveview()
    local saved_cpo = vim.o.cpo
-   local should_match_at_curpos = in_whole_window
+   local should_match_at_curpos = in_whole_win
 
    vim.opt.cpo:remove('c')  -- do not skip overlapping matches
-   if in_whole_window then
+   if in_whole_win then
       vim.fn.cursor({ vim.fn.line('w0'), 1 })
    end
 
@@ -95,7 +95,7 @@ local function get_targets_in_current_window(pattern, targets, kwargs)
    local is_backward = kwargs.is_backward
    local offset = kwargs.offset or 0
    local inputlen = kwargs.inputlen
-   local in_whole_window = kwargs.in_whole_window
+   local in_whole_win = kwargs.in_whole_win
    local skip_curpos = kwargs.skip_curpos
    local wininfo = vim.fn.getwininfo(api.nvim_get_current_win())[1]
    local curline, curcol = unpack(get_cursor_pos())
@@ -108,7 +108,7 @@ local function get_targets_in_current_window(pattern, targets, kwargs)
    local match_positions, is_at_win_edge, is_offscreen =
       get_match_positions(pattern, bounds, {
          is_backward = is_backward,
-         in_whole_window = in_whole_window
+         in_whole_win = in_whole_win
       })
 
    local prev_line
@@ -177,14 +177,14 @@ local function euclidean_distance(pos1, pos2)
    return pow((dx * dx) + (dy * dy), 0.5)
 end
 
-local function rank(targets, cursor_positions, src_win)
+local function rank(targets, cursor_positions, curr_win)
    for _, target in ipairs(targets) do
       local win = target.wininfo.winid
       local pos = target.pos
       local curpos = cursor_positions[win]
 
       local distance = curpos and euclidean_distance(pos, curpos) or 99999 -- #287
-      local curr_win_bonus = (win == src_win) and 30
+      local curr_win_bonus = (win == curr_win) and 30
       local curr_line_bonus = curr_win_bonus and (pos[1] == curpos[1]) and 999
       local curr_line_fwd_bonus = curr_line_bonus and (pos[2] > curpos[2]) and 999
 
@@ -197,44 +197,41 @@ end
 
 local function get_targets(pattern, kwargs)
    local is_backward = kwargs.is_backward
-   local windows = kwargs.windows
    local offset = kwargs.offset
    local is_op_mode = kwargs.is_op_mode
    local inputlen = kwargs.inputlen
-   local in_whole_window = windows
-   local src_win = api.nvim_get_current_win()
-   windows = windows or { src_win }
-   local curr_win_only = (windows[1] == src_win) and not windows[2]
-   local cursor_positions = { [src_win] = get_cursor_pos() }
 
+   local in_whole_win = kwargs.windows and true
+   local curr_win = api.nvim_get_current_win()
+   local windows = kwargs.windows
+   windows = windows or { curr_win }
+   local curr_win_only = (windows[1] == curr_win) and not windows[2]
+
+   local cursor_positions = {}
    local targets = {}
    for _, win in ipairs(windows) do
-      if not curr_win_only then
-         api.nvim_set_current_win(win)
-      end
-      if in_whole_window then
-         cursor_positions[win] = get_cursor_pos()
-      end
-      -- Fill up the provided `targets`, instead of returning a new table.
-      get_targets_in_current_window(pattern, targets, {
-         is_backward = is_backward,
-         offset = offset,
-         in_whole_window = in_whole_window,
-         inputlen = inputlen,
-         skip_curpos = (win == src_win)
-      })
-   end
-   if not curr_win_only then
-      api.nvim_set_current_win(src_win)
+      api.nvim_win_call(win, function()
+         if in_whole_win then
+            cursor_positions[win] = get_cursor_pos()
+         end
+         -- Fill up the provided `targets`, instead of returning a new table.
+         get_targets_in_current_window(pattern, targets, {
+            is_backward = is_backward,
+            offset = offset,
+            in_whole_win = in_whole_win,
+            inputlen = inputlen,
+            skip_curpos = (win == curr_win)
+         })
+      end)
    end
 
    if #targets > 0 then
-      if in_whole_window then  -- = bidirectional
+      if in_whole_win then  -- bidirectional
          if is_op_mode and curr_win_only then
-            -- Preserve the original (byte) order for dot-repeat, before sorting.
-            add_directional_indexes(targets, cursor_positions[src_win])
+            -- Preserve the original (byte) order for dot-repeat before sorting.
+            add_directional_indexes(targets, cursor_positions[curr_win])
          end
-         rank(targets, cursor_positions, src_win)
+         rank(targets, cursor_positions, curr_win)
          table.sort(targets, function(x, y) return x.rank < y.rank end)
       end
       return targets

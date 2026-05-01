@@ -35,3 +35,17 @@ map({ 'n', 'o' }, '<Plug>(leap-remote-linewise)', function()
    )
    require('leap.remote').action { input = input, count = false }
 end)
+
+local function remote_text_object(prefix)
+   local ok, c = pcall(vim.fn.getcharstr)  -- handling <C-c>
+   if not ok or (c == vim.keycode('<esc>')) then
+      return
+   end
+   require('leap.remote').action { input = prefix .. c }
+end
+map({ 'x', 'o' }, '<Plug>(leap-remote-text-object)', function()
+   remote_text_object('a')
+end)
+map({ 'x', 'o' }, '<Plug>(leap-remote-inner-text-object)', function()
+   remote_text_object('i')
+end)
