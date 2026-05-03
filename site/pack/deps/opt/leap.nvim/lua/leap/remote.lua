@@ -41,14 +41,10 @@ local function action(kwargs)
    end
 
    local function to_normal_mode()
-      if state.mode:match('^[vV\22]') then
-         api.nvim_feedkeys(state.mode, 'n', false)
-      elseif state.mode:match('o') then
-         -- I'm just cargo-culting this TBH, but the combination of
-         -- the two indeed seems to work reliably.
-         api.nvim_feedkeys(vim.keycode('<C-\\><C-N>'), 'nx', false)
-         api.nvim_feedkeys(vim.keycode('<esc>'), 'n', false)
-      end
+      -- I'm just cargo-culting this TBH, but the combination of
+      -- the two indeed seems necessary for O-p mode.
+      api.nvim_feedkeys(vim.keycode('<C-\\><C-N>'), 'nx', false)
+      api.nvim_feedkeys(vim.keycode('<esc>'), 'n', false)
    end
 
    local function back_to_pending_action()
@@ -91,9 +87,8 @@ local function action(kwargs)
          pattern = '*:*',
          once = true,
          callback = function ()
-            local is_change_op = vim.fn.mode(1):match('o') and (vim.v.operator == 'c')
             api.nvim_create_autocmd('ModeChanged', {
-               pattern = is_change_op and 'i:n' or '*:n',
+               pattern = (vim.bo.buftype == 'terminal') and '*:nt' or '*:n',
                once = true,
                callback = vim.schedule_wrap(function()
                   restore_cursor()

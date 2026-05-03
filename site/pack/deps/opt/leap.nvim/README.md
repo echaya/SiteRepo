@@ -109,7 +109,7 @@ vim.api.nvim_create_autocmd('User', {
 })
 ```
 
-Treesitter parent node selection (`vannnny` or `yan{label}`):
+Treesitter parent node selection (`vannn...y` or `yan{label}`):
 
 ```lua
 vim.keymap.set({ 'x', 'o' }, 'an', function()
@@ -228,20 +228,20 @@ position specified by `{leap}`.
 The recommended way though is automatically starting Visual mode after
 jumping (see "feeding input" below). The keys `<Plug>(leap-remote)` and
 `<Plug>(leap-remote-linewise)` do that by default, so that from Normal
-mode you can e.g. `gs{leap}apy`. In terms of keystrokes this is on par
-with the _op-leap-select_ method, but here you have visual feedback, can
-move around freely with arbitrary motion combinations, and correct
-mistakes.
+mode you can e.g. `gs{leap}apy` (_leap-select-op_). This is the same amount of
+keystrokes as the _op-leap-select_ method (`ygs{leap}ap`), but here you have
+visual feedback, can move around freely with arbitrary motion combinations, and
+correct mistakes.
 
-Note that this feature makes exchanging two regions of text moderately simple,
+Tip: this feature makes exchanging two regions of text moderately simple,
 without needing a custom plugin: delete region A + remotely select region B +
 `pP`. Example (swapping two words): `diw gs{leap}iw pP`.
 
 **Icing on the cake, no. 1 - automatic paste after yanking**
 
-With this, you can clone text objects or regions in the blink of an eye, even
-from another window (just `ygs{leap}ap`, or, with predefiend remote text
-object, `yarp{leap}`, and voilà, the remote paragraph appears there):
+With this, you can clone regions in the blink of an eye, even from another
+window (just `ygs{leap}ap`, or, with predefiend remote text object,
+`yarp{leap}`, and voilà, the remote paragraph appears there):
 
 ```lua
 vim.api.nvim_create_autocmd('User', {
@@ -255,6 +255,8 @@ vim.api.nvim_create_autocmd('User', {
   end,
 })
 ```
+
+Tip: use this in terminal buffers when entering commands!
 
 **Icing on the cake, no. 2 - feeding input**
 
@@ -274,9 +276,9 @@ end)
 By giving text objects as `input`, you can create _remote text objects_, for an
 even more intuitive workflow (`yarp{leap}` - "yank a remote paragraph at...").
 For this, you can use the readily available `<Plug>(leap-remote-text-object)`
-and `<Plug>(leap-remote-inner-text-object)` keys - they simply consume an
-additional input character before triggering Leap, and later feed that
-character prefixed with `a` and `i`, respectively. (In the previous example
+and `<Plug>(leap-remote-inner-text-object)` keys - they are simple wrappers
+that consume an additional input character before calling `action()`, and feed
+that character prefixed with `a` and `i`, respectively. (In the above example
 `ar` is the hardcoded LHS of the mapping, and `p` is the additional input.)
 
 **Jumping to off-screen areas with native search commands**
@@ -299,10 +301,6 @@ end)
 
 Vim tip: use `c_CTRL-G` and `c_CTRL-T` to move between matches without
 finishing the search.
-
-Note that in Normal mode you are free to move around after the jump. For
-example, search for a markdown header, then move to the concrete target
-(paragraph, line, word) you want to operate on.
 
 </details>
 
@@ -375,7 +373,7 @@ unique in that it
 ### Search and motions
 
 <details>
-<summary>1-character search (enhanced f/t motions)</summary>
+<summary>Enhanced f/t motions (1-character search)</summary>
 
 ```lua
 do
