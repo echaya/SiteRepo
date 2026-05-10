@@ -83,25 +83,36 @@ local function action(kwargs)
             action_canceled = true
          end
       end)
-      api.nvim_create_autocmd('ModeChanged', {
-         pattern = '*:*',
-         once = true,
-         callback = function ()
-            api.nvim_create_autocmd('ModeChanged', {
-               pattern = (vim.bo.buftype == 'terminal') and '*:nt' or '*:n',
-               once = true,
-               callback = vim.schedule_wrap(function()
-                  restore_cursor()
-                  vim.on_key(nil, listener_id)  -- remove listener
-                  if not action_canceled then
-                     api.nvim_exec_autocmds('User', {
-                        pattern = 'RemoteOperationDone',
-                        data = state
-                     })
-                  end
-               end)
-            })
-         end
+      -- Wait for going back to Normal, then restore.
+      local id
+      id = api.nvim_create_autocmd('ModeChanged', {
+         pattern = (vim.bo.buftype == 'terminal') and '*:nt' or '*:n',
+         callback = vim.schedule_wrap(function(ev)
+            -- Edge case:
+            --   1. start remote change op
+            --    --- autocommand active now ---
+            --   2. execute non-atomic movement, e.g., a `leap()` call
+            --    --- false alarm here, would return early ---
+            --   [3. insert replacement text]
+            -- Solution: Wait until leaving from Insert mode.
+            if
+               state.mode:match('o') and (vim.v.operator == 'c')
+               and not ev.match:match('i:')
+            then
+               return
+            end
+
+            api.nvim_del_autocmd(id)
+            vim.on_key(nil, listener_id)  -- remove listener
+            restore_cursor()
+
+            if not action_canceled then
+               api.nvim_exec_autocmds('User', {
+                  pattern = 'RemoteOperationDone',
+                  data = state
+               })
+            end
+         end)
       })
    end
 

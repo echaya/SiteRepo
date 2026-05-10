@@ -341,9 +341,21 @@ end
 
 --- Restart Neovim preserving current session
 ---
---- Requires |:restart| command available on Neovim>=0.12.
+--- Write (active or new temporary) session, |:restart|, source the session.
+---
+--- Notes:
+--- - Requires Neovim>=0.12 for |:restart| command.
+--- - If there is no active session (|v:this_session|), |argument-list| is cleared
+---   for temporary session to not preserve it.
 MiniSessions.restart = function()
   if vim.fn.has('nvim-0.12') == 0 then return H.message('`restart()` requires Neovim>=0.12') end
+
+  -- Return early if `:restart +qall` is impossible
+  for _, buf_id in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.bo[buf_id].modified then
+      H.error('No write since last change in buffer ' .. buf_id .. '. `:restart` will fail.')
+    end
+  end
 
   -- Compute session to write and restore
   local this_session, del_session = H.get_this_session(), nil
@@ -351,6 +363,7 @@ MiniSessions.restart = function()
     local _, filename = vim.loop.fs_mkstemp('restart_session_XXXXXX')
     this_session = vim.fs.abspath(filename)
     del_session = this_session
+    vim.cmd('%argdelete')
   end
 
   -- Write session
@@ -358,25 +371,18 @@ MiniSessions.restart = function()
   vim.cmd('mksession! ' .. session_arg)
 
   -- Restart Neovim and execute Lua commands to restore necessary session
-  local after = {
-    'vim.cmd("source ' .. session_arg:gsub('\\', '\\\\') .. '")',
-    -- Restore 'termguicolors' manually since it is not (yet) autodetected
-    'vim.o.termguicolors = ' .. tostring(vim.o.termguicolors),
-    'vim.notify("(mini.sessions) Restarted")',
-  }
+  local after = { 'vim.cmd("source ' .. session_arg:gsub('\\', '\\\\') .. '")' }
   if del_session ~= nil then
-    table.insert(after, 2, 'pcall(vim.fs.rm, ' .. vim.inspect(this_session) .. ')')
-    table.insert(after, 3, 'vim.v.this_session = ""')
+    table.insert(after, 'pcall(vim.fs.rm, ' .. vim.inspect(del_session) .. ')')
+    table.insert(after, 'vim.v.this_session = ""')
   end
-  local ok, msg = pcall(vim.cmd, 'restart lua ' .. table.concat(after, ';'))
 
-  -- Ensure cleanup in case of an error restarting (like a modified buffer)
-  if ok then return end
-  if del_session then
-    pcall(vim.fs.rm, this_session)
-    vim.v.this_session = ''
-  end
-  H.error(msg)
+  -- - Ensure proper 'termguicolors' (problems on Neovim<0.12.1 and in tests)
+  table.insert(after, 'vim.o.termguicolors = ' .. tostring(vim.o.termguicolors))
+  table.insert(after, 'vim.notify("(mini.sessions) Restarted")')
+
+  local ok, msg = pcall(vim.cmd, 'restart lua ' .. table.concat(after, ';'))
+  if not ok then H.error(msg) end
 end
 
 --- Select session interactively and perform action

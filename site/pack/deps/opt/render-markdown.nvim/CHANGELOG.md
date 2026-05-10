@@ -7,6 +7,8 @@
 - allow inline code left and right icon highlight to be specified [e9d7409](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/e9d7409c2d604dc12589c00ef922e08e3998e000)
 - improve table start column tracking [2247dcd](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/2247dcd1ff0c223cfa7e317783f89b8d00457ce6)
 - ability to not conceal wikilink destination when there is an alias [d67113f](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/d67113f11384c0dad96fced2f7b91f1fc811e97f)
+- configurable code block background inset [#643](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/643)
+  [3f3eea9](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/3f3eea97b80839f629c951ca660ffd125bfa5b34)
 
 ### Bug Fixes
 
@@ -18,6 +20,8 @@
 - check global Obsidian.opts for Obsidian.nvim in healthcheck [#633](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/633)
   [54d4b54](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/54d4b5431e9634ee3d8d30784e017239b5b89d41)
 - conceal padding spaces in multi-backtick code spans per CommonMark spec [#635](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/635)
+- false positive link matching [#650](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/650)
+  [ff2fcd6](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/ff2fcd6f2c7b69ae2c08ebfb003b644b0d8b9acb)
 
 ### Collaborator Shoutouts
 

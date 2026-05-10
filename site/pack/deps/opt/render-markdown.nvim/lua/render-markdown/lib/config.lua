@@ -36,6 +36,7 @@ function Config.new(root, enabled, buf, custom)
         paragraph = root.paragraph,
         pipe_table = root.pipe_table,
         quote = root.quote,
+        render = root.render,
         sign = root.sign,
         win_options = root.win_options,
         yaml = root.yaml,
@@ -71,6 +72,15 @@ function Config:set_link_text(destination, icon)
     local options = iter.table.filter(self.link.custom, function(custom)
         if custom.kind == 'suffix' then
             return vim.endswith(destination, custom.pattern)
+        elseif custom.kind == 'url' then
+            local prefix = destination:match('^(.*)' .. custom.pattern) ---@type string?
+            if not prefix then
+                return false
+            end
+            prefix = prefix:gsub('^https?://', '', 1)
+            prefix = prefix:gsub('^www%.', '', 1)
+            local last = prefix:sub(-1)
+            return last == '' or last == '.'
         else
             return destination:find(custom.pattern) ~= nil
         end
@@ -109,6 +119,7 @@ function Config.schema(child)
         paragraph = settings.paragraph.schema(),
         pipe_table = settings.pipe_table.schema(),
         quote = settings.quote.schema(),
+        render = settings.render.schema(),
         sign = settings.sign.schema(),
         win_options = settings.win_options.schema(),
         yaml = settings.yaml.schema(),

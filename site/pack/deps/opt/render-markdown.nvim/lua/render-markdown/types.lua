@@ -1,21 +1,8 @@
 ---@meta
 
----@class (exact) render.md.UserConfig: render.md.partial.UserConfig
+---@class (exact) render.md.UserConfig: render.md.partial.UserConfig, render.md.state.UserConfig
 ---@field preset? render.md.config.Preset
----@field log_level? render.md.log.Level
----@field log_runtime? boolean
----@field file_types? string[]
----@field max_file_size? number
----@field ignore? fun(buf: integer): boolean
----@field nested? boolean
----@field change_events? string[]
----@field restart_highlighter? boolean
----@field injections? render.md.injection.UserConfigs
----@field patterns? render.md.pattern.UserConfigs
----@field on? render.md.on.UserConfig
----@field completions? render.md.completions.UserConfig
 ---@field overrides? render.md.overrides.UserConfig
----@field custom_handlers? table<string, render.md.Handler>
 
 ---@class (exact) render.md.partial.UserConfig: render.md.base.UserConfig
 ---@field debounce? integer
@@ -36,9 +23,25 @@
 ---@field paragraph? render.md.paragraph.UserConfig
 ---@field pipe_table? render.md.table.UserConfig
 ---@field quote? render.md.quote.UserConfig
+---@field render? render.md.render.UserConfig
 ---@field sign? render.md.sign.UserConfig
 ---@field win_options? render.md.window.UserConfigs
 ---@field yaml? render.md.yaml.UserConfig
+
+---@class (exact) render.md.state.UserConfig
+---@field log_level? render.md.log.Level
+---@field log_runtime? boolean
+---@field file_types? string[]
+---@field max_file_size? number
+---@field ignore? fun(buf: integer): boolean
+---@field nested? boolean
+---@field change_events? string[]
+---@field restart_highlighter? boolean
+---@field injections? render.md.injection.UserConfigs
+---@field patterns? render.md.pattern.UserConfigs
+---@field on? render.md.on.UserConfig
+---@field completions? render.md.completions.UserConfig
+---@field custom_handlers? table<string, render.md.Handler>
 
 ---@class (exact) render.md.anti.conceal.UserConfig
 ---@field enabled? boolean
@@ -242,8 +245,8 @@
 ---@field scope_highlight? string
 
 ---@class (exact) render.md.link.custom.UserConfig
----@field pattern? string
 ---@field icon? string
+---@field pattern? string
 ---@field kind? render.md.link.custom.Kind
 ---@field priority? integer
 ---@field highlight? string
@@ -296,6 +299,9 @@
 ---@field icon? string|string[]
 ---@field repeat_linebreak? boolean
 ---@field highlight? string|string[]
+
+---@class (exact) render.md.render.UserConfig
+---@field diff? boolean
 
 ---@class (exact) render.md.sign.UserConfig
 ---@field enabled? boolean
