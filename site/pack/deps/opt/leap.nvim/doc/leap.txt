@@ -14,8 +14,7 @@ USAGE                                                             *leap-usage*
 
 • Initiate the command in a given scope (|leap-mappings|), and start typing a
   2-character search pattern ({char1}{char2}). For the last character on a
-  line, type {char}<space>; for empty lines, type <space><space>.
-  |leap-till-eol| |leap-to-eol|
+  line, type {char}<space>; for empty lines, type <space><space>. |leap-eol|
 
 • After typing {char1}, you can see "labels" appearing next to some pairs.
   They are not active yet, but this preview allows you to process them in the
@@ -43,29 +42,30 @@ MAPPINGS                                                       *leap-mappings*
 There are some predefined <Plug> keys provided, aliasing calls with the most
 common/useful argument tables:
 
-    Key                         |  Search scope    |  Offset  |  |inclusive|
-    ----------------------------|------------------|----------|-------------
-    <Plug>(leap-forward)        |  After cursor    |          |  *
-    <Plug>(leap-forward-till)   |  After cursor    |  -1      |  *
-    <Plug>(leap-backward)       |  Before cursor   |          |
-    <Plug>(leap-backward-till)  |  Before cursor   |  +1      |
-    <Plug>(leap)                |  Current window  |          |  * (forward)
-    <Plug>(leap-from-window)    |  Other windows   |          |
-    <Plug>(leap-anywhere)       |  All windows     |          |
+    Key                            |  Search scope    |  Offset  |  |inclusive|
+    -------------------------------|------------------|----------|------------
+    <Plug>(leap-forward)           |  After cursor    |          |  *
+    <Plug>(leap-forward-next-to)   |  After cursor    |  -1      |  *
+    <Plug>(leap-backward)          |  Before cursor   |          |
+    <Plug>(leap-backward-next-to)  |  Before cursor   |  +1      |
+    <Plug>(leap)                   |  Current window  |          |  * (forward)
+    <Plug>(leap-next-to)           |  Current window  |  {-1}    |  * (forward)
+    <Plug>(leap-from-window)       |  Other windows   |          |
+    <Plug>(leap-anywhere)          |  All windows     |          |
 
 Suggested arrangements ~
 
 1. Sneak-style >lua
     vim.keymap.set({ 'n', 'x', 'o' }, 's',  '<Plug>(leap-forward)')
     vim.keymap.set({ 'n', 'x', 'o' }, 'S',  '<Plug>(leap-backward)')
-    vim.keymap.set('n',               'gs', '<Plug>(leap-from-window)')
+    vim.keymap.set({ 'n' },           'gs', '<Plug>(leap-from-window)')
 
 2. Bidirectional >lua
     vim.keymap.set({ 'n', 'x', 'o' }, 's', '<Plug>(leap)')
-    vim.keymap.set('n',               'S', '<Plug>(leap-from-window)')
+    vim.keymap.set({ 'n' },           'S', '<Plug>(leap-from-window)')
 
 3. One key for everything >lua
-    vim.keymap.set('n',               's', '<Plug>(leap-anywhere)')
+    vim.keymap.set({ 'n' },           's', '<Plug>(leap-anywhere)')
     vim.keymap.set({ 'x', 'o' },      's', '<Plug>(leap)')
 <
     Note: The trade-off with `<Plug>(leap-anywhere)` is that whenever multiple
@@ -73,9 +73,12 @@ Suggested arrangements ~
     allowed when all matches are in one window (this is an intentional
     restriction to avoid confusing behaviour and implementation problems).
 
-You might add a pair of keys for exclusive selection to any of the above: >lua
-    vim.keymap.set({ 'x', 'o' },      'x', '<Plug>(leap-forward-till)')
-    vim.keymap.set({ 'x', 'o' },      'X', '<Plug>(leap-backward-till)')
+Keys for exclusive selection: >lua
+    -- #1:
+    vim.keymap.set({ 'x', 'o' }, 'x', '<Plug>(leap-forward-next-to)')
+    vim.keymap.set({ 'x', 'o' }, 'X', '<Plug>(leap-backward-next-to)')
+    -- #2, #3:
+    vim.keymap.set({ 'x', 'o' }, 'x', '<Plug>(leap-next-to)')
 
 Note that each native editing command overridden by the suggested mappings has
 an equivalent:
@@ -99,9 +102,9 @@ Search ~
 
 • The last character on a line can be targeted by pressing <space> after it.
   There is nothing special going on here: <space> is simply an alias for `\n`
-  and `\r`, set in |leap.opts.equivalence_classes| by default. *leap-till-eol*
+  and `\r`, set in |leap.opts.equivalence_classes| by default.
   To target actual EOL positions, including empty lines, press a newline alias
-  twice (pretend that each newline character is duplicated). *leap-to-eol*
+  twice (pretend that each newline character is duplicated). *leap-eol*
 
 • Case sensitivity is determined by 'ignorecase' and 'smartcase'. If you want
   specific settings for Leap motions, you can set these to temporary values in
@@ -253,7 +256,7 @@ Example configuration: >lua
     issue: `x` -> `x|X`.) *leap-wildcard-problem*
 
     Note: If you want to be able to target empty lines and characters at the
-    end of a line, keep an alias for `\n` and `\r`. |leap-till-eol|
+    end of a line, keep an alias for `\n` and `\r`. |leap-eol|
 
                                                        *leap.opts.safe_labels*
 `safe_labels = 'sfnut/SFNLHMUGTZ?'`
@@ -413,7 +416,9 @@ leap({opts})                                                     *leap.leap()*
                • {windows}? (`table`) A list of windows (as |winid|s) to be
                  searched.
                • {offset}? (`-1|0|1`, default: `0`) Where to land with the
-                 cursor compared to the target position.
+                 cursor compared to the target position. Can be wrapped in a
+                 table (`{ -1 }`), which is interpreted as relative offset
+                 (negative value means closer to the cursor).
                • {inclusive}? (`boolean`, default: `false`) Make operations
                  |inclusive| for forward jumps.
                • {repeat}? (`boolean`, default: `false`) Leap again with the

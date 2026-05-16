@@ -3,22 +3,9 @@ local util = require 'yarepl.extensions.utility'
 
 local M = {}
 
-local function default_wincmd(bufnr, name)
-    local winid = vim.api.nvim_open_win(bufnr, true, {
-        relative = 'laststatus',
-        row = 0,
-        col = math.floor(vim.o.columns * 0.5),
-        width = math.floor(vim.o.columns * 0.5),
-        height = math.floor(vim.o.lines * 0.7),
-        style = 'minimal',
-        title = name,
-        border = 'rounded',
-        title_pos = 'center',
-    })
-    if M.config.show_winbar_in_float_window then
-        vim.wo[winid].winbar = '%t'
-    end
-end
+local default_wincmd = util.default_float_wincmd(function()
+    return M.config
+end)
 
 local prefixes = {
     '/model',
@@ -44,6 +31,15 @@ local codex_args = {
     '--cd',
 }
 
+---@class yarepl.extensions.CodexConfig
+---@field show_winbar_in_float_window boolean
+---@field wincmd fun(bufnr: number, name: string)
+---@field source_syntax string
+---@field codex_args string[]
+---@field formatter string
+---@field codex_cmd string|string[]
+---@field warn_on_EDITOR_env_var boolean
+---@type yarepl.extensions.CodexConfig
 M.config = {
     show_winbar_in_float_window = true,
     wincmd = default_wincmd,
@@ -61,23 +57,7 @@ end
 M.create_codex_meta = function()
     return {
         cmd = function()
-            local args
-            -- build up the command to launch codex based on M.config.codex_args
-            -- (the command line options) and the M.config.codex_cmd.
-            if type(M.config.codex_cmd) == 'string' then
-                args = vim.deepcopy(M.config.codex_args)
-                table.insert(args, 1, M.config.codex_cmd)
-            elseif type(M.config.codex_cmd) == 'table' then
-                args = vim.deepcopy(M.config.codex_cmd)
-                for _, arg in ipairs(M.config.codex_args) do
-                    table.insert(args, arg)
-                end
-            else
-                vim.notify('invalid codex cmd type', vim.log.levels.ERROR)
-                return
-            end
-
-            return args
+            return util.build_cmd('codex', M.config.codex_cmd, M.config.codex_args)
         end,
         formatter = M.config.formatter,
         wincmd = M.config.wincmd,
@@ -104,9 +84,7 @@ local shortcuts = {
         key = '\7',
         requires_cr = false,
         pre_hook = function()
-            if M.config.warn_on_EDITOR_env_var and ((not vim.env.EDITOR) or (not vim.env.EDITOR:find 'nvr')) then
-                vim.notify('current $EDITOR command is not nvr, please consider using nvr', vim.log.levels.WARN)
-            end
+            util.warn_editor_not_nvr(M.config.warn_on_EDITOR_env_var)
         end,
     },
     --Ctrl-t
@@ -180,7 +158,7 @@ yarepl.completions.codex = codex_completions
 -------------------------------------
 
 for _, shortcut in ipairs(shortcuts) do
-    local plug_name = shortcut.name:gsub('_', '-')
+    local plug_name = util.plug_name(shortcut.name)
     keymap('n', '<Plug>(yarepl-codex-' .. plug_name .. ')', '', {
         noremap = true,
         callback = function()
@@ -247,7 +225,7 @@ end, {
 
 for _, shortcut in ipairs(shortcuts) do
     local old_plug = '<Plug>(CodexSend' .. shortcut.legacy_name .. ')'
-    local new_plug = '<Plug>(yarepl-codex-' .. shortcut.name:gsub('_', '-') .. ')'
+    local new_plug = '<Plug>(yarepl-codex-' .. util.plug_name(shortcut.name) .. ')'
     keymap('n', old_plug, '', {
         noremap = true,
         callback = function()

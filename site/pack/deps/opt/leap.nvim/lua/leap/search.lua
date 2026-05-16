@@ -115,7 +115,13 @@ local function get_targets_in_current_window(pattern, targets, kwargs)
    local line_str
    for i, pos in ipairs(match_positions) do
       local line, col = unpack(pos)
-      if not (skip_curpos and line == curline and (col + offset) == curcol) then
+      local skip_pos = skip_curpos and line == curline and (
+         type(offset) == 'number'
+         and (col + offset) == curcol
+         or type(offset) == 'table'  -- relative offset
+         and ((col + offset[1]) == curcol or (col - offset[1]) == curcol)
+      )
+      if not skip_pos then
          if line ~= prev_line then
             line_str = vim.fn.getline(line)
             prev_line = line

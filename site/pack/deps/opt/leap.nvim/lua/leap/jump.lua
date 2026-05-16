@@ -87,6 +87,8 @@ end
 
 local function jump_to(pos, kwargs)
    local lnum, col = unpack(pos)
+   -- Original cursor position before invoking Leap.
+   local curline, curcol = unpack(kwargs.curpos)
    local win = kwargs.win
    local mode = kwargs.mode
    local offset = kwargs.offset
@@ -104,10 +106,16 @@ local function jump_to(pos, kwargs)
    if win ~= api.nvim_get_current_win() then
       api.nvim_set_current_win(win)
    end
+   if type(offset) == 'table' then  -- relative offset
+      local is_backward = lnum < curline or (lnum == curline and col < curcol)
+      offset = is_backward and (- offset[1]) or offset[1]
+   end
    api.nvim_win_set_cursor(0, { lnum, col - 1 })
    if offset then
       add_offset(offset)
    end
+   -- `is_backward` is set in `main` for bidirectional too,
+   -- but only in O-p mode, based on `target.idx`.
    if is_op_mode and is_inclusive and not is_backward then
       -- Since Vim interprets our jump as exclusive (:h exclusive), we
       -- need custom tweaks to behave as inclusive. (This is only

@@ -890,9 +890,11 @@ local function leap(kwargs)
 
    local jump_to
    do
+      local curpos = { vim.fn.line('.'), vim.fn.col('.') }
       local is_first_jump = true
       jump_to = function(target)
          require('leap.jump').jump_to(target.pos, {
+            curpos = curpos,
             add_to_jumplist = is_first_jump,
             win = target.wininfo.winid,
             mode = mode,

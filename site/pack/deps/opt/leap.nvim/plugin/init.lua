@@ -3,17 +3,20 @@ local map = vim.keymap.set
 map({ 'n', 'x', 'o' }, '<Plug>(leap-forward)', function()
    require('leap').leap { inclusive = true }
 end)
+map({ 'n', 'x', 'o' }, '<Plug>(leap-forward-next-to)', function()
+   require('leap').leap { offset = -1, inclusive = true }
+end)
 map({ 'n', 'x', 'o' }, '<Plug>(leap-backward)', function()
    require('leap').leap { backward = true }
 end)
-map({ 'n', 'x', 'o' }, '<Plug>(leap-forward-till)', function()
-   require('leap').leap { offset = -1, inclusive = true }
-end)
-map({ 'n', 'x', 'o' }, '<Plug>(leap-backward-till)', function()
+map({ 'n', 'x', 'o' }, '<Plug>(leap-backward-next-to)', function()
    require('leap').leap { backward = true, offset = 1 }
 end)
 map({ 'n', 'x', 'o' }, '<Plug>(leap)', function()
-   require('leap').leap { windows = { vim.api.nvim_get_current_win() }, inclusive = true }
+   require('leap').leap { windows = { vim.fn.win_getid() }, inclusive = true }
+end)
+map({ 'n', 'x', 'o' }, '<Plug>(leap-next-to)', function()
+   require('leap').leap { windows = { vim.fn.win_getid() }, inclusive = true, offset = { -1 }, }
 end)
 map({ 'n', 'x', 'o' }, '<Plug>(leap-from-window)', function()
    require('leap').leap { windows = require('leap.user').get_enterable_windows() }
@@ -49,3 +52,7 @@ end)
 map({ 'x', 'o' }, '<Plug>(leap-remote-inner-text-object)', function()
    remote_text_object('i')
 end)
+
+map({ 'n', 'x', 'o' }, '<Plug>(leap-till)', '<Plug>(leap-next-to)')
+map({ 'n', 'x', 'o' }, '<Plug>(leap-forward-till)', '<Plug>(leap-forward-next-to)')
+map({ 'n', 'x', 'o' }, '<Plug>(leap-backward-till)', '<Plug>(leap-backward-next-to)')
