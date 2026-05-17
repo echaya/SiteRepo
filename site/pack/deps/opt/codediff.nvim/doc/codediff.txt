@@ -198,8 +198,10 @@ Setup entry point:
     },
     explorer = {
       position = "left",
+      hidden = false,
       width = 40,
       height = 15,
+      auto_refresh = true,
       indent_markers = true,
       icons = {
         folder_closed = "",
