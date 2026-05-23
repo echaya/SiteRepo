@@ -20,6 +20,7 @@ There are following change types:
 
 - Add new plugin integrations:
     - 'folke/snacks.nvim'
+    - 'saghen/blink.cmp'
 
 ## mini.clue
 
@@ -71,6 +72,7 @@ There are following change types:
 
 - Add new plugin integrations:
     - 'folke/snacks.nvim'
+    - 'saghen/blink.cmp'
 
 ## mini.jump
 
@@ -109,6 +111,8 @@ There are following change types:
 - Describe alternative move keys (`<Down>`, `<Up>`, `<Home>`) as "hard-coded but overridable" (instead of a previous not very precise "non-overridable") and show them in the info view.
 
 - Update `ui_select` to wait until currently active picker is stopped before opening a new one. This behavior allows to call several `vim.ui.select()` in a row and is more aligned with how it is assumed to work.
+
+- Update `grep` and `grep_live` pickers to allow `method` local option which describes a pattern matching method (`'regex'` or `'plain'`). The `grep_live` picker also has custom `<C-e>` mapping to switch method.
 
 ### Refine
 
