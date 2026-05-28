@@ -92,6 +92,9 @@ Remote operations:
 -- e.g. `d2gS{leap}` deletes two lines.
 vim.keymap.set({ 'n', 'o' }, 'gs', '<Plug>(leap-remote)')
 vim.keymap.set({ 'n', 'o' }, 'gS', '<Plug>(leap-remote-linewise)')
+-- Useful shortcut for a frequent operation: the same as remote-linewise,
+-- except it auto-triggers even without [count] (`yrr{leap}` copies a line).
+vim.keymap.set({ 'o' },      'rr', '<Plug>(leap-remote-line)')
 -- These commands expect another character as input before leaping, and
 -- select the given text object at the destination (`yarp{leap}`).
 vim.keymap.set({ 'x', 'o' }, 'ar', '<Plug>(leap-remote-text-object)')

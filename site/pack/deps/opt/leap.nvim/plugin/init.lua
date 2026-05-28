@@ -29,14 +29,21 @@ map({ 'n', 'o' }, '<Plug>(leap-remote)', function()
    local input = vim.fn.mode(true):match('o') and '' or 'v'
    require('leap.remote').action { input = input }
 end)
-map({ 'n', 'o' }, '<Plug>(leap-remote-linewise)', function()
+
+local function remote_linewise(autotrigger)
    local input = 'V' .. (
       vim.v.count > 1 and (vim.v.count - 1 .. 'j')
       -- Move to trigger the operation.
-      or vim.v.count == 1 and vim.fn.mode(true):match('o') and 'l'
+      or (vim.fn.mode(true):match('o') and (vim.v.count == 1 or autotrigger)) and 'l'
       or ''
    )
    require('leap.remote').action { input = input, count = false }
+end
+map({ 'n', 'o' }, '<Plug>(leap-remote-linewise)', function()
+   remote_linewise()
+end)
+map({ 'o' }, '<Plug>(leap-remote-line)', function()
+   remote_linewise(true)
 end)
 
 local function remote_text_object(prefix)

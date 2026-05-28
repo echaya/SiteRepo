@@ -84,7 +84,10 @@ function M.delete(opts)
   end
 
   if vim.api.nvim_buf_is_valid(buf) then
+    local ei = vim.o.eventignore
+    vim.o.eventignore = "DiagnosticChanged"
     pcall(vim.cmd, (opts.wipe and "bwipeout! " or "bdelete! ") .. buf)
+    vim.o.eventignore = ei
   end
 end
 
