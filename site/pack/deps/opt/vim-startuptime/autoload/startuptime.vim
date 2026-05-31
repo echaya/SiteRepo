@@ -348,8 +348,8 @@ function! s:Profile(onfinish, onprogress, options, tries, file, items) abort
           \   'relative': 'editor',
           \   'row': 0,
           \   'col': 0,
-          \   'width': min([&columns, 1]),
-          \   'height': min([&lines, 1]),
+          \   'width': max([&columns, 1]),
+          \   'height': max([&lines, 1]),
           \   'hide': v:true,
           \   'focusable': v:false
           \ })

@@ -738,7 +738,7 @@ end
 
 --- Git files picker
 ---
---- Pick from Git files using `git ls-files`.
+--- Pick from Git files using `git ls-files` using standard ignore rules.
 --- __extra_pickers_git_notes
 ---
 --- Examples:
@@ -746,12 +746,12 @@ end
 --- - `MiniExtra.pickers.git_files({ scope = 'ignored' })` - ignored files from
 ---   parent Git repository of |current-directory|.
 --- - `:Pick git_files path='subdir' scope='modified'` - files from 'subdir'
----   subdirectory which are ignored by Git.
+---   subdirectory which differ from Git index.
 ---
 ---@param local_opts __extra_pickers_local_opts
 ---   Possible fields:
 ---   __extra_pickers_git_path
----   - <scope> `(string)` - files scope to show. One of
+---   - <scope> `(string)` - files scope to show. One of:
 ---       - "tracked"   (`--cached`   Git flag).
 ---       - "modified"  (`--modified` Git flag).
 ---       - "untracked" (`--others`   Git flag).
@@ -779,11 +779,11 @@ MiniExtra.pickers.git_files = function(local_opts, opts)
   local show = H.pick_get_config().source.show or H.show_with_icons
 
   local args = ({
-    tracked = { '--cached' },
-    modified = { '--modified' },
-    untracked = { '--others' },
+    tracked = { '--cached', '--exclude-standard' },
+    modified = { '--modified', '--exclude-standard' },
+    untracked = { '--others', '--exclude-standard' },
     ignored = { '--others', '--ignored', '--exclude-standard' },
-    deleted = { '--deleted' },
+    deleted = { '--deleted', '--exclude-standard' },
   })[local_opts.scope]
   local command = vim.list_extend({ 'git', '-C', path_dir, '-c', 'core.quotepath=false', 'ls-files' }, args)
 
