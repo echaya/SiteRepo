@@ -44,6 +44,7 @@ M.defaults = {
     jump_to_first_change = true, -- Auto-scroll to first change when opening a diff: true = jump to first hunk, false = stay at same line
     highlight_priority = 100, -- Priority for line-level diff highlights (increase to override LSP highlights)
     compute_moves = false, -- Detect moved code blocks (opt-in, may increase diff computation time)
+    compact_context_lines = 3, -- Number of context lines around hunks in compact mode
   },
 
   -- Explorer panel configuration
@@ -64,6 +65,7 @@ M.defaults = {
       ignore = { ".git/**", ".jj/**" }, -- Glob patterns to hide (e.g., {"*.lock", "dist/*"})
     },
     focus_on_select = false, -- Jump to modified pane after selecting a file (default: stay in explorer)
+    auto_open_on_cursor = false, -- Rebind j/k/Down/Up in the explorer to also open the file under the cursor
     flatten_dirs = true, -- Flatten single-child directory chains in tree view (e.g., src/components/ui/)
     status_right_margin = 1, -- Trailing cells between the status symbol (M/A/D) and the right edge; increase if Nerd Font icons clip it
     visible_groups = { -- Which groups to show in explorer (can be toggled at runtime)
@@ -103,6 +105,7 @@ M.defaults = {
       hunk_textobject = "ih", -- Textobject for hunk (vih to select, yih to yank, etc.)
       align_move = "gm", -- Temporarily align other pane to show paired moved code
       toggle_layout = "t", -- Toggle diff layout for the current codediff session
+      toggle_compact = "gc", -- Toggle compact mode (fold unchanged regions, show only hunks + context)
       show_help = "g?", -- Show floating window with available keymaps
     },
     explorer = {

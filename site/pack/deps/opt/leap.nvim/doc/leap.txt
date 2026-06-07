@@ -13,23 +13,23 @@ very quickly, with near-zero mental overhead.
 USAGE                                                             *leap-usage*
 
 • Initiate the command in a given scope (|leap-mappings|), and start typing a
-  2-character search pattern ({char1}{char2}). For the last character on a
-  line, type {char}<space>; for empty lines, type <space><space>. |leap-eol|
+  2-character search pattern ({char1}{char2}). After typing {char1}, you can
+  see label characters appearing next to some pairs. They are not active yet,
+  but this preview allows you to process them in the background. *leap-preview*
 
-• After typing {char1}, you can see "labels" appearing next to some pairs.
-  They are not active yet, but this preview allows you to process them in the
-  background. *leap-preview*
+• Typing {char2} filters the matches. When the closest pair is not labeled,
+  you automatically jump there. If that was your target, you can safely ignore
+  the labels remaining on the screen - those will not conflict with any
+  sensible command, and will disappear on the next keypress.
+  |leap.opts.safe_labels| *leap-autojump*
 
-• Typing {char2} filters the matches. When the closest one is unlabeled, you
-  automatically jump there. If that was your target, you can safely ignore the
-  remaining labels - those will not conflict with any sensible command, and
-  will disappear on the next keypress. |leap.opts.safe_labels| *leap-autojump*
-
-• Else: type the label character to jump. If there are more matches than
+• Else: type the given label character to jump. If there are more matches than
   available labels, use <space> and <backspace> to move between groups
-  (|leap.opts.keys|). Labels in subsequent target groups are concealed with an
-  empty block or a middle dot, depending on the color scheme, and have a
-  dimmed color. *leap-concealed-labels*
+  (|leap.opts.keys|).
+
+To target the last character on a line, type {char}<space>; to target empty
+lines, type <space><space> (|leap-eol|). Use <enter> as a shortcut anytime
+(|leap-next|).
 
 See |leap-features| for lots of additional details.
 
@@ -53,37 +53,18 @@ common/useful argument tables:
     <Plug>(leap-from-window)       |  Other windows   |          |
     <Plug>(leap-anywhere)          |  All windows     |          |
 
-Suggested arrangements ~
-
-1. Sneak-style >lua
-    vim.keymap.set({ 'n', 'x', 'o' }, 's',  '<Plug>(leap-forward)')
-    vim.keymap.set({ 'n', 'x', 'o' }, 'S',  '<Plug>(leap-backward)')
-    vim.keymap.set({ 'n' },           'gs', '<Plug>(leap-from-window)')
-
-2. Bidirectional >lua
+Suggested arrangement: >lua
     vim.keymap.set({ 'n', 'x', 'o' }, 's', '<Plug>(leap)')
+    vim.keymap.set({ 'x', 'o' },      'x', '<Plug>(leap-next-to)')
     vim.keymap.set({ 'n' },           'S', '<Plug>(leap-from-window)')
-
-3. One key for everything >lua
-    vim.keymap.set({ 'n' },           's', '<Plug>(leap-anywhere)')
-    vim.keymap.set({ 'x', 'o' },      's', '<Plug>(leap)')
 <
-    Note: The trade-off with `<Plug>(leap-anywhere)` is that whenever multiple
-    windows are open, you can rarely expect |leap-autojump|s, as it is only
-    allowed when all matches are in one window (this is an intentional
-    restriction to avoid confusing behaviour and implementation problems).
+    Note that each command overridden by our mappings has an equivalent:
+    |s| = `cl`; |S| = |cc|; |v_s| = |v_c|; |v_S| = |v_c| in |V|; |v_x| = |v_d|.
 
-Keys for exclusive selection: >lua
-    -- #1:
-    vim.keymap.set({ 'x', 'o' }, 'x', '<Plug>(leap-forward-next-to)')
-    vim.keymap.set({ 'x', 'o' }, 'X', '<Plug>(leap-backward-next-to)')
-    -- #2, #3:
-    vim.keymap.set({ 'x', 'o' }, 'x', '<Plug>(leap-next-to)')
-
-Note that each native editing command overridden by the suggested mappings has
-an equivalent:
-|s| = `cl`; |S| = |cc|; |v_s| = |v_c|; |v_S| = |v_c| in |V|; |v_x| = |v_d|;
-|v_X| = |v_D|.
+Note: The trade-off with `<Plug>(leap-anywhere)` is that whenever multiple
+windows are open, you can rarely expect |leap-autojump|s, as it is only
+allowed when all matches are in one window (this is an intentional restriction
+to avoid confusing behaviour and implementation problems).
 
 ==============================================================================
 FEATURES                                                       *leap-features*
@@ -138,9 +119,13 @@ that the targets right in front of you will be the first ones.
 
 Handling preview conflicts ~
 
-In |leap-preview| phase, |leap-concealed-labels| might appear in the first
-label group too, marking that there is a conflict or potential source of
-confusion (to be resolved in the next step): *leap-preview-conflicts*
+Labels in subsequent target groups are concealed with an empty block or a
+middle dot, depending on the color scheme, and have a dimmed color.
+*leap-concealed-labels*
+
+During |leap-preview|, concealed labels might appear in the first label group
+too, marking that there is a conflict or potential source of confusion, to be
+resolved in the next step: *leap-preview-conflicts*
 
 1. Two overlapping matches at window edge or EOL, where at least one of them
    is labeled. (A label beyond the edge would be shifted left a column, so
@@ -169,7 +154,7 @@ disable this behaviour, see |leap.opts.safe_labels| and |leap.opts.labels|.
 *leap-smart-autojump*
 
 At any stage, <enter> (|leap.opts.keys.next_target|) forces jumping to the
-next/closest available target:
+next/closest available target: *leap-next*
 
 • Pressing <enter> right away repeats the previous search. *leap-repeat*
 
@@ -186,8 +171,9 @@ explicitly invoking Leap (so that you can `<enter><enter>...` instead of
 `s<enter><enter>...`): >lua
     do
       local clever = require('leap.user').with_traversal_keys
-      -- For relative directions, set the `backward` flags according to:
-      -- local prev_backward = require('leap').state['repeat'].backward
+      -- For relative instead of absolute directions, set the `backward`
+      -- flags according to the previous invocation:
+      -- `require('leap').state['repeat'].backward`.
       vim.keymap.set({ 'n', 'x', 'o' }, '<cr>', function()
         require('leap').leap {
           ['repeat'] = true, opts = clever('<cr>', '<bs>'),
@@ -223,11 +209,11 @@ Example configuration: >lua
     selected matches, to reduce visual noise. It gets three characters as
     arguments: the character preceding the match, and the matched pair itself
     (missing characters are represented by empty strings).
-    Example: >lua
-        -- Skip preview for matches starting with whitespace or an
-        -- alphabetic mid-word character: foobar[baaz] = quux
-        --                                *    ***  ** * *  *
-        function(ch0, ch1, ch2)
+
+    Example - show preview only for matches starting at word boundaries: >lua
+        -- foobar[baaz] = quux
+        -- ^    ^^^  ^^ ^ ^  ^
+        leap.opts.preview = function(ch0, ch1, ch2)
           return not (
             ch1:match('%s')
             or (ch0:match('%a') and ch1:match('%a') and ch2:match('%a'))
@@ -245,6 +231,9 @@ Example configuration: >lua
     Mutual alias groups for input characters: members will match any other in
     their equivalence class. Can be strings or tables.
 
+    Note: If you want to be able to target empty lines and characters at the
+    end of a line, keep an alias for `\n` and `\r`. |leap-eol|
+
     Note: Non-mutual aliases (wildcard characters), at least ones that work
     for the whole pattern, are not possible in Leap, because we cannot read
     your mind after the first input, and decide on which label to show for
@@ -254,9 +243,6 @@ Example configuration: >lua
     `?` next. But then `?xyz` is, by definition, a mutual alias group, there
     are no shortcuts anymore. |smartcase| is a specific instance of this
     issue: `x` -> `x|X`.) *leap-wildcard-problem*
-
-    Note: If you want to be able to target empty lines and characters at the
-    end of a line, keep an alias for `\n` and `\r`. |leap-eol|
 
                                                        *leap.opts.safe_labels*
 `safe_labels = 'sfnut/SFNLHMUGTZ?'`
@@ -502,7 +488,7 @@ At runtime you can access the argument table passed to |leap.leap()| via
 `require('leap').state.args`. This lets you flag any given invocation, and
 define custom behaviours for it: >lua
 
-    local function leap2 ()
+    local function leap2()
       require('leap').leap { called_leap2 = true }
     end
 

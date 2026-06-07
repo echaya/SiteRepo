@@ -10,24 +10,21 @@ very quickly, with near-zero mental overhead.
 ### How to use it (TL;DR)
 
 * Initiate the command in a given scope, and start typing a 2-character search
-  pattern (`{char1}{char2}`). For the last character on a line, type
-  `{char}<space>`; for empty lines, type `<space><space>`.
+  pattern (`{char1}{char2}`). After typing `{char1}`, you can see **label
+  characters** appearing next to some pairs. **They are not active yet, but
+  this preview allows you to process them in the background**.
 
-* After typing `{char1}`, you can see **labels** appearing next to some pairs.
-  **They are not active yet, but this preview allows you to process them in the
-  background**.
+* Typing `{char2}` filters the matches. When the closest pair is not labeled,
+  you automatically jump there. If that was your target, you can safely ignore
+  the labels remaining on the screen - those will not conflict with any
+  sensible command, and will disappear on the next keypress.
 
-* Typing `{char2}` filters the matches. When the closest one is unlabeled, you
-  automatically jump there. If that was your target, you can safely ignore the
-  remaining labels - those will not conflict with any sensible command, and
-  will disappear on the next keypress.
-
-* Else: type the label character to jump. If there are more matches than
+* Else: type the given label character to jump. If there are more matches than
   available labels, use `<space>` and `<backspace>` to move between groups.
 
-At any stage, `<enter>` is a shortcut, jumping to the next/closest available
-target: pressing `<enter>` right away repeats the previous search;
-`{char}<enter>` accepts the closest `{char}` match.
+To target the last character on a line, type `{char}<space>`; to target empty
+lines, type `<space><space>`. Use `{char}<enter>` as a shortcut to the closest
+`{char}` match.
 
 ### Why this method?
 
@@ -93,8 +90,8 @@ Remote operations:
 vim.keymap.set({ 'n', 'o' }, 'gs', '<Plug>(leap-remote)')
 vim.keymap.set({ 'n', 'o' }, 'gS', '<Plug>(leap-remote-linewise)')
 -- Useful shortcut for a frequent operation: the same as remote-linewise,
--- except it auto-triggers even without [count] (`yrr{leap}` copies a line).
-vim.keymap.set({ 'o' },      'rr', '<Plug>(leap-remote-line)')
+-- except it auto-triggers even without [count] (`yR{leap}` copies a line).
+vim.keymap.set({ 'o' },      'R',  '<Plug>(leap-remote-line)')
 -- These commands expect another character as input before leaping, and
 -- select the given text object at the destination (`yarp{leap}`).
 vim.keymap.set({ 'x', 'o' }, 'ar', '<Plug>(leap-remote-text-object)')
@@ -136,7 +133,7 @@ expected (selecting remotely).
 -- For example, define word boundaries as the common case, that is, skip
 -- preview for matches starting with whitespace or an alphabetic
 -- mid-word character: foobar[baaz] = quux
---                     *    ***  ** * *  *
+--                     ^    ^^^  ^^ ^ ^  ^
 require('leap').opts.preview = function(ch0, ch1, ch2)
   return not (
     ch1:match('%s')
@@ -148,8 +145,6 @@ end
 -- explicitly invoking Leap (`<cr><cr>...` instead of `s<cr><cr>...`):
 do
   local clever = require('leap.user').with_traversal_keys
-  -- For relative directions, set the `backward` flags according to:
-  -- local prev_backward = require('leap').state['repeat'].backward
   vim.keymap.set({ 'n', 'x', 'o' }, '<cr>', function()
     require('leap').leap {
       ['repeat'] = true, opts = clever('<cr>', '<bs>'),
@@ -380,16 +375,16 @@ unique in that it
 
 ```lua
 do
-  local function ft(key_specific_args)
+  local function ft(kwargs)
     require('leap').leap(
-      vim.tbl_deep_extend('keep', key_specific_args, {
+      vim.tbl_deep_extend('keep', kwargs, {
         inputlen = 1,
         inclusive = true,
         opts = {
           -- Force autojump.
           labels = '',
           -- Match the modes where you don't need labels (`:h mode()`).
-          safe_labels = vim.fn.mode(1):match('o') and '' or nil,
+          safe_labels = vim.fn.mode(1):match('no?') and '' or nil,
         },
       })
     )

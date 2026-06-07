@@ -24,14 +24,6 @@ local M = {
    current_call = {},
 }
 
--- `default` might be accessed directly (see `init.lua`), need to handle
--- the deprecated name here too.
-setmetatable(M.default, {
-   __index = function(self, key_)
-      return self[key_ == 'special_keys' and 'keys' or key_]
-   end,
-})
-
 setmetatable(M, {
    __index = function(self, key_)
       -- Handle deprecated name.
@@ -40,29 +32,35 @@ setmetatable(M, {
       -- Try to look up everything in the `current_call` table first,
       -- so that we can override settings on a per-call basis.
       local cc = self.current_call[key]
-      if cc == nil then  -- `false` should be returned too
-         return rawget(self.default, key)
-      else
-         local first_access_to_dict =
-            type(cc) == 'table'
-            and not vim.isarray(cc)
-            and (getmetatable(cc) and getmetatable(cc).merge or nil) ~= false
-         if first_access_to_dict then
-            -- On the first access, we automatically merge map-like
-            -- subtables with their defaults. This way users can set the
-            -- relevant values only, without having to deepcopy the
-            -- whole default subtable, and then modify it.
+      if cc ~= nil then  -- `false` should be returned too
+         -- MAGIC: On first access, we automatically merge map-like
+         -- subtables with their defaults. This way users can set the
+         -- relevant values only, without having to deepcopy the whole
+         -- default subtable, and then modify it.
+         local is_dict = type(cc) == 'table' and not vim.isarray(cc)
+         if is_dict and not (getmetatable(cc) and getmetatable(cc).merge == false) then
             for k, v in pairs(self.default[key]) do
-               if cc[k] == nil then cc[k] = v end
+               if cc[k] == nil then
+                  cc[k] = v
+               end
             end
             -- Using a metatable field as a convenient flag to skip
             -- merging on subsequent access. It can also be used by
             -- users to prevent merging in the first place.
-            return setmetatable(cc, { merge = false })
-         else
-            return cc
+            setmetatable(cc, { merge = false })
          end
+         return cc
+      else
+         return rawget(self.default, key)
       end
+   end,
+})
+
+-- `default` might be accessed directly (see `init.lua`), need to handle
+-- the deprecated name here too.
+setmetatable(M.default, {
+   __index = function(self, key_)
+      return self[key_ == 'special_keys' and 'keys' or key_]
    end,
 })
 

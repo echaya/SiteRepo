@@ -10,6 +10,16 @@ There are following change types:
 
 ## All
 
+### Evolve
+
+- Prefer using 'mini.input' functionality (if module is enabled) to get user input asynchronously. Affected modules:
+
+    - mini.ai
+    - mini.align
+    - mini.jump2d
+    - mini.pick
+    - mini.surround
+
 ### Refine
 
 - Soft deprecate support for Neovim 0.9. It will be fully deprecated in next release.
@@ -74,6 +84,10 @@ There are following change types:
     - 'folke/snacks.nvim'
     - 'saghen/blink.cmp'
 
+## mini.input
+
+- Introduction of a new module.
+
 ## mini.jump
 
 ### Evolve
@@ -114,6 +128,8 @@ There are following change types:
 
 - Update `grep` and `grep_live` pickers to allow `method` local option which describes a pattern matching method (`'regex'` or `'plain'`). The `grep_live` picker also has custom `<C-e>` mapping to switch method.
 
+- Allow non-streaming paste from system clipboard when a picker is active. It will insert text at caret similar to built-in `paste` action.
+
 ### Refine
 
 - Stop forcing redraw every `config.delay.async` milliseconds while the picker is active. It added visible CPU usage and code/test lines for its benefit (mostly to show "background" changes/notifications).
@@ -149,6 +165,12 @@ There are following change types:
 - Update all `MiniTest.expect` expectations to allow customization of failure reason instead of default "Failed expectation for ...". This also consistently introduces `opts` last argument.
 
 - Update `MiniTest.expect.equality` to show more detailed cause of failed equality. Like which character is different in two string or which values are different in two tables and at what key branch.
+
+## mini.visits
+
+### Refine
+
+- Update `add_label` and `remove_label` to use `vim.ui.input` to ask user for not supplied label instead of previous non-customizable `vim.fn.input()`.
 
 
 # Version 0.17.0

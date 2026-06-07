@@ -544,6 +544,8 @@
 --- - Supports special cases of register: <C-f> (as |c_CTRL-R_CTRL-F|),
 ---   <C-w> (as |c_CTRL-R_CTRL-W|), <C-a> (as |c_CTRL-R_CTRL-A|),
 ---   <C-l> (as |c_CTRL-R_CTRL-L|).
+--- - Pasting from system |clipboard| is supported for "non-streaming" paste (as
+---   described in |vim.paste()|). Use terminal's key combo instead of this action.
 ---
 --- ## Refine ~
 --- *MiniPick-actions-refine*
@@ -736,12 +738,8 @@ MiniPick.setup = function(config)
   -- Create user commands
   H.create_user_commands()
 
-  -- Disable terminal emulator's pasting with active picker
-  local paste_orig = vim.paste
-  vim.paste = function(...)
-    if not MiniPick.is_picker_active() then return paste_orig(...) end
-    H.notify('Use `mappings.paste` (`<C-r>` by default) with "*" or "+" register.', 'HINT')
-  end
+  -- Adjust terminal emulator's pasting with active picker
+  H.adjust_vim_paste()
 
   -- Set custom implementation
   vim.ui.select = MiniPick.ui_select
@@ -1366,7 +1364,7 @@ end
 ---   - <tool> `(string)` - which tool to use. One of "rg", "git", "fallback".
 ---     Default: whichever tool is present, trying in that same order.
 ---   - <pattern> `(string)` - string pattern to search. If not given, asks user
----     interactively with |input()|.
+---     interactively with |MiniInput.get()| (if enabled) or |input()|.
 ---   - __pick_builtin_grep_globs
 ---   - __pick_builtin_grep_method
 ---@param opts __pick_builtin_opts
@@ -1379,7 +1377,8 @@ MiniPick.builtin.grep = function(local_opts, opts)
   local default_opts = { source = { name = name, show = H.get_config().source.show or H.show_with_icons } }
   opts = vim.tbl_deep_extend('force', default_opts, opts or {})
 
-  local pattern = type(local_opts.pattern) == 'string' and local_opts.pattern or H.user_input('Grep pattern')
+  local pattern = local_opts.pattern
+  if type(local_opts.pattern) ~= 'string' then pattern = H.user_input('Grep pattern', nil, 'file', 'editor') end
   if pattern == nil then return end
   if tool == 'fallback' then
     local cwd = H.full_path(opts.source.cwd or vim.fn.getcwd())
@@ -1408,7 +1407,9 @@ end
 ---   - <tool> `(string)` - which tool to use. One of "rg", "git".
 ---     Default: whichever tool is present, trying in that same order.
 ---   - __pick_builtin_grep_globs
----     Use <C-o> custom mapping to add glob to the array.
+---     Use <C-o> custom mapping to add glob to the array. It uses |MiniInput.get()|
+---     (if enabled) to show input in |'winbar'| or |'statusline'| (depending of
+---     whether content is from bottom).
 ---   - __pick_builtin_grep_method
 ---     Use <C-e> custom mapping to add glob to the array.
 ---@param opts __pick_builtin_opts
@@ -1441,8 +1442,7 @@ MiniPick.builtin.grep_live = function(local_opts, opts)
   end
 
   local ag = function()
-    local ok, glob = pcall(vim.fn.input, 'Glob pattern: ')
-    if ok then table.insert(globs, glob) end
+    table.insert(globs, H.user_input('Glob pattern', nil, 'file', 'window'))
     globs_suffix = #globs == 0 and '' or (' | ' .. table.concat(globs, ', '))
     MiniPick.set_picker_opts({ source = { name = get_name() } })
     MiniPick.set_picker_query(MiniPick.get_picker_query())
@@ -2101,6 +2101,22 @@ H.create_user_commands = function()
   vim.api.nvim_create_user_command('Pick', callback, opts)
 end
 
+H.adjust_vim_paste = function()
+  local paste_orig = vim.paste
+  vim.paste = function(lines, phase)
+    local picker = H.pickers.active
+    if picker == nil then return paste_orig(lines, phase) end
+    if phase ~= -1 then
+      return H.notify('There is no streaming paste support. Use `mappings.paste` with "*" or "+" register.', 'WARN')
+    end
+    local text = table.concat(lines, ' '):gsub('[\n\t]', ' ')
+    for i = 1, vim.fn.strchars(text) do
+      H.picker_query_add(picker, vim.fn.strcharpart(text, i - 1, 1))
+    end
+    H.picker_update(picker, true, true)
+  end
+end
+
 -- Command --------------------------------------------------------------------
 H.command_parse_fargs = function(fargs)
   local name, opts_parts = fargs[1], vim.tbl_map(H.expandcmd, vim.list_slice(fargs, 2, #fargs))
@@ -2370,6 +2386,7 @@ H.picker_track_lost_focus = function(picker)
     local is_cur_win = vim.api.nvim_get_current_win() == picker.windows.main
     local is_proper_focus = is_cur_win and (H.cache.is_in_getcharstr or vim.fn.mode() ~= 'n')
     if is_proper_focus then return end
+    if _G.MiniInput ~= nil and _G.MiniInput.get_state() ~= nil then return end
     if H.cache.is_in_getcharstr then return vim.api.nvim_feedkeys('\3', 't', true) end
     H.picker_stop(picker, true)
   end)
@@ -2709,6 +2726,8 @@ H.picker_stop = function(picker, abort)
   picker.windows, picker.buffers = {}, {}
 
   H.querytick = H.querytick + 1
+
+  if H.cache.getcharstr_errmsg ~= nil then error(H.cache.getcharstr_errmsg) end
 end
 
 H.picker_free = function(picker)
@@ -3691,6 +3710,10 @@ H.getcharstr = function(lmap)
   local ok, char = pcall(vim.fn.getcharstr)
   H.cache.is_in_getcharstr = nil
 
+  -- Cache possible error if it doesn't come from pressing <C-c>
+  local is_ctrl_c = (not ok and char == 'Keyboard interrupt') or (ok and char == '\3')
+  if not ok and not is_ctrl_c then H.cache.getcharstr_errmsg = char end
+
   -- Terminate if no input, on hard-coded <C-c>, or outside mouse click
   local main_win_id
   if H.pickers.active ~= nil then main_win_id = H.pickers.active.windows.main end
@@ -3795,14 +3818,26 @@ H.parse_uri = function(x)
   return path
 end
 
-H.user_input = function(prompt, text)
+H.user_input = function(prompt, text, completion, scope)
+  prompt = '(mini.pick) ' .. prompt
+  if _G.MiniInput ~= nil then
+    local opts = { prompt = prompt, scope = scope, init_keys = { text }, completion = completion }
+    -- Show in UI line in active picker window as other styles are distracting
+    if MiniPick.is_picker_active() then
+      local from_bottom = MiniPick.get_picker_opts().options.content_from_bottom
+      local style = (from_bottom and vim.fn.has('nvim-0.12') == 1) and 'statusline' or 'winbar'
+      opts.handlers = { view = MiniInput.gen_view.uiline({ style = style }) }
+    end
+    return MiniInput.get(opts)
+  end
+
   -- Use `on_key` to distinguish cancel with `<Esc>` and immediate `<CR>`
   local was_cancelled = false
   vim.on_key(function(key) was_cancelled = was_cancelled or key == '\27' end, H.ns_id.input)
 
   -- Ask for input. Use `pcall` to allow `<C-c>` to cancel user input
   vim.cmd('echohl Question')
-  local ok, res = pcall(vim.fn.input, { prompt = '(mini.pick) ' .. prompt .. ': ', default = text or '' })
+  local ok, res = pcall(vim.fn.input, { prompt = prompt .. ': ', default = text or '', completion = completion })
   vim.cmd('echohl None | echo "" | redraw')
 
   vim.on_key(nil, H.ns_id.input)

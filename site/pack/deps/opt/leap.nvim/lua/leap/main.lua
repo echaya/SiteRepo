@@ -584,7 +584,7 @@ local function leap(kwargs)
    local is_change_op = is_op_mode and (vim.v.operator == 'c')
 
    local count
-   if is_directional then
+   if is_directional or user_given_action then
       if vim.v.count ~= 0 then
          count = vim.v.count
       elseif is_op_mode and no_labels_to_use then

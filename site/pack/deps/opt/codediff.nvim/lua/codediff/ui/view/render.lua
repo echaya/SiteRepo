@@ -228,6 +228,10 @@ function M.compute_and_render_conflict(original_buf, modified_buf, base_lines, o
     base_to_original_diff = base_to_original_diff,
     base_to_modified_diff = base_to_modified_diff,
     conflict_blocks = render_result and render_result.conflict_blocks or {},
+    -- Pass through the per-side content so callers (e.g. conflict_window's
+    -- auto-merge seed) can compute Result without re-fetching buffers.
+    original_lines = original_lines,
+    modified_lines = modified_lines,
   }
 end
 
