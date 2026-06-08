@@ -54,7 +54,19 @@ local function compute_and_render_inline(
   if modified_win and vim.api.nvim_win_is_valid(modified_win) then
     vim.wo[modified_win].wrap = false
     if auto_scroll_to_first_hunk and lines_diff.changes and #lines_diff.changes > 0 then
-      local target_line = lines_diff.changes[1].modified.start_line
+      -- Honor session.pending_cursor_landing (cycle-hunks-across-files
+      -- backward direction sets it to "last"; see ui/view/navigation.lua).
+      -- Look up the session via the window's tabpage because this code can
+      -- run from a scheduled callback on a different tab.
+      local lifecycle = require("codediff.ui.lifecycle")
+      local tabpage = vim.api.nvim_win_get_tabpage(modified_win)
+      local session = tabpage and lifecycle.get_session(tabpage) or nil
+      local landing = session and session.pending_cursor_landing
+      if session then session.pending_cursor_landing = nil end
+
+      local target_line = landing == "last"
+        and lines_diff.changes[#lines_diff.changes].modified.start_line
+        or lines_diff.changes[1].modified.start_line
       pcall(vim.api.nvim_win_set_cursor, modified_win, { target_line, 0 })
       vim.api.nvim_set_current_win(modified_win)
       vim.cmd("normal! zz")

@@ -41,10 +41,12 @@ M.defaults = {
     conflict_result_width_ratio = { 1, 1, 1 }, -- Width ratio for center layout panes {left, center, right} (e.g., {1, 2, 1} for wider result)
     cycle_next_hunk = true, -- Wrap around when navigating hunks (]c/[c): true = cycle, false = stop at first/last
     cycle_next_file = true, -- Wrap around when navigating files (]f/[f): true = cycle, false = stop at first/last
+    cycle_hunks_across_files = true, -- ]c/[c at file boundary jumps to first/last hunk of next/prev file (explorer/history mode)
     jump_to_first_change = true, -- Auto-scroll to first change when opening a diff: true = jump to first hunk, false = stay at same line
     highlight_priority = 100, -- Priority for line-level diff highlights (increase to override LSP highlights)
     compute_moves = false, -- Detect moved code blocks (opt-in, may increase diff computation time)
     compact_context_lines = 3, -- Number of context lines around hunks in compact mode
+    compact_sync_folds = true, -- Sync fold open/close across panes in compact mode (mirrors Vim diff mode behavior)
   },
 
   -- Explorer panel configuration
