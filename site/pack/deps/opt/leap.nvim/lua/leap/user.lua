@@ -139,13 +139,19 @@ do
    end
 
    --- Applies `hl_group` to all search ranges. Disabled on color scheme change.
-   set_backdrop_highlight = function(hl_group)
-      local group = vim.api.nvim_create_augroup('LeapBackdrop', {})
+   set_backdrop_highlight = function(hl_group, ranges_fn)
+      local group = vim.api.nvim_create_augroup('leap.user.backdrop', {})
       local id = vim.api.nvim_create_autocmd('User', {
          pattern = 'LeapRedraw',
          group = group,
          callback = function()
-            highlight_ranges_for_redraw_cycle(hl_group, get_search_ranges())
+            highlight_ranges_for_redraw_cycle(
+               hl_group,
+               -- Do use this ternary, so that `ranges_fn` can fall back
+               -- to the default by returning a falsy value (enough to
+               -- define the special cases in it).
+               ranges_fn and ranges_fn() or get_search_ranges()
+            )
          end,
       })
       vim.api.nvim_create_autocmd('ColorScheme', {
