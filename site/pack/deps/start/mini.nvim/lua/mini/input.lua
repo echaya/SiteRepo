@@ -60,6 +60,15 @@
 --- - `MiniInputNormal`  - basic foreground/background.
 --- - `MiniInputPrompt`  - input prompt (intention of the input).
 --- - `MiniInputSpecial` - special keys (like literal `\t`, `\n`, etc.) in input.
+---
+--- # Using in other plugins ~
+--- *MiniInput-in-other-plugins*
+---
+--- - Prefer using |vim.ui.input()| for more user coverage. Use |MiniInput.get()|
+---   only when getting input synchronously is absolutely necessary.
+---
+--- - Perform a `_G.MiniInput ~= nil` check before using any feature. This ensures
+---   that user explicitly set up the module.
 ---@tag MiniInput
 
 --- Information about the state of the input. It is passed as a handler argument.
@@ -210,15 +219,6 @@
 ---   input.setup({ handlers = { view = view_handler } })
 --- <
 --- Change symbols for caret and hidden input: see |MiniInput.gen_view|.
----
---- # Using 'mini.input' in other plugins ~
---- *MiniInput-in-other-plugins*
----
---- - Prefer using |vim.ui.input()| for more user coverage. Use |MiniInput.get()|
----   only when getting input synchronously is absolutely necessary.
----
---- - Perform a `_G.MiniInput ~= nil` check before using any feature. This ensures
----   that user explicitly set up 'mini.input'.
 ---@tag MiniInput-examples
 
 ---@alias __input_to_chunks - <to_chunks> `(function)` - a function that takes |MiniInput-state| and
@@ -488,7 +488,7 @@ MiniInput.config = {
 ---   to advance a step. Note: <C-c> is hard coded to cancel the input.
 --- - Repeat previous step until the ending <status> (`"accept"` or `"cancel"`).
 --- - Finish the input:
----     - Perform a "teardown"' step with `key=nil`.
+---     - Perform a "teardown" step with `key=nil`.
 ---     - If <errmsg> is set, throw an |error()|.
 ---     - If input is accepted (even if empty) and not hidden, add <input> to
 ---       the history. Get the whole history with |MiniInput.get_history()|.
@@ -975,8 +975,8 @@ end
 ---       caret inside of it.
 ---     - Closing characters `)`, `]`, `}` move caret to the right if there is the same
 ---       character to the right.
----     - Closeopen characters `'`, `"`, <`> perform "close" action if possible and
----       "open" action if not.
+---     - Closeopen characters single+double quotes and backtick perform "close"
+---       action if possible and "open" action if not.
 ---     - In all cases press <C-v> before special character to insert it verbatim.
 ---
 --- - Completion:
@@ -2013,7 +2013,7 @@ H.get_chunks_displaywidth = function(chunks) return vim.fn.strdisplaywidth(H.get
 
 -- Highlight ranges -----------------------------------------------------------
 --- Add new proper highlight range on top of an array of ranges that don't
---- intersect and are orderd from left to right.
+--- intersect and are ordered from left to right.
 ---@private
 H.insert_hl_range = function(arr, max_to, from, to, hl)
   -- Insert only proper range that fits constraints

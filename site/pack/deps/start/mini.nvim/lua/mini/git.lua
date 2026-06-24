@@ -43,7 +43,7 @@
 ---     - Mostly a dedicated Git client, while this module is not (by design).
 ---     - Provides buffer-local Git data only through fixed statusline component,
 ---       while this module has richer data in the form of a Lua table.
----     - Both provide |:Git| command with 'vim-fugitive' treating some cases
+---     - Both provide |:Git| command with `vim-fugitive` treating some cases
 ---       extra specially (like `:Git blame`, etc.), while this module mostly
 ---       treats all cases the same. See |MiniGit-examples| for how they can be
 ---       manually customized.
@@ -51,7 +51,7 @@
 ---       completion suggestions.
 ---
 --- - [NeogitOrg/neogit](https://github.com/NeogitOrg/neogit):
----     - Similar to 'tpope/vim-fugitive', but without `:Git` command.
+---     - Similar to `tpope/vim-fugitive`, but without `:Git` command.
 ---
 --- - [lewis6991/gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim):
 ---     - Provides buffer-local Git data with emphasis on granular diff status,
@@ -205,7 +205,7 @@
 
 ---@alias __git_buf_id number Target buffer identifier. Default: 0 for current buffer.
 ---@alias __git_split_field <split> `(string)` - split direction. One of "horizontal", "vertical",
----     "tab", or "auto" (default). Value "auto" uses |:vertical| if only 'mini.git'
+---     "tab", or "auto" (default). Value "auto" uses |:vertical| if only |mini.git|
 ---     buffers are shown in the tabpage and |:tab| otherwise.
 
 ---@diagnostic disable:undefined-field
@@ -284,7 +284,7 @@ end
 ---
 --- `command.split` defines default split direction for |:Git| command output. Can be
 --- one of "horizontal", "vertical", "tab", or "auto". Value "auto" uses |:vertical|
---- if only 'mini.git' buffers are shown in the tabpage and |:tab| otherwise.
+--- if only |mini.git| buffers are shown in the tabpage and |:tab| otherwise.
 --- Default: "auto".
 MiniGit.config = {
   -- General CLI execution
@@ -429,7 +429,7 @@ end
 ---
 --- Notes:
 --- - Works well with |MiniGit.diff_foldexpr()|.
---- - Does not work if there are uncommited changes, as there is no easy way to
+--- - Does not work if there are uncommitted changes, as there is no easy way to
 ---   compute effective range line numbers.
 ---
 ---@param opts table|nil Options. Possible fields:
@@ -579,7 +579,7 @@ end
 ---@return table|nil Table with buffer Git data or `nil` if buffer is not enabled.
 ---   If the file is not part of Git repo, table will be empty.
 ---   Table has the following fields:
----   - <repo> `(string)` - full path to '.git' directory.
+---   - <repo> `(string)` - full path to `.git` directory.
 ---   - <root> `(string)` - full path to worktree root.
 ---   - <head> `(string)` - full commit of current HEAD.
 ---   - <head_name> `(string)` - short name of current HEAD (like "master").
@@ -619,7 +619,7 @@ H.cache = {}
 -- - <buffers> - map of buffers which should are part of repo.
 H.repos = {}
 
--- Termporary file used as config for `GIT_EDITOR`
+-- Temporary file used as config for `GIT_EDITOR`
 H.git_editor_config = nil
 
 -- Data about supported Git subcommands. Initialized lazily. Fields:
@@ -924,7 +924,7 @@ H.command_get_complete_candidates = function(line, col, base)
   local cwd = H.get_git_cwd()
 
   -- Determine command candidates:
-  -- - Commannd options if complete base starts with "-".
+  -- - Command options if complete base starts with "-".
   -- - Paths if after explicit "--".
   -- - Git commands if there is none fully formed yet or cursor is at the end
   --   of the command (to also suggest subcommands).
@@ -977,7 +977,7 @@ H.command_complete_option = function(command)
   -- exactly with "       -" indicating proper indent for subsection start.
   -- Known not parsable options:
   -- - `git reset <mode>` (--soft, --hard, etc.): not listed in "OPTIONS".
-  -- - All -<number> options, as they are not really completeable.
+  -- - All -<number> options, as they are not really completable.
   local is_in_options_section = false
   for _, l in ipairs(lines) do
     if is_in_options_section and l:find('^%u[%u ]+$') ~= nil then is_in_options_section = false end
@@ -1240,10 +1240,10 @@ H.setup_buf_behavior = function(buf_id)
     on_reload = function()
       local buf_cache = H.cache[buf_id]
       if buf_cache == nil or buf_cache.root == nil then return end
-      -- Don't upate repo/root as it is tracked in 'BufFilePost' autocommand
+      -- Don't update repo/root as it is tracked in 'BufFilePost' autocommand
       H.update_git_head(buf_cache.root, { buf_id })
       H.update_git_in_progress(buf_cache.repo, { buf_id })
-      -- Don't upate status as it is tracked in file watcher
+      -- Don't update status as it is tracked in file watcher
     end,
 
     -- Called when buffer is unloaded from memory (`:h nvim_buf_detach_event`),
