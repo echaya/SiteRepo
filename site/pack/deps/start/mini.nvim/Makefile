@@ -1,6 +1,12 @@
 NVIM_EXEC ?= nvim
 
-all: test doc
+all: test gendoc
+
+init-git-hooks:
+	@mkdir -p .git/hooks
+	ln -sf ../../scripts/git-hook-pre-commit .git/hooks/pre-commit
+	ln -sf ../../scripts/git-hook-commit-msg .git/hooks/commit-msg
+	chmod +x scripts/git-hook-pre-commit scripts/git-hook-commit-msg
 
 # Use `make test` to run tests for all modules
 test:
@@ -24,11 +30,14 @@ $(TEST_MODULES):
 			-c "lua MiniTest.run_file('tests/$@.lua')" ; \
 	done
 
-doc:
+gendoc:
 	$(NVIM_EXEC) --headless --noplugin -u ./scripts/minimal_init.lua -c "lua require('mini.doc').generate()" -c "qa!"
 
 lintdoc:
 	$(NVIM_EXEC) --headless --noplugin --cmd "let &rtp.=','.getcwd()" -u ./scripts/lintdoc.lua
+
+lintspell:
+	typos
 
 lintcommit-ci:
 	export LINTCOMMIT_STRICT=true && chmod u+x scripts/lintcommit-ci.sh && scripts/lintcommit-ci.sh
