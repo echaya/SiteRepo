@@ -197,6 +197,7 @@ Setup entry point:
       compute_moves = false,
       compact_context_lines = 3,
       compact_sync_folds = true,
+      compact = false,
       cycle_hunks_across_files = false,
     },
     explorer = {

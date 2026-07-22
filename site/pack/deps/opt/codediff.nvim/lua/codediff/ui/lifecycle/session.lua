@@ -13,8 +13,8 @@ local welcome_window = require("codediff.ui.view.welcome_window")
 --     original_bufnr, modified_bufnr, original_win, modified_win,
 --     mode = "standalone" | "explorer",
 --     git_root = string?,
---     original_path = string,
---     modified_path = string,
+--     original = Path,
+--     modified = Path,
 --     original_revision = string?, -- nil | "WORKING" | "STAGED" | commit_hash
 --     modified_revision = string?,
 --     original_state, modified_state,
@@ -55,8 +55,8 @@ function M.create_session(
   tabpage,
   mode,
   git_root,
-  original_path,
-  modified_path,
+  original,
+  modified,
   original_revision,
   modified_revision,
   original_bufnr,
@@ -76,8 +76,8 @@ function M.create_session(
     -- Mode & Git Context (immutable)
     mode = mode,
     git_root = git_root,
-    original_path = original_path,
-    modified_path = modified_path,
+    original = original,
+    modified = modified,
     original_revision = original_revision,
     modified_revision = modified_revision,
 

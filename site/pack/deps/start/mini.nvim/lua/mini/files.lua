@@ -12,7 +12,7 @@
 ---   rename (all three are LSP aware), copy, move.
 ---   See |MiniFiles-manipulation| for an overview.
 ---
---- - Use as default file explorer instead of `netrw`.
+--- - Use as default file explorer instead of built-in one.
 ---
 --- - Configurable:
 ---     - Filter/prefix/sort of file system entries.
@@ -580,15 +580,6 @@ local H = {}
 ---   require('mini.files').setup({}) -- replace {} with your config table
 --- <
 MiniFiles.setup = function(config)
-  -- TODO: Remove after Neovim=0.9 support is dropped
-  if vim.fn.has('nvim-0.10') == 0 then
-    vim.notify(
-      '(mini.files) Neovim<0.10 is soft deprecated (module works but is not supported).'
-        .. " It will be deprecated after the next 'mini.nvim' release (module might not work)."
-        .. ' Please update your Neovim version.'
-    )
-  end
-
   -- Export module
   _G.MiniFiles = MiniFiles
 
@@ -663,7 +654,7 @@ end
 --- # Options ~
 ---
 --- `options.use_as_default_explorer` is a boolean indicating whether this module
---- will be used as a default file explorer to edit directory (instead of `netrw`).
+--- is used as a default file explorer to edit directory (instead of built-in).
 --- Note: to work with directory in |arglist|, do not lazy load this module.
 ---
 --- `options.permanent_delete` is a boolean indicating whether to perform
@@ -1376,13 +1367,19 @@ H.create_autocommands = function(config)
   end
 
   if config.options.use_as_default_explorer then
-    -- Stop 'netrw' from showing. Needs `VimEnter` event autocommand if
-    -- this is called prior 'netrw' is set up
+    -- Stop using default explorer (whether it is already set up or not)
+    -- - Neovim<0.13 uses `netrw` and it is still present on Neovim>=0.13
     vim.cmd('silent! autocmd! FileExplorer *')
     vim.cmd('autocmd VimEnter * ++once silent! autocmd! FileExplorer *')
+    -- - Neovim>=0.13 uses `dir.lua`
+    if vim.fn.has('nvim-0.13') == 1 then
+      vim.cmd('silent! autocmd! nvim.dir *')
+      vim.cmd('autocmd VimEnter * ++once silent! autocmd! nvim.dir *')
+    end
 
     -- - Use `nested` to allow other events (`BufWinEnter` for 'mini.clue')
     local opts = { nested = true, group = gr, callback = H.track_dir_edit, desc = 'Track directory edit' }
+    -- TODO: Use `au FileType directory` after Neovim=0.12 support is dropped
     vim.api.nvim_create_autocmd('BufEnter', opts)
   end
 
@@ -1788,7 +1785,7 @@ H.explorer_compute_fs_actions = function(explorer)
   local trash_dir = H.fs_child_path(vim.fn.stdpath('data'), 'mini.files/trash')
   for p, _ in pairs(delete_map) do
     local to = is_trash and H.fs_child_path(trash_dir, H.fs_get_basename(p)) or nil
-    table.insert(delete, { action = 'delete', from = p, to = to })
+    table.insert(delete, { action = 'delete', from = p, fs_type = H.fs_get_type(p), to = to })
   end
 
   -- Construct final array with proper order of actions:
@@ -1807,6 +1804,10 @@ H.explorer_compute_fs_actions = function(explorer)
         local to_is_affected = vim.startswith(diff.to, del_from_dir) and diff.to ~= del_from_dir
         will_be_deleted = will_be_deleted or from_is_affected or to_is_affected
       end
+
+      -- Pre-compute file system type of operation as it is harder to compute
+      -- later. This info is useful for LSP hooks.
+      diff.fs_type = H.fs_get_type(diff.from) or (vim.endswith(diff.to or '', '/') and 'directory' or 'file')
       table.insert(will_be_deleted and before_delete or after_delete, diff)
     end
   end
@@ -2576,29 +2577,22 @@ H.window_set_view = function(win_id, view)
   buf_data.win_id = win_id
 
   -- Set cursor (if defined), visible only in directories
-  pcall(H.window_set_cursor, win_id, view.cursor)
+  local ok_cursor = pcall(vim.api.nvim_win_set_cursor, win_id, view.cursor)
+  -- - Tweak cursor here, before `CursorMoved`, event to reduce flicker
+  local is_dir = H.fs_get_type(buf_data.path) == 'directory'
+  if ok_cursor and is_dir then pcall(H.window_tweak_cursor, win_id, buf_id) end
+
   -- NOTE: set 'cursorline[opt]' here because changing buffer might remove it
-  vim.wo[win_id].cursorline = H.fs_get_type(buf_data.path) == 'directory'
+  vim.wo[win_id].cursorline = is_dir
   local culopt = vim.wo[win_id].cursorlineopt
   if culopt:find('line') == nil then vim.wo[win_id].cursorlineopt = culopt .. ',line' end
 
   -- Respect global 'list' option, as it is disabled in floating windows
-  -- TODO: Use vim.wo[win_id][0] after compatibility with Neovim=0.9 is dropped
-  local opts_scope = { scope = 'local', win = win_id }
-  vim.api.nvim_set_option_value('list', vim.go.list, opts_scope)
-  vim.api.nvim_set_option_value('listchars', vim.go.listchars, opts_scope)
+  vim.wo[win_id][0].list = vim.go.list
+  vim.wo[win_id][0].listchars = vim.go.listchars
 
   -- Update border highlight based on buffer status
   H.window_update_border_hl(win_id)
-end
-
-H.window_set_cursor = function(win_id, cursor)
-  if type(cursor) ~= 'table' then return end
-
-  vim.api.nvim_win_set_cursor(win_id, cursor)
-
-  -- Tweak cursor here and don't rely on `CursorMoved` event to reduce flicker
-  H.window_tweak_cursor(win_id, vim.api.nvim_win_get_buf(win_id))
 end
 
 H.window_tweak_cursor = function(win_id, buf_id)
@@ -2746,7 +2740,7 @@ end
 H.fs_is_windows_top = function(path) return H.is_windows and path:find('^%w:[\\/]?$') ~= nil end
 
 H.fs_get_type = function(path)
-  if not (not H.fs_is_imaginary_path(path) and H.fs_is_present_path(path)) then return nil end
+  if path == nil or not (not H.fs_is_imaginary_path(path) and H.fs_is_present_path(path)) then return nil end
   return vim.fn.isdirectory(path) == 1 and 'directory' or 'file'
 end
 
@@ -2830,7 +2824,7 @@ H.lsp_fs_hook = function(method, diffs, lsp_timeout)
   -- https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#createFilesParams
   -- https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#deleteFilesParams
   -- https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#renameFilesParams
-  local files, to_uri = {}, vim.uri_from_fname
+  local files, to_uri = {}, H.fname_to_uri
   local needs_check = method == 'willCreate' or method == 'willRename'
   local is_create, is_delete, is_rename =
     vim.endswith(method, 'Create'), vim.endswith(method, 'Delete'), vim.endswith(method, 'Rename')
@@ -2840,8 +2834,8 @@ H.lsp_fs_hook = function(method, diffs, lsp_timeout)
     if is_delete and d.action == 'delete' then file = { uri = to_uri(d.from) } end
     if is_rename and d.action == 'rename' then file = { oldUri = to_uri(d.from), newUri = to_uri(d.to) } end
 
-    -- Precompute LSP file type for filters (path can be not yet on disk)
-    file.fs_type = (d.from or d.to):find('/$') ~= nil and 'folder' or 'file'
+    -- Pass file system type according to the LSP spec
+    file.fs_type = d.fs_type == 'directory' and 'folder' or 'file'
 
     -- Some actions might not succeed, so make best effort check before that
     local pass_check = not needs_check or (needs_check and d.to ~= nil and not H.fs_is_present_path(d.to))
@@ -2864,12 +2858,10 @@ H.lsp_fs_hook_client = function(client, full_method, lsp_files, timeout)
   local is_fs_type = function(lsp_file, ref_fs_type) return ref_fs_type == nil or ref_fs_type == lsp_file.fs_type end
   local make_filter = function(scheme, ref_fs_type, glob, ignore_case)
     local adjust_case = ignore_case and vim.fn.tolower or function(x) return x end
-    -- On Windows `uri_to_fname` forces `\`, but forcing / seems more robust
-    local to_fname = H.is_windows and function(x) return (vim.uri_to_fname(x):gsub('\\', '/')) end or vim.uri_to_fname
     local glob_lpeg = vim.glob.to_lpeg(adjust_case(glob) or '**')
     return function(lsp_file)
       local uri = lsp_file.uri or lsp_file.oldUri
-      local fname = adjust_case(to_fname(uri))
+      local fname = adjust_case(H.uri_to_fname(uri))
       return is_scheme(uri, scheme) and is_fs_type(lsp_file, ref_fs_type) and glob_lpeg:match(fname) ~= nil
     end
   end
@@ -3023,6 +3015,16 @@ H.adjust_after_move = function(from, to, fs_actions, start_ind)
   end
 end
 
+H.uri_to_fname = vim.uri_to_fname
+H.fname_to_uri = vim.uri_from_fname
+if H.is_windows then
+  -- On Windows `uri_to_fname` forces `\`, but forcing `/` seems more robust
+  H.uri_to_fname = function(x) return (vim.uri_to_fname(x):gsub('\\', '/')) end
+  -- On Windows paths like `C://...` have issues with glob matching and some
+  -- LSP implementations. Force `C:/` instead.
+  H.fname_to_uri = function(x) return vim.uri_from_fname((x:gsub('^(%a)://([^/])', '%1:/%2'))) end
+end
+
 -- Validators -----------------------------------------------------------------
 H.validate_opened_buffer = function(x)
   if x == nil or x == 0 then x = vim.api.nvim_get_current_buf() end
@@ -3039,7 +3041,7 @@ H.validate_line = function(buf_id, x)
 end
 
 H.validate_branch = function(x)
-  if not (H.islist(x) and x[1] ~= nil) then H.error('`branch` should be array with at least one element') end
+  if not (vim.islist(x) and x[1] ~= nil) then H.error('`branch` should be array with at least one element') end
   local res = {}
   for i, p in ipairs(x) do
     if type(p) ~= 'string' then H.error('`branch` contains not string: ' .. vim.inspect(p)) end
@@ -3117,7 +3119,6 @@ H.win_set_buf = function(win_id, buf_id)
   vim.cmd(cmd)
   vim.wo[win_id].winfixbuf = true
 end
-if vim.fn.has('nvim-0.10') == 0 then H.win_set_buf = vim.api.nvim_win_set_buf end
 
 H.get_first_valid_normal_window = function()
   for _, win_id in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
@@ -3133,8 +3134,5 @@ H.getcharstr = function()
 end
 
 H.sanitize_string = function(x) return ((x or ''):gsub('\n', '<NL>'):gsub('%z', '')) end
-
--- TODO: Remove after compatibility with Neovim=0.9 is dropped
-H.islist = vim.fn.has('nvim-0.10') == 1 and vim.islist or vim.tbl_islist
 
 return MiniFiles

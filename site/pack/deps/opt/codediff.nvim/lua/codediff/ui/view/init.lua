@@ -25,8 +25,8 @@ end
 ---@class SessionConfig
 ---@field mode "standalone"|"explorer"|"history"
 ---@field git_root string?
----@field original_path string
----@field modified_path string
+---@field original Path
+---@field modified Path
 ---@field original_revision string?
 ---@field modified_revision string?
 ---@field conflict boolean? For merge conflict mode: render both sides against base

@@ -5,6 +5,7 @@ local M = {}
 local lifecycle = require("codediff.ui.lifecycle")
 local auto_refresh = require("codediff.ui.auto_refresh")
 local config = require("codediff.config")
+local path = require("codediff.core.path")
 local diff_module = require("codediff.core.diff")
 local inline = require("codediff.ui.inline")
 local semantic = require("codediff.ui.semantic_tokens")
@@ -62,11 +63,11 @@ local function compute_and_render_inline(
       local tabpage = vim.api.nvim_win_get_tabpage(modified_win)
       local session = tabpage and lifecycle.get_session(tabpage) or nil
       local landing = session and session.pending_cursor_landing
-      if session then session.pending_cursor_landing = nil end
+      if session then
+        session.pending_cursor_landing = nil
+      end
 
-      local target_line = landing == "last"
-        and lines_diff.changes[#lines_diff.changes].modified.start_line
-        or lines_diff.changes[1].modified.start_line
+      local target_line = landing == "last" and lines_diff.changes[#lines_diff.changes].modified.start_line or lines_diff.changes[1].modified.start_line
       pcall(vim.api.nvim_win_set_cursor, modified_win, { target_line, 0 })
       vim.api.nvim_set_current_win(modified_win)
       vim.cmd("normal! zz")
@@ -105,8 +106,7 @@ function M.create(session_config, filetype, on_ready)
   local initial_buf = vim.api.nvim_get_current_buf()
 
   -- Check if this is an explorer/history placeholder
-  local is_explorer_placeholder = session_config.mode == "explorer"
-    and ((session_config.original_path == "" or session_config.original_path == nil) or (not session_config.git_root and session_config.explorer_data))
+  local is_explorer_placeholder = session_config.mode == "explorer" and (path.is_empty(session_config.original) or (not session_config.git_root and session_config.explorer_data))
   local is_history_placeholder = session_config.mode == "history" and session_config.history_data
 
   if is_explorer_placeholder or is_history_placeholder then
@@ -170,8 +170,8 @@ function M.create(session_config, filetype, on_ready)
   local original_is_virtual = is_virtual_revision(session_config.original_revision)
   local modified_is_virtual = is_virtual_revision(session_config.modified_revision)
 
-  local original_info = prepare_buffer(original_is_virtual, session_config.git_root, session_config.original_revision, session_config.original_path)
-  local modified_info = prepare_buffer(modified_is_virtual, session_config.git_root, session_config.modified_revision, session_config.modified_path)
+  local original_info = prepare_buffer(original_is_virtual, session_config.git_root, session_config.original_revision, session_config.original)
+  local modified_info = prepare_buffer(modified_is_virtual, session_config.git_root, session_config.modified_revision, session_config.modified)
 
   -- Load modified buffer into the visible window
   if modified_info.needs_edit then
@@ -230,8 +230,8 @@ function M.create(session_config, filetype, on_ready)
         tabpage,
         session_config.mode,
         session_config.git_root,
-        session_config.original_path,
-        session_config.modified_path,
+        session_config.original,
+        session_config.modified,
         session_config.original_revision,
         session_config.modified_revision,
         original_info.bufnr,
@@ -263,7 +263,7 @@ function M.create(session_config, filetype, on_ready)
   -- Async buffer loading
   if original_is_virtual then
     local git = require("codediff.core.git")
-    git.get_file_content(session_config.original_revision, session_config.git_root, session_config.original_path, function(err, lines)
+    git.get_file_content(session_config.original_revision, session_config.git_root, session_config.original.relative, function(err, lines)
       vim.schedule(function()
         if not vim.api.nvim_buf_is_valid(original_info.bufnr) then
           return
@@ -371,12 +371,12 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
     vim.bo[mod_buf].buftype = "nofile"
     vim.bo[mod_buf].modifiable = true
     vim.api.nvim_win_set_buf(modified_win, mod_buf)
-    local ft = vim.filetype.match({ filename = session_config.modified_path })
+    local ft = vim.filetype.match({ filename = session_config.modified.absolute })
     if ft then
       vim.bo[mod_buf].filetype = ft
     end
   else
-    local modified_info = prepare_buffer(false, session_config.git_root, nil, session_config.modified_path)
+    local modified_info = prepare_buffer(false, session_config.git_root, nil, session_config.modified)
     if modified_info.needs_edit then
       local bufnr = vim.fn.bufadd(modified_info.target)
       vim.fn.bufload(bufnr)
@@ -412,7 +412,7 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
       lifecycle.update_revisions(tabpage, session_config.original_revision, session_config.modified_revision)
       lifecycle.update_diff_result(tabpage, lines_diff)
       lifecycle.update_changedtick(tabpage, vim.api.nvim_buf_get_changedtick(orig_buf), vim.api.nvim_buf_get_changedtick(mod_buf))
-      lifecycle.update_paths(tabpage, session_config.original_path or "", session_config.modified_path or "")
+      lifecycle.update_paths(tabpage, session_config.original, session_config.modified)
 
       auto_refresh.enable(orig_buf)
       auto_refresh.enable(mod_buf)
@@ -437,23 +437,28 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
   end
 
   if original_is_virtual then
-    git.get_file_content(session_config.original_revision, session_config.git_root, session_config.original_path or session_config.modified_path, function(err, lines)
-      vim.schedule(function()
-        if not vim.api.nvim_buf_is_valid(orig_buf) then
-          return
-        end
-        if err then
-          lines = {}
-        end
-        vim.bo[orig_buf].modifiable = true
-        vim.api.nvim_buf_set_lines(orig_buf, 0, -1, false, lines)
-        vim.bo[orig_buf].modifiable = false
-        pending.original = false
-        check_ready()
-      end)
-    end)
+    git.get_file_content(
+      session_config.original_revision,
+      session_config.git_root,
+      (session_config.original.relative ~= "" and session_config.original.relative) or session_config.modified.relative,
+      function(err, lines)
+        vim.schedule(function()
+          if not vim.api.nvim_buf_is_valid(orig_buf) then
+            return
+          end
+          if err then
+            lines = {}
+          end
+          vim.bo[orig_buf].modifiable = true
+          vim.api.nvim_buf_set_lines(orig_buf, 0, -1, false, lines)
+          vim.bo[orig_buf].modifiable = false
+          pending.original = false
+          check_ready()
+        end)
+      end
+    )
   else
-    local orig_path = session_config.original_path or session_config.modified_path
+    local orig_path = (session_config.original.absolute ~= "" and session_config.original.absolute) or session_config.modified.absolute
     if orig_path and orig_path ~= "" then
       local real_bufnr = vim.fn.bufadd(orig_path)
       vim.fn.bufload(real_bufnr)
@@ -466,7 +471,7 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
   end
 
   if modified_is_virtual then
-    git.get_file_content(session_config.modified_revision, session_config.git_root, session_config.modified_path, function(err, lines)
+    git.get_file_content(session_config.modified_revision, session_config.git_root, session_config.modified.relative, function(err, lines)
       vim.schedule(function()
         if not vim.api.nvim_buf_is_valid(mod_buf) then
           return
@@ -585,15 +590,16 @@ function M.show_single_file(tabpage, file_path, opts)
   vim.bo[empty_buf].buftype = "nofile"
 
   local session_path = (opts.revision and opts.rel_path) and opts.rel_path or file_path
+  local file_ref = path.make_ref(session_path, opts.git_root or session.git_root)
   local orig_bufnr = side == "original" and file_bufnr or empty_buf
   local mod_bufnr = side == "modified" and file_bufnr or empty_buf
-  local original_path = side == "original" and session_path or ""
-  local modified_path = side == "modified" and session_path or ""
+  local original = side == "original" and file_ref or path.empty()
+  local modified = side == "modified" and file_ref or path.empty()
   local original_revision = side == "original" and opts.revision or nil
   local modified_revision = side == "modified" and opts.revision or nil
 
   lifecycle.update_buffers(tabpage, orig_bufnr, mod_bufnr)
-  lifecycle.update_paths(tabpage, original_path, modified_path)
+  lifecycle.update_paths(tabpage, original, modified)
   lifecycle.update_revisions(tabpage, original_revision, modified_revision)
   lifecycle.update_diff_result(tabpage, { changes = {}, moves = {} })
 
@@ -630,7 +636,7 @@ function M.show_welcome(tabpage, load_bufnr)
   vim.bo[empty_buf].buftype = "nofile"
 
   lifecycle.update_buffers(tabpage, empty_buf, load_bufnr)
-  lifecycle.update_paths(tabpage, "", "")
+  lifecycle.update_paths(tabpage, path.empty(), path.empty())
   lifecycle.update_revisions(tabpage, nil, nil)
   lifecycle.update_diff_result(tabpage, { changes = {}, moves = {} })
 

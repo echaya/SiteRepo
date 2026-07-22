@@ -73,14 +73,15 @@ function M.get_windows(tabpage)
   return sess.original_win, sess.modified_win
 end
 
---- Get paths
+--- Get path refs
+---@return Path? original, Path? modified
 function M.get_paths(tabpage)
   local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return nil, nil
   end
-  return sess.original_path, sess.modified_path
+  return sess.original, sess.modified
 end
 
 --- Find tabpage containing a buffer
@@ -267,16 +268,18 @@ function M.update_mtime(tabpage, original_mtime, modified_mtime)
   return true
 end
 
---- Update paths (for file switching/sync)
-function M.update_paths(tabpage, original_path, modified_path)
+--- Update path refs (for file switching/sync)
+---@param original Path
+---@param modified Path
+function M.update_paths(tabpage, original, modified)
   local active_diffs = get_active_diffs()
   local sess = active_diffs[tabpage]
   if not sess then
     return false
   end
 
-  sess.original_path = original_path
-  sess.modified_path = modified_path
+  sess.original = original
+  sess.modified = modified
   return true
 end
 
@@ -596,11 +599,12 @@ function M.setup_auto_sync_on_file_switch(tabpage, original_is_virtual, modified
               end
 
               -- No pre-fetching needed, buffers will load content
+              local path = require("codediff.core.path")
               view.update(tabpage, {
                 mode = sess.mode,
                 git_root = nil,
-                original_path = working_side == "original" and new_path or relative_path,
-                modified_path = working_side == "modified" and new_path or relative_path,
+                original = path.make_ref(working_side == "original" and new_path or relative_path, nil),
+                modified = path.make_ref(working_side == "modified" and new_path or relative_path, nil),
                 original_revision = working_side == "original" and nil or sess.original_revision,
                 modified_revision = working_side == "modified" and nil or sess.modified_revision,
               })
@@ -613,11 +617,12 @@ function M.setup_auto_sync_on_file_switch(tabpage, original_is_virtual, modified
 
           -- No pre-fetching needed, buffers will load content
           vim.schedule(function()
+            local path = require("codediff.core.path")
             view.update(tabpage, {
               mode = sess.mode,
               git_root = new_git_root,
-              original_path = relative_path,
-              modified_path = relative_path,
+              original = path.make_ref(relative_path, new_git_root),
+              modified = path.make_ref(relative_path, new_git_root),
               original_revision = sess.original_revision,
               modified_revision = sess.modified_revision,
             })

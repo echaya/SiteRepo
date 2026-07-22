@@ -8,6 +8,7 @@ local git = require("codediff.core.git")
 local lifecycle = require("codediff.ui.lifecycle")
 local config = require("codediff.config")
 local view = require("codediff.ui.view")
+local path = require("codediff.core.path")
 
 --- Parse triple-dot syntax for merge-base comparisons.
 -- @param arg string: The argument to parse
@@ -29,10 +30,19 @@ end
 -- @param global_opts table?: Global options (e.g., { layout = "inline" })
 -- This function chains async git operations to get git root, resolve revision to hash, and get file content.
 local function handle_git_diff(revision, revision2, global_opts)
-  local current_file = vim.api.nvim_buf_get_name(0)
+  local current_buf = vim.api.nvim_get_current_buf()
+  local current_file = vim.api.nvim_buf_get_name(current_buf)
+  local buftype = vim.api.nvim_get_option_value("buftype", { buf = current_buf })
 
-  if current_file == "" then
+  -- Diffing the current buffer against a revision requires a real on-disk file.
+  -- Reject scratch/quickfix/terminal/dashboard buffers (buftype ~= "") and
+  -- codediff:// virtual diff buffers (re-diffing one is not meaningful).
+  if current_file == "" or buftype ~= "" then
     vim.notify("Current buffer is not a file", vim.log.levels.ERROR)
+    return
+  end
+  if current_file:match("^codediff://") then
+    vim.notify("Cannot diff a codediff:// virtual buffer", vim.log.levels.ERROR)
     return
   end
 
@@ -80,8 +90,8 @@ local function handle_git_diff(revision, revision2, global_opts)
                 local session_config = {
                   mode = "standalone",
                   git_root = git_root,
-                  original_path = original_path,
-                  modified_path = modified_path,
+                  original = path.make_ref(original_path, git_root),
+                  modified = path.make_ref(modified_path, git_root),
                   original_revision = commit_hash,
                   modified_revision = commit_hash2,
                   layout = global_opts.layout,
@@ -97,8 +107,8 @@ local function handle_git_diff(revision, revision2, global_opts)
             local session_config = {
               mode = "standalone",
               git_root = git_root,
-              original_path = original_path,
-              modified_path = relative_path,
+              original = path.make_ref(original_path, git_root),
+              modified = path.make_ref(relative_path, git_root),
               original_revision = commit_hash,
               modified_revision = "WORKING",
               layout = global_opts.layout,
@@ -125,8 +135,8 @@ local function handle_file_diff(file_a, file_b, global_opts)
   local session_config = {
     mode = "standalone",
     git_root = nil,
-    original_path = file_a,
-    modified_path = file_b,
+    original = path.make_ref(file_a, nil),
+    modified = path.make_ref(file_b, nil),
     original_revision = nil,
     modified_revision = nil,
     layout = global_opts.layout,
@@ -187,8 +197,8 @@ local function handle_dir_diff(dir1, dir2, global_opts)
   local session_config = {
     mode = "explorer",
     git_root = nil, -- nil signals non-git (directory) mode
-    original_path = diff.root1,
-    modified_path = diff.root2,
+    original = path.make_ref(diff.root1, nil),
+    modified = path.make_ref(diff.root2, nil),
     original_revision = nil,
     modified_revision = nil,
     layout = global_opts.layout,
@@ -265,8 +275,8 @@ local function handle_history(range, file_path, flags, line_range, global_opts)
         local session_config = {
           mode = "history",
           git_root = git_root,
-          original_path = "",
-          modified_path = "",
+          original = path.empty(),
+          modified = path.empty(),
           original_revision = nil,
           modified_revision = nil,
           layout = global_opts.layout,
@@ -348,8 +358,8 @@ local function handle_explorer(revision, revision2, global_opts)
         local session_config = {
           mode = "explorer",
           git_root = git_root,
-          original_path = "", -- Empty indicates explorer mode placeholder
-          modified_path = "",
+          original = path.empty(), -- Empty indicates explorer mode placeholder
+          modified = path.empty(),
           original_revision = original_rev,
           modified_revision = modified_rev,
           layout = global_opts.layout,
@@ -577,8 +587,8 @@ function M.vscode_merge(opts)
       local session_config = {
         mode = "standalone",
         git_root = git_root,
-        original_path = relative_path,
-        modified_path = relative_path,
+        original = path.make_ref(relative_path, git_root),
+        modified = path.make_ref(relative_path, git_root),
         original_revision = original_rev,
         modified_revision = modified_rev,
         conflict = true,

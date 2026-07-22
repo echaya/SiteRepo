@@ -57,8 +57,8 @@ local function cleanup_diff(tabpage)
 
   -- Send didClose notifications for virtual buffers
   -- Compute URIs on-demand since we don't store them anymore
-  local original_virtual_uri = session.compute_virtual_uri(diff.git_root, diff.original_revision, diff.original_path)
-  local modified_virtual_uri = session.compute_virtual_uri(diff.git_root, diff.modified_revision, diff.modified_path)
+  local original_virtual_uri = session.compute_virtual_uri(diff.git_root, diff.original_revision, diff.original.relative)
+  local modified_virtual_uri = session.compute_virtual_uri(diff.git_root, diff.modified_revision, diff.modified.relative)
 
   -- Get LSP clients from any valid buffer
   local ref_bufnr = vim.api.nvim_buf_is_valid(diff.original_bufnr) and diff.original_bufnr or diff.modified_bufnr

@@ -24,10 +24,14 @@ end
 -- Returns: { bufnr = number?, target = string?, needs_edit = boolean }
 -- - If buffer already exists: { bufnr = 123, target = nil, needs_edit = false }
 -- - If needs :edit: { bufnr = nil, target = "path or url", needs_edit = true }
-function M.prepare_buffer(is_virtual, git_root, revision, path)
+---@param is_virtual boolean
+---@param git_root string?
+---@param revision string?
+---@param ref Path `.relative` builds the codediff:// URL; `.absolute` identifies the real file
+function M.prepare_buffer(is_virtual, git_root, revision, ref)
   if is_virtual then
-    -- Virtual file: generate URL
-    local virtual_url = virtual_file.create_url(git_root, revision, path)
+    -- Virtual file: generate URL from the repo-relative path
+    local virtual_url = virtual_file.create_url(git_root, revision, ref.relative)
     -- Check if buffer already exists (exact match to avoid prefix collisions)
     local existing_buf = bufnr_exact(virtual_url)
 
@@ -52,8 +56,8 @@ function M.prepare_buffer(is_virtual, git_root, revision, path)
       }
     end
   else
-    -- Real file: use exact match for buffer lookup
-    local existing_buf = bufnr_exact(path)
+    -- Real file: use exact match for buffer lookup by absolute path
+    local existing_buf = bufnr_exact(ref.absolute)
     if existing_buf ~= -1 then
       -- Buffer already exists, reuse it
       return {
@@ -65,7 +69,7 @@ function M.prepare_buffer(is_virtual, git_root, revision, path)
       -- Buffer doesn't exist, need to :edit it
       return {
         bufnr = nil,
-        target = path,
+        target = ref.absolute,
         needs_edit = true,
       }
     end

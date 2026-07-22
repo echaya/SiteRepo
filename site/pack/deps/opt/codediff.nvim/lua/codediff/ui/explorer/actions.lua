@@ -181,7 +181,10 @@ function M.toggle_group(explorer, group_name)
   end
 
   explorer.visible_groups[group_name] = not explorer.visible_groups[group_name]
-  refresh_module.refresh(explorer)
+  -- Group visibility changed but git status did not: rebuild the tree
+  -- synchronously from the cached status so the hidden/shown group takes effect
+  -- immediately (navigation reads the tree, so this also keeps ]f/[f correct).
+  refresh_module.rebuild_from_cache(explorer)
 
   local state = explorer.visible_groups[group_name] and "shown" or "hidden"
   local label = ({ staged = "Staged Changes", unstaged = "Changes", conflicts = "Merge Changes" })[group_name] or group_name

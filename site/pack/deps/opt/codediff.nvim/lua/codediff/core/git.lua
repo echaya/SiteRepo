@@ -612,12 +612,6 @@ function M.apply_patch(git_root, patch, opts, callback)
   end
 end
 
--- Discard a hunk from the working tree by reverse-applying a patch (async)
--- Convenience wrapper: applies patch in reverse to working tree (not index)
-function M.discard_hunk_patch(git_root, patch, callback)
-  M.apply_patch(git_root, patch, { cached = false, reverse = true }, callback)
-end
-
 -- Run a git command synchronously
 -- Returns output string or nil on error
 local function run_git_sync(args, opts)

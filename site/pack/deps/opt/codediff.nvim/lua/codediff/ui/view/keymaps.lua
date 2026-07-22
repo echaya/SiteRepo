@@ -285,14 +285,13 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     -- For virtual buffers, resolve the real file on disk
     local target_file
     if is_virtual then
-      local original_path, modified_path = lifecycle.get_paths(tabpage)
-      local rel_path = side == "original" and original_path or modified_path
-      if not rel_path or rel_path == "" then
+      local original, modified = lifecycle.get_paths(tabpage)
+      local ref = side == "original" and original or modified
+      if not ref or ref.absolute == "" then
         vim.notify("Buffer has no associated file path", vim.log.levels.WARN)
         return
       end
-      local git_root = session.git_root
-      target_file = git_root .. "/" .. rel_path
+      target_file = ref.absolute
     else
       target_file = vim.api.nvim_buf_get_name(current_buf)
       if target_file == "" then
@@ -418,7 +417,7 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     end
 
     -- Get the file path relative to git root
-    local file_path = session.original_path or session.modified_path
+    local file_path = (session.original.relative ~= "" and session.original.relative) or session.modified.relative
     if not file_path or file_path == "" then
       vim.notify("No file path for staging", vim.log.levels.WARN)
       return
@@ -466,7 +465,7 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
       return
     end
 
-    local file_path = session.original_path or session.modified_path
+    local file_path = (session.original.relative ~= "" and session.original.relative) or session.modified.relative
     if not file_path or file_path == "" then
       vim.notify("No file path for unstaging", vim.log.levels.WARN)
       return
@@ -494,7 +493,11 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     end)
   end
 
-  -- Helper: Discard hunk under cursor from working tree
+  -- Helper: Discard hunk under cursor from working tree.
+  -- Mirrors VSCode's `revertChange`/`_revertChanges`: revert the hunk range in
+  -- the in-memory modified buffer (like `applyLineChanges` + `WorkspaceEdit`),
+  -- then write the buffer to disk (like `modifiedDocument.save()`). No external
+  -- `git apply` and no file reload, so unrelated buffer content is preserved.
   local function discard_hunk()
     local session = lifecycle.get_session(tabpage)
     if not session or not session.git_root then
@@ -514,12 +517,6 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
       return
     end
 
-    local file_path = session.original_path or session.modified_path
-    if not file_path or file_path == "" then
-      vim.notify("No file path for discarding", vim.log.levels.WARN)
-      return
-    end
-
     -- Prompt for confirmation before discarding (destructive operation)
     local prompt = string.format("Discard hunk %d?", hunk_idx)
     local choice = vim.fn.confirm(prompt, "&Discard\n&Cancel", 2, "Warning")
@@ -533,20 +530,38 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
       return
     end
 
-    -- Read lines from both buffers for this hunk
+    -- Replace the modified hunk range with the original lines. Every other line
+    -- (including unrelated unsaved edits) stays as-is in the live buffer, so the
+    -- discarded region falls back to original content and nothing else changes.
     local orig_lines = vim.api.nvim_buf_get_lines(discard_orig_buf, hunk.original.start_line - 1, hunk.original.end_line - 1, false)
-    local mod_lines = vim.api.nvim_buf_get_lines(discard_mod_buf, hunk.modified.start_line - 1, hunk.modified.end_line - 1, false)
 
-    local patch = build_hunk_patch(file_path, orig_lines, mod_lines, hunk.original.start_line, hunk.modified.start_line)
+    local was_modifiable = vim.bo[discard_mod_buf].modifiable
+    local was_readonly = vim.bo[discard_mod_buf].readonly
 
-    local git = require("codediff.core.git")
-    git.discard_hunk_patch(session.git_root, patch, function(err)
-      if err then
-        vim.notify("Failed to discard hunk: " .. err, vim.log.levels.ERROR)
-        return
-      end
-      vim.notify(string.format("Discarded hunk %d", hunk_idx), vim.log.levels.INFO)
+    local ok, edit_err = pcall(function()
+      vim.bo[discard_mod_buf].readonly = false
+      vim.bo[discard_mod_buf].modifiable = true
+      vim.api.nvim_buf_set_lines(discard_mod_buf, hunk.modified.start_line - 1, hunk.modified.end_line - 1, false, orig_lines)
+      -- Persist through the native write path so 'fileformat', 'fileencoding'
+      -- and 'endofline' are honored. 'noautocmd' keeps format-on-save (and
+      -- similar BufWritePre hooks) from rewriting lines outside the hunk.
+      vim.api.nvim_buf_call(discard_mod_buf, function()
+        vim.cmd("silent noautocmd write!")
+      end)
     end)
+
+    if vim.api.nvim_buf_is_valid(discard_mod_buf) then
+      vim.bo[discard_mod_buf].modifiable = was_modifiable
+      vim.bo[discard_mod_buf].readonly = was_readonly
+    end
+
+    if not ok then
+      vim.notify("Failed to discard hunk: " .. tostring(edit_err), vim.log.levels.ERROR)
+      return
+    end
+
+    auto_refresh.trigger(discard_mod_buf)
+    vim.notify(string.format("Discarded hunk %d", hunk_idx), vim.log.levels.INFO)
   end
 
   -- ========================================================================
@@ -841,8 +856,9 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
     lifecycle.set_tab_keymap(tabpage, "n", keymaps.align_move, align_move, { desc = "Align moved code block" })
   end
 
-  -- Re-apply compact mode folds if active (persists across file switches)
-  compact.reapply(tabpage)
+  -- Keep compact mode in sync when the diff view is (re)built — applies the
+  -- configured default on open and re-folds on file switches (no-op if off).
+  compact.refresh(tabpage)
 end
 
 return M

@@ -5,6 +5,7 @@ local Tree = require("codediff.ui.lib.tree")
 local Split = require("codediff.ui.lib.split")
 local config = require("codediff.config")
 local git = require("codediff.core.git")
+local path = require("codediff.core.path")
 local nodes_module = require("codediff.ui.history.nodes")
 local keymaps_module = require("codediff.ui.history.keymaps")
 local layout = require("codediff.ui.layout")
@@ -291,7 +292,7 @@ function M.create(commits, git_root, tabpage, width, opts)
     local target_hash = base_revision or (commit_hash .. "^")
     local session = lifecycle.get_session(tabpage)
     if not opts.force and session and session.original_revision == target_hash and session.modified_revision == commit_hash then
-      if session.modified_path == file_path or session.original_path == file_path then
+      if (session.modified and session.modified.relative == file_path) or (session.original and session.original.relative == file_path) then
         return
       end
     end
@@ -305,11 +306,11 @@ function M.create(commits, git_root, tabpage, width, opts)
 
         if is_inline then
           local rev = file_status == "A" and commit_hash or target_hash
-          local path = file_status == "D" and (old_path or file_path) or file_path
-          require("codediff.ui.view.inline_view").show_single_file(tabpage, path, {
+          local single_path = file_status == "D" and (old_path or file_path) or file_path
+          require("codediff.ui.view.inline_view").show_single_file(tabpage, single_path, {
             revision = rev,
             git_root = git_root,
-            rel_path = path,
+            rel_path = single_path,
             side = file_status == "D" and "original" or "modified",
           })
         else
@@ -326,8 +327,8 @@ function M.create(commits, git_root, tabpage, width, opts)
       local session_config = {
         mode = "history",
         git_root = git_root,
-        original_path = base_revision and file_path or (old_path or file_path),
-        modified_path = file_path,
+        original = path.make_ref(base_revision and file_path or (old_path or file_path), git_root),
+        modified = path.make_ref(file_path, git_root),
         original_revision = target_hash,
         modified_revision = commit_hash,
         line_range = line_range,

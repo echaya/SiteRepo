@@ -430,8 +430,8 @@ function M.sync_mutable_buffers(tabpage)
     end)
   end
 
-  sync_buffer(session.original_bufnr, session.original_revision, session.original_path)
-  sync_buffer(session.modified_bufnr, session.modified_revision, session.modified_path)
+  sync_buffer(session.original_bufnr, session.original_revision, session.original.relative)
+  sync_buffer(session.modified_bufnr, session.modified_revision, session.modified.relative)
 end
 
 -- Cleanup all watched buffers

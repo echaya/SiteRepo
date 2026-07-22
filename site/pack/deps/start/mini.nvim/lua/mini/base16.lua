@@ -168,15 +168,6 @@ local H = {}
 ---                                    -- needs `palette` field present
 --- <
 MiniBase16.setup = function(config)
-  -- TODO: Remove after Neovim=0.9 support is dropped
-  if vim.fn.has('nvim-0.10') == 0 then
-    vim.notify(
-      '(mini.base16) Neovim<0.10 is soft deprecated (module works but is not supported).'
-        .. " It will be deprecated after the next 'mini.nvim' release (module might not work)."
-        .. ' Please update your Neovim version.'
-    )
-  end
-
   -- Export module
   _G.MiniBase16 = MiniBase16
 
@@ -673,45 +664,30 @@ H.apply_palette = function(palette, use_cterm)
   hi('markdownH5', {fg=p.base0D, bg=nil, attr=nil, sp=nil})
   hi('markdownH6', {fg=p.base0F, bg=nil, attr=nil, sp=nil})
 
-  -- Tree-sitter
-  -- Sources:
-  -- - `:h treesitter-highlight-groups`
-  -- - https://github.com/nvim-treesitter/nvim-treesitter/blob/master/CONTRIBUTING.md#highlights
-  -- Included only those differing from default links
+  -- Tree-sitter. Source: `:h treesitter-highlight-groups`.
   hi('@keyword.return', {fg=p.base08, bg=nil, attr=nil, sp=nil})
-  hi('@symbol',         {fg=p.base0E, bg=nil, attr=nil, sp=nil})
   hi('@variable',       {fg=p.base05, bg=nil, attr=nil, sp=nil})
 
-  hi('@text.strong',    {fg=nil, bg=nil, attr='bold',          sp=nil})
-  hi('@text.emphasis',  {fg=nil, bg=nil, attr='italic',        sp=nil})
-  hi('@text.strike',    {fg=nil, bg=nil, attr='strikethrough', sp=nil})
-  hi('@text.underline', {link='Underlined'})
+  hi('@markup.strong',        {fg=nil, bg=nil, attr='bold',          sp=nil})
+  hi('@markup.italic',        {fg=nil, bg=nil, attr='italic',        sp=nil})
+  hi('@markup.strikethrough', {fg=nil, bg=nil, attr='strikethrough', sp=nil})
+  hi('@markup.underline',     {link='Underlined'})
+
+  hi('@markup.heading.1', {link='markdownH1'})
+  hi('@markup.heading.2', {link='markdownH2'})
+  hi('@markup.heading.3', {link='markdownH3'})
+  hi('@markup.heading.4', {link='markdownH4'})
+  hi('@markup.heading.5', {link='markdownH5'})
+  hi('@markup.heading.6', {link='markdownH6'})
+
+  hi('@string.special.vimdoc',     {link='SpecialChar'})
+  hi('@variable.parameter.vimdoc', {fg=p.base09, bg=nil, attr=nil, sp=nil})
+  hi('@markup.heading.4.vimdoc',   {link='Title'})
 
   -- Semantic tokens. Source: `:h lsp-semantic-highlight`.
   -- Included only those differing from default links
   hi('@lsp.type.variable',  {fg=p.base05, bg=nil, attr=nil, sp=nil})
   hi('@lsp.mod.deprecated', {fg=p.base08, bg=nil, attr=nil, sp=nil})
-
-  -- New tree-sitter groups
-  if vim.fn.has('nvim-0.10') == 1 then
-    -- Source: `:h treesitter-highlight-groups`
-    -- Included only those differing from default links
-    hi('@markup.strong',        {link='@text.strong'})
-    hi('@markup.italic',        {link='@text.emphasis'})
-    hi('@markup.strikethrough', {link='@text.strike'})
-    hi('@markup.underline',     {link='@text.underline'})
-
-    hi('@markup.heading.1', {link='markdownH1'})
-    hi('@markup.heading.2', {link='markdownH2'})
-    hi('@markup.heading.3', {link='markdownH3'})
-    hi('@markup.heading.4', {link='markdownH4'})
-    hi('@markup.heading.5', {link='markdownH5'})
-    hi('@markup.heading.6', {link='markdownH6'})
-
-    hi('@string.special.vimdoc',     {link='SpecialChar'})
-    hi('@variable.parameter.vimdoc', {fg=p.base09, bg=nil, attr=nil, sp=nil})
-    hi('@markup.heading.4.vimdoc',   {link='Title'})
-  end
 
   -- Plugins
   -- nvim-mini/mini.nvim

@@ -79,8 +79,8 @@ local function rerender_current_file(tabpage)
   local session_config = {
     mode = session.mode,
     git_root = session.git_root,
-    original_path = session.original_path,
-    modified_path = session.modified_path,
+    original = session.original,
+    modified = session.modified,
     original_revision = session.original_revision,
     modified_revision = session.modified_revision,
   }

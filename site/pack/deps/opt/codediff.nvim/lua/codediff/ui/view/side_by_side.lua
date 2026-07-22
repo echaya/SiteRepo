@@ -6,6 +6,7 @@ local lifecycle = require("codediff.ui.lifecycle")
 local virtual_file = require("codediff.core.virtual_file")
 local auto_refresh = require("codediff.ui.auto_refresh")
 local config = require("codediff.config")
+local path = require("codediff.core.path")
 
 -- Eagerly load explorer and history to avoid lazy require failures
 -- when CWD changes in vim.schedule callbacks
@@ -44,8 +45,7 @@ function M.create(session_config, filetype, on_ready)
 
   -- For explorer mode with empty paths OR dir mode (git_root == nil with explorer_data),
   -- or history mode, create empty panes and skip buffer setup
-  local is_explorer_placeholder = session_config.mode == "explorer"
-    and ((session_config.original_path == "" or session_config.original_path == nil) or (not session_config.git_root and session_config.explorer_data))
+  local is_explorer_placeholder = session_config.mode == "explorer" and (path.is_empty(session_config.original) or (not session_config.git_root and session_config.explorer_data))
 
   local is_history_placeholder = session_config.mode == "history" and session_config.history_data
 
@@ -84,8 +84,8 @@ function M.create(session_config, filetype, on_ready)
     local original_is_virtual = is_virtual_revision(session_config.original_revision)
     local modified_is_virtual = is_virtual_revision(session_config.modified_revision)
 
-    original_info = prepare_buffer(original_is_virtual, session_config.git_root, session_config.original_revision, session_config.original_path)
-    modified_info = prepare_buffer(modified_is_virtual, session_config.git_root, session_config.modified_revision, session_config.modified_path)
+    original_info = prepare_buffer(original_is_virtual, session_config.git_root, session_config.original_revision, session_config.original)
+    modified_info = prepare_buffer(modified_is_virtual, session_config.git_root, session_config.modified_revision, session_config.modified)
 
     initial_buf = vim.api.nvim_get_current_buf()
     original_win = vim.api.nvim_get_current_win()
@@ -192,7 +192,7 @@ function M.create(session_config, filetype, on_ready)
         local git = require("codediff.core.git")
         local base_revision = ":1"
 
-        git.get_file_content(base_revision, session_config.git_root, session_config.original_path, function(err, base_lines)
+        git.get_file_content(base_revision, session_config.git_root, session_config.original.relative, function(err, base_lines)
           -- For add/add conflicts (AA), there's no base version - use empty base
           if err then
             base_lines = {}
@@ -216,8 +216,8 @@ function M.create(session_config, filetype, on_ready)
                 tabpage,
                 session_config.mode,
                 session_config.git_root,
-                session_config.original_path,
-                session_config.modified_path,
+                session_config.original,
+                session_config.modified,
                 session_config.original_revision,
                 session_config.modified_revision,
                 original_info.bufnr,
@@ -272,8 +272,8 @@ function M.create(session_config, filetype, on_ready)
             tabpage,
             session_config.mode,
             session_config.git_root,
-            session_config.original_path,
-            session_config.modified_path,
+            session_config.original,
+            session_config.modified,
             session_config.original_revision,
             session_config.modified_revision,
             original_info.bufnr,
@@ -461,8 +461,8 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
   local modified_is_virtual = is_virtual_revision(session_config.modified_revision)
 
   -- Prepare new buffer information
-  local original_info = prepare_buffer(original_is_virtual, session_config.git_root, session_config.original_revision, session_config.original_path)
-  local modified_info = prepare_buffer(modified_is_virtual, session_config.git_root, session_config.modified_revision, session_config.modified_path)
+  local original_info = prepare_buffer(original_is_virtual, session_config.git_root, session_config.original_revision, session_config.original)
+  local modified_info = prepare_buffer(modified_is_virtual, session_config.git_root, session_config.modified_revision, session_config.modified)
 
   -- Determine if we need to wait for virtual file content
   local wait_state = {
@@ -493,7 +493,7 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
       local git = require("codediff.core.git")
       local base_revision = ":1"
 
-      git.get_file_content(base_revision, session_config.git_root, session_config.original_path, function(err, base_lines)
+      git.get_file_content(base_revision, session_config.git_root, session_config.original.relative, function(err, base_lines)
         if err then
           base_lines = {}
         end
@@ -667,7 +667,7 @@ function M.update(tabpage, session_config, auto_scroll_to_first_hunk)
   welcome_window.sync(modified_win)
 
   -- Update lifecycle session metadata
-  lifecycle.update_paths(tabpage, session_config.original_path, session_config.modified_path)
+  lifecycle.update_paths(tabpage, session_config.original, session_config.modified)
 
   -- Delete old virtual buffers if they were virtual AND are not reused
   if lifecycle.is_original_virtual(tabpage) and old_original_buf ~= original_info.bufnr and old_original_buf ~= modified_info.bufnr then
@@ -761,7 +761,7 @@ local function show_single_file(tabpage, opts)
     local mod_bufnr = opts.keep == "modified" and opts.load_bufnr or empty_buf
 
     lifecycle.update_buffers(tabpage, orig_bufnr, mod_bufnr)
-    lifecycle.update_paths(tabpage, opts.original_path or "", opts.modified_path or "")
+    lifecycle.update_paths(tabpage, path.make_ref(opts.original_path or "", session.git_root), path.make_ref(opts.modified_path or "", session.git_root))
     lifecycle.update_revisions(tabpage, opts.original_revision, opts.modified_revision)
     lifecycle.update_diff_result(tabpage, { changes = {}, moves = {} })
 

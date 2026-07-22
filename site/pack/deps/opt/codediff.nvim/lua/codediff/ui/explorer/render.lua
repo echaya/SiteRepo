@@ -4,6 +4,7 @@ local M = {}
 local Tree = require("codediff.ui.lib.tree")
 local Split = require("codediff.ui.lib.split")
 local config = require("codediff.config")
+local path = require("codediff.core.path")
 local nodes_module = require("codediff.ui.explorer.nodes")
 local tree_module = require("codediff.ui.explorer.tree")
 local keymaps_module = require("codediff.ui.explorer.keymaps")
@@ -215,12 +216,19 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
 
     -- Dir mode: Compare files from dir1 vs dir2 (no git)
     if is_dir_mode then
-      local original_path = explorer.dir1 .. "/" .. file_path
-      local modified_path = explorer.dir2 .. "/" .. file_path
+      local original = path.make_ref(file_path, explorer.dir1)
+      local modified = path.make_ref(file_path, explorer.dir2)
 
       -- Check if already displaying same file
       local session = lifecycle.get_session(tabpage)
-      if not opts.force and session and session.original_path == original_path and session.modified_path == modified_path then
+      if
+        not opts.force
+        and session
+        and session.original
+        and session.modified
+        and session.original.absolute == original.absolute
+        and session.modified.absolute == modified.absolute
+      then
         return
       end
 
@@ -229,8 +237,8 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
         local session_config = {
           mode = "explorer",
           git_root = nil,
-          original_path = original_path,
-          modified_path = modified_path,
+          original = original,
+          modified = modified,
           original_revision = nil,
           modified_revision = nil,
         }
@@ -239,7 +247,7 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
       return
     end
 
-    local abs_path = git_root .. "/" .. file_path
+    local abs_path = path.make_ref(file_path, git_root).absolute
 
     -- Handle untracked files: show file without diff
     if file_data.status == "??" then
@@ -341,7 +349,7 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
     -- Same file can have different diffs (staged vs HEAD, working vs staged)
     local session = lifecycle.get_session(tabpage)
     if session then
-      local is_same_file = (session.modified_path == abs_path or session.modified_path == file_path or (session.git_root and session.original_path == file_path))
+      local is_same_file = (session.modified and session.modified.absolute == abs_path) or (session.original and session.original.absolute == abs_path)
 
       if is_same_file and not opts.force then
         -- Conflict mode: skip if already showing the same conflict file
@@ -391,8 +399,8 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
         local session_config = {
           mode = "explorer",
           git_root = git_root,
-          original_path = old_path or file_path,
-          modified_path = file_path,
+          original = path.make_ref(old_path or file_path, git_root),
+          modified = path.make_ref(file_path, git_root),
           original_revision = base_revision,
           modified_revision = target_revision,
         }
@@ -418,8 +426,8 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
           local session_config = {
             mode = "explorer",
             git_root = git_root,
-            original_path = old_path or file_path,
-            modified_path = abs_path,
+            original = path.make_ref(old_path or file_path, git_root),
+            modified = path.make_ref(abs_path, git_root),
             original_revision = commit_hash,
             modified_revision = nil,
           }
@@ -449,8 +457,8 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
           local session_config = {
             mode = "explorer",
             git_root = git_root,
-            original_path = file_path,
-            modified_path = file_path,
+            original = path.make_ref(file_path, git_root),
+            modified = path.make_ref(file_path, git_root),
             original_revision = original_rev,
             modified_revision = modified_rev,
             conflict = true,
@@ -466,8 +474,8 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
           local session_config = {
             mode = "explorer",
             git_root = git_root,
-            original_path = old_path or file_path, -- Use old_path if rename
-            modified_path = file_path, -- New path after rename
+            original = path.make_ref(old_path or file_path, git_root), -- Use old_path if rename
+            modified = path.make_ref(file_path, git_root), -- New path after rename
             original_revision = commit_hash,
             modified_revision = ":0",
           }
@@ -494,8 +502,8 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
           local session_config = {
             mode = "explorer",
             git_root = git_root,
-            original_path = file_path,
-            modified_path = abs_path,
+            original = path.make_ref(file_path, git_root),
+            modified = path.make_ref(abs_path, git_root),
             original_revision = original_revision,
             modified_revision = nil,
           }
@@ -543,8 +551,7 @@ function M.create(status_result, git_root, tabpage, width, base_revision, target
       if node_type == "group" or node_type == "directory" then
         return
       end
-      if explorer.current_file_path == node.data.path
-          and explorer.current_file_group == node.data.group then
+      if explorer.current_file_path == node.data.path and explorer.current_file_group == node.data.group then
         return
       end
       explorer.on_file_select(node.data)

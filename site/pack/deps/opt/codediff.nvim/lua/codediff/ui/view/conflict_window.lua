@@ -47,7 +47,7 @@ end
 -- @param is_update boolean: true if updating existing view (may reuse result window)
 -- @return boolean: success
 function M.setup_conflict_result_window(tabpage, session_config, original_win, modified_win, base_lines, conflict_diffs, is_update)
-  local abs_path = session_config.git_root .. "/" .. session_config.original_path
+  local abs_path = session_config.original.absolute
   local result_win, result_bufnr
 
   -- Check if result window already exists (only in update mode)
