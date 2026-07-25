@@ -16,7 +16,8 @@ local M = {
 local custom_def_maps = {
    label_light = {
       fg = 'NvimDarkGrey2',
-      bg = '#ffaf3f',
+      bg = '#98d8a8',
+      bold = true,
       nocombine = true,
       ctermfg = 'red'
    },

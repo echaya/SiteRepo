@@ -369,7 +369,7 @@ return {
   },
   diff = {
     install_info = {
-      revision = '7d20331b97a008daf2dd0055da8c609f03424105',
+      revision = 'e7e845fc380e8677f9b770dc96d6b7e029daab55',
       url = 'https://github.com/tree-sitter-grammars/tree-sitter-diff',
     },
     maintainers = { '@gbprod' },
@@ -752,7 +752,7 @@ return {
   },
   gnuplot = {
     install_info = {
-      revision = '20a98295a52caa5f474839838a800d250e8fe1f4',
+      revision = '4787d5c1defa7a28ed548e9b0c6b27b9997debfe',
       url = 'https://github.com/dpezto/tree-sitter-gnuplot',
     },
     maintainers = { '@dpezto' },
