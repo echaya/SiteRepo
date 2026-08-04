@@ -12,7 +12,8 @@ very quickly, with near-zero mental overhead.
 * Initiate the command in a given scope, and start typing a 2-character search
   pattern (`{char1}{char2}`). After typing `{char1}`, you can see **label
   characters** appearing next to some pairs. **They are not active yet, but
-  this preview allows you to process them in the background**.
+  this preview allows you to process them in the background**. To keep visual
+  noise tolerable, preview is only enabled at word boundaries by default.
 
 * Typing `{char2}` filters the matches. When the closest pair is not labeled,
   you automatically jump there. If that was your target, you can safely ignore
@@ -128,19 +129,6 @@ expected (selecting remotely).
 <summary>Suggested additional configuration</summary>
 
 ```lua
--- Highly recommended: define a preview filter to reduce visual noise
--- and the blinking effect after the first keypress.
--- For example, define word boundaries as the common case, that is, skip
--- preview for matches starting with whitespace or an alphabetic
--- mid-word character: foobar[baaz] = quux
---                     ^    ^^^  ^^ ^ ^  ^
-require('leap').opts.preview = function(ch0, ch1, ch2)
-  return not (
-    ch1:match('%s')
-    or (ch0:match('%a') and ch1:match('%a') and ch2:match('%a'))
-  )
-end
-
 -- Enable the traversal keys to repeat the previous search without
 -- explicitly invoking Leap (`<cr><cr>...` instead of `s<cr><cr>...`):
 do

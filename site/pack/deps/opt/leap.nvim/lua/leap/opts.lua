@@ -1,6 +1,16 @@
 local M = {
    default = {
-      preview = true,
+      preview = function(ch0, ch1, ch2)
+         -- Skip matches starting with whitespace altogether.
+         if ch1:match('%s') then return false end
+         local delim = '[\1-\64\91-\96\123-\127]'  -- ASCII non-alpha
+         return (
+            -- Show matches touching a delimiter or line start/end.
+            ch0:match(delim) or ch2:match(delim) or (ch0 == '') or (ch2 == '')
+            -- Also match a single delimiter between letters (`foo:bar`).
+            or ch1:match(delim)
+         )
+      end,
       equivalence_classes = { ' \t\r\n', '([{', ')]}', '\'"`' },
       safe_labels = 'sfnut/SFNLHMUGTZ?',
       labels = 'sfnjklhodweimbuyvrgtaqpcxz/SFNJKLHODWEIMBUYVRGTAQPCXZ?',
