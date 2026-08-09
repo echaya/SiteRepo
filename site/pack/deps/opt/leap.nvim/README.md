@@ -12,13 +12,13 @@ very quickly, with near-zero mental overhead.
 * Initiate the command in a given scope, and start typing a 2-character search
   pattern (`{char1}{char2}`). After typing `{char1}`, you can see **label
   characters** appearing next to some pairs. **They are not active yet, but
-  this preview allows you to process them in the background**. To keep visual
-  noise tolerable, preview is only enabled at word boundaries by default.
+  this preview allows you to process them in the background**.
 
-* Typing `{char2}` filters the matches. When the closest pair is not labeled,
-  you automatically jump there. If that was your target, you can safely ignore
-  the labels remaining on the screen - those will not conflict with any
-  sensible command, and will disappear on the next keypress.
+* Typing `{char2}` filters the matches, and the labels are now active. When the
+  closest pair is not labeled, you automatically jump there. If that was your
+  target, you can safely ignore the labels remaining on the screen - those will
+  not conflict with any sensible command, and will disappear on the next
+  keypress.
 
 * Else: type the given label character to jump. If there are more matches than
   available labels, use `<space>` and `<backspace>` to move between groups.
@@ -26,6 +26,10 @@ very quickly, with near-zero mental overhead.
 To target the last character on a line, type `{char}<space>`; to target empty
 lines, type `<space><space>`. Use `{char}<enter>` as a shortcut to the closest
 `{char}` match.
+
+> [!Note]
+> To keep visual noise tolerable, preview is only enabled at word boundaries by
+> default. Check `:h leap.opts.preview`.
 
 ### Why this method?
 
@@ -60,6 +64,11 @@ arbitrary window with eight keystrokes speaks for itself:
 
 ## Getting started
 
+Help files are not exactly page-turners, but [`:help leap`](doc/leap.txt) is
+written with considerable care (by humans, for humans), and I suggest at least
+skimming it, even if you don't have a specific question yet, as it contains
+lots of additional information and details.
+
 ### Requirements
 
 * Neovim >= 0.10.0 stable, or latest nightly
@@ -69,50 +78,46 @@ arbitrary window with eight keystrokes speaks for itself:
 
 ### Installation
 
-<details>
-<summary>Mappings</summary>
-
-No setup is required, just define keybindings - our recommended
-arrangement is:
-
 ```lua
-vim.keymap.set({ 'n', 'x', 'o' }, 's', '<Plug>(leap)')
-vim.keymap.set('n',               'S', '<Plug>(leap-from-window)')
+vim.pack.add { 'https://codeberg.org/andyg/leap.nvim' }
 ```
 
-See `:h leap-mappings` for more.
+> [!Note]
+> Lazy loading is all the rage now, but doing it via your plugin manager is
+> unnecessary, as Leap already lazy-loads itself, [as it
+> should](https://github.com/neovim/neovim/issues/35562#issuecomment-3239702727).
+> Using the `keys` feature of lazy.nvim might even cause
+> [problems](https://codeberg.org/andyg/leap.nvim-github/issues/191).
 
-Remote operations:
+### Mappings & configuration
+
+Recommended starter configuration:
 
 ```lua
--- E.g., `gs{leap}$y` or `ygs{leap}$`, where {leap}, as usual, means
--- {char1}{char2}{label?}. The linewise version can also take [count],
--- e.g. `d2gS{leap}` deletes two lines.
-vim.keymap.set({ 'n', 'o' }, 'gs', '<Plug>(leap-remote)')
-vim.keymap.set({ 'n', 'o' }, 'gS', '<Plug>(leap-remote-linewise)')
--- Useful shortcut for a frequent operation: the same as remote-linewise,
--- except it auto-triggers even without [count] (`yR{leap}` copies a line).
-vim.keymap.set({ 'o' },      'R',  '<Plug>(leap-remote-line)')
--- These commands expect another character as input before leaping, and
--- select the given text object at the destination (`yarp{leap}`).
-vim.keymap.set({ 'x', 'o' }, 'ar', '<Plug>(leap-remote-text-object)')
-vim.keymap.set({ 'x', 'o' }, 'ir', '<Plug>(leap-remote-inner-text-object)')
+-- Jump
+vim.keymap.set({ 'n', 'x', 'o' }, 's', '<Plug>(leap)')
+vim.keymap.set('n',               'S', '<Plug>(leap-from-window)')
 
--- Set automatic paste after yanking:
+-- Visit (remote operations)
+vim.keymap.set({ 'n', 'o' }, 'gs', '<Plug>(leap-visit)')
+vim.keymap.set({ 'n', 'o' }, 'gS', '<Plug>(leap-visit-linewise)')
+vim.keymap.set({ 'x', 'o' }, 'ar', '<Plug>(leap-visit-text-object)')
+vim.keymap.set({ 'x', 'o' }, 'ir', '<Plug>(leap-visit-inner-text-object)')
+vim.keymap.set({ 'o' },      'rr', '<Plug>(leap-visit-line)')
+
 vim.api.nvim_create_autocmd('User', {
-  pattern = 'RemoteOperationDone',
-  group = vim.api.nvim_create_augroup('LeapRemote', {}),
+  pattern = 'VisitDone',
+  group = vim.api.nvim_create_augroup('VisitorMode', {}),
   callback = function(event)
     if vim.v.operator == 'y' and event.data.register == '"' then
       vim.cmd('normal! p')
     end
   end,
 })
-```
 
-Treesitter parent node selection (`vannn...y` or `yan{label}`):
-
-```lua
+-- Treeselect
+-- Tip: If you have set up remote text objects (`ar`/`ir`), `arn` will
+-- work as expected (visit node).
 vim.keymap.set({ 'x', 'o' }, 'an', function()
   require('leap.treesitter').select {
     opts = require('leap.user').with_traversal_keys('n', 'N')
@@ -120,51 +125,78 @@ vim.keymap.set({ 'x', 'o' }, 'an', function()
 end)
 ```
 
-Tip: if you have set up remote text objects, `varn` or `Varn` will work as
-expected (selecting remotely).
+See `:h leap-mappings` for more.
 
-</details>
+### Extra modules
 
 <details>
-<summary>Suggested additional configuration</summary>
+<summary>Visit ("spooky actions at a distance")</summary>
+
+Prior art: [leap-spooky.nvim](https://github.com/ggandor/leap-spooky.nvim), and
+[flash.nvim](https://github.com/folke/flash.nvim)'s "remote operation" feature.
+
+The `visit()` function allows you to perform an action in a remote location: it
+forgets the current mode or pending operator, lets you leap to anywhere on the
+tab page, then continues where it left off. Once returning to Normal mode, it
+jumps back to the original position, as if you had operated from the distance.
 
 ```lua
--- Enable the traversal keys to repeat the previous search without
--- explicitly invoking Leap (`<cr><cr>...` instead of `s<cr><cr>...`):
-do
-  local clever = require('leap.user').with_traversal_keys
-  vim.keymap.set({ 'n', 'x', 'o' }, '<cr>', function()
-    require('leap').leap {
-      ['repeat'] = true, opts = clever('<cr>', '<bs>'),
-    }
-  end)
-  vim.keymap.set({ 'n', 'x', 'o' }, '<bs>', function()
-    require('leap').leap {
-      ['repeat'] = true, opts = clever('<bs>', '<cr>'), backward = true,
-    }
-  end)
-end
+-- For example, `gs{leap}yap` or `ygs{leap}ap` will yank the paragraph
+-- at the position specified by `{leap}`.
+vim.keymap.set({ 'n', 'x', 'o' }, 'gs', function()
+  require('leap').visit()
+end)
+```
+
+The recommended way though is automatically starting Visual mode after jumping,
+so that from Normal mode you can e.g. `gs{leap}apy` (_leap-select-op_). This is
+the same amount of keystrokes as the _leap-op-select_ (`gs{leap}yap`) or the
+_op-leap-select_ (`ygs{leap}ap`) version, but here you have visual feedback,
+can move around freely with arbitrary motion combinations, and correct
+mistakes. The `input` parameter lets you feed keystrokes automatically:
+
+```lua
+vim.keymap.set({ 'n', 'o' }, 'gs', function()
+  require('leap').visit { input = vim.fn.mode(true):match('o') and '' or 'v' }
+end)
+```
+
+The keys `<Plug>(leap-visit)` and `<Plug>(leap-visit-linewise)` do this by
+default (the above is the actual body or `<Plug>(leap-visit)` by the way).
+
+By giving text objects as `input`, you can create _remote text objects_, for an
+even more intuitive workflow (`yarp{leap}` - "yank a remote paragraph at...").
+For this, you can use the readily available `<Plug>(leap-visit-text-object)`
+and `<Plug>(leap-visit-inner-text-object)` keys. They are simple wrappers that
+consume an additional input character before calling `visit()`, and feed that
+character prefixed with `a` and `i`, respectively. (In `arp`, for example, `ar`
+is the hardcoded LHS of the mapping, and `p` is the additional input.)
+
+> [!Tip]
+> This feature makes exchanging two regions of text moderately simple, without
+> needing a custom plugin: delete region A + remotely select region B + `pP`.
+> Example (swapping two words): `diw gs{leap}iw pP`.
+
+**Icing on the cake: automatic paste after yanking**
+
+With this, you can clone regions in the blink of an eye, even from another
+window (just `ygs{leap}ap`, or, with predefiend remote text object,
+`yarp{leap}`, and voilà, the remote paragraph appears there):
+
+```lua
+vim.api.nvim_create_autocmd('User', {
+  pattern = 'VisitDone',
+  group = vim.api.nvim_create_augroup('VisitorMode', {}),
+  callback = function(event)
+    -- Do not paste if some special register was in use.
+    if vim.v.operator == 'y' and event.data.register == '"' then
+      vim.cmd('normal! p')
+    end
+  end,
+})
 ```
 
 </details>
-
-<details>
-<summary>Lazy loading</summary>
-
-...is all the rage now, but doing it via your plugin manager is unnecessary, as
-Leap already lazy-loads itself, [as it
-should](https://github.com/neovim/neovim/issues/35562#issuecomment-3239702727).
-Using the `keys` feature of lazy.nvim might even cause
-[problems](https://github.com/ggandor/leap.nvim/issues/191).
-
-</details>
-
-Help files are not exactly page-turners, but [`:help leap`](doc/leap.txt) is
-written with considerable care (by humans, for humans), and I suggest at least
-skimming it, even if you don't have a specific question yet, as it contains
-lots of additional information and details.
-
-### Experimental modules
 
 <details>
 <summary>Treesitter integration</summary>
@@ -173,10 +205,6 @@ You can either choose a node directly (`van{label}`), or, in Normal/Visual
 mode, use the traversal keys for incremental selection. The labels are forced
 to be safe, so you can operate on the selection right away then (`vannny`).
 Traversal can "wrap around" backwards (`vanN` selects the root node).
-
-It is also worth noting that linewise mode (`Vannn...`, `yVan`) filters out
-redundant nodes (only the outermost are kept in a given line range), making the
-selection much more efficient.
 
 ```lua
 vim.keymap.set({ 'x', 'o' }, 'an', function()
@@ -189,104 +217,10 @@ vim.keymap.set({ 'x', 'o' }, 'an', function()
 end)
 ```
 
-</details>
-
-<details>
-<summary>Remote actions</summary>
-
-Inspired by [leap-spooky.nvim](https://github.com/ggandor/leap-spooky.nvim),
-and [flash.nvim](https://github.com/folke/flash.nvim)'s similar feature.
-
-This function allows you to perform an action in a remote location: it forgets
-the current mode or pending operator, lets you leap to anywhere on the tab
-page, then continues where it left off. Once returning to Normal mode, it jumps
-back, as if you had operated from the distance.
-
-```lua
-vim.keymap.set({ 'n', 'x', 'o' }, 'gs', function()
-  require('leap.remote').action()
-end)
-```
-
-Example: `gs{leap}yap` or `ygs{leap}ap` yank the paragraph at the
-position specified by `{leap}`.
-
-The recommended way though is automatically starting Visual mode after
-jumping (see "feeding input" below). The keys `<Plug>(leap-remote)` and
-`<Plug>(leap-remote-linewise)` do that by default, so that from Normal
-mode you can e.g. `gs{leap}apy` (_leap-select-op_). This is the same amount of
-keystrokes as the _op-leap-select_ method (`ygs{leap}ap`), but here you have
-visual feedback, can move around freely with arbitrary motion combinations, and
-correct mistakes.
-
-Tip: this feature makes exchanging two regions of text moderately simple,
-without needing a custom plugin: delete region A + remotely select region B +
-`pP`. Example (swapping two words): `diw gs{leap}iw pP`.
-
-**Icing on the cake, no. 1 - automatic paste after yanking**
-
-With this, you can clone regions in the blink of an eye, even from another
-window (just `ygs{leap}ap`, or, with predefiend remote text object,
-`yarp{leap}`, and voilà, the remote paragraph appears there):
-
-```lua
-vim.api.nvim_create_autocmd('User', {
-  pattern = 'RemoteOperationDone',
-  group = vim.api.nvim_create_augroup('LeapRemote', {}),
-  callback = function(event)
-    -- Do not paste if some special register was in use.
-    if vim.v.operator == 'y' and event.data.register == '"' then
-      vim.cmd('normal! p')
-    end
-  end,
-})
-```
-
-Tip: use this in terminal buffers when entering commands!
-
-**Icing on the cake, no. 2 - feeding input**
-
-The `input` parameter lets you feed keystrokes automatically after the jump:
-
-```lua
--- When starting from Normal mode, trigger visual selection right away,
--- so that you can `gs{leap}apy`. (This is the actual body of
--- `<Plug>(leap-remote)`.)
-vim.keymap.set({ 'n', 'o' }, 'gs', function()
-  require('leap.remote').action {
-    input = vim.fn.mode(true):match('o') and '' or 'v'
-  }
-end)
-```
-
-By giving text objects as `input`, you can create _remote text objects_, for an
-even more intuitive workflow (`yarp{leap}` - "yank a remote paragraph at...").
-For this, you can use the readily available `<Plug>(leap-remote-text-object)`
-and `<Plug>(leap-remote-inner-text-object)` keys - they are simple wrappers
-that consume an additional input character before calling `action()`, and feed
-that character prefixed with `a` and `i`, respectively. (In the above example
-`ar` is the hardcoded LHS of the mapping, and `p` is the additional input.)
-
-**Jumping to off-screen areas with native search commands**
-
-The `remote` module is not really an extension, but a separate plugin bundled
-with Leap; `action` can use any jump logic via the `jumper` parameter, be it a
-custom `leap()` call or something entirely different.
-
-You can even use the native search commands, that is, target off-screen
-regions, with the special `jumper` values `/` and `?`:
-
-```lua
-vim.keymap.set({ 'n', 'o' }, 'g/', function()
-  require('leap.remote').action { jumper = '/' }
-end)
-vim.keymap.set({ 'n', 'o' }, 'g?', function()
-  require('leap.remote').action { jumper = '?' }
-end)
-```
-
-Vim tip: use `c_CTRL-G` and `c_CTRL-T` to move between matches without
-finishing the search.
+> [!Tip]
+> Use linewise mode (`Vannn...`, `yVan`) whenever possible, as it filters out
+> redundant nodes in the same line range, making the selection much more
+> efficient.
 
 </details>
 
@@ -503,19 +437,8 @@ require('leap').opts.preview = false
 <details>
 <summary>Always show labels at the beginning of the match</summary>
 
-Warning: `on_beacons` is an experimental escape hatch, and this workaround
-depends on implementation details.
-
 ```lua
--- `on_beacons` hooks into `beacons.light_up_beacons`, the function
--- responsible for displaying stuff.
-require('leap').opts.on_beacons = function(targets, _, _)
-  for _, t in ipairs(targets) do
-    -- Overwrite the `offset` value in all beacons.
-    -- target.beacon looks like: { <offset>, <extmark_opts> }
-    if t.label and t.beacon then t.beacon[1] = 0 end
-  end
-end
+require('leap').opts.offset_labels = false
 ```
 
 </details>

@@ -6,6 +6,8 @@ return setmetatable({}, {
    __index = function(_, k)
       if k == 'leap' then
          return require('leap.main').leap
+      elseif k == 'visit' then
+         return require('leap.visit').visit
       elseif k == 'opts' then
          return require('leap.opts').default
       elseif k == 'state' then

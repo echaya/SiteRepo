@@ -11,6 +11,7 @@ local M = {
             or ch1:match(delim)
          )
       end,
+      offset_labels = true,
       equivalence_classes = { ' \t\r\n', '([{', ')]}', '\'"`' },
       safe_labels = 'sfnut/SFNLHMUGTZ?',
       labels = 'sfnjklhodweimbuyvrgtaqpcxz/SFNJKLHODWEIMBUYVRGTAQPCXZ?',

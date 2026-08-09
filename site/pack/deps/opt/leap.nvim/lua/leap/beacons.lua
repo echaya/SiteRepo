@@ -50,7 +50,9 @@ local function set_beacon_for_labeled(target, group_offset, phase)
    if not virt_text then
       target.beacon = nil
    else
-      local offset = (target.chars and phase) and get_label_offset(target) or 0
+      local offset = (target.chars and phase and opts.offset_labels)
+                     and get_label_offset(target)
+                     or 0
       local extmark_opts = { virt_text = virt_text }
       target.beacon = { offset, extmark_opts }
    end

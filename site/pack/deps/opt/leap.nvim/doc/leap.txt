@@ -19,11 +19,11 @@ USAGE                                                             *leap-usage*
   Note: To keep visual noise tolerable, preview is only enabled at word
   boundaries by default (|leap.opts.preview|). *leap-preview*
 
-• Typing {char2} filters the matches. When the closest pair is not labeled,
-  you automatically jump there. If that was your target, you can safely ignore
-  the labels remaining on the screen - those will not conflict with any
-  sensible command, and will disappear on the next keypress
-  (|leap.opts.safe_labels|). *leap-autojump*
+• Typing {char2} filters the matches, and the labels are now active. When the
+  closest pair is not labeled, you automatically jump there. If that was your
+  target, you can safely ignore the labels remaining on the screen - those
+  will not conflict with any sensible command, and will disappear on the next
+  keypress (|leap.opts.safe_labels|). *leap-autojump*
 
 • Else: type the given label character to jump. If there are more matches than
   available labels, use <space> and <backspace> to move between groups
@@ -35,10 +35,13 @@ lines, type <space><space> (|leap-eol|). Use <enter> as a shortcut anytime
 
 See |leap-features| for lots of additional details.
 
+"Visitor mode" is another layer on top of the above, that allows performing an
+action in a remote location: |leap.visit()|.
+
 ==============================================================================
 MAPPINGS                                                       *leap-mappings*
 
-|leap.leap()| is the single entry point for all actions: >lua
+|leap.leap()| is the single entry point for all regular jumps: >lua
     require('leap').leap { windows = { vim.fn.win_getid() } }
 
 There are some predefined <Plug> keys provided, aliasing calls with the most
@@ -67,6 +70,40 @@ Note: The trade-off with `<Plug>(leap-anywhere)` is that whenever multiple
 windows are open, you can rarely expect |leap-autojump|s, as it is only
 allowed when all matches are in one window (this is an intentional restriction
 to avoid confusing behaviour and implementation problems).
+
+Visit ~
+
+There are also a few useful <Plug> keys with different `input`s for
+|leap.visit()|.
+
+When starting from Normal mode, these automatically start Visual selection:
+
+    <Plug>(leap-visit)
+    <Plug>(leap-visit-linewise)
+
+The linewise version can also take [count], e.g. `d2gS{leap}` deletes two
+lines right away.
+
+These expect another character as input before leaping, and select the given
+(a/i) text object at the destination (`yarp{leap}` yanks a remote paragraph):
+
+    <Plug>(leap-visit-text-object)
+    <Plug>(leap-visit-inner-text-object)
+
+Useful shortcut for a frequent operation: like `<Plug>(visit-linewise)`,
+except it auto-triggers even without |[count]| (`yrr{leap}` copies a line):
+
+    <Plug>(leap-visit-line)
+
+Suggested arrangement: >lua
+    vim.keymap.set({ 'n', 'o' }, 'gs', '<Plug>(leap-visit)')
+    vim.keymap.set({ 'n', 'o' }, 'gS', '<Plug>(leap-visit-linewise)')
+    -- Mnemonic: "a/inner remote (text object)".
+    vim.keymap.set({ 'x', 'o' }, 'ar', '<Plug>(leap-visit-text-object)')
+    vim.keymap.set({ 'x', 'o' }, 'ir', '<Plug>(leap-visit-inner-text-object)')
+    vim.keymap.set({ 'o' },      'rr', '<Plug>(leap-visit-line)')
+<
+See also |leap-visit-autopaste|.
 
 ==============================================================================
 FEATURES                                                       *leap-features*
@@ -224,7 +261,8 @@ Example configuration: >lua
           return (
             -- Show matches touching a delimiter or line start/end.
             ch0:match(delim) or ch2:match(delim) or (ch0 == '') or (ch2 == '')
-            -- Also match a single delimiter between letters (`foo:bar`).
+            -- To cover the edge case of a single non-whitespace delimiter
+            -- between letters (`foo:bar`).
             or ch1:match(delim)
           )
         end
@@ -232,6 +270,12 @@ Example configuration: >lua
     You can implement more involved checks here, but keep in mind that this
     function will be called for every single match, so efficiency is something
     to consider.
+
+                                                     *leap.opts.offset_labels*
+`offset_labels = true`
+
+    Display labels after the match instead of at the beginning. Only applies
+    for |leap-preview|.
 
                                                *leap.opts.equivalence_classes*
 `equivalence_classes =` >
@@ -249,8 +293,8 @@ Example configuration: >lua
     |leap-preview|. (Let's say you have entered `a`, and there is a
     `?` -> `x|y|z` wildcard mapping. We have no other choice than to cover all
     `ax|ay|az` matches with one shared label sequence, since you might type
-    `?` next. But then `?xyz` is, by definition, a mutual alias group, there
-    are no shortcuts anymore. |smartcase| is a specific instance of this
+    `?` next. But then `?xyz` becomes, by definition, a mutual alias group,
+    there are no shortcuts anymore. |smartcase| is a specific instance of this
     issue: `x` -> `x|X`.) *leap-wildcard-problem*
 
                                                        *leap.opts.safe_labels*
@@ -482,14 +526,45 @@ leap({opts})                                                     *leap.leap()*
                  argument. (You can obviously implement some custom jump logic
                  here too.)
 
+visit({opts})                                                   *leap.visit()*
+    Allows performing an action in a remote location: it forgets the current
+    mode or pending operator, lets you jump to anywhere on the tab page, then
+    continues where it left off. You can think of this state as a meta-mode:
+    once switching (back) to Normal mode from another mode, the cursor jumps
+    back to the original position, as if you had operated from the distance.
+
+    Parameters: ~
+        {opts} Optional keyword arguments:
+               • {jumper}? (`function|string`) Lua callback that moves the
+                 cursor to the reference point. The default is a slightly
+                 tweaked `<Plug>(leap-anywhere)`.
+
+                 You can also use the native search commands, that is, target
+                 off-screen regions, with the special jumper values `/` and
+                 `?`: >lua
+                    vim.keymap.set({ 'n', 'o' }, 'g/', function()
+                      require('leap').visit { jumper = '/' }
+                    end)
+                    vim.keymap.set({ 'n', 'o' }, 'g?', function()
+                      require('leap').visit { jumper = '?' }
+                    end)
+
+                 Vim tip: use |c_CTRL-G| and |c_CTRL-T| to move between
+                 matches without finishing the search.
+
+               • {input}? (`string`) Input keys to be fed on arrival via
+                 |nvim_feedkeys()|.
+               • {use_count}? (`boolean`, default: `true`) Feed |v:count|
+                 on arrival.
+
 ==============================================================================
 EVENTS                                                           *leap-events*
 
-The |User| event is triggered with the following patterns on entering/exiting
-Leap:
+The |User| event is triggered with the following patterns:
 
-*LeapEnter*
-*LeapLeave*
+*LeapEnter* on entering Leap
+*LeapLeave* on exiting Leap
+*VisitDone* on returning from Visitor mode
 
 Custom behaviours for specific invocations ~
 
@@ -518,6 +593,22 @@ define custom behaviours for it: >lua
           })
         end
       end
+    })
+
+                                                        *leap-visit-autopaste*
+Automatic paste after yanking in Visitor mode ~
+
+The preeminent use case of |VisitDone| is pasting yanked content: >lua
+
+    vim.api.nvim_create_autocmd('User', {
+      pattern = 'VisitDone',
+      group = vim.api.nvim_create_augroup('VisitorMode', {}),
+      callback = function(event)
+        -- Only paste from the default register.
+        if vim.v.operator == 'y' and event.data.register == '"' then
+          vim.cmd('normal! p')
+        end
+      end,
     })
 
 ==============================================================================
