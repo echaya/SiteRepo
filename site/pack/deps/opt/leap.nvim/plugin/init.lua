@@ -37,7 +37,7 @@ local function visit_linewise(autotrigger)
       or (vim.fn.mode(true):match('o') and (vim.v.count == 1 or autotrigger)) and 'l'
       or ''
    )
-   require('leap').visit { input = input, count = false }
+   require('leap').visit { input = input, count = false, linewise = true }
 end
 map({ 'n', 'o' }, '<Plug>(leap-visit-linewise)', function()
    visit_linewise()
@@ -51,7 +51,14 @@ local function visit_text_object(prefix)
    if not ok or (c == vim.keycode('<esc>')) then
       return
    end
-   require('leap').visit { input = prefix .. c }
+   require('leap').visit {
+      input = prefix .. c,
+      linewise = vim.fn.mode(true):match('V') or (
+         -- `p` forces linewise, while `l` is aboult lines in the first
+         -- place (check remappings though).
+         (c == 'p' or c == 'l') and (vim.fn.maparg(prefix .. c) == '')
+      ),
+   }
 end
 map({ 'x', 'o' }, '<Plug>(leap-visit-text-object)', function()
    visit_text_object('a')

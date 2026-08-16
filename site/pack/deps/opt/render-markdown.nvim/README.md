@@ -280,8 +280,8 @@ require('render-markdown').setup({
         },
     },
     padding = {
-        -- Highlight to use when adding whitespace, should match background.
-        highlight = 'Normal',
+        -- Highlight to use when adding whitespace, should blend in with background.
+        highlight = 'RenderMarkdownPadding',
     },
     latex = {
         -- Turn on / off latex rendering.
@@ -980,7 +980,6 @@ require('render-markdown').setup({
         buftype = {
             nofile = {
                 render_modes = true,
-                padding = { highlight = 'NormalFloat' },
                 sign = { enabled = false },
             },
         },

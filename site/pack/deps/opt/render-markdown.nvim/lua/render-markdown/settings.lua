@@ -1493,7 +1493,6 @@ M.overrides.default = {
     buftype = {
         nofile = {
             render_modes = true,
-            padding = { highlight = 'NormalFloat' },
             sign = { enabled = false },
         },
     },
@@ -1527,8 +1526,8 @@ M.padding = {}
 
 ---@type render.md.padding.Config
 M.padding.default = {
-    -- Highlight to use when adding whitespace, should match background.
-    highlight = 'Normal',
+    -- Highlight to use when adding whitespace, should blend in with background.
+    highlight = 'RenderMarkdownPadding',
 }
 
 ---@return render.md.Schema

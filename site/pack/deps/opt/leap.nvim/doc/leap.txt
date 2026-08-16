@@ -98,7 +98,7 @@ except it auto-triggers even without |[count]| (`yrr{leap}` copies a line):
 Suggested arrangement: >lua
     vim.keymap.set({ 'n', 'o' }, 'gs', '<Plug>(leap-visit)')
     vim.keymap.set({ 'n', 'o' }, 'gS', '<Plug>(leap-visit-linewise)')
-    -- Mnemonic: "a/inner remote (text object)".
+    -- Mnemonic: "remote (text object)".
     vim.keymap.set({ 'x', 'o' }, 'ar', '<Plug>(leap-visit-text-object)')
     vim.keymap.set({ 'x', 'o' }, 'ir', '<Plug>(leap-visit-inner-text-object)')
     vim.keymap.set({ 'o' },      'rr', '<Plug>(leap-visit-line)')
@@ -120,6 +120,9 @@ Modifiers and input methods ~
 
 Search ~
 
+• The search can go horizontally offscreen for directional motions (those
+  targets can only be reached via |leap-traversal|).
+
 • The last character on a line can be targeted by pressing <space> after it.
   There is nothing special going on here: <space> is simply an alias for `\n`
   and `\r`, set in |leap.opts.equivalence_classes| by default.
@@ -139,14 +142,15 @@ Search ~
   implemented as a step-by-step replay of the original invocation's phases).
   *leap-smartcase*
 
-• |V| and |o_V| modes make the search skip the current line.
+Optimizations ~
 
 • A same-character pair (`==`) will match a longer such sequence (`=====`)
   only at the beginning, so that e.g. separator lines will not create
   unnecessary noise and eat up all the labels.
 
-• The search can go horizontally offscreen for directional motions (those
-  targets can only be reached via |leap-traversal|).
+• In linewise modes (|V|, |o_V|), all targets on a given line are treated as
+  equal, getting the same label. The search also skips the current line.
+  *leap-linewise-labeling*
 
 Sorting matches ~
 
@@ -272,7 +276,7 @@ Example configuration: >lua
     to consider.
 
                                                      *leap.opts.offset_labels*
-`offset_labels = true`
+`offset_labels = false`
 
     Display labels after the match instead of at the beginning. Only applies
     for |leap-preview|.
@@ -450,18 +454,22 @@ leap({opts})                                                     *leap.leap()*
 
     Parameters: ~
         {opts} Optional keyword arguments:
-               • {backward}? (`boolean`, default: `false`) Search backward
-                 instead of forward in the current window.
+               • {backward}? (`boolean`) Search backward instead of forward in
+                 the current window.
                • {windows}? (`table`) A list of windows (as |winid|s) to be
                  searched.
                • {offset}? (`-1|0|1`, default: `0`) Where to land with the
                  cursor compared to the target position. Can be wrapped in a
                  table (`{ -1 }`), which is interpreted as relative offset
                  (negative value means closer to the cursor).
-               • {inclusive}? (`boolean`, default: `false`) Make operations
-                 |inclusive| for forward jumps.
-               • {repeat}? (`boolean`, default: `false`) Leap again with the
-                 previous inputs and arguments.
+               • {inclusive}? (`boolean`) Make operations |inclusive| for
+                 forward jumps.
+               • {repeat}? (`boolean`) Leap again with the previous inputs and
+                 arguments.
+               • {linewise}? (`boolean`) Force |leap-linewise-labeling|. The
+                 use case is when invoked as |leap.visit()|'s `jumper` from
+                 Normal mode, and the operation itself is supposed to be
+                 linewise (we have no other way to know that).
 
                • {opts}? (`table`) A table like |leap.opts|, to override any
                  default setting for the specific call. Example: >lua
@@ -548,7 +556,7 @@ visit({opts})                                                   *leap.visit()*
                     vim.keymap.set({ 'n', 'o' }, 'g?', function()
                       require('leap').visit { jumper = '?' }
                     end)
-
+<
                  Vim tip: use |c_CTRL-G| and |c_CTRL-T| to move between
                  matches without finishing the search.
 
@@ -556,6 +564,8 @@ visit({opts})                                                   *leap.visit()*
                  |nvim_feedkeys()|.
                • {use_count}? (`boolean`, default: `true`) Feed |v:count|
                  on arrival.
+               • {linewise}? (`boolean`) Use |leap-linewise-labeling|. Only
+                 applies if no custom `jumper` is specified, obviously.
 
 ==============================================================================
 EVENTS                                                           *leap-events*
@@ -594,7 +604,7 @@ define custom behaviours for it: >lua
         end
       end
     })
-
+<
                                                         *leap-visit-autopaste*
 Automatic paste after yanking in Visitor mode ~
 

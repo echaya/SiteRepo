@@ -1,5 +1,5 @@
 *render-markdown.txt*                       Improve viewing Markdown in Neovim
-                                 For NVIM v0.12.3    Last change: 2026 June 18
+                               For NVIM v0.12.4    Last change: 2026 August 11
 
 ==============================================================================
 Table of Contents                          *render-markdown-table-of-contents*
@@ -347,8 +347,8 @@ Default Configuration ~
             },
         },
         padding = {
-            -- Highlight to use when adding whitespace, should match background.
-            highlight = 'Normal',
+            -- Highlight to use when adding whitespace, should blend in with background.
+            highlight = 'RenderMarkdownPadding',
         },
         latex = {
             -- Turn on / off latex rendering.
@@ -1047,7 +1047,6 @@ Default Configuration ~
             buftype = {
                 nofile = {
                     render_modes = true,
-                    padding = { highlight = 'NormalFloat' },
                     sign = { enabled = false },
                 },
             },

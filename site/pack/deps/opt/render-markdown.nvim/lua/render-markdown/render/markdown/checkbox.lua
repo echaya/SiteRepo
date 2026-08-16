@@ -98,6 +98,7 @@ function Render:checkbox()
     local used = overlay:width()
     if not overlay:empty() then
         self.marks:add(self.config, 'check_icon', row, start_col, {
+            hl_mode = 'combine',
             virt_text = overlay:get(),
             virt_text_pos = 'overlay',
         })
@@ -106,6 +107,7 @@ function Render:checkbox()
     local inline = line:sub(used + 1, line:width())
     if not inline:empty() then
         self.marks:add(self.config, 'check_icon', row, end_col, {
+            hl_mode = 'combine',
             virt_text = inline:get(),
             virt_text_pos = 'inline',
         })

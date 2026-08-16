@@ -98,7 +98,7 @@ Recommended starter configuration:
 vim.keymap.set({ 'n', 'x', 'o' }, 's', '<Plug>(leap)')
 vim.keymap.set('n',               'S', '<Plug>(leap-from-window)')
 
--- Visit (remote operations)
+-- Visit (jump - operate - jump back)
 vim.keymap.set({ 'n', 'o' }, 'gs', '<Plug>(leap-visit)')
 vim.keymap.set({ 'n', 'o' }, 'gS', '<Plug>(leap-visit-linewise)')
 vim.keymap.set({ 'x', 'o' }, 'ar', '<Plug>(leap-visit-text-object)')
@@ -174,14 +174,15 @@ is the hardcoded LHS of the mapping, and `p` is the additional input.)
 
 > [!Tip]
 > This feature makes exchanging two regions of text moderately simple, without
-> needing a custom plugin: delete region A + remotely select region B + `pP`.
-> Example (swapping two words): `diw gs{leap}iw pP`.
+> needing a custom plugin: delete region A + visit region B + `pP`. Example
+> (swapping two words): `diw gs{leap}iw pP`.
 
 **Icing on the cake: automatic paste after yanking**
 
-With this, you can clone regions in the blink of an eye, even from another
-window (just `ygs{leap}ap`, or, with predefiend remote text object,
-`yarp{leap}`, and voilà, the remote paragraph appears there):
+By setting an autocommand on `VisitDone`, you can clone regions in the blink of
+an eye, even from another window (just `ygs{leap}ap`, or, with predefiend
+remote text object, `yarp{leap}`, and voilà, the remote paragraph appears
+there):
 
 ```lua
 vim.api.nvim_create_autocmd('User', {
@@ -429,16 +430,6 @@ See [Extending Leap](#extending-leap) for more.
 
 ```lua
 require('leap').opts.preview = false
-```
-
-</details>
-
-
-<details>
-<summary>Always show labels at the beginning of the match</summary>
-
-```lua
-require('leap').opts.offset_labels = false
 ```
 
 </details>

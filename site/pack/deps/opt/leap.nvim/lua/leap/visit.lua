@@ -5,6 +5,7 @@ local function visit(kwargs)
    local jumper = kwargs.jumper
    local input = kwargs.input
    local use_count = kwargs.count ~= false
+   local linewise = kwargs.linewise
 
    local state = {
       args = kwargs,
@@ -37,6 +38,7 @@ local function visit(kwargs)
       require('leap').leap {
          windows = require('leap.user').get_focusable_windows(),
          opts = no_autojump and { safe_labels = '' } or nil,
+         linewise = linewise,
       }
    end
 

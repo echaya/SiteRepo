@@ -315,6 +315,7 @@ local function prepare_labeled_targets(targets, kwargs)
    local can_traverse = kwargs.can_traverse
    local force_noautojump = kwargs.force_noautojump
    local multi_windows = kwargs.multi_windows
+   local as_linewise = kwargs.linewise  -- visit() might force this
 
    local labels, safe_labels = opts.labels, opts.safe_labels
    if can_traverse then
@@ -368,25 +369,50 @@ local function prepare_labeled_targets(targets, kwargs)
    -- Note that these are once-and-for-all fixed attributes, regardless
    -- of the actual UI state ('beacons').
    local function set_labels()
+      local is_linewise = vim.fn.mode(1):match('V') or as_linewise
       -- We need to handle multibyte chars anyway, it's better to create
       -- a table than calling `strcharpart()` for each access.
       local labelset = split(targets.label_set, '\\zs')
       local len_labelset = #labelset
+
+      -- In linewise modes, assign the same labels on a given line.
+      local label_of_line = {}
+      if is_linewise and targets.autojump then
+         -- "No label for this line".
+         label_of_line[targets[1].pos[1]] = '__autojump__'
+      end
+      local group_of_line = {}
+      local labels_reused = 0
+
       local skipped = targets.autojump and 1 or 0
+
       for i = (skipped + 1), #targets do
          local target = targets[i]
          if target then
-            local ii = i - skipped
             if target.is_offscreen then
                skipped = skipped + 1
             else
-               local mod = ii % len_labelset
-               if mod == 0 then
-                  target.label = labelset[len_labelset]
-                  target.group = floor(ii / len_labelset)
+               local reused_label = is_linewise and label_of_line[target.pos[1]] or nil
+               if reused_label then
+                  if reused_label ~= '__autojump__' then
+                     target.label = reused_label
+                     target.group = group_of_line[target.pos[1]]
+                     labels_reused = labels_reused + 1
+                  end
                else
-                  target.label = labelset[mod]
-                  target.group = floor(ii / len_labelset) + 1
+                  local i_label = i - skipped - labels_reused
+                  local mod = i_label % len_labelset
+                  if mod ~= 0 then
+                     target.label = labelset[mod]
+                     target.group = floor(i_label / len_labelset) + 1
+                  else
+                     target.label = labelset[len_labelset]
+                     target.group = floor(i_label / len_labelset)
+                  end
+                  if is_linewise then
+                     label_of_line[target.pos[1]] = target.label
+                     group_of_line[target.pos[1]] = target.group
+                  end
                end
             end
          end
@@ -833,6 +859,7 @@ local function leap(kwargs)
                or is_op_mode and #targets > 1
             ),
          multi_windows = windows and #windows > 1,
+         linewise = kwargs.linewise,
       })
    end
 

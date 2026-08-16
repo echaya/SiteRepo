@@ -80,6 +80,11 @@ function M.init()
             default = true,
         })
     end
+
+    vim.api.nvim_set_hl(0, M.prefix .. 'Padding', {
+        default = true,
+    })
+
     -- reload generated colors on color scheme change
     vim.api.nvim_create_autocmd('ColorScheme', {
         group = vim.api.nvim_create_augroup('RenderMarkdownColors', {}),
