@@ -14,29 +14,30 @@ USAGE                                                             *leap-usage*
 
 • Initiate the command in a given scope (|leap-mappings|), and start typing a
   2-character search pattern ({char1}{char2}). After typing {char1}, you can
-  see label characters appearing next to some pairs. They are not active yet,
-  but this preview allows you to process them in the background.
-  Note: To keep visual noise tolerable, preview is only enabled at word
-  boundaries by default (|leap.opts.preview|). *leap-preview*
+  see label characters appearing on some pairs. They are not active yet, but
+  this preview allows you to process them in the background. *leap-preview*
 
 • Typing {char2} filters the matches, and the labels are now active. When the
-  closest pair is not labeled, you automatically jump there. If that was your
-  target, you can safely ignore the labels remaining on the screen - those
-  will not conflict with any sensible command, and will disappear on the next
-  keypress (|leap.opts.safe_labels|). *leap-autojump*
+  closest pair is not labeled, you automatically jump there, and might safely
+  ignore the remaining labels (those will not conflict with any sensible
+  command, and will disappear on the next keypress) (|leap.opts.safe_labels|).
+  *leap-autojump*
 
-• Else: type the given label character to jump. If there are more matches than
-  available labels, use <space> and <backspace> to move between groups
+  Else type a label character to jump. When there are more matches than
+  available labels, <space> and <backspace> can switch groups
   (|leap.opts.keys|).
 
 To target the last character on a line, type {char}<space>; to target empty
 lines, type <space><space> (|leap-eol|). Use <enter> as a shortcut anytime
 (|leap-next|).
 
+Note: To keep visual noise tolerable, preview is only enabled at word
+boundaries by default (|leap.opts.preview|).
+
 See |leap-features| for lots of additional details.
 
 "Visitor mode" is another layer on top of the above, that allows performing an
-action in a remote location: |leap.visit()|.
+action in a remote location: see |leap-visit|.
 
 ==============================================================================
 MAPPINGS                                                       *leap-mappings*
@@ -58,52 +59,19 @@ common/useful argument tables:
     <Plug>(leap-from-window)       |  Other windows   |          |
     <Plug>(leap-anywhere)          |  All windows     |          |
 
-Suggested arrangement: >lua
-    vim.keymap.set({ 'n', 'x', 'o' }, 's', '<Plug>(leap)')
-    vim.keymap.set({ 'x', 'o' },      'x', '<Plug>(leap-next-to)')
-    vim.keymap.set({ 'n' },           'S', '<Plug>(leap-from-window)')
-<
-    Note that each command overridden by our mappings has an equivalent:
-    |s| = `cl`; |S| = |cc|; |v_s| = |v_c|; |v_S| = |v_c| in |V|; |v_x| = |v_d|.
-
 Note: The trade-off with `<Plug>(leap-anywhere)` is that whenever multiple
 windows are open, you can rarely expect |leap-autojump|s, as it is only
 allowed when all matches are in one window (this is an intentional restriction
 to avoid confusing behaviour and implementation problems).
 
-Visit ~
+Suggested arrangement ~
+>lua
+    vim.keymap.set({ 'n', 'x', 'o' }, 's',  '<Plug>(leap)')
+    vim.keymap.set({ 'x', 'o' },      'x',  '<Plug>(leap-next-to)')
+    vim.keymap.set({ 'n' },           'S',  '<Plug>(leap-from-window)')
 
-There are also a few useful <Plug> keys with different `input`s for
-|leap.visit()|.
-
-When starting from Normal mode, these automatically start Visual selection:
-
-    <Plug>(leap-visit)
-    <Plug>(leap-visit-linewise)
-
-The linewise version can also take [count], e.g. `d2gS{leap}` deletes two
-lines right away.
-
-These expect another character as input before leaping, and select the given
-(a/i) text object at the destination (`yarp{leap}` yanks a remote paragraph):
-
-    <Plug>(leap-visit-text-object)
-    <Plug>(leap-visit-inner-text-object)
-
-Useful shortcut for a frequent operation: like `<Plug>(visit-linewise)`,
-except it auto-triggers even without |[count]| (`yrr{leap}` copies a line):
-
-    <Plug>(leap-visit-line)
-
-Suggested arrangement: >lua
-    vim.keymap.set({ 'n', 'o' }, 'gs', '<Plug>(leap-visit)')
-    vim.keymap.set({ 'n', 'o' }, 'gS', '<Plug>(leap-visit-linewise)')
-    -- Mnemonic: "remote (text object)".
-    vim.keymap.set({ 'x', 'o' }, 'ar', '<Plug>(leap-visit-text-object)')
-    vim.keymap.set({ 'x', 'o' }, 'ir', '<Plug>(leap-visit-inner-text-object)')
-    vim.keymap.set({ 'o' },      'rr', '<Plug>(leap-visit-line)')
-<
-See also |leap-visit-autopaste|.
+Note that each command overridden by our mappings has an equivalent:
+|s| = `cl`; |S| = |cc|; |v_s| = |v_c|; |v_S| = |v_c| in |V|; |v_x| = |v_d|.
 
 ==============================================================================
 FEATURES                                                       *leap-features*
@@ -254,7 +222,7 @@ Example configuration: >lua
     arguments: the character preceding the match, and the matched pair itself.
     Missing characters (line start/end) are represented by empty strings.
 
-    The default filter shows preview only for matches at word boundaries
+    The default filter shows label preview only for matches at word boundaries
     (roughly speaking): >lua
         -- foobar[baaz] = quux
         -- ^    ^^^  ^^ ^ ^  ^
@@ -279,7 +247,7 @@ Example configuration: >lua
 `offset_labels = false`
 
     Display labels after the match instead of at the beginning. Only applies
-    for |leap-preview|.
+    to |leap-preview|.
 
                                                *leap.opts.equivalence_classes*
 `equivalence_classes =` >
@@ -534,39 +502,6 @@ leap({opts})                                                     *leap.leap()*
                  argument. (You can obviously implement some custom jump logic
                  here too.)
 
-visit({opts})                                                   *leap.visit()*
-    Allows performing an action in a remote location: it forgets the current
-    mode or pending operator, lets you jump to anywhere on the tab page, then
-    continues where it left off. You can think of this state as a meta-mode:
-    once switching (back) to Normal mode from another mode, the cursor jumps
-    back to the original position, as if you had operated from the distance.
-
-    Parameters: ~
-        {opts} Optional keyword arguments:
-               • {jumper}? (`function|string`) Lua callback that moves the
-                 cursor to the reference point. The default is a slightly
-                 tweaked `<Plug>(leap-anywhere)`.
-
-                 You can also use the native search commands, that is, target
-                 off-screen regions, with the special jumper values `/` and
-                 `?`: >lua
-                    vim.keymap.set({ 'n', 'o' }, 'g/', function()
-                      require('leap').visit { jumper = '/' }
-                    end)
-                    vim.keymap.set({ 'n', 'o' }, 'g?', function()
-                      require('leap').visit { jumper = '?' }
-                    end)
-<
-                 Vim tip: use |c_CTRL-G| and |c_CTRL-T| to move between
-                 matches without finishing the search.
-
-               • {input}? (`string`) Input keys to be fed on arrival via
-                 |nvim_feedkeys()|.
-               • {use_count}? (`boolean`, default: `true`) Feed |v:count|
-                 on arrival.
-               • {linewise}? (`boolean`) Use |leap-linewise-labeling|. Only
-                 applies if no custom `jumper` is specified, obviously.
-
 ==============================================================================
 EVENTS                                                           *leap-events*
 
@@ -574,7 +509,6 @@ The |User| event is triggered with the following patterns:
 
 *LeapEnter* on entering Leap
 *LeapLeave* on exiting Leap
-*VisitDone* on returning from Visitor mode
 
 Custom behaviours for specific invocations ~
 
@@ -605,21 +539,126 @@ define custom behaviours for it: >lua
       end
     })
 <
+==============================================================================
+VISITOR MODE                                                      *leap-visit*
+
+`visit.lua` is a module bundled with |leap.nvim| for "remote operations", that
+can also be used in a standalone fashion.
+
+visit({opts})                                                   *leap.visit()*
+    A wrapper around some jump functionality, allowing performing an action in
+    a remote location: it forgets the current mode or pending operator,
+    invokes the provided callback, then continues where it left off. Once
+    switching to Normal mode from any other mode, the cursor returns to its
+    original position, as if you had operated from the distance.
+
+    Make sure to check out |leap-visit-autopaste|, which makes this feature
+    even more useful.
+
+                                                           *leap-visit-visual*
+    When invoked from Visual mode, `visit()` does two additional things:
+    • Before jumping, it yanks the selection to the default register.
+    • On return, it reselects the previous Visual area.
+
+    This greatly simplifies otherwise nontrivial operations. Assuming
+    automatic pasting configured, after selecting region B at the destination:
+    • `y` makes region A shapeshift into B (cloning).
+    • `d` is the James Cameron version of the above ("typically, the subject
+      being copied is terminated").
+    • `p` swaps region A and B (remember, |v_p| yanks implicitly).
+    • `P` makes region B shapeshift into A (mentioned for the sake of
+      completeness).
+
+    Examples (with |leap-mappings|):
+        - Swapping two lines: `Vgs{leap}p`.
+        - Cloning the contents of a remote tag block: `vitirt{leap}y`.
+
+    Parameters: ~
+        {opts} Optional keyword arguments:
+               • {jumper}? (`function|string|false`) Lua callback that moves
+                 the cursor to the reference point. The default is `leap()`
+                 scoped to all windows on the tab page, with some tweaks.
+
+                 With the special jumper values `/` and `?`, you can also use
+                 the native search commands, that is, target off-screen
+                 regions: >lua
+                    vim.keymap.set({ 'n', 'x' }, 'g/', function()
+                      require('leap').visit { jumper = '/' }
+                    end)
+                    vim.keymap.set({ 'n', 'x' }, 'g?', function()
+                      require('leap').visit { jumper = '?' }
+                    end)
+<
+                 Vim tip: use |c_CTRL-G| and |c_CTRL-T| to move between
+                 matches without finishing the search.
+
+                 By setting the jumper to `false` ("travel by your own
+                 means"), you can define a Visual command as a simple
+                 vim-exchange replacement: >lua
+                    vim.keymap.set('x', 'X', function()
+                      require('leap').visit { jumper = false }
+                    end)
+<
+               • {input}? (`string`) Input keys to be fed on arrival via
+                 |nvim_feedkeys()|.
+               • {use_count}? (`boolean`, default: `true`) Feed |v:count|
+                 on arrival.
+               • {linewise}? (`boolean`) Use |leap-linewise-labeling|. Only
+                 applies if no custom `jumper` is specified, obviously.
+
+Mappings ~
+
+There are a few useful <Plug> keys available, calling |leap.visit()| with
+different `input`s.
+
+When starting from Normal mode, these automatically start Visual selection:
+
+    <Plug>(leap-visit)
+    <Plug>(leap-visit-linewise)
+
+The linewise version can also take [count], e.g. `d2gS{leap}` deletes two
+lines right away.
+
+These expect another character as input before leaping, and select the given
+(a/i) text object at the destination (`yarp{leap}` yanks a remote paragraph):
+
+    <Plug>(leap-visit-text-object)
+    <Plug>(leap-visit-inner-text-object)
+
+Useful shortcut for a frequent operation: like `<Plug>(leap-visit-linewise)`,
+except it auto-triggers even without |[count]| (`yrr{leap}` copies a line):
+
+    <Plug>(leap-visit-line)
+
+Suggested mappings:
+>lua
+    local map = vim.keymap.set
+    map({ 'n', 'x', 'o' }, 'gs', '<Plug>(leap-visit)')
+    map({ 'n', 'x', 'o' }, 'gS', '<Plug>(leap-visit-linewise)')
+    map({ 'x', 'o' },      'ar', '<Plug>(leap-visit-text-object)')
+    map({ 'x', 'o' },      'ir', '<Plug>(leap-visit-inner-text-object)')
+    map({ 'o' },           'rr', '<Plug>(leap-visit-line)')
+<
                                                         *leap-visit-autopaste*
-Automatic paste after yanking in Visitor mode ~
+Automatic pasting on return ~
 
-The preeminent use case of |VisitDone| is pasting yanked content: >lua
-
+|User| is triggered with *VisitDone* on returning from a visit. The preeminent
+use case is pasting content:
+>lua
     vim.api.nvim_create_autocmd('User', {
       pattern = 'VisitDone',
-      group = vim.api.nvim_create_augroup('VisitorMode', {}),
+      group = vim.api.nvim_create_augroup('Visit', {}),
       callback = function(event)
-        -- Only paste from the default register.
-        if vim.v.operator == 'y' and event.data.register == '"' then
+        if
+          -- See |leap-visit-visual|.
+          (event.data.mode:match('^[vV\22]') or (vim.v.operator == 'y'))
+          -- Skip if some special register was in use.
+          and event.data.register == '"'
+        then
           vim.cmd('normal! p')
         end
       end,
     })
-
+<
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:

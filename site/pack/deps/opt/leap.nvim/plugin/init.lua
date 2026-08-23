@@ -25,21 +25,22 @@ map({ 'n', 'x', 'o' }, '<Plug>(leap-anywhere)', function()
    require('leap').leap { windows = require('leap.user').get_focusable_windows() }
 end)
 
-map({ 'n', 'o' }, '<Plug>(leap-visit)', function()
-   local input = vim.fn.mode(true):match('o') and '' or 'v'
+map({ 'n', 'x', 'o' }, '<Plug>(leap-visit)', function()
+   local input = (vim.fn.mode(true) == 'n') and 'v' or ''
    require('leap').visit { input = input }
 end)
 
 local function visit_linewise(autotrigger)
-   local input = 'V' .. (
-      vim.v.count > 1 and (vim.v.count - 1 .. 'j')
+   local input = (vim.fn.mode(true) == 'V') and '' or 'V'
+   if vim.v.count > 1 then
+      input = input .. ((vim.v.count - 1) .. 'j')
+   elseif ((vim.v.count == 1) or autotrigger) and vim.fn.mode(true):match('o') then
       -- Move to trigger the operation.
-      or (vim.fn.mode(true):match('o') and (vim.v.count == 1 or autotrigger)) and 'l'
-      or ''
-   )
+      input = input .. 'l'
+   end
    require('leap').visit { input = input, count = false, linewise = true }
 end
-map({ 'n', 'o' }, '<Plug>(leap-visit-linewise)', function()
+map({ 'n', 'x', 'o' }, '<Plug>(leap-visit-linewise)', function()
    visit_linewise()
 end)
 map({ 'o' }, '<Plug>(leap-visit-line)', function()

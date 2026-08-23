@@ -11,17 +11,15 @@ very quickly, with near-zero mental overhead.
 
 * Initiate the command in a given scope, and start typing a 2-character search
   pattern (`{char1}{char2}`). After typing `{char1}`, you can see **label
-  characters** appearing next to some pairs. **They are not active yet, but
-  this preview allows you to process them in the background**.
+  characters** appearing on some pairs. **They are not active yet**, but this
+  **preview** allows you to process them in the background.
 
 * Typing `{char2}` filters the matches, and the labels are now active. When the
-  closest pair is not labeled, you automatically jump there. If that was your
-  target, you can safely ignore the labels remaining on the screen - those will
-  not conflict with any sensible command, and will disappear on the next
-  keypress.
-
-* Else: type the given label character to jump. If there are more matches than
-  available labels, use `<space>` and `<backspace>` to move between groups.
+  closest pair is not labeled, you automatically jump there, and might safely
+  ignore the remaining labels (they will not conflict with any sensible
+  command, and will disappear on the next keypress). Else type a label
+  character to jump. When there are more matches than available labels,
+  `<space>` and `<backspace>` can switch groups.
 
 To target the last character on a line, type `{char}<space>`; to target empty
 lines, type `<space><space>`. Use `{char}<enter>` as a shortcut to the closest
@@ -50,12 +48,13 @@ At the same time, it reduces mental effort by all possible means:
 * _You don't have to pause in the middle_: if typing at a moderate speed, your
   mind can prepare for the next steps ahead of time.
 
-### Showcase
+### Visitor mode
 
-This efficient mode of navigation allows building interesting features on top
-of it. "Text editing at the speed of thought" has become a bit of an inflated
-phrase in the Vim world, but cloning an arbitrary syntax tree node from an
-arbitrary window with eight keystrokes speaks for itself:
+Another layer on top of the above is the so-called Visitor mode, opening up a
+whole new set of possibilities. "Text editing at the speed of thought" has
+become a bit of an inflated phrase in the Vim world, but cloning an arbitrary
+syntax tree node from an arbitrary window with eight keystrokes speaks for
+itself:
 
 <figure>
     <img src="../media/showcase.gif?raw=true" width="80%" alt="Leap in action" title="Leap in action" />
@@ -95,29 +94,31 @@ Recommended starter configuration:
 
 ```lua
 -- Jump
-vim.keymap.set({ 'n', 'x', 'o' }, 's', '<Plug>(leap)')
-vim.keymap.set('n',               'S', '<Plug>(leap-from-window)')
+vim.keymap.set({ 'n', 'x', 'o' }, 's',  '<Plug>(leap)')
+vim.keymap.set('n',               'S',  '<Plug>(leap-from-window)')
 
 -- Visit (jump - operate - jump back)
-vim.keymap.set({ 'n', 'o' }, 'gs', '<Plug>(leap-visit)')
-vim.keymap.set({ 'n', 'o' }, 'gS', '<Plug>(leap-visit-linewise)')
-vim.keymap.set({ 'x', 'o' }, 'ar', '<Plug>(leap-visit-text-object)')
-vim.keymap.set({ 'x', 'o' }, 'ir', '<Plug>(leap-visit-inner-text-object)')
-vim.keymap.set({ 'o' },      'rr', '<Plug>(leap-visit-line)')
+vim.keymap.set({ 'n', 'x', 'o' }, 'gs', '<Plug>(leap-visit)')
+vim.keymap.set({ 'n', 'x', 'o' }, 'gS', '<Plug>(leap-visit-linewise)')
+vim.keymap.set({ 'x', 'o' },      'ar', '<Plug>(leap-visit-text-object)')
+vim.keymap.set({ 'x', 'o' },      'ir', '<Plug>(leap-visit-inner-text-object)')
+vim.keymap.set({ 'o' },           'rr', '<Plug>(leap-visit-line)')
 
+-- Automatic paste on return.
 vim.api.nvim_create_autocmd('User', {
   pattern = 'VisitDone',
-  group = vim.api.nvim_create_augroup('VisitorMode', {}),
+  group = vim.api.nvim_create_augroup('Visit', {}),
   callback = function(event)
-    if vim.v.operator == 'y' and event.data.register == '"' then
+    if
+      (event.data.mode:match('^[vV\22]') or (vim.v.operator == 'y'))
+      and event.data.register == '"'
+    then
       vim.cmd('normal! p')
     end
   end,
 })
 
 -- Treeselect
--- Tip: If you have set up remote text objects (`ar`/`ir`), `arn` will
--- work as expected (visit node).
 vim.keymap.set({ 'x', 'o' }, 'an', function()
   require('leap.treesitter').select {
     opts = require('leap.user').with_traversal_keys('n', 'N')
@@ -141,43 +142,44 @@ tab page, then continues where it left off. Once returning to Normal mode, it
 jumps back to the original position, as if you had operated from the distance.
 
 ```lua
--- For example, `gs{leap}yap` or `ygs{leap}ap` will yank the paragraph
--- at the position specified by `{leap}`.
 vim.keymap.set({ 'n', 'x', 'o' }, 'gs', function()
   require('leap').visit()
 end)
 ```
 
-The recommended way though is automatically starting Visual mode after jumping,
-so that from Normal mode you can e.g. `gs{leap}apy` (_leap-select-op_). This is
-the same amount of keystrokes as the _leap-op-select_ (`gs{leap}yap`) or the
-_op-leap-select_ (`ygs{leap}ap`) version, but here you have visual feedback,
-can move around freely with arbitrary motion combinations, and correct
-mistakes. The `input` parameter lets you feed keystrokes automatically:
+With the above mapping, `gs{leap}yap` or `ygs{leap}ap` will yank the paragraph
+at the position specified by `{leap}`.
+
+**Feeding input**
+
+The recommended way though is automatically entering Visual mode on arrival, so
+that from Normal mode you can e.g. `gs{leap}apy` (_leap-select-op_). This is
+the same number of keystrokes as `gs{leap}yap` (_leap-op-select_) or
+`ygs{leap}ap` (_op-leap-select_), but you get visual feedback, can move around
+freely with arbitrary motion combinations, and correct mistakes. The `input`
+parameter lets you feed keystrokes:
 
 ```lua
-vim.keymap.set({ 'n', 'o' }, 'gs', function()
-  require('leap').visit { input = vim.fn.mode(true):match('o') and '' or 'v' }
+vim.keymap.set({ 'n', 'x', 'o' }, 'gs', function()
+  require('leap').visit { input = (vim.fn.mode(true) == 'n') and 'v' or '' }
 end)
 ```
 
 The keys `<Plug>(leap-visit)` and `<Plug>(leap-visit-linewise)` do this by
-default (the above is the actual body or `<Plug>(leap-visit)` by the way).
+default (the above is the actual body or `<Plug>(leap-visit)`).
 
-By giving text objects as `input`, you can create _remote text objects_, for an
-even more intuitive workflow (`yarp{leap}` - "yank a remote paragraph at...").
-For this, you can use the readily available `<Plug>(leap-visit-text-object)`
-and `<Plug>(leap-visit-inner-text-object)` keys. They are simple wrappers that
-consume an additional input character before calling `visit()`, and feed that
-character prefixed with `a` and `i`, respectively. (In `arp`, for example, `ar`
-is the hardcoded LHS of the mapping, and `p` is the additional input.)
+**Remote text objects**
 
-> [!Tip]
-> This feature makes exchanging two regions of text moderately simple, without
-> needing a custom plugin: delete region A + visit region B + `pP`. Example
-> (swapping two words): `diw gs{leap}iw pP`.
+By giving _text objects_ as `input`, you can define "remote" text objects, for
+an even more intuitive workflow (`yarp{leap}` - "yank a remote paragraph
+at..."). Instead of doing this for each, you can use the convenient
+`<Plug>(leap-visit-text-object)` and `<Plug>(leap-visit-inner-text-object)`
+keys: they are simple wrappers that first read an additional input character
+from the user, and then feed that prefixed with `a` and `i`, respectively, to
+`visit()`. (In `arp`, the key itself is mapped to `ar`, and `p` is the dynamic
+input.)
 
-**Icing on the cake: automatic paste after yanking**
+**Icing on the cake: automatic paste on return**
 
 By setting an autocommand on `VisitDone`, you can clone regions in the blink of
 an eye, even from another window (just `ygs{leap}ap`, or, with predefiend
@@ -187,15 +189,41 @@ there):
 ```lua
 vim.api.nvim_create_autocmd('User', {
   pattern = 'VisitDone',
-  group = vim.api.nvim_create_augroup('VisitorMode', {}),
+  group = vim.api.nvim_create_augroup('Visit', {}),
   callback = function(event)
-    -- Do not paste if some special register was in use.
-    if vim.v.operator == 'y' and event.data.register == '"' then
+    if
+      -- See the next section (Visual mode).
+      (event.data.mode:match('^[vV\22]') or (vim.v.operator == 'y'))
+      -- Skip if some special register was in use.
+      and event.data.register == '"'
+    then
       vim.cmd('normal! p')
     end
   end,
 })
 ```
+
+**Region manipulations in Visual mode**
+
+When invoked from Visual mode, `visit()` does two additional things:
+
+- Before jumping, it yanks the selection to the default register.
+- On return, it reselects the previous Visual area.
+
+This greatly simplifies otherwise nontrivial operations. Assuming automatic
+pasting configured, after selecting region B at the destination:
+
+- `y` makes region A shapeshift into B (cloning).
+- `d` is the James Cameron version of the above ("typically, the subject being
+  copied is terminated").
+- `p` swaps region A and B (remember, `p` yanks implicitly).
+- `P` makes region B shapeshift into A (mentioned for the sake of
+  completeness).
+
+Examples:
+
+- Swapping two lines: `Vgs{leap}p`.
+- Cloning the contents of a remote tag block: `vitirt{leap}y`.
 
 </details>
 

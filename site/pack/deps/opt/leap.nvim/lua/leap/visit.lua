@@ -16,15 +16,42 @@ local function visit(kwargs)
    }
 
    local src_win = vim.fn.win_getid()
-   local saved_view = vim.fn.winsaveview()
+   local saved_view = vim.fn.winsaveview()  -- (1,0)
    -- Set an extmark as an anchor, so that we can execute remote delete
    -- commands in the backward direction, and move together with the text.
    local anch_ns = api.nvim_create_namespace('')
-   local anch_id = api.nvim_buf_set_extmark(
-      0, anch_ns, saved_view.lnum - 1, saved_view.col, {}
-   )
+   local anch_id
+   if state.mode:match('^[vV\22]') then
+      -- In Visual mode, anchor both ends, as we want to reselect the
+      -- area on return (so that we can replace the selection with text
+      -- yanked/deleted at the destination).
+      local start_pos  -- (1,1)
+      local end_pos    -- (1,1)
+      local _, o_lnum, o_col = unpack(vim.fn.getpos('v'))
+      if
+         saved_view.lnum < o_lnum
+         or (saved_view.lnum == o_lnum and (saved_view.col + 1) < o_col)
+      then
+         start_pos = { saved_view.lnum, saved_view.col + 1 }
+         end_pos = { o_lnum, o_col }
+      else
+         start_pos = { o_lnum, o_col }
+         end_pos = { saved_view.lnum, saved_view.col + 1 }
+      end
+      local start_lnum, start_col = unpack(start_pos)
+      local end_lnum, end_col = unpack(end_pos)
+      anch_id = --[[(1,1)->(0,0)]] api.nvim_buf_set_extmark(
+         0, anch_ns, start_lnum - 1, start_col - 1, {
+            end_row = end_lnum - 1, end_col = end_col - 1,
+         }
+      )
+   else
+      anch_id = --[[(1,0)->(0,0)]] api.nvim_buf_set_extmark(
+         0, anch_ns, saved_view.lnum - 1, saved_view.col, {}
+      )
+   end
 
-   jumper = jumper or function()
+   jumper = (jumper == nil) and (function()
       -- We are back in Normal mode when this call is executed, so _we_
       -- should tell Leap whether it is OK to autojump.
       -- If `input` is given, all bets are off - before moving on to a
@@ -40,13 +67,20 @@ local function visit(kwargs)
          opts = no_autojump and { safe_labels = '' } or nil,
          linewise = linewise,
       }
-   end
+   end) or jumper  -- false is meaningful
 
    local function to_normal_mode()
-      -- I'm just cargo-culting this TBH, but the combination of
-      -- the two indeed seems necessary for O-p mode.
-      api.nvim_feedkeys(vim.keycode('<C-\\><C-N>'), 'nx', false)
-      api.nvim_feedkeys(vim.keycode('<esc>'), 'n', false)
+      if state.mode:match('^[vV\22]') then
+         -- In Visual mode, yank the selection to the default register
+         -- before jumping (like |v_p| does before pasting), making it
+         -- easy to exchange regions.
+         api.nvim_feedkeys('y', 'n', false)
+      else
+         -- I'm just cargo-culting this TBH, but the combination of
+         -- the two indeed seems necessary for O-p mode.
+         api.nvim_feedkeys(vim.keycode('<C-\\><C-N>'), 'nx', false)
+         api.nvim_feedkeys(vim.keycode('<esc>'), 'n', false)
+      end
    end
 
    local function back_to_pending_action()
@@ -64,7 +98,7 @@ local function visit(kwargs)
    local function cursor_moved()
       return vim.fn.win_getid() ~= src_win
          or vim.fn.line('.') ~= saved_view.lnum
-         or vim.fn.col('.') ~= saved_view.col + 1
+         or vim.fn.col('.') ~= --[[0-]] saved_view.col + 1
    end
 
    local function restore_cursor()
@@ -72,8 +106,16 @@ local function visit(kwargs)
          api.nvim_set_current_win(src_win)
       end
       vim.fn.winrestview(saved_view)
-      local anch_pos = api.nvim_buf_get_extmark_by_id(0, anch_ns, anch_id, {})
-      api.nvim_win_set_cursor(0, { anch_pos[1] + 1, anch_pos[2] })
+      local anch = api.nvim_buf_get_extmark_by_id(0, anch_ns, anch_id, {
+        details = true
+      })
+      api.nvim_win_set_cursor(0, { anch[1] + 1, anch[2] })  -- (0,0)->(1,0)
+      if state.mode:match('^[vV\22]') then
+         -- Reselect the original area.
+         api.nvim_feedkeys(state.mode, 'nx', false)
+         -- (0,0)->(1,0)
+         api.nvim_win_set_cursor(0, { anch[3].end_row + 1, anch[3].end_col })
+      end
       api.nvim_buf_clear_namespace(0, anch_ns, 0, -1)
    end
 
@@ -119,7 +161,10 @@ local function visit(kwargs)
    end
 
    local function after_jump()
-      if not cursor_moved() then return end
+      if not cursor_moved() then
+         api.nvim_buf_clear_namespace(0, anch_ns, 0, -1)
+         return
+      end
       -- Add target postion to jumplist.
       vim.cmd('norm! m`')
       back_to_pending_action()  -- (feedkeys...)
@@ -134,7 +179,10 @@ local function visit(kwargs)
    to_normal_mode()  -- (feedkeys...)
    -- Wait for `feedkeys`.
    vim.schedule(function()
-      if type(jumper) == 'function' then
+      if jumper == false then
+         -- Use case: exchanging nearby regions (Visual mode).
+         register_followup_actions()
+      elseif type(jumper) == 'function' then
          jumper()
          -- Wait for `jumper` to finish its business.
          vim.schedule(function() after_jump() end)
