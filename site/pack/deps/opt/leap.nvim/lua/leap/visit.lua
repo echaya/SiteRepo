@@ -4,6 +4,9 @@ local function visit(kwargs)
    kwargs = kwargs or {}
    local jumper = kwargs.jumper
    local input = kwargs.input
+   if input == '' then
+      input = nil
+   end
    local use_count = kwargs.count ~= false
    local linewise = kwargs.linewise
 
@@ -51,23 +54,66 @@ local function visit(kwargs)
       )
    end
 
-   jumper = (jumper == nil) and (function()
-      -- We are back in Normal mode when this call is executed, so _we_
-      -- should tell Leap whether it is OK to autojump.
-      -- If `input` is given, all bets are off - before moving on to a
-      -- labeled target, we would have to undo whatever action was taken
-      -- (practically impossible).
-      -- Visual and Operator-pending mode are also problematic, because
-      -- we could only re-trigger them inside the `leap()` call, with a
-      -- custom action, and that would prevent users from customizing
-      -- the jumper.
-      local no_autojump = (input and #input > 0) or state.mode ~= 'n'
+   local function default_jumper()
+      local function handle_visual_autojump()
+         -- On autojump, we feed the given input (re-triggering Visual
+         -- mode first if needed), and tell `visit()` to skip doing that
+         -- again once we're done. In case we would move on to a labeled
+         -- target, we go back to Normal mode (effectively removing the
+         -- visual selection), and withdraw our previous instruction.
+         local au_1, au_2
+         au_1 = api.nvim_create_autocmd('User', {
+            pattern = 'LeapAutojump',
+            once = true,
+            callback = function()
+               -- Use `feedkeys()` with 'x' everywhere, else
+               -- short-circuits `leap()`.
+               if state.mode:match('^[vV\22]') then
+                  api.nvim_feedkeys(state.mode, 'nx', false)
+               end
+               if input then
+                  api.nvim_feedkeys(input, 'x', false)
+               end
+               state.visual_autojump = true
+
+               au_2 = api.nvim_create_autocmd('User', {
+                  pattern = 'LeapJumpPre',
+                  once = true,
+                  callback = function()
+                     -- Back to Normal mode.
+                     api.nvim_feedkeys(vim.keycode('<C-\\><C-N>'), 'nx', false)
+                     state.visual_autojump = false
+                  end
+               })
+            end,
+         })
+         api.nvim_create_autocmd('User', {
+            pattern = 'LeapLeave',
+            once = true,
+            callback = function()
+               pcall(api.nvim_del_autocmd, au_1)
+               pcall(api.nvim_del_autocmd, au_2)
+            end
+         })
+      end
+
+      -- We are back in Normal mode when this call is executed, so Leap
+      -- has no context to decide whether it is OK to autojump.
+      local autojump = not state.mode:match('o')
+
+      -- Note: `input` is assumed to be some visual selection command,
+      -- else the behavior is undefined.
+      if autojump and (input or state.mode:match('[vV\22]')) then
+         handle_visual_autojump()
+      end
       require('leap').leap {
          windows = require('leap.user').get_focusable_windows(),
-         opts = no_autojump and { safe_labels = '' } or nil,
-         linewise = linewise,
+         opts = (not autojump) and { safe_labels = '' } or nil,
+         linewise = linewise or state.mode:match('V'),
       }
-   end) or jumper  -- false is meaningful
+   end
+
+   jumper = (jumper == nil) and default_jumper or jumper  -- false is meaningful
 
    local function to_normal_mode()
       if state.mode:match('^[vV\22]') then
@@ -167,9 +213,11 @@ local function visit(kwargs)
       end
       -- Add target postion to jumplist.
       vim.cmd('norm! m`')
-      back_to_pending_action()  -- (feedkeys...)
+      if not state.visual_autojump then
+         back_to_pending_action()  -- (feedkeys...)
       -- No 'n' flag, custom mappings should work here.
-      if input then api.nvim_feedkeys(input, '', false) end
+         if input then api.nvim_feedkeys(input, '', false) end
+      end
       -- Wait for `feedkeys`.
       vim.schedule(register_followup_actions)
    end

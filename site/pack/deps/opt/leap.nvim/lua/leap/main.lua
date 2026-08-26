@@ -144,9 +144,9 @@ end
 ---@param in2? string
 ---@param inputlen integer
 ---
-local function prepare_pattern(in1, in2, inputlen)
+local function prepare_pattern(in1, in2, inputlen, as_linewise)
    local prefix = '\\V'
-   if vim.fn.mode(1):match('V') then
+   if vim.fn.mode(1):match('V') or as_linewise then  -- visit() might force this
       -- Skip the current line in linewise modes. (Hardcode the number,
       -- we might set the cursor before starting the search.)
       local lnum = vim.fn.line('.')
@@ -1106,10 +1106,12 @@ local function leap(kwargs)
          if type(user_given_pattern_) == 'string' then
             pattern = user_given_pattern_
          elseif type(user_given_pattern_) == 'function' then
-            local prepared = in1 and prepare_pattern(in1, in2, inputlen) or ''
+            local prepared = in1
+               and prepare_pattern(in1, in2, inputlen, kwargs.linewise)
+               or ''
             pattern = user_given_pattern_(prepared, { in1, in2 })
          else
-            pattern = prepare_pattern(in1, in2, inputlen)
+            pattern = prepare_pattern(in1, in2, inputlen, kwargs.linewise)
          end
 
          targets = get_targets(pattern, in1, in2)
@@ -1228,6 +1230,7 @@ local function leap(kwargs)
          do_action(targets2[1])
          st.curr_idx = 1
       end
+      exec_user_autocmds('LeapAutojump')
    end
 
    local in_final = select(targets2)  -- REDRAW (LOOP)
@@ -1268,6 +1271,7 @@ local function leap(kwargs)
    -- Otherwise try to get a labeled target, and if no success, feed the key.
    local target, idx = get_target_with_active_label(targets2, in_final)
    if target and idx then
+      exec_user_autocmds('LeapJumpPre')
       if is_visual_mode and can_traverse(targets2) then
          do_action(targets2[idx])
          traverse(targets2, idx)  -- REDRAW (LOOP)
