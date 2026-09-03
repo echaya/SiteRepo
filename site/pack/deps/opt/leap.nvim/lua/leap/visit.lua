@@ -142,9 +142,12 @@ local function visit(kwargs)
    end
 
    local function cursor_moved()
+      -- We need to compare with the anchor instead of the saved cursor
+      -- position in Visual mode anyway, because we start with a yank.
+      local anch = api.nvim_buf_get_extmark_by_id(0, anch_ns, anch_id, {})
       return vim.fn.win_getid() ~= src_win
-         or vim.fn.line('.') ~= saved_view.lnum
-         or vim.fn.col('.') ~= --[[0-]] saved_view.col + 1
+         or vim.fn.line('.') ~= anch[1] + 1
+         or vim.fn.col('.') ~= anch[2] + 1
    end
 
    local function restore_cursor()
@@ -165,42 +168,63 @@ local function visit(kwargs)
       api.nvim_buf_clear_namespace(0, anch_ns, 0, -1)
    end
 
-   local function register_followup_actions()
+   local function register_listeners()
       local action_canceled = false
-      -- Register "cancel" keys.
-      local listener_id = vim.on_key(function(key, _)
-         if key == vim.keycode('<esc>') or key == vim.keycode('<c-c>') then
+      local cancel_key_listener = vim.on_key(function(key, _)
+         if
+            key == vim.keycode('<c-c>') or
+            key == vim.keycode('<esc>') and vim.fn.mode(0) ~= 'i'
+         then
             action_canceled = true
          end
       end)
+
+      recur_listener = api.nvim_create_autocmd('User', {
+         pattern = 'Visit',
+         once = true,
+         callback = function()
+            state.recursed = true
+         end,
+      })
+
       -- Wait for going back to Normal, then restore.
-      local id
-      id = api.nvim_create_autocmd('ModeChanged', {
+      local mode_change_listener
+      mode_change_listener = api.nvim_create_autocmd('ModeChanged', {
          pattern = (vim.bo.buftype == 'terminal') and '*:nt' or '*:n',
          callback = vim.schedule_wrap(function(ev)
-            -- Edge case:
-            --   1. start remote change op
-            --    --- autocommand active now ---
-            --   2. execute non-atomic movement, e.g., a `leap()` call
-            --    --- false alarm here, would return early ---
-            --   [3. insert replacement text]
-            -- Solution: Wait until leaving from Insert mode.
-            if
+            local function cleanup()
+               pcall(api.nvim_del_autocmd, recur_listener)
+               pcall(api.nvim_del_autocmd, mode_change_listener)
+               vim.on_key(nil, cancel_key_listener)
+            end
+
+            if state.recursed then
+               -- Use case of recursing and dropping the parent: start a
+               -- "binary" operation (e.g. swap) remotely, that is,
+               -- select the source object itself with an atomic command.
+               cleanup()
+               return
+            elseif
+               -- Edge case:
+               --   1. start remote change op
+               --   --- autocommand active now ---
+               --   2. execute non-atomic movement, e.g., a `leap()` call
+               --   --- false alarm here, would return early ---
+               --   [3. insert replacement text]
+               -- Solution: Wait until leaving from Insert mode.
                state.mode:match('o') and (vim.v.operator == 'c')
                and not ev.match:match('i:')
             then
                return
-            end
-
-            api.nvim_del_autocmd(id)
-            vim.on_key(nil, listener_id)  -- remove listener
-            restore_cursor()
-
-            if not action_canceled then
-               api.nvim_exec_autocmds('User', {
-                  pattern = { 'VisitDone', 'RemoteOperationDone' },
-                  data = state
-               })
+            else
+               cleanup()
+               restore_cursor()
+               if not action_canceled then
+                  api.nvim_exec_autocmds('User', {
+                     pattern = { 'VisitDone', 'RemoteOperationDone' },
+                     data = state
+                  })
+               end
             end
          end)
       })
@@ -208,7 +232,8 @@ local function visit(kwargs)
 
    local function after_jump()
       if not cursor_moved() then
-         api.nvim_buf_clear_namespace(0, anch_ns, 0, -1)
+         -- For cleaning up extmarks, and restoring the visual selection.
+         restore_cursor()
          return
       end
       -- Add target postion to jumplist.
@@ -219,17 +244,18 @@ local function visit(kwargs)
          if input then api.nvim_feedkeys(input, '', false) end
       end
       -- Wait for `feedkeys`.
-      vim.schedule(register_followup_actions)
+      vim.schedule(register_listeners)
    end
 
    -- Execute "spooky" action: jump - operate - restore.
 
+   api.nvim_exec_autocmds('User', { pattern = 'Visit', modeline = false })
    to_normal_mode()  -- (feedkeys...)
    -- Wait for `feedkeys`.
    vim.schedule(function()
       if jumper == false then
          -- Use case: exchanging nearby regions (Visual mode).
-         register_followup_actions()
+         register_listeners()
       elseif type(jumper) == 'function' then
          jumper()
          -- Wait for `jumper` to finish its business.

@@ -2,10 +2,10 @@
 
 # leap.nvim
 
-Leap is a motion and selection plugin for Neovim, building and improving
-primarily on [vim-sneak](https://github.com/justinmk/vim-sneak). Using some
-clever ideas, it allows you to jump to any position in the visible editor area
-very quickly, with near-zero mental overhead.
+Leap is a motion and selection plugin for Neovim, originally inspired by
+[vim-sneak](https://github.com/justinmk/vim-sneak). Using some clever ideas, it
+allows you to jump to any position in the visible editor area very quickly,
+with near-zero mental overhead.
 
 ### How to use it (TL;DR)
 
@@ -48,13 +48,18 @@ At the same time, it reduces mental effort by all possible means:
 * _You don't have to pause in the middle_: if typing at a moderate speed, your
   mind can prepare for the next steps ahead of time.
 
-### Visitor mode
+It is important to emphasise that while Leap can bring you to the far end of
+the screen in almost an instant, it is _also_ natural to use for, say, moving
+just a few words ahead on the same line - the true standout feature is this
+versatility.
 
-Another layer on top of the above is the so-called Visitor mode, opening up a
-whole new set of possibilities. "Text editing at the speed of thought" has
-become a bit of an inflated phrase in the Vim world, but cloning an arbitrary
-syntax tree node from an arbitrary window with eight keystrokes speaks for
-itself:
+### Showcase
+
+This efficient method of navigation allows building interesting features on top
+of it, like the so-called visitor mode. "Text editing at the speed of thought"
+has become a bit of an inflated phrase in the Vim world, but cloning an
+arbitrary syntax tree node from an arbitrary window with eight keystrokes
+speaks for itself:
 
 <figure>
     <img src="../media/showcase.gif?raw=true" width="80%" alt="Leap in action" title="Leap in action" />
@@ -93,16 +98,20 @@ vim.pack.add { 'https://codeberg.org/andyg/leap.nvim' }
 Recommended starter configuration:
 
 ```lua
+-- See `:h leap-mappings`, `:h leap.visit-mappings` for more.
+
 -- Jump
 vim.keymap.set({ 'n', 'x', 'o' }, 's',  '<Plug>(leap)')
 vim.keymap.set('n',               'S',  '<Plug>(leap-from-window)')
 
 -- Visit (jump - operate - jump back)
 vim.keymap.set({ 'n', 'x', 'o' }, 'gs', '<Plug>(leap-visit)')
-vim.keymap.set({ 'n', 'x', 'o' }, 'gS', '<Plug>(leap-visit-linewise)')
 vim.keymap.set({ 'x', 'o' },      'ar', '<Plug>(leap-visit-text-object)')
 vim.keymap.set({ 'x', 'o' },      'ir', '<Plug>(leap-visit-inner-text-object)')
-vim.keymap.set({ 'o' },           'rr', '<Plug>(leap-visit-line)')
+
+vim.keymap.set('o', 'rr', function()  -- "visit line" shortcut
+  return (vim.v.count == 0 and '1' or '') .. '<Plug>(leap-visit)'
+end, { expr = true })
 
 -- Automatic paste on return.
 vim.api.nvim_create_autocmd('User', {
@@ -125,8 +134,6 @@ vim.keymap.set({ 'x', 'o' }, 'an', function()
   }
 end)
 ```
-
-See `:h leap-mappings` for more.
 
 ### Extra modules
 
@@ -157,16 +164,13 @@ that from Normal mode you can e.g. `gs{leap}apy` (_leap-select-op_). This is
 the same number of keystrokes as `gs{leap}yap` (_leap-op-select_) or
 `ygs{leap}ap` (_op-leap-select_), but you get visual feedback, can move around
 freely with arbitrary motion combinations, and correct mistakes. The `input`
-parameter lets you feed keystrokes:
+parameter lets you feed keystrokes (`<Plug>(leap-visit)` does this by default):
 
 ```lua
 vim.keymap.set({ 'n', 'x', 'o' }, 'gs', function()
   require('leap').visit { input = (vim.fn.mode(true) == 'n') and 'v' or '' }
 end)
 ```
-
-The keys `<Plug>(leap-visit)` and `<Plug>(leap-visit-linewise)` do this by
-default (the above is the actual body or `<Plug>(leap-visit)`).
 
 **Remote text objects**
 
@@ -546,10 +550,9 @@ to linewise surround then.
 <summary>Was the name inspired by Jef Raskin's Leap?</summary>
 
 To paraphrase Steve Jobs about their logo and Turing's poison apple, I wish it
-were, but it is a coincidence. "Leap" is just another synonym for "jump", that
-happens to rhyme with Sneak. That said, you can think of the name as a
-little tribute to the great pioneer of interface design, even though embracing
-the modal paradigm is a fundamental difference in Vim's approach.
+were, but it is a coincidence. That said, you can think of the name as a little
+tribute to the great pioneer of interface design, even though embracing the
+modal paradigm is a fundamental difference in Vim's approach.
 
 </details>
 
@@ -723,3 +726,9 @@ require('telescope').setup {
 ```
 
 </details>
+
+## Slopolicy
+
+All of the source code and the documentation is written and maintained, since
+the beginning, by human beings who actually love their craft. I would like to
+keep it that way, if you don't mind.

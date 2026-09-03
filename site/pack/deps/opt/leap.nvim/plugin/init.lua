@@ -25,11 +25,57 @@ map({ 'n', 'x', 'o' }, '<Plug>(leap-anywhere)', function()
    require('leap').leap { windows = require('leap.user').get_focusable_windows() }
 end)
 
-map({ 'n', 'x', 'o' }, '<Plug>(leap-visit)', function()
-   local input = (vim.fn.mode(true) == 'n') and 'v' or ''
-   require('leap').visit { input = input }
+local function visit(start_visual)
+   local input, linewise
+   if vim.v.count >= 1 then
+      linewise = true
+      if vim.v.count == 1 then
+         -- (Attempt to) move to trigger the operation.
+         input = vim.fn.mode(true):match('o') and 'Vl' or 'V'
+      else
+         input = (start_visual and 'V' or '') .. ((vim.v.count - 1) .. 'j')
+      end
+   elseif start_visual then
+      input = 'v'
+   end
+   require('leap').visit { input = input, count = false, linewise = linewise }
+end
+map({ 'n', 'i' }, '<Plug>(leap-visit)', function() visit(true) end)
+map({ 'x', 'o' }, '<Plug>(leap-visit)', function() visit() end)
+
+local function visit_text_object(prefix)
+   local ok, c = pcall(vim.fn.getcharstr)  -- handling <C-c>
+   if not ok or (c == vim.keycode('<esc>')) then
+      return
+   end
+   local mode = vim.fn.mode(true)
+   local input = prefix .. c
+   -- MAGIC: Handle single-character charwise Visual selection
+   -- specially, like a Normal-mode invocation with `input=v`.
+   -- Motivation: Yanking the selection or pasting into it is not
+   -- terribly useful in such cases, while Visual mode has the advantage
+   -- of a possible autojump.
+   if (mode == 'v') and vim.deep_equal(vim.fn.getpos('v'), vim.fn.getpos('.')) then
+      vim.api.nvim_feedkeys('v', 'nx', false)  -- back to Normal
+      input = 'v' .. input
+   end
+   require('leap').visit {
+      input = input,
+      linewise = mode:match('V') or (
+         -- `p` forces linewise, while `l` is aboult lines in the first
+         -- place (check remappings though).
+         (c == 'p' or c == 'l') and (vim.fn.maparg(prefix .. c) == '')
+      ),
+   }
+end
+map({ 'x', 'o' }, '<Plug>(leap-visit-text-object)', function()
+   visit_text_object('a')
+end)
+map({ 'x', 'o' }, '<Plug>(leap-visit-inner-text-object)', function()
+   visit_text_object('i')
 end)
 
+-- Deprecated.
 local function visit_linewise(autotrigger)
    local input = (vim.fn.mode(true) == 'V') and '' or 'V'
    if vim.v.count > 1 then
@@ -43,29 +89,8 @@ end
 map({ 'n', 'x', 'o' }, '<Plug>(leap-visit-linewise)', function()
    visit_linewise()
 end)
-map({ 'o' }, '<Plug>(leap-visit-line)', function()
+map({ 'n', 'x', 'o' }, '<Plug>(leap-visit-line)', function()
    visit_linewise(true)
-end)
-
-local function visit_text_object(prefix)
-   local ok, c = pcall(vim.fn.getcharstr)  -- handling <C-c>
-   if not ok or (c == vim.keycode('<esc>')) then
-      return
-   end
-   require('leap').visit {
-      input = prefix .. c,
-      linewise = vim.fn.mode(true):match('V') or (
-         -- `p` forces linewise, while `l` is aboult lines in the first
-         -- place (check remappings though).
-         (c == 'p' or c == 'l') and (vim.fn.maparg(prefix .. c) == '')
-      ),
-   }
-end
-map({ 'x', 'o' }, '<Plug>(leap-visit-text-object)', function()
-   visit_text_object('a')
-end)
-map({ 'x', 'o' }, '<Plug>(leap-visit-inner-text-object)', function()
-   visit_text_object('i')
 end)
 
 map({ 'n', 'o' }, '<Plug>(leap-remote)', '<Plug>(leap-visit)')

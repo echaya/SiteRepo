@@ -265,6 +265,12 @@ local function as_traversable(labels, prepend_next_key)
    return traversable
 end
 
+-- Problem: We are autojumping to some position in window A, but our
+-- chosen labeled target happens to be in window B - in that case we do
+-- not actually want to reposition the cursor in window A. Restoring it
+-- afterwards would be overcomplicated, not to mention that the jump
+-- itself is disorienting, especially A->B->C (autojumping to B, before
+-- moving to C).
 local function all_in_the_same_window(targets)
    if not targets[1].wininfo then return true end
    local win = targets[1].wininfo.winid
@@ -285,14 +291,12 @@ end
 --   xyL    target #2 (labeled)
 --     ^    auto-jump would move the cursor here (covering the label)
 --
--- Note: The situation implies backward search, and may arise in phase
--- two, when only the chosen sublist remained.
---
--- Caveat: this case in fact depends on the label position, for which
--- the `beacons` module is responsible (e.g. the label is on top of the
--- match when repeating), but we're not considering that, and just err
--- on the safe side instead of complicating the code.
+-- Note: The situation implies `opts.offset_labels`, backward jump, and
+-- may arise in phase two, when only the chosen sublist remained.
 local function cursor_would_cover_the_first_label_on_autojump(targets)
+   if not opts.offset_labels then
+      return false
+   end
    local t1, t2 = targets[1], targets[2]
    if t2 and t2.chars and not t2.is_offscreen then
       local line1, col1 = unpack(t1.pos)
@@ -301,21 +305,13 @@ local function cursor_would_cover_the_first_label_on_autojump(targets)
    end
 end
 
-local function count_onscreen(targets)
-   local count = 0
-   for _, target in ipairs(targets) do
-      if not target.is_offscreen then count = count + 1 end
-   end
-   return count
-end
-
 ---@param targets table
 ---@param kwargs table
 local function prepare_labeled_targets(targets, kwargs)
    local can_traverse = kwargs.can_traverse
    local force_noautojump = kwargs.force_noautojump
    local multi_windows = kwargs.multi_windows
-   local as_linewise = kwargs.linewise  -- visit() might force this
+   local is_linewise = vim.fn.mode(1):match('V') or kwargs.linewise
 
    local labels, safe_labels = opts.labels, opts.safe_labels
    if can_traverse then
@@ -330,99 +326,93 @@ local function prepare_labeled_targets(targets, kwargs)
          as_traversable(opts.safe_labels, prepend_next_key)
    end
 
-   -- Sets a flag indicating whether we can automatically jump to the
-   -- first target, without having to select a label.
-   local function set_autojump()
-      if not (
-         force_noautojump
-         or #safe_labels == 0
-         -- Prevent shifting the viewport (we might want to select a label).
-         or targets[1].is_offscreen and #targets > 1
-         -- Problem: We are autojumping to some position in window A, but
-         -- our chosen labeled target happens to be in window B - in that
-         -- case we do not actually want to reposition the cursor in window
-         -- A. Restoring it afterwards would be overcomplicated, not to
-         -- mention that the jump itself is disorienting, especially
-         -- A->B->C (autojumping to B, before moving to C).
-         or multi_windows and not all_in_the_same_window(targets)
-         or cursor_would_cover_the_first_label_on_autojump(targets)
-      ) then
-         -- Forced or "smart" autojump, respectively.
-         targets.autojump = (#labels == 0)
-            or count_onscreen(targets) <= #safe_labels + 1
-      end
-   end
-
-   local function attach_label_set()
-      -- Note that `labels` => no `autojump`, and `autojump` =>
-      -- `safe_labels`, but the converse statmenets do not hold.
-      targets.label_set =
-         #labels == 0 and safe_labels
-         or #safe_labels == 0 and labels
-         or targets.autojump and safe_labels
-         or labels
-   end
-
-   -- Assigns a label to each target, by repeating the label set
-   -- indefinitely, and registers the number of the label group the
-   -- target is part of.
-   -- Note that these are once-and-for-all fixed attributes, regardless
-   -- of the actual UI state ('beacons').
-   local function set_labels()
-      local is_linewise = vim.fn.mode(1):match('V') or as_linewise
-      -- We need to handle multibyte chars anyway, it's better to create
-      -- a table than calling `strcharpart()` for each access.
-      local labelset = split(targets.label_set, '\\zs')
-      local len_labelset = #labelset
-
-      -- In linewise modes, assign the same labels on a given line.
-      local label_of_line = {}
-      if is_linewise and targets.autojump then
-         -- "No label for this line".
-         label_of_line[targets[1].pos[1]] = '__autojump__'
-      end
-      local group_of_line = {}
-      local labels_reused = 0
-
-      local skipped = targets.autojump and 1 or 0
-
-      for i = (skipped + 1), #targets do
-         local target = targets[i]
-         if target then
-            if target.is_offscreen then
-               skipped = skipped + 1
-            else
-               local reused_label = is_linewise and label_of_line[target.pos[1]] or nil
-               if reused_label then
-                  if reused_label ~= '__autojump__' then
-                     target.label = reused_label
-                     target.group = group_of_line[target.pos[1]]
-                     labels_reused = labels_reused + 1
-                  end
-               else
-                  local i_label = i - skipped - labels_reused
-                  local mod = i_label % len_labelset
-                  if mod ~= 0 then
-                     target.label = labelset[mod]
-                     target.group = floor(i_label / len_labelset) + 1
-                  else
-                     target.label = labelset[len_labelset]
-                     target.group = floor(i_label / len_labelset)
-                  end
-                  if is_linewise then
-                     label_of_line[target.pos[1]] = target.label
-                     group_of_line[target.pos[1]] = target.group
-                  end
-               end
+   -- Map target indexes to label indexes.
+   -- We just index into an abstract label set here (unknown length),
+   -- as if repeated infinitely, and do not consider autojump yet,
+   -- because autojump itself should take the result into account (if it
+   -- turns out that we autojump, we simply shift all values by -1).
+   -- In linewise mode, could look like: { 1, 2, 0, 3, 2, 0, 3, 4, ... }
+   -- (same index means the same line in the same buffer).
+   local label_of_target = {}  -- (idx : idx)
+   do
+      -- In linewise modes, assign the same labels on a given line - to
+      -- handle this, we maintain a separate tabe.
+      local label_of_line = {}    -- ("<buf> <lnum>" : idx)
+      local label_idx = 1
+      for i, target in ipairs(targets) do
+         if target.is_offscreen then
+            label_of_target[i] = 0
+         elseif is_linewise then
+            local blnum = target.wininfo.bufnr .. ' ' .. target.pos[1]
+            if not label_of_line[blnum] then
+               label_of_line[blnum] = label_idx
+               label_idx = label_idx + 1
             end
+            label_of_target[i] = label_of_line[blnum]
+         else
+            label_of_target[i] = label_idx
+            label_idx = label_idx + 1
          end
       end
    end
 
-   -- Note: The three depend on each other, in this order.
-   set_autojump()
-   attach_label_set()
-   set_labels()
+   -- Set `autojump`.
+   local n_labels_needed = 0
+   do
+      local seen = {}
+      for _, idx in ipairs(label_of_target) do
+         if idx >= 2 then  -- assuming autojump (+1)
+            if is_linewise then
+               if not seen[idx] then
+                  n_labels_needed = n_labels_needed + 1
+                  seen[idx] = true
+               end
+            else
+               n_labels_needed = n_labels_needed + 1
+            end
+         end
+      end
+   end
+   if not (
+      force_noautojump
+      or #safe_labels == 0
+      -- Prevent shifting the viewport (we might want to select a label).
+      or targets[1].is_offscreen and n_labels_needed > 0
+      or multi_windows and not all_in_the_same_window(targets)
+      or cursor_would_cover_the_first_label_on_autojump(targets)
+   ) then
+      targets.autojump = (#labels == 0) or                  -- forced
+                         (n_labels_needed <= #safe_labels)  -- "smart"
+   end
+   if targets.autojump then  -- shift values in label map (-1)
+      for i = 1, #label_of_target do
+         label_of_target[i] = label_of_target[i] - 1
+      end
+   end
+
+   -- Attach label set to target list.
+   -- (Note that `labels` => no-`autojump`, and `autojump` =>
+   -- `safe_labels`, but the converse statmenets do not hold.)
+   targets.label_set =
+      #labels == 0 and safe_labels
+      or #safe_labels == 0 and labels
+      or targets.autojump and safe_labels
+      or labels
+
+   -- Assign labels.
+
+   -- We need to handle multibyte chars anyway, it's better to make a
+   -- table than calling `strcharpart()` for each access.
+   local label_set = split(targets.label_set, '\\zs')
+
+   for i = 1, #targets do
+      local i_label = label_of_target[i]
+      if i_label >= 1 then
+         local mod = i_label % #label_set
+         targets[i].label = label_set[(mod == 0) and #label_set or mod]
+         targets[i].group = floor(i_label / #label_set) + ((mod == 0) and 0 or 1)
+      end
+   end
 end
 
 local function normalize_directional_indexes(targets)
