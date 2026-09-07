@@ -2,9 +2,9 @@
 local M = {}
 
 local core = require("codediff.ui.core")
-local semantic = require("codediff.ui.semantic_tokens")
 local config = require("codediff.config")
 local diff_module = require("codediff.core.diff")
+local cursor_util = require("codediff.ui.view.cursor")
 
 --- Establish scroll synchronization between the two diff windows.
 --- Positions each pane's cursor on its own hunk line, then binds them with the
@@ -24,10 +24,10 @@ function M.establish_scrollbind(orig_win, mod_win, orig_buf, mod_buf, lines_diff
 
   -- Place cursors on their respective hunk lines (per-pane coordinates).
   if orig_cursor then
-    pcall(vim.api.nvim_win_set_cursor, orig_win, orig_cursor)
+    pcall(vim.api.nvim_win_set_cursor, orig_win, cursor_util.clamp_cursor(orig_win, orig_cursor))
   end
   if mod_cursor then
-    pcall(vim.api.nvim_win_set_cursor, mod_win, mod_cursor)
+    pcall(vim.api.nvim_win_set_cursor, mod_win, cursor_util.clamp_cursor(mod_win, mod_cursor))
   end
 
   -- Bind the two panes and align the original pane to the modified pane.
@@ -64,14 +64,6 @@ function M.compute_and_render(
 
   -- Render diff highlights
   core.render_diff(original_buf, modified_buf, original_lines, modified_lines, lines_diff)
-
-  -- Apply semantic tokens for virtual buffers
-  if original_is_virtual then
-    semantic.apply_semantic_tokens(original_buf, modified_buf)
-  end
-  if modified_is_virtual then
-    semantic.apply_semantic_tokens(modified_buf, original_buf)
-  end
 
   -- Setup scroll synchronization (only if windows provided)
   if original_win and modified_win and vim.api.nvim_win_is_valid(original_win) and vim.api.nvim_win_is_valid(modified_win) then
