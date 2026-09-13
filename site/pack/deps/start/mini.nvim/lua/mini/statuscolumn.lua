@@ -480,15 +480,14 @@ H.ensure_dim_hl = function()
   local normal = vim.api.nvim_get_hl(0, { name = 'Normal', link = false })
   local fg_num, bg_num = linenr.fg or normal.fg, linenr.bg or normal.bg
   if type(fg_num) ~= 'number' or type(bg_num) ~= 'number' then
-    return vim.api.nvim_set_hl(0, 'MiniStatuscolumnDim', { link = 'LineNr' })
+    return vim.api.nvim_set_hl(0, 'MiniStatuscolumnDim', { default = true, link = 'LineNr' })
   end
 
   -- Make regular foreground a bit closer to the effective background
   local fg, bg = string.format('%06x', fg_num), string.format('%06x', bg_num)
   local mix = function(i, j) return 0.618 * tonumber(bg:sub(i, j), 16) + 0.382 * tonumber(fg:sub(i, j), 16) end
   local fg_dim = string.format('#%02x%02x%02x', mix(1, 2), mix(3, 4), mix(5, 6))
-  -- NOTE: do not use `default=true` since it needs recomputation to be valid
-  vim.api.nvim_set_hl(0, 'MiniStatuscolumnDim', { fg = fg_dim, bg = '#' .. bg })
+  vim.api.nvim_set_hl(0, 'MiniStatuscolumnDim', { default = true, fg = fg_dim, bg = '#' .. bg })
 end
 
 -- Content --------------------------------------------------------------------
@@ -648,8 +647,7 @@ H.make_main_content_map = function(spec, click)
         local content_str = ltype_map.format:gsub('[=fls]', format_repl)
 
         -- NOTE: show separator hl based on whether it is configured to show
-        -- "CursorLine" highlighting in the column (`:h hl-CursorLineNr`, but
-        -- it works for fold and sign: https://github.com/vim/vim/issues/20480)
+        -- "CursorLine" highlighting in the column (`:h hl-CursorLineNr`).
         -- It also helps with drawing issues, since statuscolumn is not redrawn
         -- on cursor movement with 'nocursorline', which makes cursor separator
         -- not update also.
