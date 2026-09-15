@@ -3,14 +3,20 @@ local interval = require('render-markdown.lib.interval')
 ---@class render.md.request.highlights.Line
 ---@field hidden boolean
 ---@field conceals render.md.request.highlights.Conceal[]
+---@field groups render.md.request.highlights.Group[]
 
 ---@class render.md.request.highlights.Entry
 ---@field hidden? boolean
 ---@field conceal? render.md.request.highlights.Conceal
+---@field group? render.md.request.highlights.Group
 
 ---@class render.md.request.highlights.Conceal: render.md.Range
----@field [3] string replacement
----@field [4] integer blocks
+---@field replacement string
+---@field blocks integer
+
+---@class render.md.request.highlights.Group: render.md.Range
+---@field priority integer
+---@field highlight render.md.mark.Hl
 
 ---@class render.md.request.Highlights
 ---@field private buf integer
@@ -36,7 +42,7 @@ end
 ---@param entry render.md.request.highlights.Entry
 function Highlights:add(row, entry)
     if not self.lines[row] then
-        self.lines[row] = { hidden = false, conceals = {} }
+        self.lines[row] = { hidden = false, conceals = {}, groups = {} }
     end
     local line = self.lines[row]
     if entry.hidden then
@@ -46,6 +52,18 @@ function Highlights:add(row, entry)
         if interval.valid(entry.conceal, true) then
             line.conceals[#line.conceals + 1] = entry.conceal
             line.conceals = Highlights.coalesce_conceals(line.conceals)
+        end
+    end
+    if entry.group then
+        if interval.valid(entry.group, true) then
+            line.groups[#line.groups + 1] = entry.group
+            table.sort(line.groups, function(a, b)
+                if a.priority ~= b.priority then
+                    return a.priority < b.priority
+                else
+                    return a.highlight < b.highlight
+                end
+            end)
         end
     end
 end
@@ -61,8 +79,8 @@ function Highlights.coalesce_conceals(conceals)
         local conceal, last = conceals[i], result[#result]
         if conceal[1] <= last[2] then
             last[2] = math.max(last[2], conceal[2])
-            last[3] = last[3] .. conceal[3]
-            last[4] = last[4] + conceal[4]
+            last.replacement = last.replacement .. conceal.replacement
+            last.blocks = last.blocks + conceal.blocks
         else
             result[#result + 1] = conceal
         end
@@ -70,16 +88,16 @@ function Highlights.coalesce_conceals(conceals)
     return result
 end
 
----@param body render.md.node.Body
+---@param row integer
 ---@return render.md.request.highlights.Line
-function Highlights:line(body)
+function Highlights:line(row)
     if not self.computed then
         self.computed = true
         self:compute()
     end
-    local line = self.lines[body.start_row]
+    local line = self.lines[row]
     if not line then
-        line = { hidden = false, conceals = {} }
+        line = { hidden = false, conceals = {}, groups = {} }
     end
     return line
 end
@@ -114,16 +132,28 @@ function Highlights:tree(language, root)
         return
     end
     self.view:query(root, query, function(id, node, data)
+        local row, start_col, _, end_col = Highlights.range(id, data, node)
         if data.conceal_lines then
-            local row = Highlights.range(id, data, node)
             self:add(row, { hidden = true })
         end
         if data.conceal then
-            local row, start_col, _, end_col = Highlights.range(id, data, node)
             self:add(row, {
-                conceal = { start_col, end_col, data.conceal, 1 },
+                conceal = {
+                    start_col,
+                    end_col,
+                    replacement = data.conceal,
+                    blocks = 1,
+                },
             })
         end
+        self:add(row, {
+            group = {
+                start_col,
+                end_col,
+                priority = Highlights.priority(id, data),
+                highlight = '@' .. query.captures[id] .. '.' .. language,
+            },
+        })
     end)
 end
 
@@ -139,6 +169,14 @@ function Highlights.range(id, data, node)
         range[2] + tonumber(offset[2]),
         range[3] + tonumber(offset[3]),
         range[4] + tonumber(offset[4])
+end
+
+---@private
+---@param id integer
+---@param data vim.treesitter.query.TSMetadata
+---@return integer
+function Highlights.priority(id, data)
+    return tonumber((data[id] or {}).priority or data.priority) or 100
 end
 
 return Highlights
