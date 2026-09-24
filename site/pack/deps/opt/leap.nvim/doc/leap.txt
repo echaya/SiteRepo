@@ -223,13 +223,16 @@ Example configuration: >lua
     Missing characters (line start/end) are represented by empty strings.
 
     The default filter shows label preview only for matches at word boundaries
-    (roughly speaking): >lua
-        -- foobar[baaz] = quux
-        -- ^    ^^^  ^^ ^ ^  ^
+    (roughly speaking): foobar[baaz] = quux
+                        ^    ^^^  ^^ ^ ^  ^
+    >lua
         require('leap').opts.preview = function(ch0, ch1, ch2)
           -- Skip matches starting with whitespace altogether.
-          if ch1:match('%s') then return false end
-          local delim = '[\1-\64\91-\96\123-\127]'  -- ASCII non-alpha
+          if ch1:match('%s') then
+            return false
+          end
+          -- ASCII non-alpha (includes whitespace).
+          local delim = '[\1-\64\91-\96\123-\127]'
           return (
             -- Show matches touching a delimiter or line start/end.
             ch0:match(delim) or ch2:match(delim) or (ch0 == '') or (ch2 == '')
@@ -562,16 +565,8 @@ visit({opts})                                                   *leap.visit()*
 
     This greatly simplifies otherwise nontrivial operations. Assuming
     automatic pasting configured, after selecting region B at the destination:
-    • `y` makes region A shapeshift into B (cloning).
-    • `d` is the James Cameron version of the above ("typically, the subject
-      being copied is terminated").
+    • `y` clones region B into A (`P` does the opposite).
     • `p` swaps region A and B (remember, |v_p| yanks implicitly).
-    • `P` makes region B shapeshift into A (mentioned for the sake of
-      completeness).
-
-    Examples (with |leap.visit-mappings|):
-        - Swapping two lines: `Vgs{leap}p`.
-        - Cloning the contents of a remote tag block: `vitirt{leap}y`.
 
     Parameters: ~
         {opts} Optional keyword arguments:
@@ -581,8 +576,8 @@ visit({opts})                                                   *leap.visit()*
                  The default is `leap()` scoped to all windows on the tab
                  page, with the additional superpower of being able to
                  |leap-autojump| even when `visit()` would start Visual mode
-                 on arrival, updating the selection if moving on to a labeled
-                 target. *leap.visit-visual-autojump*
+                 on arrival (the selection is updated properly if moving on to
+                 a labeled target). *leap.visit-visual-autojump*
 
                  With the special jumper values `/` and `?`, you can also use
                  the native search commands, that is, target off-screen
@@ -595,14 +590,20 @@ visit({opts})                                                   *leap.visit()*
                     end, { desc = 'Visit by backward search' })
 <
                  By setting the jumper to `false` ("travel by your own
-                 means"), you can define a Visual command as a simple
-                 vim-exchange replacement: >lua
+                 means"), you can define a simple vim-exchange replacement:
+                 >lua
                     vim.keymap.set('x', 'X', function()
                       require('leap').visit { jumper = false }
                     end)
 <
                • {input}? (`string`) Input keys to be fed on arrival via
-                 |nvim_feedkeys()|.
+                 |nvim_feedkeys()|. Example: >lua
+                     vim.keymap.set({ 'n', 'x', 'o' }, 'gs', function()
+                       require('leap').visit {
+                         input = (vim.fn.mode(1) == 'n') and 'v' or ''
+                       }
+                     end)
+<
                • {use_count}? (`boolean`, default: `true`) Feed |v:count|
                  on arrival.
                • {linewise}? (`boolean`) Use |leap-linewise-labeling|. Only
@@ -640,16 +641,11 @@ Suggested mappings: >lua
     -- Mnemonic: "remote [text object]".
     vim.keymap.set({ 'x', 'o' }, 'ar', '<Plug>(leap-visit-text-object)')
     vim.keymap.set({ 'x', 'o' }, 'ir', '<Plug>(leap-visit-inner-text-object)')
-<
-Additional ideas: >lua
-    -- "Visit line": useful shortcut for a frequent action (`yrr{leap}`
-    -- yanks a line right away). Feeds [count]=1 in the mapping itself
-    -- (|:map-<expr>|). See |map-examples| on why the ternary is needed.
-    vim.cmd("omap <expr> rr (v:count == 0 ? '1' : '') . '<Plug>(leap-visit)'")
-    -- "Visit linewise": the same as above, but does not auto-trigger in
-    -- Operator-pending mode without [count].
-    vim.cmd("map  <expr> gS (v:count == 0 ? '1' : '') . '<Plug>(leap-visit)'")
-    vim.cmd('omap        gS V<Plug>(leap-visit)')
+    -- Useful shortcut for a frequent action (`yrr{leap}` yanks a line
+    -- right away). See |map-examples| on why the ternary.
+    vim.keymap.set('o', 'rr', function()
+      return (vim.v.count == 0 and '1' or '') .. '<Plug>(leap-visit)'
+    end, { expr = true })
 <
                                                         *leap.visit-autopaste*
 Automatic pasting on return ~

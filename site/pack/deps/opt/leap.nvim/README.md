@@ -87,10 +87,9 @@ vim.pack.add { 'https://codeberg.org/andyg/leap.nvim' }
 ```
 
 > [!Note]
-> Lazy loading is all the rage now, but doing it via your plugin manager is
-> unnecessary, as Leap already lazy-loads itself, [as it
-> should](https://github.com/neovim/neovim/issues/35562#issuecomment-3239702727).
-> Using the `keys` feature of lazy.nvim might even cause
+> Lazy loading is all the rage now, but doing it manually is unnecessary, as
+> Leap already lazy-loads itself, as it should. Using the `keys` feature of
+> lazy.nvim might even cause
 > [problems](https://codeberg.org/andyg/leap.nvim-github/issues/191).
 
 ### Mappings & configuration
@@ -113,8 +112,7 @@ vim.keymap.set('o', 'rr', function()  -- "visit line" shortcut
   return (vim.v.count == 0 and '1' or '') .. '<Plug>(leap-visit)'
 end, { expr = true })
 
--- Automatic paste on return.
-vim.api.nvim_create_autocmd('User', {
+vim.api.nvim_create_autocmd('User', {  -- automatic paste on return
   pattern = 'VisitDone',
   group = vim.api.nvim_create_augroup('Visit', {}),
   callback = function(event)
@@ -188,46 +186,11 @@ input.)
 By setting an autocommand on `VisitDone`, you can clone regions in the blink of
 an eye, even from another window (just `ygs{leap}ap`, or, with predefiend
 remote text object, `yarp{leap}`, and voilà, the remote paragraph appears
-there):
-
-```lua
-vim.api.nvim_create_autocmd('User', {
-  pattern = 'VisitDone',
-  group = vim.api.nvim_create_augroup('Visit', {}),
-  callback = function(event)
-    if
-      -- See the next section (Visual mode).
-      (event.data.mode:match('^[vV\22]') or (vim.v.operator == 'y'))
-      -- Skip if some special register was in use.
-      and event.data.register == '"'
-    then
-      vim.cmd('normal! p')
-    end
-  end,
-})
-```
+there). See `:h leap.visit-autopaste`.
 
 **Region manipulations in Visual mode**
 
-When invoked from Visual mode, `visit()` does two additional things:
-
-- Before jumping, it yanks the selection to the default register.
-- On return, it reselects the previous Visual area.
-
-This greatly simplifies otherwise nontrivial operations. Assuming automatic
-pasting configured, after selecting region B at the destination:
-
-- `y` makes region A shapeshift into B (cloning).
-- `d` is the James Cameron version of the above ("typically, the subject being
-  copied is terminated").
-- `p` swaps region A and B (remember, `p` yanks implicitly).
-- `P` makes region B shapeshift into A (mentioned for the sake of
-  completeness).
-
-Examples:
-
-- Swapping two lines: `Vgs{leap}p`.
-- Cloning the contents of a remote tag block: `vitirt{leap}y`.
+Yet another useful feature. See `:h leap.visit-visual`.
 
 </details>
 
