@@ -32,7 +32,9 @@ end
 
 local function set_beacon_for_labeled(target, group_offset, phase)
    local has_ch2 = target.chars and (target.chars[2] ~= '')
-   local pad = (has_ch2 and not phase) and ' ' or ''
+   local hl_label = api.nvim_get_hl(0, { name = hl.group.label, link = false })
+   local has_bg = type(hl_label.bg) == 'number'
+   local pad = (not phase and has_ch2 and has_bg) and ' ' or ''
    local label = opts.substitute_chars[target.label] or target.label
    local relative_group = target.group - (group_offset or 0)
    -- In unlabeled matches are not highlighted, then "no highlight"
