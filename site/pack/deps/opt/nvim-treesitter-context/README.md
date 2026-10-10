@@ -45,12 +45,14 @@ Note: support for specific languages is strictly community maintained and can br
   - [x] `fish`
   - [x] `fortran`
   - [x] `gdscript`
+  - [x] `gleam`
   - [x] `glimmer`
   - [x] `glsl`
   - [x] `go`
   - [x] `graphql`
   - [x] `groovy`
   - [x] `haskell`
+  - [x] `hcl`
   - [x] `html`
   - [x] `ini`
   - [x] `janet_simple`
@@ -129,6 +131,7 @@ Note: support for specific languages is strictly community maintained and can br
   - [ ] `blade`
   - [ ] `blueprint`
   - [ ] `bp`
+  - [ ] `bpftrace`
   - [ ] `brightscript`
   - [ ] `c3`
   - [ ] `caddy`
@@ -178,7 +181,6 @@ Note: support for specific languages is strictly community maintained and can br
   - [ ] `gitattributes`
   - [ ] `gitcommit`
   - [ ] `gitignore`
-  - [ ] `gleam`
   - [ ] `glimmer_javascript`
   - [ ] `glimmer_typescript`
   - [ ] `gn`
@@ -196,7 +198,6 @@ Note: support for specific languages is strictly community maintained and can br
   - [ ] `hack`
   - [ ] `hare`
   - [ ] `haskell_persistent`
-  - [ ] `hcl`
   - [ ] `heex`
   - [ ] `helm`
   - [ ] `hjson`
@@ -217,6 +218,7 @@ Note: support for specific languages is strictly community maintained and can br
   - [ ] `javadoc`
   - [ ] `jinja`
   - [ ] `jinja_inline`
+  - [ ] `jjdescription`
   - [ ] `jq`
   - [ ] `jsdoc`
   - [ ] `json5`
@@ -226,6 +228,7 @@ Note: support for specific languages is strictly community maintained and can br
   - [ ] `kcl`
   - [ ] `kconfig`
   - [ ] `kitty`
+  - [ ] `kos`
   - [ ] `koto`
   - [ ] `kusto`
   - [ ] `lalrpop`
@@ -294,6 +297,7 @@ Note: support for specific languages is strictly community maintained and can br
   - [ ] `rnoweb`
   - [ ] `robot`
   - [ ] `robots`
+  - [ ] `robots_txt`
   - [ ] `roc`
   - [ ] `ron`
   - [ ] `rst`
@@ -425,6 +429,9 @@ vim.keymap.set("n", "[c", function()
   require("treesitter-context").go_to_context(vim.v.count1)
 end, { silent = true })
 ```
+
+With `mouse` enabled, left-click a context line or its number in Normal mode to
+jump to that source line. Use `<C-o>` to return.
 
 ## Adding support for other languages
 

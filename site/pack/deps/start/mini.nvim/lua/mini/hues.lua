@@ -487,6 +487,8 @@ MiniHues.apply_palette = function(palette, plugins, opts)
 
   -- Builtin highlighting groups
   hi('ColorColumn',    { fg=nil,       bg=p.bg_mid2 })
+  hi('ComplHint',      { link='NonText' })
+  hi('ComplHintMore',  { link='MoreMsg' })
   hi('ComplMatchIns',  { fg=nil,       bg=nil })
   hi('Conceal',        { fg=p.azure,   bg=nil })
   hi('CurSearch',      { fg=p.bg,      bg=p.yellow })
@@ -515,6 +517,8 @@ MiniHues.apply_palette = function(palette, plugins, opts)
   hi('LineNrAbove',    { link='LineNr' })
   hi('LineNrBelow',    { link='LineNr' })
   hi('MatchParen',     { fg=nil,       bg=p.bg_mid2, bold=true })
+  hi('MCursor',        { fg=p.bg,      bg=p.purple })
+  hi('MCursorVisual',  { link='Visual' })
   hi('ModeMsg',        { fg=p.green,   bg=nil })
   hi('MoreMsg',        { fg=p.azure,   bg=nil })
   hi('MsgArea',        { link='Normal' })
@@ -549,8 +553,8 @@ MiniHues.apply_palette = function(palette, plugins, opts)
   hi('StderrMsg',      { link='ErrorMsg' })
   hi('StdoutMsg',      { link='MsgArea' })
   hi('Substitute',     { fg=p.bg,      bg=p.blue })
-  hi('TabLine',        { fg=p.fg_mid,  bg=p.bg_edge })
-  hi('TabLineFill',    { link='Tabline' })
+  hi('TabLine',        { link='TablineFill' })
+  hi('TabLineFill',    { fg=p.fg_mid,  bg=p.bg_edge })
   hi('TabLineSel',     { fg=p.accent,  bg=p.bg_edge })
   hi('TermCursor',     { fg=nil,       bg=nil,       reverse=true })
   hi('TermCursorNC',   { fg=nil,       bg=nil,       reverse=true })
@@ -566,6 +570,8 @@ MiniHues.apply_palette = function(palette, plugins, opts)
   hi('WinSeparator',   { fg=p.accent,  bg=nil })
 
   -- Standard syntax (affects treesitter)
+  hi('Bold',           { fg=nil,       bg=nil,         bold=true })
+  hi('BoldItalic',     { fg=nil,       bg=nil,         bold=true, italic=true })
   hi('Boolean',        { link='Constant' })
   hi('Character',      { link='Constant' })
   hi('Comment',        { fg=p.fg_mid2, bg=nil })
@@ -574,13 +580,15 @@ MiniHues.apply_palette = function(palette, plugins, opts)
   hi('Debug',          { link='Special' })
   hi('Define',         { link='PreProc' })
   hi('Delimiter',      { fg=p.orange,  bg=nil })
+  hi('Dimmed',         { link='Comment' })
   hi('Error',          { fg=nil,       bg=p.red_bg })
   hi('Exception',      { link='Statement' })
   hi('Float',          { link='Constant' })
   hi('Function',       { fg=p.azure,   bg=nil })
   hi('Identifier',     { fg=p.yellow,  bg=nil })
-  hi('Ignore',         { fg=nil,       bg=nil })
+  hi('Ignore',         { fg='bg',      bg=nil })
   hi('Include',        { link='PreProc' })
+  hi('Italic',         { fg=nil,       bg=nil,         italic=true })
   hi('Keyword',        { link='Statement' })
   hi('Label',          { link='Statement' })
   hi('Macro',          { link='PreProc' })
@@ -600,11 +608,7 @@ MiniHues.apply_palette = function(palette, plugins, opts)
   hi('Todo',           { fg=p.accent,  bg=p.accent_bg, bold=true })
   hi('Type',           { fg=p.fg,      bg=nil })
   hi('Typedef',        { link='Type' })
-
-  -- Other community standard
-  hi('Bold',       { fg=nil, bg=nil, bold=true })
-  hi('Italic',     { fg=nil, bg=nil, italic=true })
-  hi('Underlined', { fg=nil, bg=nil, underline=true })
+  hi('Underlined',     { fg=nil,       bg=nil,         underline=true })
 
   -- Patch diff
   hi('diffAdded',   { fg=p.green,  bg=nil })
@@ -679,8 +683,8 @@ MiniHues.apply_palette = function(palette, plugins, opts)
   hi('DiagnosticSignHint',  { link='DiagnosticHint' })
   hi('DiagnosticSignOk',    { link='DiagnosticOk' })
 
-  hi('DiagnosticDeprecated',  { fg=nil, bg=nil, sp=p.red, strikethrough=true })
-  hi('DiagnosticUnnecessary', { link='Comment' })
+  hi('DiagnosticDeprecated',  { fg=nil, bg=nil, sp=p.red,     strikethrough=true })
+  hi('DiagnosticUnnecessary', { fg=nil, bg=nil, sp=p.fg_mid2, underline=true })
 
   -- Built-in LSP
   hi('LspReferenceText',  { fg=nil, bg=p.bg_mid2 })
@@ -1966,11 +1970,11 @@ end
 H.setup_autoadjust = function(palette)
   local gr = vim.api.nvim_create_augroup('MiniHuesAdjust', {})
   local hi = function(name, data) vim.api.nvim_set_hl(0, name, data) end
-  local adjust = function(ev)
+  local adjust = vim.schedule_wrap(function(ev)
     local adjust_all = ev.event == 'VimEnter'
     if adjust_all or ev.match == 'fillchars' then hi('MsgSeparator', H.attr_msgseparator(palette, true)) end
     if adjust_all or ev.match == 'pumborder' then hi('Pmenu', H.attr_pmenu(palette, true)) end
-  end
+  end)
 
   -- Use single autocommand without pattern for performance (skips Neovim doing
   -- pattern matching on the option name). Use 'VimEnter' to work when option
