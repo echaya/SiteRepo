@@ -1,5 +1,8 @@
 # 🌊 kanagawa-paper.nvim
 
+> [!IMPORTANT]
+> `master` is now the compatibility branch for existing Neovim installations. Use [`main`](https://github.com/thesimonho/kanagawa-paper.nvim/tree/main) for future updates and current documentation. Follow the installation instructions on `main` to move to the new release track; Neovim installations use the `neovim` distribution branch.
+
 <p align="center">
 Remixed light and dark Kanagawa color scheme with muted colors. For Neovim.
 </p>
@@ -22,11 +25,8 @@ I love the original [kanagawa.nvim](https://github.com/rebelot/kanagawa.nvim) co
 Both a light theme and a dark theme are provided.
 
 I have also ported the color scheme to VSCode, which you can find here: [kanagawa-paper.vscode](https://github.com/thesimonho/kanagawa-paper.vscode)
-
-| Ink                                                                                             | Canvas                                                                                             |
-| ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| ![ink](https://github.com/user-attachments/assets/d4e551e2-6091-4638-a584-c11201c6cfbd)         | ![canvas](https://github.com/user-attachments/assets/b1d1965b-63e0-4302-8a66-156882429b3e)         |
-| ![ink_palette](https://github.com/user-attachments/assets/ec7b304f-f318-4a83-a9af-bd44fce36bd2) | ![canvas_palette](https://github.com/user-attachments/assets/7dce8e71-e650-4b85-8efc-139ad6f4f849) |
+![ink](https://github.com/user-attachments/assets/68d6e82f-8dbb-4b96-9844-dcde55b264ee)
+![canvas](https://github.com/user-attachments/assets/b653e9a0-260d-462a-8ad8-93290deed0b8)
 
 ## ⚡️ Requirements
 
