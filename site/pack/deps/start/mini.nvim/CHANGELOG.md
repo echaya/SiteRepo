@@ -10,6 +10,10 @@ There are following change types:
 
 ## All
 
+### Evolve
+
+- Update `minischeme` color scheme to use 'mini.hues' and use it in examples as the suggested color scheme instead of `miniwinter`. The previous 'mini.base16' variant is now provided as `miniblue`.
+
 ### Refine
 
 - Stop official support of Neovim 0.9.
@@ -66,6 +70,8 @@ There are following change types:
 ### Evolve
 
 - Executing `run()` with zero test cases now goes through the reporter instead of early return with a `No cases to execute` message.
+
+- Soft deprecate `child.loop` redirection table in favor of a `child.uv` rename. This follows the `vim.loop` -> `vim.uv` rename done in Neovim=0.10.
 
 
 # Version 0.18.0 (2026-06-21)

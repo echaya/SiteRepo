@@ -71,7 +71,7 @@ sync_module () {
 sync_module "ai"
 sync_module "align"
 sync_module "animate"
-sync_module "base16" colors/minischeme.lua colors/minicyan.lua
+sync_module "base16" colors/miniblue.lua colors/minicyan.lua
 sync_module "basics"
 sync_module "bracketed"
 sync_module "bufremove"
@@ -89,7 +89,7 @@ sync_module "files"
 sync_module "fuzzy"
 sync_module "git"
 sync_module "hipatterns"
-sync_module "hues" colors/miniwinter.lua colors/minispring.lua colors/minisummer.lua colors/miniautumn.lua colors/randomhue.lua
+sync_module "hues" colors/minischeme.lua colors/miniwinter.lua colors/minispring.lua colors/minisummer.lua colors/miniautumn.lua colors/randomhue.lua
 sync_module "icons"
 sync_module "indentscope"
 sync_module "input"

@@ -1,4 +1,4 @@
-<p align="center"> <img src="https://github.com/nvim-mini/assets/blob/main/logo-2/logo-base16_readme.png?raw=true" alt="mini.base16" style="max-width:100%;border:solid 2px"/> </p>
+<p align="center"> <img src="https://github.com/nvim-mini/assets/blob/main/logo-3/logo-mini-module-base16.svg?raw=true" alt="mini.base16" style="max-width:100%;border:solid 2px"/> </p>
 
 ### Fast implementation of [chriskempson/base16](https://github.com/chriskempson/base16) theme for manually supplied palette
 
@@ -27,10 +27,10 @@ If you want to help this project grow but don't know where to start, check out [
 
 ## Demo
 
-Using `minischeme` color scheme:
+Using `miniblue` color scheme:
 
-<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minischeme-dark.png?raw=true"> <img alt="minischeme dark" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minischeme-dark.png?raw=true" style="width: 45%"/> </a>
-<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minischeme-light.png?raw=true"> <img alt="minischeme light" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_minischeme-light.png?raw=true" style="width: 45%"/> </a>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_miniblue-dark.png?raw=true"> <img alt="miniblue dark" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_miniblue-dark.png?raw=true" style="width: 45%"/> </a>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_miniblue-light.png?raw=true"> <img alt="miniblue light" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-base16_miniblue-light.png?raw=true" style="width: 45%"/> </a>
 
 Using `minicyan` color scheme:
 

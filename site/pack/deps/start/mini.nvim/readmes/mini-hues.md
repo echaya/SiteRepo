@@ -1,4 +1,4 @@
-<p align="center"> <img src="https://github.com/nvim-mini/assets/blob/main/logo-2/logo-hues_readme.png?raw=true" alt="mini.hues" style="max-width:100%;border:solid 2px"/> </p>
+<p align="center"> <img src="https://github.com/nvim-mini/assets/blob/main/logo-3/logo-mini-module-hues.svg?raw=true" alt="mini.hues" style="max-width:100%;border:solid 2px"/> </p>
 
 ### Generate configurable color scheme
 
@@ -27,6 +27,13 @@ If you want to help this project grow but don't know where to start, check out [
 https://user-images.githubusercontent.com/24854248/236634787-ab0c33df-f697-4d96-a754-d77eccee7513.mp4
 
 ### Bundled color schemes
+
+#### `minischeme`
+
+`minischeme` is the main color scheme that uses blue and yellow base colors:
+
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-minischeme-dark.png?raw=true"> <img alt="minischeme dark" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-minischeme-dark.png?raw=true" style="width: 45%"/> </a>
+<a href="https://github.com/nvim-mini/assets/blob/main/demo/demo-minischeme-light.png?raw=true"> <img alt="minischeme light" src="https://github.com/nvim-mini/assets/blob/main/demo/demo-minischeme-light.png?raw=true" style="width: 45%"/> </a>
 
 #### Four seasons
 

@@ -1,4 +1,4 @@
-<p align="center"> <img src="https://github.com/nvim-mini/assets/blob/main/logo-2/logo-deps_readme.png?raw=true" alt="mini.deps" style="max-width:100%;border:solid 2px"/> </p>
+<p align="center"> <img src="https://github.com/nvim-mini/assets/blob/main/logo-3/logo-mini-module-deps.svg?raw=true" alt="mini.deps" style="max-width:100%;border:solid 2px"/> </p>
 
 ### Plugin manager
 
@@ -171,7 +171,7 @@ Any lazy-loading is assumed to be done manually by calling `MiniDeps.add()` at a
 local now, later = MiniDeps.now, MiniDeps.later
 
 -- Safely execute immediately
-now(function() vim.cmd('colorscheme miniwinter') end)
+now(function() vim.cmd('colorscheme minischeme') end)
 now(function() require('mini.statusline').setup() end)
 
 -- Safely execute later

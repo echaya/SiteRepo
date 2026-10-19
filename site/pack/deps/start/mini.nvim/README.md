@@ -1,4 +1,4 @@
-<p align="center"> <img src="logo.png" alt="mini.nvim" style="max-width:100%;border:solid 2px"/> </p>
+<p align="center"> <img src="logo.svg" alt="mini.nvim" style="max-width:100%;border:solid 2px"/> </p>
 
 ### All-in-one plugin
 
@@ -230,9 +230,10 @@ Including functionality which needs several filetype/language specific implement
 
 ## Plugin color schemes
 
-This plugin comes with several color schemes (all have both dark and light variants). Activate any of them as a regular `colorscheme` (like `:colorscheme miniwinter` or `vim.cmd.colorscheme('miniwinter')`).
+This plugin comes with several color schemes (all have both dark and light variants). Activate any of them as a regular `colorscheme` (like `:colorscheme minischeme` or `vim.cmd.colorscheme('minischeme')`).
 
 - Based on ['mini.hues'](readmes/mini-hues.md) (recommended):
+    - `minischeme`: blue and yellow main color scheme.
     - `miniwinter`: "icy winter" palette with azure background.
     - `minispring`: "blooming spring" palette with green background.
     - `minisummer`: "hot summer" palette with brown/yellow background.
@@ -243,7 +244,7 @@ This plugin comes with several color schemes (all have both dark and light varia
 
 - Based on ['mini.base16'](readmes/mini-base16.md):
     - `minicyan`: cyan and grey main colors with medium contrast and saturation palette.
-    - `minischeme`: blue and yellow main colors with high contrast and saturation palette.
+    - `miniblue`: blue and yellow main colors with high contrast and saturation palette.
 
     You can see how they look in ['mini.base16' README](readmes/mini-base16.md#demo).
 
