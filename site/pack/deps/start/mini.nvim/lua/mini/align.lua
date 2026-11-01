@@ -4,7 +4,7 @@
 
 --- Rich and flexible customization of both alignment rules and user interaction.
 --- Works with charwise, linewise, and blockwise selections in both Normal mode
---- (on textobject/motion; with dot-repeat) and Visual mode.
+--- (on textobject/motion; with dot-repeat and |multicursor|) and Visual mode.
 ---
 --- Features:
 --- - Alignment is done in three main steps:
@@ -798,7 +798,7 @@ MiniAlign.align_user = function(mode)
         local msg = string.format('Modifier %s should be properly callable. Reason: %s', vim.inspect(id), out)
         H.echo({ { msg, 'WarningMsg' } }, true)
         vim.cmd('redraw')
-        vim.loop.sleep(500)
+        vim.uv.sleep(500)
       end
     end
 

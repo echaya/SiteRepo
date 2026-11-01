@@ -15,8 +15,8 @@
 ---   target suffix and can be selectively disabled.
 ---
 ---   Each mapping supports |[count]|. Mappings are created in Normal mode; for
----   targets which move cursor in current buffer also Visual and
----   Operator-pending (with dot-repeat) modes are supported.
+---   targets which move cursor in current buffer also Visual and Operator-pending
+---   (with dot-repeat and |multicursor|) modes are usually supported.
 ---
 ---   Using `lower-suffix` and `upper-suffix` (lower and upper case suffix) for
 ---   a single target the following mappings are created:
@@ -29,20 +29,21 @@
 ---   function):
 ---
 ---   `Target`                           `Mappings`         `Lua function`
----   Buffer ......................... `[B` `[b` `]b` `]B` .... |MiniBracketed.buffer()|
----   Comment block .................. `[C` `[c` `]c` `]C` .... |MiniBracketed.comment()|
----   Conflict marker ................ `[X` `[x` `]x` `]X` .... |MiniBracketed.conflict()|
----   Diagnostic ..................... `[D` `[d` `]d` `]D` .... |MiniBracketed.diagnostic()|
----   File on disk ................... `[F` `[f` `]f` `]F` .... |MiniBracketed.file()|
----   Indent change .................. `[I` `[i` `]i` `]I` .... |MiniBracketed.indent()|
----   Jump inside current buffer ..... `[J` `[j` `]j` `]J` .... |MiniBracketed.jump()|
----   Location from |location-list| .... `[L` `[l` `]l` `]L` .... |MiniBracketed.location()|
----   Old files ...................... `[O` `[o` `]o` `]O` .... |MiniBracketed.oldfile()|
----   Quickfix entry from |Quickfix| ... `[Q` `[q` `]q` `]Q` .... |MiniBracketed.quickfix()|
----   Tree-sitter node and parents ... `[T` `[t` `]t` `]T` .... |MiniBracketed.treesitter()|
----   Undo from linear history ....... `[U` `[u` `]u` `]U` .... |MiniBracketed.undo()|
----   Window in current tab .......... `[W` `[w` `]w` `]W` .... |MiniBracketed.window()|
----   Yank entry over put region ..... `[Y` `[y` `]y` `]Y` .... |MiniBracketed.yank()|
+---   Buffer ......................... `[B` `[b` `]b` `]B` ... |MiniBracketed.buffer()|
+---   Comment block .................. `[C` `[c` `]c` `]C` ... |MiniBracketed.comment()|
+---   Conflict marker ................ `[X` `[x` `]x` `]X` ... |MiniBracketed.conflict()|
+---   Diagnostic ..................... `[D` `[d` `]d` `]D` ... |MiniBracketed.diagnostic()|
+---   File on disk ................... `[F` `[f` `]f` `]F` ... |MiniBracketed.file()|
+---   Indent change .................. `[I` `[i` `]i` `]I` ... |MiniBracketed.indent()|
+---   Jump inside current buffer ..... `[J` `[j` `]j` `]J` ... |MiniBracketed.jump()|
+---   Location from |location-list| .... `[L` `[l` `]l` `]L` ... |MiniBracketed.location()|
+---   Multicursor .................... `[M` `[m` `]m` `]M` ... |MiniBracketed.multicursor()|
+---   Old files ...................... `[O` `[o` `]o` `]O` ... |MiniBracketed.oldfile()|
+---   Quickfix entry from |Quickfix| ... `[Q` `[q` `]q` `]Q` ... |MiniBracketed.quickfix()|
+---   Tree-sitter node and parents ... `[T` `[t` `]t` `]T` ... |MiniBracketed.treesitter()|
+---   Undo from linear history ....... `[U` `[u` `]u` `]U` ... |MiniBracketed.undo()|
+---   Window in current tab .......... `[W` `[w` `]w` `]W` ... |MiniBracketed.window()|
+---   Yank entry over put region ..... `[Y` `[y` `]y` `]Y` ... |MiniBracketed.yank()|
 ---
 --- Notes:
 --- - The `undo` target remaps |u| and |CTRL-R| keys to register undo state
@@ -187,20 +188,21 @@ MiniBracketed.config = {
   --
   -- See `:h MiniBracketed.config` for more info.
 
-  buffer     = { suffix = 'b', options = {} },
-  comment    = { suffix = 'c', options = {} },
-  conflict   = { suffix = 'x', options = {} },
-  diagnostic = { suffix = 'd', options = {} },
-  file       = { suffix = 'f', options = {} },
-  indent     = { suffix = 'i', options = {} },
-  jump       = { suffix = 'j', options = {} },
-  location   = { suffix = 'l', options = {} },
-  oldfile    = { suffix = 'o', options = {} },
-  quickfix   = { suffix = 'q', options = {} },
-  treesitter = { suffix = 't', options = {} },
-  undo       = { suffix = 'u', options = {} },
-  window     = { suffix = 'w', options = {} },
-  yank       = { suffix = 'y', options = {} },
+  buffer      = { suffix = 'b', options = {} },
+  comment     = { suffix = 'c', options = {} },
+  conflict    = { suffix = 'x', options = {} },
+  diagnostic  = { suffix = 'd', options = {} },
+  file        = { suffix = 'f', options = {} },
+  indent      = { suffix = 'i', options = {} },
+  jump        = { suffix = 'j', options = {} },
+  location    = { suffix = 'l', options = {} },
+  multicursor = { suffix = 'm', options = {} },
+  oldfile     = { suffix = 'o', options = {} },
+  quickfix    = { suffix = 'q', options = {} },
+  treesitter  = { suffix = 't', options = {} },
+  undo        = { suffix = 'u', options = {} },
+  window      = { suffix = 'w', options = {} },
+  yank        = { suffix = 'y', options = {} },
 }
 --minidoc_afterlines_end
 
@@ -397,6 +399,7 @@ end
 --- Direction "forward" increases line number, "backward" - decreases.
 ---
 --- Notes:
+--- - Respects `on_jump` from |vim.diagnostic.JumpOpts|.
 --- - Using `severity` option, this target can be used in mappings like "go to
 ---   next/previous error" (), etc. Using code similar to this: >lua
 ---
@@ -420,43 +423,26 @@ MiniBracketed.diagnostic = function(direction, opts)
   if vim.is_callable(default_opts.float) then default_opts.float = default_opts.float(nil, buf_id) end
   opts = vim.tbl_extend('force', default_opts, H.get_config().diagnostic.options, opts or {})
 
-  -- Define iterator that traverses all diagnostic entries in current buffer
-  local to_cursor_pos = function(pos) return { pos[1] + 1, pos[2] } end
-  local pos_field = vim.fn.has('nvim-0.11') == 1 and 'pos' or 'cursor_position'
-  local iterator = {}
-
-  iterator.next = function(position)
-    local next_opts = { [pos_field] = to_cursor_pos(position), severity = opts.severity, wrap = false }
-    local next = vim.diagnostic.get_next(next_opts)
-    if next == nil then return end
-    return { next.lnum, next.col }
+  local pos_arr = {}
+  for _, d in ipairs(vim.diagnostic.get(0, { severity = opts.severity })) do
+    local pos = H.diagnostic_get_pos(d)
+    if pos ~= nil and not H.is_pos_same(pos_arr[#pos_arr] or {}, pos) then table.insert(pos_arr, pos) end
   end
 
-  iterator.prev = function(position)
-    local prev_opts = { [pos_field] = to_cursor_pos(position), severity = opts.severity, wrap = false }
-    local prev = vim.diagnostic.get_prev(prev_opts)
-    if prev == nil then return end
-    return { prev.lnum, prev.col }
-  end
-
-  -- - Define states with zero-based indexing as used in `vim.diagnostic`.
-  -- - Go outside of proper buffer position for `start_edge` and `end_edge` to
-  --   correctly spot diagnostic entry right and start and end of buffer.
-  local cursor_pos = vim.api.nvim_win_get_cursor(0)
-  iterator.state = { cursor_pos[1] - 1, cursor_pos[2] }
-
-  iterator.start_edge = { 0, -1 }
-
-  local last_line = vim.api.nvim_buf_line_count(0)
-  iterator.end_edge = { last_line - 1, vim.fn.col({ last_line, '$' }) - 1 }
+  local pos_init = vim.api.nvim_win_get_cursor(0)
+  local iterator = H.make_bufpos_iterator(pos_arr, pos_init, direction, opts)
+  if iterator == nil then return end
 
   -- Iterate
-  local res_pos = MiniBracketed.advance(iterator, direction, opts)
-  if res_pos == nil or res_pos == iterator.state then return end
+  local res_pos_id = MiniBracketed.advance(iterator, direction, opts)
+  local target = pos_arr[res_pos_id]
+  if target == nil or H.is_pos_same(pos_init, target) then return end
 
-  -- Apply. Use built-in jump with offsetted cursor position to make it respect
-  -- `vim.diagnostic.config()`.
-  H.diagnostic_jump({ res_pos[1] + 1, res_pos[2] - 1 }, opts.float, opts.severity)
+  -- Apply similarly to `vim.diagnostic.jump()`
+  H.add_to_jumplist()
+  H.set_cursor(target[1], target[2])
+  vim.cmd('normal! zv')
+  H.diagnostic_on_jump(target[3], opts.float)
 end
 
 --- File on disk
@@ -696,6 +682,59 @@ MiniBracketed.location = function(direction, opts)
     vim.tbl_deep_extend('force', { n_times = vim.v.count1, wrap = true }, H.get_config().location.options, opts or {})
 
   H.qf_loc_implementation('location', direction, opts)
+end
+
+--- Multicursor
+---
+--- Go to next/previous extra cursor of |multicursor|.
+---
+--- Direction "forward" increases line number, "backward" - decreases.
+---
+--- Notes:
+--- - In follow mode (|'follow'| enabled, like after |q=|) extra cursors rotate while
+---   preserving their total number:
+---   - If initial position is not extra cursor: add extra cursor at it and remove
+---     one from target.
+---   - If initial position is extra cursor: only move main cursor.
+--- - |'follow'| is temporarily disabled during jump.
+---
+---@param direction __bracketed_direction
+---@param opts __bracketed_opts
+---   __bracketed_add_to_jumplist
+MiniBracketed.multicursor = function(direction, opts)
+  if H.is_disabled() then return end
+
+  H.validate_direction(direction, { 'first', 'backward', 'forward', 'last' }, 'multicursor')
+  local default_opts = { add_to_jumplist = false, n_times = vim.v.count1, wrap = true }
+  opts = vim.tbl_deep_extend('force', default_opts, H.get_config().multicursor.options, opts or {})
+
+  -- Compute extra cursors in order
+  local ns_id = vim.api.nvim_get_namespaces()['nvim.multicursor']
+  local ok, extmarks = pcall(vim.api.nvim_buf_get_extmarks, 0, ns_id, 0, -1, {})
+  if not ok or #extmarks == 0 then return end
+
+  local pos_init = vim.api.nvim_win_get_cursor(0)
+  -- NOTE: `extmarks` items are `{extmark_id,row,col}`, 0-based row and col
+  local pos_arr = vim.tbl_map(function(ext) return { ext[2] + 1, ext[3] } end, extmarks)
+  local iterator, on_extra_cursor = H.make_bufpos_iterator(pos_arr, pos_init, direction, opts)
+  if iterator == nil then return end
+
+  -- Iterate
+  local res_pos_id = MiniBracketed.advance(iterator, direction, opts)
+  local target = pos_arr[res_pos_id]
+  if H.is_pos_same(pos_init, target) then return end
+
+  -- Possibly add current position to jumplist
+  if opts.add_to_jumplist then H.add_to_jumplist() end
+
+  -- Apply: jump, preserve 'follow', possibly rotate, open just enough folds
+  local cache_follow = vim.bo.follow
+  if cache_follow then vim.bo.follow = false end
+  if cache_follow and not on_extra_cursor then vim.cmd('normal! Q') end
+  H.set_cursor(target[1], target[2])
+  vim.cmd('normal! zv')
+  if cache_follow and not on_extra_cursor then vim.cmd('normal! Q') end
+  if cache_follow then vim.bo.follow = true end
 end
 
 --- Old files from previous and current sessions
@@ -1478,6 +1517,15 @@ H.apply_config = function(config)
     H.map('o', ']' .. low, "v<Cmd>lua MiniBracketed.jump('forward')<CR>", { desc = 'Jump forward' })
   end
 
+  if config.multicursor.suffix ~= '' and vim.fn.has('nvim-0.13') == 1 then
+    -- Visual and Operator-pending mappings are rarely useful and discouraged
+    local low, up = H.get_suffix_variants(config.multicursor.suffix)
+    H.map('n', '[' .. up,  "<Cmd>lua MiniBracketed.multicursor('first')<CR>",    { desc = 'Multicursor first' })
+    H.map('n', ']' .. up,  "<Cmd>lua MiniBracketed.multicursor('last')<CR>",     { desc = 'Multicursor last' })
+    H.map('n', '[' .. low, "<Cmd>lua MiniBracketed.multicursor('backward')<CR>", { desc = 'Multicursor backward' })
+    H.map('n', ']' .. low, "<Cmd>lua MiniBracketed.multicursor('forward')<CR>",  { desc = 'Multicursor forward' })
+  end
+
   if config.oldfile.suffix ~= '' then
     local low, up = H.get_suffix_variants(config.oldfile.suffix)
     H.map('n', '[' .. up,  "<Cmd>lua MiniBracketed.oldfile('first')<CR>",    { desc = 'Oldfile first' })
@@ -1643,25 +1691,28 @@ H.is_conflict_mark = function(line_num)
 end
 
 -- Diagnostic -----------------------------------------------------------------
-H.diagnostic_jump = function(pos, float, severity)
-  local on_jump = nil
-  if vim.diagnostic.config().jump.on_jump == nil and float ~= false then
+H.diagnostic_get_pos = function(d)
+  -- Try using "logical position" from tracking extmark. Useful after text edit
+  -- before diagnostic provider update. This is like `vim.diagnostic.jump()`.
+  local ok_ns, ns_data = pcall(vim.diagnostic.get_namespace, d.namespace)
+  if not ok_ns then return { d.lnum + 1, d.col } end
+  local ns_id = ns_data.user_data.location_ns
+  local ok_extmark, extmark = pcall(vim.api.nvim_buf_get_extmark_by_id, 0, ns_id, d._extmark_id, { details = true })
+  if ok_extmark then return (not extmark[3].invalid) and { extmark[1] + 1, extmark[2], d } or nil end
+  return { d.lnum + 1, d.col, d }
+end
+
+H.diagnostic_on_jump = function(diag, float)
+  local on_jump = (vim.diagnostic.config().jump or {}).on_jump
+  if on_jump == nil then
+    if float == false then return end
     float = type(float) == 'table' and float or {}
     on_jump = function(_, bufnr)
-      local default_opts = { bufnr = bufnr, scope = 'cursor', focus = false }
-      vim.diagnostic.open_float(vim.tbl_extend('force', default_opts, float))
+      local default_float_opts = { bufnr = bufnr, scope = 'cursor', focus = false }
+      vim.diagnostic.open_float(vim.tbl_extend('force', default_float_opts, float))
     end
   end
-  vim.diagnostic.jump({ count = 1, pos = pos, on_jump = on_jump, severity = severity })
-end
-if vim.fn.has('nvim-0.12') == 0 and vim.fn.has('nvim-0.11') == 1 then
-  H.diagnostic_jump = function(pos, float, severity)
-    vim.diagnostic.jump({ count = 1, pos = pos, float = float, severity = severity })
-  end
-elseif vim.fn.has('nvim-0.11') == 0 then
-  H.diagnostic_jump = function(pos, float, severity)
-    vim.diagnostic.goto_next({ cursor_position = pos, float = float, severity = severity })
-  end
+  vim.schedule(function() on_jump(diag, vim.api.nvim_get_current_buf()) end)
 end
 
 -- Files ----------------------------------------------------------------------
@@ -1671,8 +1722,8 @@ H.get_file_data = function()
   local dir_path = cur_buf_path ~= '' and vim.fn.fnamemodify(cur_buf_path, ':p:h') or vim.fn.getcwd()
 
   -- Compute sorted array of all files in target directory
-  local dir_handle = vim.loop.fs_scandir(dir_path)
-  local files_stream = function() return vim.loop.fs_scandir_next(dir_handle) end
+  local dir_handle = vim.uv.fs_scandir(dir_path)
+  local files_stream = function() return vim.uv.fs_scandir_next(dir_handle) end
 
   local files = {}
   for basename, fs_type in files_stream do
@@ -1967,6 +2018,48 @@ H.get_register_mode = function(register)
   -- Use only first character to correctly get '\22' in blockwise mode
   return vim.fn.getregtype(register):sub(1, 1)
 end
+
+-- Buffer position iterator ---------------------------------------------------
+H.make_bufpos_iterator = function(pos_arr, pos_init, direction, opts)
+  local n = #pos_arr
+  table.sort(pos_arr, H.is_pos_before)
+
+  -- Do not move cursor if outside of first/last and no wrap
+  if not opts.wrap then
+    if direction == 'backward' and H.is_pos_before(pos_init, pos_arr[1]) then return end
+    if direction == 'forward' and H.is_pos_before(pos_arr[n], pos_init) then return end
+  end
+
+  -- Locate starting state and if initial position is on some input position
+  local state, on_pos = nil, false
+  for i, pos in ipairs(pos_arr) do
+    if not H.is_pos_before(pos_init, pos) then state = i end
+    on_pos = on_pos or H.is_pos_same(pos_init, pos)
+  end
+  if state == nil then state = #pos_arr end
+  if not on_pos and (direction == 'backward' or direction == 'last') then state = state + 1 end
+
+  local res = {}
+
+  res.next = function(id)
+    if id == nil or n <= id then return end
+    return id + 1
+  end
+
+  res.prev = function(id)
+    if id == nil or id <= 1 then return end
+    return id - 1
+  end
+
+  res.state = state
+  res.start_edge = 0
+  res.end_edge = n + 1
+
+  return res, on_pos
+end
+
+H.is_pos_before = function(a, b) return a[1] < b[1] or (a[1] == b[1] and a[2] < b[2]) end
+H.is_pos_same = function(a, b) return a[1] == b[1] and a[2] == b[2] end
 
 -- Utilities ------------------------------------------------------------------
 H.error = function(msg) error('(mini.bracketed) ' .. msg, 0) end

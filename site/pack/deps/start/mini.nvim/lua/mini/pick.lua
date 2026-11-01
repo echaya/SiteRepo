@@ -1779,12 +1779,12 @@ MiniPick.set_picker_items_from_cli = function(command, opts)
   if not MiniPick.is_picker_active() then return end
 
   local executable, args = command[1], vim.list_slice(command, 2, #command)
-  local stdout, data_feed = vim.loop.new_pipe(), {}
+  local stdout, data_feed = vim.uv.new_pipe(), {}
   local spawn_opts = vim.tbl_deep_extend('force', opts.spawn_opts, { args = args, stdio = { nil, stdout, nil } })
   if type(spawn_opts.cwd) == 'string' then spawn_opts.cwd = H.full_path(spawn_opts.cwd) end
 
   local process, pid
-  process, pid = vim.loop.spawn(executable, spawn_opts, function()
+  process, pid = vim.uv.spawn(executable, spawn_opts, function()
     if not process:is_closing() then process:close() end
   end)
   if process == nil then
@@ -1953,9 +1953,9 @@ H.ns_id = {
 
 -- Timers
 H.timers = {
-  busy = vim.loop.new_timer(),
-  focus = vim.loop.new_timer(),
-  redraw = vim.loop.new_timer(),
+  busy = vim.uv.new_timer(),
+  focus = vim.uv.new_timer(),
+  redraw = vim.uv.new_timer(),
 }
 
 -- Pickers
@@ -1968,7 +1968,7 @@ H.querytick = 0
 H.cache = {}
 
 -- File system information
-H.is_windows = vim.loop.os_uname().sysname == 'Windows_NT'
+H.is_windows = vim.uv.os_uname().sysname == 'Windows_NT'
 
 -- Helper functionality =======================================================
 -- Settings -------------------------------------------------------------------
@@ -2320,7 +2320,7 @@ H.picker_new_win = function(buf_id, win_config, cwd)
   vim.o.guicursor = 'a:MiniPickCursor'
 
   -- Create window and focus on it
-  local win_id = vim.api.nvim_open_win(buf_id, true, H.picker_compute_win_config(win_config, true))
+  local win_id = vim.api.nvim_open_win(buf_id, true, H.picker_compute_win_config(win_config))
 
   -- Set window-local data
   local opts_scope = { scope = 'local', win = win_id }
@@ -2340,7 +2340,7 @@ H.picker_new_win = function(buf_id, win_config, cwd)
   return win_id
 end
 
-H.picker_compute_win_config = function(win_config, is_for_open)
+H.picker_compute_win_config = function(win_config)
   local has_tabline = vim.o.showtabline == 2 or (vim.o.showtabline == 1 and #vim.api.nvim_list_tabpages() > 1)
   local has_statusline = vim.o.laststatus > 0
   local max_height = vim.o.lines - vim.o.cmdheight - (has_tabline and 1 or 0) - (has_statusline and 1 or 0)
@@ -2356,7 +2356,6 @@ H.picker_compute_win_config = function(win_config, is_for_open)
     row = max_height + (has_tabline and 1 or 0),
     border = winborder == '' and 'single' or nil,
     style = 'minimal',
-    noautocmd = is_for_open,
     -- Use high enough value to be on top of built-in windows (pmenu, etc.)
     zindex = 251,
   }
@@ -2693,7 +2692,7 @@ H.picker_compute_footer = function(picker, win_id)
 end
 
 H.picker_stop = function(picker, abort)
-  vim.tbl_map(function(timer) pcall(vim.loop.timer_stop, timer) end, H.timers)
+  vim.tbl_map(function(timer) pcall(vim.uv.timer_stop, timer) end, H.timers)
 
   -- Show cursor (work around `guicursor=''` actually leaving cursor hidden)
   if H.cache.guicursor == '' then vim.cmd('set guicursor=a: | redraw') end
@@ -3603,9 +3602,9 @@ H.poke_picker_throttle = function(querytick_ref)
     return function() return true end
   end
 
-  local latest_time, dont_check_querytick = vim.loop.hrtime(), querytick_ref == nil
+  local latest_time, dont_check_querytick = vim.uv.hrtime(), querytick_ref == nil
   local threshold = 1000000 * H.pickers.active.opts.delay.async
-  local hrtime = vim.loop.hrtime
+  local hrtime = vim.uv.hrtime
   local poke_is_picker_active = MiniPick.poke_is_picker_active
   return function()
     local now = hrtime()
@@ -3784,10 +3783,10 @@ H.get_next_char_bytecol = function(line_str, col)
 end
 
 H.is_file_text = function(path)
-  local fd = vim.loop.fs_open(path, 'r', 1)
+  local fd = vim.uv.fs_open(path, 'r', 1)
   if fd == nil then return nil end
-  local is_text = vim.loop.fs_read(fd, 1024):find('\0') == nil
-  vim.loop.fs_close(fd)
+  local is_text = vim.uv.fs_read(fd, 1024):find('\0') == nil
+  vim.uv.fs_close(fd)
   return is_text
 end
 
@@ -3796,7 +3795,7 @@ if H.is_windows then
   H.full_path = function(path) return (vim.fn.fnamemodify(path, ':p'):gsub('(.)[\\/]$', '%1')) end
 end
 
-H.expand_home = function(path) return path:sub(1, 1) == '~' and ((vim.loop.os_homedir() or '~') .. path:sub(2)) or path end
+H.expand_home = function(path) return path:sub(1, 1) == '~' and ((vim.uv.os_homedir() or '~') .. path:sub(2)) or path end
 
 H.parse_uri = function(x)
   local ok, path = pcall(vim.uri_to_fname, x)

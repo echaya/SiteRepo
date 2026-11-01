@@ -896,7 +896,7 @@ end
 ---@return boolean|nil Whether closing was done or `nil` if there was nothing to close.
 MiniFiles.close = function()
   -- Stop possible tracking lost focus
-  pcall(vim.loop.timer_stop, H.timers.focus)
+  pcall(vim.uv.timer_stop, H.timers.focus)
 
   -- Act if there is explorer to close (even invisible after improper quit)
   local explorer = H.explorer_get(nil, true)
@@ -1284,7 +1284,7 @@ H.ns_id = {
 
 -- Timers
 H.timers = {
-  focus = vim.loop.new_timer(),
+  focus = vim.uv.new_timer(),
 }
 
 -- Index of all visited files
@@ -1313,7 +1313,7 @@ H.opened_buffers = {}
 H.vim_ui = { select = nil, select_active = false, input = nil, input_active = false }
 
 -- File system information
-H.is_windows = vim.loop.os_uname().sysname == 'Windows_NT'
+H.is_windows = vim.uv.os_uname().sysname == 'Windows_NT'
 
 -- Helper functionality =======================================================
 -- Settings -------------------------------------------------------------------
@@ -1536,6 +1536,7 @@ H.explorer_refresh = function(explorer, opts)
       view = H.view_encode_cursor(view)
       -- Force update of shown path ids
       if H.opened_buffers[view.buf_id] then H.opened_buffers[view.buf_id].children_path_ids = nil end
+      H.clear_multicursor(view.buf_id)
       H.buffer_update(view.buf_id, path, explorer.opts, not view.was_focused)
       explorer.views[path] = view
     end
@@ -2131,6 +2132,7 @@ H.view_track_cursor = vim.schedule_wrap(function(data)
 
   -- Ensure cursor doesn't go over path id and icon
   local cur_cursor = H.window_tweak_cursor(win_id, buf_id)
+  H.window_tweak_multicursor(buf_id)
 
   -- Ensure cursor line doesn't contradict window on the right
   local tabpage_id = vim.api.nvim_win_get_tabpage(win_id)
@@ -2384,10 +2386,10 @@ end
 H.buffer_update_file = function(buf_id, path, opts, _)
   -- Work only with readable text file. This is not 100% proof, but good enough.
   -- Source: https://github.com/sharkdp/content_inspector
-  local fd, width_preview = vim.loop.fs_open(path, 'r', 1), opts.windows.width_preview
+  local fd, width_preview = vim.uv.fs_open(path, 'r', 1), opts.windows.width_preview
   if fd == nil then return H.set_buflines(buf_id, { '-No-access' .. string.rep('-', width_preview) }) end
-  local is_text = vim.loop.fs_read(fd, 1024):find('\0') == nil
-  vim.loop.fs_close(fd)
+  local is_text = vim.uv.fs_read(fd, 1024):find('\0') == nil
+  vim.uv.fs_close(fd)
   if not is_text then return H.set_buflines(buf_id, { '-Non-text-file' .. string.rep('-', width_preview) }) end
 
   -- Compute lines. Limit number of read lines to work better on large files.
@@ -2605,18 +2607,28 @@ end
 
 H.window_tweak_cursor = function(win_id, buf_id)
   local cursor = vim.api.nvim_win_get_cursor(win_id)
-  local l = H.get_bufline(buf_id, cursor[1])
-
-  local cur_offset = H.match_line_offset(l)
+  local cur_offset = H.match_line_offset(H.get_bufline(buf_id, cursor[1]))
   if cursor[2] < (cur_offset - 1) then
     cursor[2] = cur_offset - 1
     vim.api.nvim_win_set_cursor(win_id, cursor)
     -- Ensure icons are shown (may be not the case after horizontal scroll)
     vim.cmd('normal! 1000zh')
   end
-
   return cursor
 end
+
+H.window_tweak_multicursor = function(buf_id)
+  local ns_id = vim.api.nvim_get_namespaces()['nvim.multicursor']
+  local mc_extmarks = vim.api.nvim_buf_get_extmarks(buf_id, ns_id, 0, -1, {})
+  for _, data in ipairs(mc_extmarks) do
+    local cur_offset = H.match_line_offset(H.get_bufline(buf_id, data[2] + 1))
+    if data[3] < (cur_offset - 1) then
+      data[3] = cur_offset - 1
+      vim.api.nvim_buf_set_extmark(buf_id, ns_id, data[2], data[3], { id = data[1] })
+    end
+  end
+end
+if vim.fn.has('nvim-0.13') == 0 then H.window_tweak_multicursor = function(_) end end
 
 H.window_update_border_hl = function(win_id)
   if not H.is_valid_win(win_id) then return end
@@ -2641,16 +2653,16 @@ end
 ---@field path_id number Id of full path.
 ---@private
 H.fs_read_dir = function(path, content_opts)
-  local fs = vim.loop.fs_scandir(path)
+  local fs = vim.uv.fs_scandir(path)
   local res = {}
   if not fs then return res end
 
   -- Read all entries
-  local name, fs_type = vim.loop.fs_scandir_next(fs)
+  local name, fs_type = vim.uv.fs_scandir_next(fs)
   while name do
     if not (fs_type == 'file' or fs_type == 'directory') then fs_type = H.fs_get_type(H.fs_child_path(path, name)) end
     table.insert(res, { fs_type = fs_type, name = name, path = H.fs_child_path(path, name) })
-    name, fs_type = vim.loop.fs_scandir_next(fs)
+    name, fs_type = vim.uv.fs_scandir_next(fs)
   end
 
   -- Filter and sort entries
@@ -2707,7 +2719,7 @@ end
 
 H.fs_is_imaginary_path = function(path) return path:sub(-1) == '\000' end
 
-H.fs_is_present_path = function(path) return vim.loop.fs_stat(path) ~= nil and not H.fs_is_imaginary_path(path) end
+H.fs_is_present_path = function(path) return vim.uv.fs_stat(path) ~= nil and not H.fs_is_imaginary_path(path) end
 
 H.fs_child_path = function(dir, name) return H.fs_normalize_path(string.format('%s/%s', dir, name)) end
 
@@ -2716,7 +2728,7 @@ H.fs_full_path = function(path) return H.fs_normalize_path(vim.fn.fnamemodify(pa
 H.fs_shorten_path = function(path)
   -- Replace home directory with '~'
   path = H.fs_normalize_path(path)
-  local home_dir = H.fs_normalize_path(vim.loop.os_homedir() or '~')
+  local home_dir = H.fs_normalize_path(vim.uv.os_homedir() or '~')
   return (path:gsub('^' .. vim.pesc(home_dir), '~'))
 end
 
@@ -2932,7 +2944,7 @@ H.fs_do.copy = function(from, to)
   vim.fn.mkdir(H.fs_get_parent(to), 'p')
 
   -- Copy file directly
-  if from_type == 'file' then return vim.loop.fs_copyfile(from, to) end
+  if from_type == 'file' then return vim.uv.fs_copyfile(from, to) end
 
   -- Recursively copy a directory
   local fs_entries = H.fs_read_dir(from, { filter = function() return true end, sort = function(x) return x end })
@@ -2963,7 +2975,7 @@ H.fs_do.move = function(from, to, skip_buf_rename)
 
   -- Move while allowing to create directory
   vim.fn.mkdir(H.fs_get_parent(to), 'p')
-  local success, _, err_code = vim.loop.fs_rename(from, to)
+  local success, _, err_code = vim.uv.fs_rename(from, to)
 
   if err_code == 'EXDEV' then
     -- Handle cross-device move separately as `loop.fs_rename` does not work
@@ -3118,6 +3130,13 @@ H.set_buflines = function(buf_id, lines)
 end
 
 H.set_extmark = function(...) pcall(vim.api.nvim_buf_set_extmark, ...) end
+
+H.clear_multicursor = function(buf_id)
+  if buf_id == nil or buf_id == 0 then buf_id = vim.api.nvim_get_current_buf() end
+  local ns_id = vim.api.nvim_get_namespaces()['nvim.multicursor']
+  pcall(vim.api.nvim_buf_clear_namespace, buf_id, ns_id, 0, -1)
+end
+if vim.fn.has('nvim-0.13') == 0 then H.clear_multicursor = function(_) end end
 
 H.win_set_buf = function(win_id, buf_id)
   vim.wo[win_id].winfixbuf = false

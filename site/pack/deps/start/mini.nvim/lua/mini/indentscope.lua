@@ -24,8 +24,8 @@
 --- - Customizable way of line to be considered "border first". This is useful
 ---   if you want to place cursor on function header and get scope of its body.
 ---
---- - There are textobjects and motions to operate on scope. Support |count|
----   and dot-repeat (in operator pending mode).
+--- - There are textobjects and motions to operate on scope. Support dot-repeat
+---   (in Operator-pending mode), |multicursor|, and |[count]|.
 ---
 --- # Setup ~
 ---
@@ -556,7 +556,7 @@ H.default_config = vim.deepcopy(MiniIndentscope.config)
 H.ns_id = vim.api.nvim_create_namespace('MiniIndentscope')
 
 -- Timer for doing animation
-H.timer = vim.loop.new_timer()
+H.timer = vim.uv.new_timer()
 
 -- Table with current relevalnt data:
 -- - `event_id` - counter for events.

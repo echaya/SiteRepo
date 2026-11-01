@@ -1131,7 +1131,7 @@ H.state = {
   -- Array of raw keys
   query = {},
   clues = {},
-  timer = vim.loop.new_timer(),
+  timer = vim.uv.new_timer(),
   buf_id = nil,
   win_id = nil,
   is_after_postkeys = false,
@@ -1164,7 +1164,7 @@ H.ft_to_enable = { help = true, git = true, ministarter = true }
 
 -- Timers
 H.timers = {
-  getcharstr = vim.loop.new_timer(),
+  getcharstr = vim.uv.new_timer(),
 }
 
 -- Undo autocommand to be created for several operator tweaks
@@ -1499,18 +1499,18 @@ H.state_get_query_clue = function()
 end
 
 H.compute_exec_keys = function()
-  local keys_count = H.state.count > 0 and H.state.count or ''
+  local cur_mode = vim.fn.mode(1)
+  local is_insert_mode = vim.startswith(cur_mode, 'i')
+  local keys_count = (H.state.count > 0 and not is_insert_mode) and H.state.count or ''
   local keys_query = H.query_to_keys(H.state.query)
   local res = keys_count .. keys_query
-
-  local cur_mode = vim.fn.mode(1)
 
   -- Using `feedkeys()` inside Operator-pending mode leads to its cancel into
   -- Normal/Insert mode so extra work should be done to rebuild all keys
   if vim.startswith(cur_mode, 'no') then
     local operator_tweak = H.operator_tweaks[vim.v.operator] or function(x) return x end
     res = operator_tweak(vim.v.operator .. H.get_forced_submode() .. res)
-  elseif not vim.startswith(cur_mode, 'i') and H.get_default_register() ~= vim.v.register then
+  elseif not is_insert_mode and H.get_default_register() ~= vim.v.register then
     -- Force non-default register but not in Insert mode
     local expr_reg_keys = vim.v.register == '=' and (vim.fn.getreginfo('=').regcontents[1] .. '\r') or ''
     res = '"' .. vim.v.register .. expr_reg_keys .. res

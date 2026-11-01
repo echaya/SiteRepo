@@ -57,7 +57,7 @@ Here are code snippets for some common installation methods:
     -- Put this at the top of 'init.lua'
     local path_package = vim.fn.stdpath('data') .. '/site'
     local mini_path = path_package .. '/pack/deps/start/mini.nvim'
-    if not vim.loop.fs_stat(mini_path) then
+    if not vim.uv.fs_stat(mini_path) then
       vim.cmd('echo "Installing `mini.nvim`" | redraw')
       local clone_cmd = {
         'git', 'clone', '--filter=blob:none',
@@ -227,6 +227,10 @@ Each module upon release is considered to be relatively stable: both in terms of
 ### Not filetype and language specific
 
 Including functionality which needs several filetype/language specific implementations is an explicit no-goal of this project. This is mostly due to the potential increase in maintenance to keep implementation up to date. However, any part which might need filetype/language specific tuning should be designed to allow it by letting user set proper buffer options and/or local configuration.
+
+### Text edit repeat
+
+All text edit mappings (like for operators, textobjects, motions) created by modules support built-in repeat functionality if technically possible. This includes dot-repeat, macros, and Neovim>=0.13 multicursor.
 
 ## Plugin color schemes
 

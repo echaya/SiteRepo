@@ -13,7 +13,7 @@
 --- - Automated configurable mappings to operate on textobject, line, selection.
 ---   Can be disabled in favor of more control with |MiniOperators.make_mappings()|.
 ---
---- - All operators support |[count]| and dot-repeat.
+--- - All operators support dot-repeat, |multicursor|, and |[count]|.
 ---
 --- See |MiniOperators-overview| and |MiniOperators.config| for more details.
 ---
@@ -346,7 +346,14 @@ end
 ---   "yank both regions" and replace each one with another.
 ---
 --- Notes:
---- - Use `<C-c>` to stop exchanging after the first step.
+--- - Use <C-c> to stop exchanging.
+---
+--- - Works with |multicursor| for each cursor in parallel: extra cursors perform
+---   the same step (first or second) as the main cursor.
+---   There are limitations: requires the same number and "order" of extra cursors
+---   for first and second steps. Behavior if this is not the case is undefined.
+---   Usually works for common situations like `gxiw` - `w` - `.` (exchange two
+---   nearby words), both as manual separate steps and as part of a mapping.
 ---
 --- - Exchanged regions can have different (char,line,block)-wise submodes.
 ---
@@ -364,23 +371,31 @@ MiniOperators.exchange = function(mode)
   end
 
   -- Depending on present cache data, perform exchange step
-  if not H.exchange_has_step_one() then
+  if H.exchange_is_step_one() then
     -- Store data about first region
-    H.cache.exchange.step_one = H.exchange_set_region_extmark(mode, true)
+    H.exchange_set_region_extmark('step_one', mode, true)
     if H.cache.exchange.step_one == nil then return end
 
     -- Temporarily remap `<C-c>` to stop the exchange
-    H.exchange_set_stop_mapping()
+    if H.cache.exchange.stop_restore_map_data == nil then H.exchange_set_stop_mapping() end
+
+    -- Force cascading if it is multicursor
+    if H.has_extra_cursors() and not vim.v.cascading then H.force_mc_cascade() end
+
+    -- Track if done inside a mapping to detect cases like `gxiww.` mapping RHS
+    if H.cache.exchange.in_mapping == nil then H.cache.exchange.in_mapping = vim.fn.state('m') == 'm' end
   else
     -- Store data about second region
-    H.cache.exchange.step_two = H.exchange_set_region_extmark(mode, false)
+    H.exchange_set_region_extmark('step_two', mode, false)
     if H.cache.exchange.step_two == nil then return end
 
-    -- Do exchange
-    H.exchange_do()
+    -- Do exchange at current cursor
+    local n_cursor = H.cache.exchange.step_two.n_cursor
+    H.exchange_do(n_cursor)
+    H.exchange_clear_extmarks(n_cursor)
 
-    -- Stop exchange
-    H.exchange_stop()
+    -- Stop exchange when there are no regions from step one to act on
+    if vim.tbl_isempty(H.cache.exchange.step_one.extmarks) then H.exchange_stop() end
   end
 end
 
@@ -792,11 +807,11 @@ H.inspect_objects = function(...)
 end
 
 -- Exchange -------------------------------------------------------------------
-H.exchange_do = function()
+H.exchange_do = function(n_cursor)
   local step_one, step_two = H.cache.exchange.step_one, H.cache.exchange.step_two
 
   -- Do nothing if regions are the same
-  if H.exchange_is_same_steps(step_one, step_two) then return end
+  if H.exchange_is_same_steps(step_one, step_two, n_cursor) then return end
 
   -- Save temporary registers
   local reg_one, reg_two = vim.fn.getreginfo('a'), vim.fn.getreginfo('b')
@@ -809,7 +824,7 @@ H.exchange_do = function()
   -- intersecting regions.
   local populating_register = function(step, register)
     return function()
-      H.exchange_set_step_marks(step, { 'x', 'y' })
+      H.exchange_set_step_marks(step, n_cursor, { 'x', 'y' })
       local yank_data =
         { mark_from = 'x', mark_to = 'y', submode = step.submode, mode = step.mode, register = register }
       H.do_between_marks('y', yank_data)
@@ -822,7 +837,7 @@ H.exchange_do = function()
   -- Sequentially replace
   local replacing = function(step, register)
     return function()
-      H.exchange_set_step_marks(step, { 'x', 'y' })
+      H.exchange_set_step_marks(step, n_cursor, { 'x', 'y' })
 
       local replace_data = {
         count = 1,
@@ -845,18 +860,27 @@ H.exchange_do = function()
   vim.fn.setreg('b', reg_two)
 end
 
-H.exchange_has_step_one = function()
-  local step_one = H.cache.exchange.step_one
-  if type(step_one) ~= 'table' then return false end
-
-  if not vim.api.nvim_buf_is_valid(step_one.buf_id) then
-    H.exchange_stop()
-    return false
-  end
-  return true
+H.exchange_clear_extmarks = function(n_cursor)
+  local ns_id = H.ns_id.exchange
+  local step_one, step_two = H.cache.exchange.step_one, H.cache.exchange.step_two
+  pcall(vim.api.nvim_buf_del_extmark, step_one.buf_id, ns_id, step_one.extmarks[n_cursor])
+  pcall(vim.api.nvim_buf_del_extmark, step_two.buf_id, ns_id, step_two.extmarks[n_cursor])
+  step_one.extmarks[n_cursor] = nil
+  step_two.extmarks[n_cursor] = nil
 end
 
-H.exchange_set_region_extmark = function(mode, add_highlight)
+H.exchange_is_step_one = function()
+  if not H.is_valid_buf((H.cache.exchange.step_one or {}).buf_id) then H.exchange_stop() end
+  -- The regular case is simple: step one if not done it yet. For multicursor
+  -- cascading it is meant to work in two situations:
+  -- - Manually perform step one expecting extra cursor to also do step one.
+  --   Then manually do the same for step two.
+  -- - Execute a mapping that has several exchange steps in it. Like `gxiww.`.
+  return H.cache.exchange.step_one == nil
+    or (vim.v.cascading and H.cache.exchange.step_two == nil and not H.cache.exchange.in_mapping)
+end
+
+H.exchange_set_region_extmark = function(cache_name, mode, add_highlight)
   local ns_id = H.ns_id.exchange
 
   -- Compute regular marks for target region
@@ -901,16 +925,22 @@ H.exchange_set_region_extmark = function(mode, add_highlight)
     H.highlight_range(buf_id, ns_id, 'MiniOperatorsExchangeFrom', extmark_from, extmark_to, opts)
   end
 
-  -- Return data to cache
-  return { buf_id = buf_id, mode = mode, submode = submode, extmark_id = region_extmark_id }
+  -- Cache data to reuse later
+  local cache = H.cache.exchange[cache_name]
+  cache = type(cache) == 'table' and cache
+    or { buf_id = buf_id, mode = mode, submode = submode, n_cursor = -1, extmarks = {} }
+  cache.n_cursor = cache.n_cursor + 1
+  cache.extmarks[cache.n_cursor] = region_extmark_id
+  H.cache.exchange[cache_name] = cache
 end
 
-H.exchange_get_region_extmark = function(step)
-  return vim.api.nvim_buf_get_extmark_by_id(step.buf_id, H.ns_id.exchange, step.extmark_id, { details = true })
+H.exchange_get_region_extmark = function(step, n_cursor)
+  local extmark_id = step.extmarks[n_cursor or 0]
+  return vim.api.nvim_buf_get_extmark_by_id(step.buf_id, H.ns_id.exchange, extmark_id, { details = true })
 end
 
-H.exchange_set_step_marks = function(step, mark_names)
-  local extmark_details = H.exchange_get_region_extmark(step)
+H.exchange_set_step_marks = function(step, n_cursor, mark_names)
+  local extmark_details = H.exchange_get_region_extmark(step, n_cursor)
 
   H.set_mark(mark_names[1], { extmark_details[1] + 1, extmark_details[2] })
 
@@ -960,12 +990,13 @@ H.exchange_del_stop_mapping = function()
   else
     vim.keymap.del('n', map_data.lhs or '<C-c>')
   end
+  H.cache.exchange.stop_restore_map_data = nil
 end
 
-H.exchange_is_same_steps = function(step_one, step_two)
+H.exchange_is_same_steps = function(step_one, step_two, n_cursor)
   if step_one.buf_id ~= step_two.buf_id or step_one.submode ~= step_two.submode then return false end
   -- Region's start and end should be the same
-  local one, two = H.exchange_get_region_extmark(step_one), H.exchange_get_region_extmark(step_two)
+  local one, two = H.exchange_get_region_extmark(step_one, n_cursor), H.exchange_get_region_extmark(step_two, n_cursor)
   return one[1] == two[1] and one[2] == two[2] and one[3].end_row == two[3].end_row and one[3].end_col == two[3].end_col
 end
 
@@ -1276,6 +1307,8 @@ H.get_submode = function(mode)
   return H.submode_keys[mode]
 end
 
+H.is_valid_buf = function(buf_id) return type(buf_id) == 'number' and vim.api.nvim_buf_is_valid(buf_id) end
+
 H.is_visual_mode = function()
   local cur_mode = vim.fn.mode()
   return cur_mode == 'v' or cur_mode == 'V' or cur_mode == H.submode_keys.block
@@ -1328,6 +1361,22 @@ H.cmd_normal = function(command, opts)
   vim.cmd('silent keepjumps normal! ' .. command)
 
   if cancel_redo then H.cancel_redo() end
+end
+
+H.has_extra_cursors = function()
+  local ns_id = vim.api.nvim_get_namespaces()['nvim.multicursor']
+  if ns_id == nil then return end
+  return #vim.api.nvim_buf_get_extmarks(0, ns_id, 0, -1, { limit = 1 }) > 0
+end
+
+H.force_mc_cascade = function()
+  -- A hack to force multicursor cascade, as it needs text edit or cursor move
+  -- There might be a dedicated way to do that in the future
+  -- See https://github.com/neovim/neovim/issues/42279
+  local cur = vim.api.nvim_win_get_cursor(0)
+  local modified = vim.bo.modified
+  vim.api.nvim_buf_set_text(0, cur[1] - 1, cur[2], cur[1] - 1, cur[2], { '' })
+  vim.bo.modified = modified
 end
 
 -- TODO: Remove after compatibility with Neovim=0.10 is dropped

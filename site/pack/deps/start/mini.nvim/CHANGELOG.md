@@ -37,6 +37,14 @@ There are following change types:
 
 - Add `<C-c>` basic mapping that acts as "Stop, clear, redraw" (a combination of `:h CTRL-C` and `:h CTRL-L-default`).
 
+## mini.bracketed
+
+### Expand
+
+- Add `multicursor` target with default `m` suffix. This is mostly a reaction to Neovim>=0.13 adding native multicursor which has default `[C` and `]C` mappings to move between extra cursors. Since those are used by 'mini.bracketed', `multicursor` provides an alternative (and richer) navigation.
+
+    This intentionally overrides built-in `[M`, `[m`, `]m` `]M` motions. To not do that, supply custom `config.multicursor.suffix` or set it to `''` to not create new mappings.
+
 ## mini.clue
 
 ### Evolve
@@ -54,6 +62,10 @@ There are following change types:
     - Empty string `''` and empty array `{}` set empty reference text. The latter previously unset the reference text, but now it doesn't.
 
         Use `'\n'` or `{ '' }` to set a single empty line as a reference text.
+
+### Expand
+
+- Overlay virtual lines now wrap horizontally along with buffer lines. Requires Neovim>=0.13 and enabled 'wrap' option.
 
 ## mini.statuscolumn
 
