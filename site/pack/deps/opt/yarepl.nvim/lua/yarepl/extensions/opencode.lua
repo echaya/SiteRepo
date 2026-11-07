@@ -8,20 +8,20 @@ local default_wincmd = util.default_float_wincmd(function()
 end)
 
 local opencode_args = {
+    'mini',
+    '--standalone',
+    '--server',
     '--continue',
     '--session',
     '--fork',
+    '--replay',
+    '--no-replay',
+    '--replay-limit',
     '--prompt',
     '--agent',
     '--model',
-    '--pure',
     '--print-logs',
     '--log-level',
-    '--port',
-    '--hostname',
-    '--mdns',
-    '--mdns-domain',
-    '--cors',
     '--help',
 }
 
@@ -62,7 +62,7 @@ M.config = {
     show_winbar_in_float_window = true,
     wincmd = default_wincmd,
     formatter = 'bracketed_pasting_delayed_cr',
-    opencode_args = {},
+    opencode_args = { 'mini' },
     opencode_cmd = 'opencode',
     warn_on_EDITOR_env_var = true,
 }

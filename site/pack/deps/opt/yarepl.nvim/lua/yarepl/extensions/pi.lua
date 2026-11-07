@@ -33,6 +33,7 @@ local pi_args = {
     '--prompt-template',
     '--no-prompt-templates',
     '--theme',
+    '--tui-mode',
     '--no-themes',
     '--no-context-files',
     '--export',
@@ -78,7 +79,7 @@ M.config = {
     show_winbar_in_float_window = true,
     wincmd = default_wincmd,
     formatter = 'bracketed_pasting_delayed_cr',
-    pi_args = {},
+    pi_args = { '--tui-mode', 'regular' },
     pi_cmd = 'pi',
     warn_on_EDITOR_env_var = true,
 }

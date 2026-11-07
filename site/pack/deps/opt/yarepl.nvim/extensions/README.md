@@ -62,6 +62,14 @@ This keeps the extension side predictable. You get one command namespace, the
 same completion behavior everywhere, and a single place to add new actions
 instead of another standalone command for each one.
 
+**Native scrollback by default:** Where the CLI supports it, the Codex,
+OpenCode, and Pi extensions launch inline by default (`--no-alt-screen`,
+`mini`, and `--tui-mode regular`, respectively). Embedded in Neovim, native
+scrollback fits better: you can navigate the transcript with
+Neovim/terminal-native scrolling and copy workflows instead of the agent's
+fullscreen UI. To opt out, override the corresponding `*_args` in the extension
+setup.
+
 # Aider
 
 ## Overview
@@ -373,7 +381,8 @@ Default configuration:
 ```lua
 require('yarepl.extensions.codex').setup {
       codex_cmd = 'codex',
-      codex_args = {},
+      -- Run inline so output stays in the terminal's native scrollback.
+      codex_args = { '--no-alt-screen' },
       -- Warn when $EDITOR is unset or not using nvr (for OpenEditor).
       warn_on_EDITOR_env_var = true,
       -- Display a winbar (e.g., "codex#<id>") in the floating window.
@@ -394,6 +403,7 @@ the most used TUI keybinds.
 ## Features
 
 - Seamless yarepl integration for OpenCode sessions
+- Launches `opencode mini` by default, keeping output in native scrollback
 - Completions for common OpenCode slash commands
 - Convenience shortcuts for OpenCode's `ctrl+x` leader commands
 - Configurable OpenCode command and arguments
@@ -402,7 +412,9 @@ the most used TUI keybinds.
 ## Commands
 
 - `Yarepl opencode set_args`: Set CLI arguments for launching OpenCode with
-  completion support, for example `Yarepl opencode set_args --model xxx`
+  completion support, for example `Yarepl opencode set_args mini --model xxx`.
+  The default is `mini`; include it when overriding args to keep output in native
+  scrollback.
 - `Yarepl opencode send_compact`: Send `/compact` to OpenCode.
 - `Yarepl opencode send_connect`: Send `/connect` to OpenCode.
 - `Yarepl opencode send_open_editor`: Send `ctrl+x e` to OpenCode.
@@ -418,8 +430,10 @@ the most used TUI keybinds.
 - `Yarepl opencode send_thinking`: Send `/thinking` to OpenCode.
 - `Yarepl opencode send_undo`: Send `/undo` to OpenCode.
 - `Yarepl opencode send_unshare`: Send `/unshare` to OpenCode.
-- `Yarepl opencode send_scroll_up`: Send `ctrl+alt+u` to OpenCode.
-- `Yarepl opencode send_scroll_down`: Send `ctrl+alt+d` to OpenCode.
+- `Yarepl opencode send_scroll_up`: Send `ctrl+alt+u` to OpenCode (fullscreen
+  TUI). The default `mini` interface uses the terminal's native scrollback.
+- `Yarepl opencode send_scroll_down`: Send `ctrl+alt+d` to OpenCode (fullscreen
+  TUI). The default `mini` interface uses the terminal's native scrollback.
 - `Yarepl opencode exec`: Send the prompt written in cmdline to OpenCode, with
   completion for common prefixes like `/compact`, `/connect`, `/editor`,
   `/models`, `/sessions`, `/thinking`, and `/undo`.
@@ -491,7 +505,9 @@ Default configuration:
 ```lua
 require('yarepl.extensions.opencode').setup {
       opencode_cmd = 'opencode',
-      opencode_args = {},
+      -- Use the inline minimal interface so output stays in the terminal's
+      -- native scrollback.
+      opencode_args = { 'mini' },
       -- Display a winbar (e.g., "opencode#<id>") in the floating window.
       show_winbar_in_float_window = true,
       -- The default is a floating window at the bottom right corner; you can override it
@@ -593,7 +609,8 @@ Default configuration:
 ```lua
 require('yarepl.extensions.pi').setup {
       pi_cmd = 'pi',
-      pi_args = {},
+      -- Run inline so output stays in the terminal's native scrollback.
+      pi_args = { '--tui-mode', 'regular' },
       -- Warn when $EDITOR is unset or not using nvr (for OpenEditor).
       warn_on_EDITOR_env_var = true,
       -- Display a winbar (e.g., "pi#<id>") in the floating window.

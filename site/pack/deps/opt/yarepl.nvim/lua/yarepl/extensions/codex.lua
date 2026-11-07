@@ -29,6 +29,7 @@ local codex_args = {
     '--full-auto',
     '--dangerously-bypass-approvals-and-sandbox',
     '--cd',
+    '--no-alt-screen',
 }
 
 ---@class yarepl.extensions.CodexConfig
@@ -44,7 +45,7 @@ M.config = {
     show_winbar_in_float_window = true,
     wincmd = default_wincmd,
     source_syntax = 'read the instruction from {{file}}',
-    codex_args = {},
+    codex_args = { '--no-alt-screen' },
     formatter = 'bracketed_pasting_delayed_cr',
     codex_cmd = 'codex',
     warn_on_EDITOR_env_var = true,
