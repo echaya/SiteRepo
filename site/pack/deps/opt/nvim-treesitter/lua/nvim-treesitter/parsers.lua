@@ -140,8 +140,8 @@ return {
   },
   c = {
     install_info = {
-      revision = 'b780e47fc780ddc8da13afa35a3f4ed5c157823d',
-      url = 'https://github.com/tree-sitter/tree-sitter-c',
+      revision = 'b1564d8e2513515be1cdbbff0a634b943316a5a1',
+      url = 'https://github.com/tree-sitter-grammars/tree-sitter-c',
     },
     tier = 2,
   },
@@ -279,13 +279,6 @@ return {
     install_info = {
       revision = 'eefee1c1ee76ccf0d7880814155b67c1738d5f89',
       url = 'https://github.com/eonpatapon/tree-sitter-cue',
-    },
-    tier = 2,
-  },
-  cylc = {
-    install_info = {
-      revision = '6d1d81137112299324b526477ce1db989ab58fb8',
-      url = 'https://github.com/elliotfontaine/tree-sitter-cylc',
     },
     tier = 2,
   },
@@ -949,21 +942,21 @@ return {
   jinja = {
     install_info = {
       location = 'tree-sitter-jinja',
-      revision = 'c213d3745ccdcaaa858869181c7b1bf9557a025f',
+      revision = 'v0.13.1',
       url = 'https://github.com/cathaysia/tree-sitter-jinja',
     },
     readme_note = 'basic highlighting',
     requires = { 'jinja_inline' },
-    tier = 2,
+    tier = 1,
   },
   jinja_inline = {
     install_info = {
       location = 'tree-sitter-jinja_inline',
-      revision = 'c213d3745ccdcaaa858869181c7b1bf9557a025f',
+      revision = 'v0.13.1',
       url = 'https://github.com/cathaysia/tree-sitter-jinja',
     },
     readme_note = 'needed for full highlighting',
-    tier = 2,
+    tier = 1,
   },
   jjdescription = {
     install_info = {

@@ -29,7 +29,7 @@ Language | Tier | Queries
 [bp](https://github.com/ambroisie/tree-sitter-bp)[^bp] | unstable | `HFIJL`
 [bpftrace](https://github.com/sgruszka/tree-sitter-bpftrace) | unstable | `H  J `
 [brightscript](https://github.com/ajdelcimmuto/tree-sitter-brightscript) | unstable | `HFIJ `
-[c](https://github.com/tree-sitter/tree-sitter-c) | unstable | `HFIJL`
+[c](https://github.com/tree-sitter-grammars/tree-sitter-c) | unstable | `HFIJL`
 [c3](https://github.com/c3lang/tree-sitter-c3) | unstable | `HFIJ `
 [c_sharp](https://github.com/tree-sitter/tree-sitter-c-sharp) | stable | `HF JL`
 [caddy](https://github.com/opa-oz/tree-sitter-caddy) | unmaintained | `HFIJ `
@@ -49,7 +49,6 @@ Language | Tier | Queries
 [csv](https://github.com/tree-sitter-grammars/tree-sitter-csv) | unstable | `H    `
 [cuda](https://github.com/tree-sitter-grammars/tree-sitter-cuda) | unstable | `HFIJL`
 [cue](https://github.com/eonpatapon/tree-sitter-cue) | unstable | `HFIJL`
-[cylc](https://github.com/elliotfontaine/tree-sitter-cylc) | unstable | `HFIJ `
 [d](https://github.com/gdamore/tree-sitter-d) | unstable | `HFIJL`
 [dart](https://github.com/UserNobody14/tree-sitter-dart) | unstable | `HFIJL`
 [desktop](https://github.com/ValdezFOmar/tree-sitter-desktop) | stable | `HF J `
@@ -142,8 +141,8 @@ html_tags (queries only)[^html_tags] | unstable | `H IJ `
 [java](https://github.com/tree-sitter/tree-sitter-java) | unstable | `HFIJL`
 [javadoc](https://github.com/rmuir/tree-sitter-javadoc) | unstable | `H IJ `
 [javascript](https://github.com/tree-sitter/tree-sitter-javascript) | unstable | `HFIJL`
-[jinja](https://github.com/cathaysia/tree-sitter-jinja)[^jinja] | unstable | `H  J `
-[jinja_inline](https://github.com/cathaysia/tree-sitter-jinja)[^jinja_inline] | unstable | `H  J `
+[jinja](https://github.com/cathaysia/tree-sitter-jinja)[^jinja] | stable | `H  J `
+[jinja_inline](https://github.com/cathaysia/tree-sitter-jinja)[^jinja_inline] | stable | `H  J `
 [jjdescription](https://github.com/ribru17/tree-sitter-jjdescription) | stable | `H  J `
 [jq](https://github.com/flurie/tree-sitter-jq) | unstable | `H  JL`
 [jsdoc](https://github.com/tree-sitter/tree-sitter-jsdoc) | unstable | `H    `
