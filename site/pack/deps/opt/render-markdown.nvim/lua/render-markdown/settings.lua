@@ -1198,6 +1198,7 @@ M.latex.position = {
     above = 'above',
     below = 'below',
     center = 'center',
+    replace = 'replace',
 }
 
 ---@type render.md.latex.Config
@@ -1216,9 +1217,10 @@ M.latex.default = {
     -- Highlight for latex blocks.
     highlight = 'RenderMarkdownMath',
     -- Determines where latex formula is rendered relative to block.
-    -- | above  | above latex block                               |
-    -- | below  | below latex block                               |
-    -- | center | centered with latex block (must be single line) |
+    -- | above   | above latex block                               |
+    -- | below   | below latex block                               |
+    -- | center  | centered with latex block (must be single line) |
+    -- | replace | replace latex block with rendered formula       |
     position = 'center',
     -- Number of empty lines above latex blocks.
     top_pad = 0,
@@ -1292,6 +1294,7 @@ M.link = {}
 ---@enum render.md.link.custom.Kind
 M.link.kind = {
     pattern = 'pattern',
+    prefix = 'prefix',
     suffix = 'suffix',
     url = 'url',
 }
@@ -1357,6 +1360,7 @@ M.link.default = {
     -- | pattern   | matched against the destination text                            |
     -- | kind      | optional determines how pattern is checked                      |
     -- |           | pattern | @see :h lua-patterns, is the default if not set       |
+    -- |           | prefix  | @see :h vim.startswith()                              |
     -- |           | suffix  | @see :h vim.endswith()                                |
     -- |           | url     | similar to pattern with additional prefix checks      |
     -- | priority  | optional used when multiple match, uses pattern length if empty |
@@ -1635,11 +1639,13 @@ M.pipe_table = {}
 ---@field preset render.md.table.Preset
 ---@field cell render.md.table.Cell
 ---@field wrap boolean
+---@field grid boolean
 ---@field cell_offset fun(ctx: render.md.table.cell.Context): integer
 ---@field padding integer
 ---@field min_width integer
 ---@field border string[]
 ---@field border_enabled boolean
+---@field border_priority? integer
 ---@field border_virtual boolean
 ---@field alignment_indicator string
 ---@field head string
@@ -1692,6 +1698,8 @@ M.pipe_table.default = {
     cell = 'padded',
     -- Fit wide tables to the current window by wrapping individual cells.
     wrap = true,
+    -- Draw a horizontal line between every body row.
+    grid = false,
     -- Adjust the computed width of table cells using custom logic.
     cell_offset = function()
         return 0
@@ -1711,6 +1719,8 @@ M.pipe_table.default = {
     },
     -- Turn on / off top & bottom lines.
     border_enabled = true,
+    -- Priority to assign to table border.
+    border_priority = nil,
     -- Always use virtual lines for table borders instead of attempting to use empty lines.
     -- Will be automatically enabled if indentation module is enabled.
     border_virtual = false,
@@ -1733,11 +1743,13 @@ function M.pipe_table.schema()
         preset = { enum = M.pipe_table.preset },
         cell = { enum = M.pipe_table.cell },
         wrap = { type = 'boolean' },
+        grid = { type = 'boolean' },
         cell_offset = { type = 'function' },
         padding = { type = 'number' },
         min_width = { type = 'number' },
         border = { list = { type = 'string' } },
         border_enabled = { type = 'boolean' },
+        border_priority = { optional = true, type = 'number' },
         border_virtual = { type = 'boolean' },
         alignment_indicator = { type = 'string' },
         head = { type = 'string' },

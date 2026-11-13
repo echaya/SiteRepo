@@ -287,11 +287,13 @@
 ---@field preset? render.md.table.Preset
 ---@field cell? render.md.table.Cell
 ---@field wrap? boolean
+---@field grid? boolean
 ---@field cell_offset? fun(ctx: render.md.table.cell.Context): integer
 ---@field padding? integer
 ---@field min_width? integer
 ---@field border? string[]
 ---@field border_enabled? boolean
+---@field border_priority? integer
 ---@field border_virtual? boolean
 ---@field alignment_indicator? string
 ---@field head? string

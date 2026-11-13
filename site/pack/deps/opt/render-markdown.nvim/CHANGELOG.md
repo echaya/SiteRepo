@@ -2,10 +2,32 @@
 
 ## Pre-release
 
+### Features
+
+- add optional buf arg to get API [82918ef](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/82918efec990b831135d23626ed9486e895c5265)
+- grid style table [#661](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/661)
+  [#710](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/710)
+  [de8ef99](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/de8ef998f4b50de23771999fade54a87719a3567)
+- prefix link kind [c1f257f](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/c1f257fdbc7641d3a14f6ce12152e456df561d2a)
+- add replace latex position [#718](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/718)
+- configurable border priority [adc0868](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/adc086861a246b66d5243757ef36593bc169c901)
+
 ### Bug Fixes
 
 - handle ordered icon tonumber returning nil [#698](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/698)
   [245956d](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/245956d67572c137df375dbf256e96bdb07e0937)
+- nested block headings [#674](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/674)
+  [fd4d24f](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/fd4d24f058d85963eb6ab0fd3c6ad103a586623b)
+- handle multi filetype values [#715](https://github.com/MeanderingProgrammer/render-markdown.nvim/issues/715)
+  [6a94bfa](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/6a94bfa9747b8b6465d300968049c7c7f69bcd7d)
+- do not debounce forced events [9c235be](https://github.com/MeanderingProgrammer/render-markdown.nvim/commit/9c235bedc4f96145e63fcad5b78cd78bce8822c4)
+- build table prefixes when wrapping is disabled [#722](https://github.com/MeanderingProgrammer/render-markdown.nvim/pull/722)
+
+### Collaborator Shoutouts
+
+- @trent-howard
+- @StudentWeis
+- @hirak99
 
 ## 8.14.0 (2026-09-14)
 

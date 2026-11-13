@@ -2,6 +2,7 @@
 ---@field buf integer
 ---@field win? integer|integer[]
 ---@field event? string
+---@field force? boolean
 ---@field config? render.md.partial.UserConfig
 
 ---@class render.md.Api
@@ -17,18 +18,27 @@ function M.render(ctx)
     local buf = ctx.buf
     local wins = list.ensure(ctx.win or env.buf.wins(buf))
     local event = ctx.event or 'Api'
+    local force = ctx.force ~= false
 
     state.get(buf, ctx.config)
     state.attach()
 
     for _, win in ipairs(wins) do
-        ui.update(buf, win, event, true)
+        ui.update(buf, win, event, force)
     end
 end
 
+---@param buf? integer
 ---@return boolean
-function M.get()
-    return require('render-markdown.state').enabled
+function M.get(buf)
+    local state = require('render-markdown.state')
+
+    if buf then
+        local config = state.get_config(buf)
+        return config and config.enabled or false
+    else
+        return state.enabled
+    end
 end
 
 ---@param enable? boolean
